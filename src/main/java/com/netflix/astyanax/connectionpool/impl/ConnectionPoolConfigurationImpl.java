@@ -4,7 +4,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.google.inject.internal.Preconditions;
+import com.google.common.base.Preconditions;
 import com.netflix.astyanax.Clock;
 import com.netflix.astyanax.KeyspaceTracers;
 import com.netflix.astyanax.connectionpool.BadHostDetector;

@@ -16,7 +16,7 @@ import com.netflix.astyanax.mock.MockConnectionFactory;
 import com.netflix.astyanax.mock.MockHostType;
 
 public class StressSimpleHostConnectionPoolImpl {
-    private static final Logger LOG = Logger.getLogger(Stress.class);
+    private static final Logger LOG = Logger.getLogger(StressSimpleHostConnectionPoolImpl.class);
 
 	/**
 	 * @param args

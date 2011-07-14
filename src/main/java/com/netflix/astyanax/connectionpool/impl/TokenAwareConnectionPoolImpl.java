@@ -22,8 +22,6 @@ import com.netflix.astyanax.connectionpool.exceptions.PoolTimeoutException;
 import com.netflix.astyanax.connectionpool.exceptions.TimeoutException;
 import com.netflix.astyanax.connectionpool.exceptions.TransportException;
 import com.netflix.astyanax.connectionpool.exceptions.UnknownException;
-import com.netflix.logging.ILog;
-import com.netflix.logging.LogManager;
 
 /**
  * Connection pool that partitions connections by the hosts which own the token
@@ -41,8 +39,6 @@ import com.netflix.logging.LogManager;
  */
 public class TokenAwareConnectionPoolImpl<CL> extends RoundRobinConnectionPoolImpl<CL> {
 
-    private static ILog logger = LogManager.getLogger(TokenAwareConnectionPoolImpl.class);
-    
 	/**
 	 * Sorted list of TokenPartition, one per token.  The list is updated 
 	 * frequently via a describe ring. This list is used to determine which 

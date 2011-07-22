@@ -5,6 +5,7 @@ import java.util.Map;
 
 import com.netflix.astyanax.connectionpool.Connection;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
+import com.netflix.astyanax.connectionpool.ExecuteWithFailover;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.OperationResult;
@@ -67,5 +68,12 @@ public class MockConnectionPool implements ConnectionPool<MockClient> {
 		// TODO Auto-generated method stub
 		
 	}
+
+  @Override
+  public <R> ExecuteWithFailover<MockClient, R> newExecuteWithFailover()
+      throws ConnectionException {
+    // TODO Auto-generated method stub
+    return null;
+  }
 
 }

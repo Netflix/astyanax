@@ -2,6 +2,7 @@ package com.netflix.astyanax.mock;
 
 import java.util.List;
 
+import com.netflix.astyanax.ColumnMutation;
 import com.netflix.astyanax.CounterMutation;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.Keyspace;
@@ -82,15 +83,17 @@ public class MockKeyspace implements Keyspace {
 	public void start() {
 	}
 
-	@Override
-	public <K, C> Query<K, C, Rows<K, C>> prepareCqlQuery(String cql) {
-		// TODO Auto-generated method stub
-		return null;
-	}
 
 	@Override
 	public <K, C> ColumnFamilyQuery<K, C> prepareQuery(ColumnFamily<K, C> cf) {
 		// TODO Auto-generated method stub
 		return null;
 	}
+
+  @Override
+  public <K, C> ColumnMutation prepareColumnMutation(
+      ColumnFamily<K, C> columnFamily, K rowKey, C column) {
+    // TODO Auto-generated method stub
+    return null;
+  }
 }

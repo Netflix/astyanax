@@ -1,9 +1,7 @@
 package com.netflix.astyanax.mock;
 
-import com.netflix.astyanax.connectionpool.AsyncOperation;
 import com.netflix.astyanax.connectionpool.Connection;
 import com.netflix.astyanax.connectionpool.ConnectionFactory;
-import com.netflix.astyanax.connectionpool.FutureOperationResult;
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.OperationResult;
@@ -35,13 +33,7 @@ public class MockConnectionFactory implements ConnectionFactory<MockClient> {
 				}
 			}
 
-			@Override
-			public <R> FutureOperationResult<R> execute(
-					AsyncOperation<MockClient, R> op)
-					throws ConnectionException {
-				// TODO Auto-generated method stub
-				return null;
-			}
+
 
 			@Override
 			public void close() {

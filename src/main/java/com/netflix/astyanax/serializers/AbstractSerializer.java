@@ -2,6 +2,7 @@ package com.netflix.astyanax.serializers;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -10,7 +11,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import com.netflix.astyanax.Serializer;
-import com.netflix.astyanax.connectionpool.exceptions.SerializationException;
 
 /**
  * A base class for serializer implementations. Takes care of the default
@@ -84,6 +84,14 @@ public abstract class AbstractSerializer<T> implements Serializer<T> {
     return bytesList;
   }
 
+  public List<ByteBuffer> toBytesList(Collection<T> list) {
+	    List<ByteBuffer> bytesList = new ArrayList<ByteBuffer>(list.size());
+	    for (T s : list) {
+	      bytesList.add(toByteBuffer(s));
+	    }
+	    return bytesList;
+  }
+  
   public List<T> fromBytesList(List<ByteBuffer> list) {
     List<T> objList = new ArrayList<T>(list.size());
     for (ByteBuffer s : list) {

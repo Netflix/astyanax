@@ -21,16 +21,6 @@ public interface Connection<CL> {
 	public <R> OperationResult<R> execute(Operation<CL, R> op) throws ConnectionException;
 
 	/**
-	 * TODO
-	 * 
-	 * @param <R>
-	 * @param op
-	 * @return
-	 * @throws ConnectionException
-	 */
-	public <R> FutureOperationResult<R> execute(AsyncOperation<CL, R> op) throws ConnectionException;
-	
-	/**
 	 * Shut down the connection.  isOpen() will now return false.
 	 */
 	public void close();

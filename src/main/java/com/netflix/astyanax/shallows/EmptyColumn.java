@@ -1,5 +1,9 @@
 package com.netflix.astyanax.shallows;
 
+import java.nio.ByteBuffer;
+import java.util.Date;
+import java.util.UUID;
+
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnList;
@@ -38,6 +42,31 @@ public class EmptyColumn<C> implements Column<C> {
 
 	@Override
 	public long getLongValue() {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public byte[] getByteArrayValue() {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public boolean getBooleanValue() {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public ByteBuffer getByteBufferValue() {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public Date getDateValue() {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public UUID getUUIDValue() {
 		throw new UnsupportedOperationException();
 	}
 }

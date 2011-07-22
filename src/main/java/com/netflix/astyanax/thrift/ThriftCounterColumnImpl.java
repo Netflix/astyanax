@@ -1,5 +1,9 @@
 package com.netflix.astyanax.thrift;
 
+import java.nio.ByteBuffer;
+import java.util.Date;
+import java.util.UUID;
+
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnList;
@@ -51,6 +55,36 @@ public class ThriftCounterColumnImpl<C> implements Column<C> {
 	@Override
 	public boolean isParentColumn() {
 		return false;
+	}
+
+	@Override
+	public byte[] getByteArrayValue() {
+		throw new UnsupportedOperationException(
+				"CounterColumn \'" + this.name+ "\' has no byte[] value. Call getLongValue().");
+	}
+
+	@Override
+	public boolean getBooleanValue() {
+		throw new UnsupportedOperationException(
+				"CounterColumn \'" + this.name+ "\' has no Boolean value. Call getLongValue().");
+	}
+
+	@Override
+	public ByteBuffer getByteBufferValue() {
+		throw new UnsupportedOperationException(
+				"CounterColumn \'" + this.name+ "\' has no ByteBuffer value. Call getLongValue().");
+	}
+
+	@Override
+	public Date getDateValue() {
+		throw new UnsupportedOperationException(
+				"CounterColumn \'" + this.name+ "\' has no Date value. Call getLongValue().");
+	}
+
+	@Override
+	public UUID getUUIDValue() {
+		throw new UnsupportedOperationException(
+				"CounterColumn \'" + this.name+ "\' has no UUID value. Call getLongValue().");
 	}
 
 }

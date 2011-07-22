@@ -1,15 +1,17 @@
 package com.netflix.astyanax.query;
 
-import com.netflix.astyanax.connectionpool.OperationResult;
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.model.ColumnPath;
+import java.nio.ByteBuffer;
+
+import com.netflix.astyanax.Execution;
+import com.netflix.astyanax.model.ByteBufferRange;
+import com.netflix.astyanax.model.ColumnSlice;
 import com.netflix.astyanax.model.Rows;
 
 /**
  * Interface to narrow down the path and column slices within a query after the
  * keys were seleted using the ColumnFamilyQuery.
  */
-public interface RowSliceQuery<K, C> {
+public interface RowSliceQuery<K, C> extends Execution<Rows<K,C>> {
 	/**
 	 * Specify a non-contiguous set of columns to retrieve.
 	 * @param columns
@@ -17,6 +19,13 @@ public interface RowSliceQuery<K, C> {
 	 */
 	RowSliceQuery<K, C> withColumnSlice(C... columns);
 
+	/**
+	 * Use this when your application caches the column slice.
+	 * @param slice
+	 * @return
+	 */
+	RowSliceQuery<K, C> withColumnSlice(ColumnSlice<C> columns);
+	
 	/**
 	 * Specify a range of columns to return.  
 	 * @param startColumn	First column in the range
@@ -29,9 +38,23 @@ public interface RowSliceQuery<K, C> {
 	RowSliceQuery<K, C> withColumnRange(C startColumn, C endColumn, boolean reversed, int count);
 	
 	/**
-	 * Execute the row slice
+	 * Specify a range and provide pre-constructed start and end columns.
+	 * Use this with Composite columns
+	 * 
+	 * @param startColumn
+	 * @param endColumn
+	 * @param reversed
+	 * @param count
 	 * @return
-	 * @throws ConnectionException
 	 */
-	OperationResult<Rows<K,C>> execute() throws ConnectionException;
+	RowSliceQuery<K, C> withColumnRange(ByteBuffer startColumn, ByteBuffer endColumn, boolean reversed, int count);
+	
+	/**
+	 * Specify a range of composite columns.  Use this in conjunction with the
+	 * AnnotatedCompositeSerializer.buildRange().
+	 * 
+	 * @param range
+	 * @return
+	 */
+	RowSliceQuery<K, C> withColumnRange(ByteBufferRange range);
 }

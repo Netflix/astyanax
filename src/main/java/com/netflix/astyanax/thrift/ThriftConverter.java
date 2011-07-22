@@ -3,6 +3,7 @@ package com.netflix.astyanax.thrift;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 
 import org.apache.cassandra.thrift.ColumnParent;
@@ -117,10 +118,7 @@ public class ThriftConverter {
 		if (columns.getColumns() != null) {
 			SlicePredicate predicate = new SlicePredicate();
 			predicate.setColumn_namesIsSet(true);
-			predicate.column_names = new ArrayList<ByteBuffer>(columns.getColumns().size());
-			for (C name : columns.getColumns()) {
-		    	predicate.column_names.add(ByteBuffer.wrap(colSer.toBytes(name)));
-		    }
+			predicate.column_names = colSer.toBytesList(columns.getColumns());
 			return predicate;
 		} 
 		else {

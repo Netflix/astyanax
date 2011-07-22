@@ -1,8 +1,5 @@
 package com.netflix.astyanax;
 
-import com.netflix.astyanax.connectionpool.FutureOperationResult;
-import com.netflix.astyanax.connectionpool.OperationResult;
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ColumnPath;
 import com.netflix.astyanax.model.ColumnSlice;
 import com.netflix.astyanax.model.ConsistencyLevel;
@@ -16,21 +13,8 @@ import com.netflix.astyanax.model.ConsistencyLevel;
  * @param <C> 	ColumnType
  * @param <R>	ResponseType
  */
-public interface Query<K, C, R> {
-	/**
-	 * Execute the query and return the result, including statistics
-	 * @return
-	 * @throws ConnectionException 
-	 */
-	OperationResult<R> execute() throws ConnectionException;
-	
-	/**
-	 * Execute the query asynchronously.  Return a FutureOperationResult which
-	 * acts exactly as a standard Java Future.
-	 * @return
-	 */
-	FutureOperationResult<R> executeAsync();
-	
+@Deprecated
+public interface Query<K, C, R> extends Execution<R> {
 	/**
 	 * Set the consistency level for this query
 	 * @param consistencyLevel

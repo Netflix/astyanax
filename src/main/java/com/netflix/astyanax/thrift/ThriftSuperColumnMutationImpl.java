@@ -26,12 +26,19 @@ import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.UUIDSerializer;
 
+/**
+ * @deprecated	Use composite columns instead
+ * @author elandau
+ *
+ * @param <C>
+ */
 public class ThriftSuperColumnMutationImpl<C> implements ColumnListMutation<C> {
 	private final Clock clock;
 	private final List<Mutation> mutationList;
 	private final ColumnPath<C> path;
 	private SuperColumn superColumn;
 	private SlicePredicate deletionPredicate;
+	private final static ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
 	
 	public ThriftSuperColumnMutationImpl(Clock clock,
 			List<Mutation> mutationList, 
@@ -44,7 +51,6 @@ public class ThriftSuperColumnMutationImpl<C> implements ColumnListMutation<C> {
 	@Override
 	public <V> ColumnListMutation<C> putColumn(C columnName, V value,
 			Serializer<V> valueSerializer, Integer ttl) {
-		// 1.  Set up the column
 		Column column = new Column();
 		column.setName(path.getSerializer().toByteBuffer(columnName));
 		column.setValue(valueSerializer.toByteBuffer(value));
@@ -52,7 +58,11 @@ public class ThriftSuperColumnMutationImpl<C> implements ColumnListMutation<C> {
 		if (ttl != null) {
 			column.setTtl(ttl);
 		}
-		
+		addMutation(column);
+		return this;
+	}
+	
+	private void addMutation(Column column) {
 		// 2.  Create the super column mutation if this is the first call
 		if (superColumn == null) {
 			superColumn = new SuperColumn().setName(path.get(0));
@@ -63,7 +73,6 @@ public class ThriftSuperColumnMutationImpl<C> implements ColumnListMutation<C> {
 		    mutationList.add(mutation);
 		}	    
 		superColumn.addToColumns(column);
-		return this;
 	}
 
 	@Override
@@ -102,7 +111,7 @@ public class ThriftSuperColumnMutationImpl<C> implements ColumnListMutation<C> {
 	}
 
 	@Override
-	public ColumnListMutation<C> putColumn(C columnName, Double value, Integer ttl) {
+	public ColumnListMutation<C> putColumn(C columnName, double value, Integer ttl) {
 		return putColumn(columnName, value, DoubleSerializer.get(), ttl);
 	}
 
@@ -111,6 +120,19 @@ public class ThriftSuperColumnMutationImpl<C> implements ColumnListMutation<C> {
 		return putColumn(columnName, value, UUIDSerializer.get(), ttl);
 	}
 
+	@Override
+	public ColumnListMutation<C> putEmptyColumn(C columnName, Integer ttl) {
+		Column column = new Column();
+		column.setName(path.getSerializer().toByteBuffer(columnName));
+		column.setValue(EMPTY_BUFFER);
+		column.setTimestamp(clock.getCurrentTime());
+		if (ttl != null) {
+			column.setTtl(ttl);
+		}
+		addMutation(column);
+		return this;
+	}
+	
 	@Override
 	public ColumnListMutation<C> delete() {
 		Deletion d = new Deletion();

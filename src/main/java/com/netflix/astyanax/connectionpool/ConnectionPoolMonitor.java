@@ -8,15 +8,10 @@ package com.netflix.astyanax.connectionpool;
  */
 public interface ConnectionPoolMonitor {
 	/**
-	 * Errors trying to establish a connection
-	 */
-	void incConnectionError();
-	
-	/**
 	 * Errors trying to execute an operation
 	 * @param host
 	 */
-	void incOperationFailure(Host host);
+	void incOperationFailure(Host host, Exception e);
 
 	/**
 	 * Succeeded in executing an operation
@@ -27,6 +22,18 @@ public interface ConnectionPoolMonitor {
 	
 	// void incInvalidState(Host host);
 
+	/**
+	 * Attempt to create a connection
+	 */
+	void incConnectionCreated(Host host);
+	
+	/**
+	 * Attempt to create a connection failed
+	 * @param host
+	 * @param e
+	 */
+	void incConnectionCreateFailed(Host host, Exception e);
+	
 	/**
 	 * Incremented for each connection borrowed
 	 * @param host 	Host from which the connection was borrowed	
@@ -49,10 +56,6 @@ public interface ConnectionPoolMonitor {
 	 * Timeout waiting for a response from the cluster
 	 */
 	void incOperationTimeout();
-
-	/**
-	 */
-	void incBorrowRetry();
 
 	/**
 	 * An operation failed due to a connection error.
@@ -87,4 +90,9 @@ public interface ConnectionPoolMonitor {
 	 * @param pool
 	 */
 	void onHostReactivated(Host host, HostConnectionPool<?> pool);
+
+	/**
+	 * There were no active hosts in the pool to borrow from. 
+	 */
+	void incNoHosts();
 }

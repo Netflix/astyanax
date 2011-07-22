@@ -19,6 +19,13 @@ public class ColumnFamily<K,C> {
 	private final Serializer<C> columnSerializer;
 	private final ColumnType type;
 
+	/**
+	 * @param columnFamilyName
+	 * @param keySerializer
+	 * @param columnSerializer
+	 * @param type
+	 * @deprecated	Super columns should be replaced with composite columns
+	 */
 	public ColumnFamily(String columnFamilyName,
 		Serializer<K> keySerializer,
 		Serializer<C> columnSerializer,
@@ -63,6 +70,7 @@ public class ColumnFamily<K,C> {
 
 	/**
 	 * Type of columns in this column family (Standard or Super)
+	 * @deprecated	Super columns should be replaced with composite columns
 	 * @return
 	 */
 	public ColumnType getType() {

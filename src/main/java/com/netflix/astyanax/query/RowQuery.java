@@ -1,9 +1,13 @@
 package com.netflix.astyanax.query;
 
+import java.nio.ByteBuffer;
+
+import com.netflix.astyanax.Execution;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.model.ColumnPath;
+import com.netflix.astyanax.model.ColumnSlice;
 
 /**
  * Interface to narrow down the path and column slices within a query after the
@@ -14,7 +18,7 @@ import com.netflix.astyanax.model.ColumnPath;
  * @param <K>
  * @param <C>
  */
-public interface RowQuery<K, C> {
+public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
 	/**
 	 * Specify the path to a single column (either Standard or Super).  
 	 * Notice that the sub column type and serializer will be used now.
@@ -26,13 +30,25 @@ public interface RowQuery<K, C> {
 
 	/**
 	 * Specify a non-contiguous set of columns to retrieve.
+	 * 
 	 * @param columns
 	 * @return
 	 */
 	RowQuery<K, C> withColumnSlice(C... columns);
 
 	/**
-	 * Specify a range of columns to return.  
+	 * Use this when your application caches the column slice.
+	 * @param slice
+	 * @return
+	 */
+	RowQuery<K, C> withColumnSlice(ColumnSlice<C> columns);
+	
+	/**
+	 * Specify a range of columns to return.  Use this for simple ranges for
+	 * non-composite column names.  For Composite column names use 
+	 * withColumnRange(ByteBufferRange range) and the 
+	 * AnnotatedCompositeSerializer.buildRange()
+	 * 
 	 * @param startColumn	First column in the range
 	 * @param endColumn		Last column in the range
 	 * @param reversed		True if the order should be reversed.  Note that for
@@ -42,5 +58,31 @@ public interface RowQuery<K, C> {
 	 */
 	RowQuery<K, C> withColumnRange(C startColumn, C endColumn, boolean reversed, int count);
 	
-	OperationResult<ColumnList<C>> execute() throws ConnectionException;
+	/**
+	 * Specify a range and provide pre-constructed start and end columns.
+	 * Use this with Composite columns
+	 * 
+	 * @param startColumn
+	 * @param endColumn
+	 * @param reversed
+	 * @param count
+	 * @return
+	 */
+	RowQuery<K, C> withColumnRange(ByteBuffer startColumn, ByteBuffer endColumn, boolean reversed, int count);
+	
+	/**
+	 * Specify a range of composite columns.  Use this in conjunction with the
+	 * AnnotatedCompositeSerializer.buildRange().
+	 * 
+	 * @param range
+	 * @return
+	 */
+	RowQuery<K, C> withColumnRange(ByteBufferRange range);
+
+	/**
+	 * Returns the number of columns in the response without returning any data
+	 * @return
+	 * @throws ConnectionException 
+	 */
+	ColumnCountQuery getCount();
 }

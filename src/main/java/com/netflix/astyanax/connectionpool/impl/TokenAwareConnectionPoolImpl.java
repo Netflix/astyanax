@@ -248,7 +248,7 @@ public class TokenAwareConnectionPoolImpl<CL> extends RoundRobinConnectionPoolIm
 					throw new PoolTimeoutException("Timed out trying to borrow a connection");
 				}
 				
-				this.monitor.incBorrowRetry();
+				this.monitor.incFailover();
 				continue;
 			}
 			

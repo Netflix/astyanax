@@ -41,6 +41,13 @@ public interface ColumnFamilyQuery<K, C> {
 	RowSliceQuery<K,C> getKeySlice(K... keys);
 	
 	/**
+	 * Prepare a CQL Query
+	 * @param cql
+	 * @return
+	 */
+	CqlQuery<K, C> withCql(String cql);
+	
+	/**
 	 * Search for keys matching the provided index clause
 	 * @param indexClause
 	 * @return

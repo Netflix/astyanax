@@ -8,6 +8,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import com.netflix.astyanax.connectionpool.OperationResult;
+import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.connectionpool.impl.ExecutionHelper;
+
 import org.apache.cassandra.thrift.Mutation;
 import org.apache.commons.codec.binary.Hex;
 
@@ -107,7 +111,7 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
 	/**
 	 * Get or add a column family mutation to this row
 	 * 
-	 * @param columnFamilyName
+	 * @param colFamily
 	 * @return
 	 */
 	private <K, C> List<Mutation> getColumnFamilyMutationList(ColumnFamily<K, C> colFamily, K key) {
@@ -175,4 +179,9 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
 		return this;
 	}
 
+
+    @Override
+    public OperationResult<Void> execute() throws ConnectionException {
+        return ExecutionHelper.blockingExecute(this);
+    }
 }

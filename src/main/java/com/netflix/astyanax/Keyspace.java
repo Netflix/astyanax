@@ -80,15 +80,6 @@ public interface Keyspace {
 	public <K,C> Query<K,C,Rows<K,C>> prepareGetMultiRowQuery(ColumnFamily<K,?> columnFamily, Serializer<C> columnSerializer, KeySlice<K> keys);
 
 	/**
-	 * Prepare to run a CQL query.  Must call .execute() to perform the query.
-	 * @param <K>
-	 * @param <C>
-	 * @param cql
-	 * @return
-	 */
-	public <K,C> Query<K,C,Rows<K,C>> prepareCqlQuery(String cql);
-	
-	/**
 	 * Query for a specific column within a row. Must call .execute() to perform the query.
 	 * @param <K>
 	 * @param <C>
@@ -127,6 +118,15 @@ public interface Keyspace {
 	 * 			the mutation to perform the operation.
 	 */
 	public <K,C> CounterMutation<K, C> prepareCounterMutation(ColumnFamily<K,C> columnFamily, K rowKey, ColumnPath<C> path, long amount);
+	
+	/**
+	 * Mutation for a single column
+	 * @param <K>
+	 * @param <C>
+	 * @param columnFamily
+	 * @return
+	 */
+	public <K,C> ColumnMutation prepareColumnMutation(ColumnFamily<K,C> columnFamily, K rowKey, C column);
 	
 	/**
 	 * Terminate the keyspace and connection pool

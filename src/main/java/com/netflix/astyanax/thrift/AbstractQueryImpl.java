@@ -1,6 +1,9 @@
 package com.netflix.astyanax.thrift;
 
 import com.netflix.astyanax.Query;
+import com.netflix.astyanax.connectionpool.OperationResult;
+import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.connectionpool.impl.ExecutionHelper;
 import com.netflix.astyanax.model.ColumnPath;
 import com.netflix.astyanax.model.ColumnSlice;
 import com.netflix.astyanax.model.ConsistencyLevel;
@@ -40,4 +43,9 @@ public abstract class AbstractQueryImpl<K, C, R> implements Query<K, C, R> {
 		this.slice = slice;
 		return this;
 	}
+
+    @Override
+    public OperationResult<R> execute() throws ConnectionException {
+        return ExecutionHelper.blockingExecute(this);
+    }
 }

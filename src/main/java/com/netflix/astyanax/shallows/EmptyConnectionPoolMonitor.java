@@ -12,14 +12,6 @@ public class EmptyConnectionPoolMonitor implements ConnectionPoolMonitor {
 	public static EmptyConnectionPoolMonitor instance = new EmptyConnectionPoolMonitor();
 	
 	@Override
-	public void incConnectionError() {
-	}
-
-	@Override
-	public void incOperationFailure(Host host) {
-	}
-
-	@Override
 	public void incOperationSuccess(Host host, long latency) {
 	}
 
@@ -51,7 +43,7 @@ public class EmptyConnectionPoolMonitor implements ConnectionPoolMonitor {
 
 	@Override
 	public void onHostDown(Host host, Exception reason) {
-		LOG.info(String.format("Downed host " + host + " reason=\"" + reason + "\""));
+		LOG.warn(String.format("Downed host " + host + " reason=\"" + reason + "\""));
 	}
 
 	@Override
@@ -60,14 +52,24 @@ public class EmptyConnectionPoolMonitor implements ConnectionPoolMonitor {
 	}
 
 	@Override
-	public void incBorrowRetry() {
+	public void incFailover() {
 		// TODO Auto-generated method stub
 		
 	}
 
 	@Override
-	public void incFailover() {
-		// TODO Auto-generated method stub
-		
+	public void incConnectionCreated(Host host) {
+	}
+
+	@Override
+	public void incConnectionCreateFailed(Host host, Exception e) {
+	}
+
+	@Override
+	public void incNoHosts() {
+	}
+
+	@Override
+	public void incOperationFailure(Host host, Exception e) {
 	}
 }

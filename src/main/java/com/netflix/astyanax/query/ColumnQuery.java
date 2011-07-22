@@ -1,7 +1,6 @@
 package com.netflix.astyanax.query;
 
-import com.netflix.astyanax.connectionpool.OperationResult;
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.Execution;
 import com.netflix.astyanax.model.Column;
 
 /**
@@ -10,6 +9,5 @@ import com.netflix.astyanax.model.Column;
  *
  * @param <C>
  */
-public interface ColumnQuery<C> {
-	OperationResult<Column<C>> execute() throws ConnectionException;
+public interface ColumnQuery<C> extends Execution<Column<C>>{
 }

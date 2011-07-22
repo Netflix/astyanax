@@ -2,9 +2,6 @@ package com.netflix.astyanax;
 
 import java.util.Collection;
 
-import com.netflix.astyanax.connectionpool.FutureOperationResult;
-import com.netflix.astyanax.connectionpool.OperationResult;
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 
@@ -19,6 +16,13 @@ import com.netflix.astyanax.model.ConsistencyLevel;
  * averts unnecessary operations to convert from one data structure to another. 
  * 
  * The mutator is not thread safe
+ * 
+ * If successful, all the mutations are cleared and new mutations may be 
+ * created.  Any previously acquired ColumnFamilyMutations are no longer
+ * valid and should be discarded.
+ * 
+ * No data is actually returned after a mutation is executed, hence 
+ * the Void return value type.
  * 
  * Example:
  * <pre>
@@ -52,27 +56,7 @@ import com.netflix.astyanax.model.ConsistencyLevel;
  *
  * @param <K>
  */
-public interface MutationBatch {
-	/**
-	 * Execute the mutation and return info about its execution.  
-	 * If successful, all the mutations are cleared and new mutations may be 
-	 * created.  Any previously acquired ColumnFamilyMutations are no longer
-	 * valid and should be discarded.
-	 * 
-	 * @return  No data is actually returned after a mutation is executed, hence 
-	 * 			the Void return value type.
-	 * @throws ConnectionException
-	 */
-	OperationResult<Void> execute() throws ConnectionException;
-	
-	/**
-	 * Execute the mutation asynchronously.  
-	 * 
-	 * @return
-	 * @throws ConnectionException
-	 */
-	FutureOperationResult<Void> executeAsync() throws ConnectionException;
-	
+public interface MutationBatch extends Execution<Void>{
 	/**
 	 * Mutate a row.  The ColumnFamilyMutation is only valid until execute()
 	 * or discardMutations is called.  

@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.netflix.astyanax.connectionpool.Connection;
 import com.netflix.astyanax.connectionpool.ConnectionFactory;
+import com.netflix.astyanax.connectionpool.ConnectionPoolMonitor;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
@@ -47,15 +48,18 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
 	 */
 	private final ConnectionFactory<CL> factory;
 	
+	private final ConnectionPoolMonitor monitor;
+	
 	/**
 	 * Host description associated with this pool
 	 */
 	private final Host host;
 	
-	public SimpleHostConnectionPool(Host host, ConnectionFactory<CL> factory, int maxConnections) {
+	public SimpleHostConnectionPool(Host host, ConnectionFactory<CL> factory, ConnectionPoolMonitor monitor, int maxConnections) {
 		this.host = host;
 		this.maxConnections = maxConnections;
 		this.factory = factory;
+		this.monitor = monitor;
 		this.availableConnections = new LinkedBlockingQueue<Connection<CL>>();
 	}
 
@@ -94,10 +98,15 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
 				try {
 					connection = this.factory.createConnection(this);
 					connection.open();
+					this.monitor.incConnectionCreated(host);
 					return connection;
 				}
 				catch (ConnectionException e) {
+					this.monitor.incConnectionCreateFailed(host, e);
 					this.activeCount.getAndDecrement();
+					if (connection != null) {
+						connection.close();
+					}
 					throw e;
 				}
 			}
@@ -120,6 +129,7 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
 				if (connection != null)
 					return connection;
 			} catch (InterruptedException e) {
+	            Thread.currentThread().interrupt();
 			} 
 			throw new PoolTimeoutException(getHost().getName());
 		}
@@ -138,7 +148,9 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
 			try {
 				this.availableConnections.put(connection);
 			} catch (InterruptedException e) {
+	            Thread.currentThread().interrupt();
 				this.activeCount.getAndDecrement();
+				connection.close();
 			}
 		}
 		else {

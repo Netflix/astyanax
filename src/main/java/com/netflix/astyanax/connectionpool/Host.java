@@ -11,6 +11,16 @@ public class Host {
 	private final String name;
 	private final String url;
 	
+	public static final Host NO_HOST = new Host();
+	
+	private Host() {
+		this.host = "None";
+		this.ipAddress = "0.0.0.0";
+		this.port = 0;
+		this.name = String.format("%s(%s):%d", this.host, this.ipAddress, this.port);
+	    this.url  = String.format("%s:%d", this.host, this.port);
+	}
+	
 	public Host(String url2, int defaultPort) {
 		
 		String tempHost = parseHostFromUrl(url2);

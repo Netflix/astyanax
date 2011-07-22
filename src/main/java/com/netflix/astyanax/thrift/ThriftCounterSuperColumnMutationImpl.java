@@ -83,7 +83,7 @@ public class ThriftCounterSuperColumnMutationImpl<C> implements ColumnListMutati
 	}
 
 	@Override
-	public ColumnListMutation<C> putColumn(C columnName, Double value, Integer ttl) {
+	public ColumnListMutation<C> putColumn(C columnName, double value, Integer ttl) {
 		return putColumn(columnName, value, DoubleSerializer.get(), ttl);
 	}
 
@@ -92,6 +92,11 @@ public class ThriftCounterSuperColumnMutationImpl<C> implements ColumnListMutati
 		return putColumn(columnName, value, UUIDSerializer.get(), ttl);
 	}
 
+	@Override
+	public ColumnListMutation<C> putEmptyColumn(C columnName, Integer ttl) {
+		return putColumn(columnName, null, UUIDSerializer.get(), ttl);
+	}
+	
 	@Override
 	public ColumnListMutation<C> delete() {
 		// Delete the entire super column
@@ -144,5 +149,4 @@ public class ThriftCounterSuperColumnMutationImpl<C> implements ColumnListMutati
 		deletionPredicate.addToColumn_names(path.getSerializer().toByteBuffer(columnName));
 		return this;
 	}
-
 }

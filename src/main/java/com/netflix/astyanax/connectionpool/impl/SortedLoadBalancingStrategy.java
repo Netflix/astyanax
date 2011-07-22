@@ -35,7 +35,8 @@ public class SortedLoadBalancingStrategy implements LoadBalancingStrategy {
 	@Override
 	public <CL> HostConnectionPool<CL> createHostPool(Host host,
 			ConnectionFactory<CL> factory) {
-		return new SimpleHostConnectionPool<CL>(host, factory, config.getMaxConnsPerHost());
+		return new SimpleHostConnectionPool<CL>(host, factory, 
+				config.getConnectionPoolMonitor(), config.getMaxConnsPerHost());
 	}
 
 	@Override

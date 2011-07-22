@@ -59,9 +59,11 @@ public interface ColumnListMutation<C> {
 
 	ColumnListMutation<C> putColumn(C columnName, Date value, Integer ttl);
 
-	ColumnListMutation<C> putColumn(C columnName, Double value, Integer ttl);
+	ColumnListMutation<C> putColumn(C columnName, double value, Integer ttl);
 
 	ColumnListMutation<C> putColumn(C columnName, UUID value, Integer ttl);
+	
+	ColumnListMutation<C> putEmptyColumn(C columnName, Integer ttl);
 	
 	ColumnListMutation<C> incrementCounterColumn(C columnName, long amount);
 	

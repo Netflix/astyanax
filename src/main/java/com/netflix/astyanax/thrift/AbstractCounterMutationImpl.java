@@ -1,6 +1,9 @@
 package com.netflix.astyanax.thrift;
 
 import com.netflix.astyanax.CounterMutation;
+import com.netflix.astyanax.connectionpool.OperationResult;
+import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.connectionpool.impl.ExecutionHelper;
 import com.netflix.astyanax.model.ConsistencyLevel;
 
 public abstract class AbstractCounterMutationImpl<K,C> implements CounterMutation<K,C> {
@@ -25,4 +28,8 @@ public abstract class AbstractCounterMutationImpl<K,C> implements CounterMutatio
 		return this;
 	}
 
+    @Override
+    public OperationResult<Void> execute() throws ConnectionException {
+        return ExecutionHelper.blockingExecute(this);
+    }
 }

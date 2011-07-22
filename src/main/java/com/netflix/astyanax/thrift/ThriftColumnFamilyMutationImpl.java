@@ -36,6 +36,7 @@ public class ThriftColumnFamilyMutationImpl<C> implements ColumnListMutation<C> 
 	private final Serializer<C> columnSerializer;
 	private final List<Mutation> mutationList;
 	private final Clock clock;
+	private final static ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
 	private SlicePredicate deletionPredicate;
 	
 	public ThriftColumnFamilyMutationImpl(Clock clock,
@@ -107,7 +108,7 @@ public class ThriftColumnFamilyMutationImpl<C> implements ColumnListMutation<C> 
 	}
 
 	@Override
-	public ColumnListMutation<C> putColumn(C columnName, Double value, Integer ttl) {
+	public ColumnListMutation<C> putColumn(C columnName, double value, Integer ttl) {
 		return putColumn(columnName, value, DoubleSerializer.get(), ttl);
 	}
 
@@ -116,6 +117,23 @@ public class ThriftColumnFamilyMutationImpl<C> implements ColumnListMutation<C> 
 		return putColumn(columnName, value, UUIDSerializer.get(), ttl);
 	}
 
+	@Override
+	public ColumnListMutation<C> putEmptyColumn(C columnName, Integer ttl) {
+		Column column = new Column();
+		column.setName(columnSerializer.toByteBuffer(columnName));
+		column.setValue(EMPTY_BUFFER);
+		column.setTimestamp(clock.getCurrentTime());
+		if (ttl != null) {
+			column.setTtl(ttl);
+		}
+		
+		// 2.  Create a mutation and append to the mutation list.
+		Mutation mutation = new Mutation();
+	    mutation.setColumn_or_supercolumn(new ColumnOrSuperColumn().setColumn(column));
+		mutationList.add(mutation);
+		return this;
+	}
+	
 	@Override
 	public ColumnListMutation<C> delete() {
 		// Delete the entire row

@@ -1,10 +1,18 @@
 package com.netflix.astyanax.thrift;
 
+import java.nio.ByteBuffer;
+import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnList;
+import com.netflix.astyanax.serializers.BooleanSerializer;
+import com.netflix.astyanax.serializers.ByteBufferSerializer;
+import com.netflix.astyanax.serializers.BytesArraySerializer;
+import com.netflix.astyanax.serializers.DateSerializer;
+import com.netflix.astyanax.serializers.UUIDSerializer;
 
 public class ThriftSuperColumnImpl<C> implements Column<C> {
 	private final List<org.apache.cassandra.thrift.Column> columns;
@@ -50,6 +58,36 @@ public class ThriftSuperColumnImpl<C> implements Column<C> {
 
 	@Override
 	public long getLongValue()  {
+		throw new UnsupportedOperationException(
+				"SuperColumn \'" + this.name+ "\' has no value");
+	}
+	
+	@Override
+	public byte[] getByteArrayValue() {
+		throw new UnsupportedOperationException(
+				"SuperColumn \'" + this.name+ "\' has no value");
+	}
+
+	@Override
+	public boolean getBooleanValue() {
+		throw new UnsupportedOperationException(
+				"SuperColumn \'" + this.name+ "\' has no value");
+	}
+
+	@Override
+	public ByteBuffer getByteBufferValue() {
+		throw new UnsupportedOperationException(
+				"SuperColumn \'" + this.name+ "\' has no value");
+	}
+
+	@Override
+	public Date getDateValue() {
+		throw new UnsupportedOperationException(
+				"SuperColumn \'" + this.name+ "\' has no value");
+	}
+
+	@Override
+	public UUID getUUIDValue() {
 		throw new UnsupportedOperationException(
 				"SuperColumn \'" + this.name+ "\' has no value");
 	}

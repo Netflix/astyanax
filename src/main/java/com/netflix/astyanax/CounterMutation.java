@@ -4,9 +4,7 @@ import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ConsistencyLevel;
 
-public interface CounterMutation<K, C> {
-	OperationResult<Void> execute() throws ConnectionException;
-	
+public interface CounterMutation<K, C> extends Execution<Void> {
 	/**
 	 * Set the consistency level for this query
 	 * @param consistencyLevel

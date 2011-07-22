@@ -1,33 +1,19 @@
 package com.netflix.astyanax.connectionpool.impl;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Map.Entry;
-
-import org.apache.commons.lang.time.StopWatch;
-import org.cliffc.high_scale_lib.NonBlockingHashMap;
-
-import com.netflix.astyanax.connectionpool.BadHostDetector;
-import com.netflix.astyanax.connectionpool.Connection;
-import com.netflix.astyanax.connectionpool.ConnectionFactory;
-import com.netflix.astyanax.connectionpool.ConnectionPool;
-import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
-import com.netflix.astyanax.connectionpool.ConnectionPoolMonitor;
-import com.netflix.astyanax.connectionpool.ExhaustedStrategy;
-import com.netflix.astyanax.connectionpool.FailoverStrategy;
-import com.netflix.astyanax.connectionpool.Host;
-import com.netflix.astyanax.connectionpool.HostConnectionPool;
-import com.netflix.astyanax.connectionpool.HostRetryService;
-import com.netflix.astyanax.connectionpool.LoadBalancingStrategy;
-import com.netflix.astyanax.connectionpool.Operation;
-import com.netflix.astyanax.connectionpool.OperationResult;
+import com.netflix.astyanax.connectionpool.*;
 import com.netflix.astyanax.connectionpool.HostRetryService.ReconnectCallback;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.connectionpool.exceptions.TimeoutException;
 import com.netflix.astyanax.connectionpool.exceptions.TransportException;
+import org.apache.commons.lang.time.StopWatch;
+import org.cliffc.high_scale_lib.NonBlockingHashMap;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 /**
  * Connection pool that keeps a pool of connections per host and then uses 
@@ -91,7 +77,6 @@ public class HostPartitionConnectionPoolImpl<CL> implements ConnectionPool<CL> {
 			}
 			catch (TimeoutException e) {
 				if (++retryCount < this.exhaustedStrategy.getMaxRetries()) {
-					this.monitor.incBorrowRetry();
 					// TODO
 				}
 				else {
@@ -172,7 +157,8 @@ public class HostPartitionConnectionPoolImpl<CL> implements ConnectionPool<CL> {
 			List<Host> hosts = entry.getValue();
 			if (hosts != null) {
 				Host host = entry.getValue().iterator().next();
-				HostConnectionPool<CL> pool = new SimpleHostConnectionPool<CL>(host, factory, config.getMaxConnsPerHost());
+				HostConnectionPool<CL> pool = new SimpleHostConnectionPool<CL>(
+						host, factory, config.getConnectionPoolMonitor(), config.getMaxConnsPerHost());
 				if (null == foundHosts.putIfAbsent(host, pool)) {
 					this.monitor.onHostAdded(host, new ImmutableHostConnectionPool<CL>(pool));
 					activeHosts.put(host, pool);
@@ -195,46 +181,89 @@ public class HostPartitionConnectionPoolImpl<CL> implements ConnectionPool<CL> {
 		}
 	}
 
-	@Override
-	public <R> OperationResult<R> executeWithFailover(
-			Operation<CL, R> op) throws ConnectionException, OperationException {
-		int retryCount = 0;
-		while (true) {
-			// First try to get a connection
-			Connection<CL> connection = null;
-			try {
-				connection = borrowConnection(op);
-			}
-			catch (TimeoutException e) {
-				throw e;
-			}
+    @Override
+    public <R> ExecuteWithFailover<CL, R> newExecuteWithFailover() throws ConnectionException {
+        return new ExecuteWithFailover<CL, R>() {
+            private int retryCount = 0;
+            private boolean isDone = false;
+            private Host host;
 
-			// Now try to execute
-			try {
-				return connection.execute(op);
-			}
-			catch (ConnectionException e) {
-				if (!e.isRetryable()) 
-					throw e;
-			}
-			finally {
-				returnConnection(connection);
-			}
-			
-			// Apply the retry strategy
-			if (++retryCount < this.failoverStrategy.getMaxRetries()) {
-				this.monitor.incFailover();
-				try {
-					if (this.failoverStrategy.getWaitTime() > 0) {
-						Thread.sleep(this.failoverStrategy.getWaitTime());
-					}
-				} catch (InterruptedException e) {
-					throw new TimeoutException("Interrupted sleeping between retries");
-				}
-			}
-			else {
-				throw new TimeoutException("Operation failed too many times");
-			}
-		}
-	}
+            @Override
+            public Host getHost() {
+                return host;
+            }
+
+            @Override
+            public OperationResult<R> tryOperation(Operation<CL, R> operation) throws ConnectionException {
+                while (!isDone) {
+                    // First try to get a connection
+                    Connection<CL> connection;
+                    try {
+                        connection = borrowConnection(operation);
+                        host = connection.getHostConnectionPool().getHost();
+                    }
+                    catch (TimeoutException e) {
+                        isDone = true;
+                        throw e;
+                    }
+
+                    // Now try to execute
+                    try {
+                        return connection.execute(operation);
+                    }
+                    catch (ConnectionException e) {
+                        informException(e);
+                    }
+                    finally {
+                        returnConnection(connection);
+                    }
+                }
+
+                throw new TimeoutException("Operation failed too many times");
+            }
+
+            @Override
+            public void informException(ConnectionException e) throws ConnectionException {
+                if ( e instanceof ConnectionException )
+                {
+                    // These are failures trying to open a new connection
+                    ConnectionException connectionException = (ConnectionException)e;
+                    if (!connectionException.isRetryable()){
+                        isDone = true;
+                        throw e;
+                    }
+                }
+
+                // Apply the retry strategy
+                if (++retryCount < failoverStrategy.getMaxRetries()) {
+                    monitor.incFailover();
+                    try {
+                        if (failoverStrategy.getWaitTime() > 0) {
+                            Thread.sleep(failoverStrategy.getWaitTime());
+                        }
+                    } catch (InterruptedException dummy) {
+                        Thread.currentThread().interrupt();
+                        isDone = true;
+                        throw new TimeoutException("Interrupted sleeping between retries");
+                    }
+                }
+                else {
+                    isDone = true;
+                    throw new TimeoutException("Operation failed too many times");
+                }
+            }
+        };
+    }
+
+    @Override
+	public <R> OperationResult<R> executeWithFailover(
+			Operation<CL, R> op) throws ConnectionException {
+        ExecuteWithFailover<CL, R> withFailover = newExecuteWithFailover();
+        try {
+            return withFailover.tryOperation(op);
+        }
+        catch (Exception e) {
+            throw new OperationException(e);
+        }
+    }
 }

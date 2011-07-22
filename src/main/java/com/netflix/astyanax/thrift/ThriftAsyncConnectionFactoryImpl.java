@@ -1,143 +1,107 @@
 package com.netflix.astyanax.thrift;
 
-import java.io.IOException;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicLong;
-
+import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
+import com.netflix.astyanax.connectionpool.HostConnectionPool;
+import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.connectionpool.exceptions.TransportException;
 import org.apache.cassandra.thrift.Cassandra;
-import org.apache.cassandra.thrift.Cassandra.AsyncClient;
-import org.apache.cassandra.thrift.Cassandra.AsyncClient.set_keyspace_call;
+import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.TBinaryProtocol;
 import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
 import org.apache.thrift.async.TAsyncClientManager;
 import org.apache.thrift.transport.TNonblockingSocket;
-import org.apache.thrift.transport.TTransport;
+import org.apache.thrift.transport.TTransportException;
 
-import com.netflix.astyanax.connectionpool.AsyncOperation;
-import com.netflix.astyanax.connectionpool.Connection;
-import com.netflix.astyanax.connectionpool.ConnectionFactory;
-import com.netflix.astyanax.connectionpool.FutureOperationResult;
-import com.netflix.astyanax.connectionpool.HostConnectionPool;
-import com.netflix.astyanax.connectionpool.Operation;
-import com.netflix.astyanax.connectionpool.OperationResult;
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.exceptions.TimeoutException;
-import com.netflix.astyanax.connectionpool.exceptions.TransportException;
-import com.netflix.astyanax.connectionpool.impl.OperationResultImpl;
+import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 
-public class ThriftAsyncConnectionFactoryImpl implements ConnectionFactory<Cassandra.AsyncClient> {
+public class ThriftAsyncConnectionFactoryImpl extends ThriftConnectionFactoryImpl<Cassandra.AsyncClient, ThriftAsyncConnectionFactoryImpl.ConnectionData> {
+    private static final String NAME_FORMAT = "ThriftConnection<%s-%d>";
 
-	private static final String NAME_FORMAT = "ThriftAsyncConnection<%s-%d>";
-	private final AtomicLong idCounter = new AtomicLong(0);
-	private final String keyspaceName;
-	private TAsyncClientManager acm;
-	
-	public ThriftAsyncConnectionFactoryImpl(String keyspaceName) throws IOException {
-		this.keyspaceName = keyspaceName;
-		this.acm = new TAsyncClientManager();
-	}
-	
-	@Override
-	public Connection<Cassandra.AsyncClient> createConnection(final HostConnectionPool<Cassandra.AsyncClient> pool)
-			throws ConnectionException {
-		return new Connection<Cassandra.AsyncClient>() {
-			
-			private final long id = idCounter.incrementAndGet();
-			private TNonblockingSocket clientSock;
-			private Cassandra.AsyncClient cassandraClient;
-			private ConnectionException lastException = null;
+    static class ConnectionData
+    {
+        final TAsyncClientManager acm;
+        final TNonblockingSocket clientSock;
 
-			@Override
-			public <R> OperationResult<R> execute(Operation<AsyncClient, R> op)
-					throws ConnectionException {
-				try {
-					lastException = null;
-					long latency = System.currentTimeMillis();
-					R result = op.execute(this.cassandraClient);
-					latency = System.currentTimeMillis() - latency;
-					return new OperationResultImpl<R>(pool.getHost(), result, latency);
-				}
-				catch (TransportException e) {
-					close();
-					lastException = e;
-					throw lastException;
-				}
-				catch (TimeoutException e) {
-					close();
-					lastException = e;
-					throw lastException;
-				}
-				catch (ConnectionException e) {
-					lastException = e;
-					throw lastException;
-				}				
-			}
+        ConnectionData(TAsyncClientManager acm, TNonblockingSocket clientSock) {
+            this.acm = acm;
+            this.clientSock = clientSock;
+        }
+    }
 
-			@Override
-			public void close() {
-				clientSock.close();
-			}
+    public ThriftAsyncConnectionFactoryImpl(ConnectionPoolConfiguration config) {
+        super(config, NAME_FORMAT);
+    }
 
-			@Override
-			public boolean isOpen() {
-				return clientSock.isOpen();
-			}
+    @Override
+    protected void setKeyspace(Cassandra.AsyncClient client, String keyspaceName) throws TException, InvalidRequestException {
+        final AtomicReference<Exception>    exceptionRef = new AtomicReference<Exception>();
+        final CountDownLatch latch = new CountDownLatch(1);
+        client.set_keyspace(keyspaceName, new AsyncMethodCallback<Cassandra.AsyncClient.set_keyspace_call>() {
+            @Override
+            public void onComplete(Cassandra.AsyncClient.set_keyspace_call response) {
+                latch.countDown();
+            }
 
-			@Override
-			public HostConnectionPool<AsyncClient> getHostConnectionPool() {
-				return pool;
-			}
+            @Override
+            public void onError(Exception exception) {
+                exceptionRef.set(exception);
+                latch.countDown();
+            }
+        });
+        try {
+            latch.await();
 
-			@Override
-			public ConnectionException getLastException() {
-				return this.lastException;
-			}
+            Exception exception = exceptionRef.get();
+            if ( exception != null ) {
+                throw new TException(exception);
+            }
+        }
+        catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new TException("thread interrupted");
+        }
+    }
 
-			@Override
-			public String toString() {
-			    return String.format(NAME_FORMAT, pool.getHost().getHostName(), id);
-			}
+    @Override
+    protected Cassandra.AsyncClient createClient(HostConnectionPool<Cassandra.AsyncClient> pool, AtomicReference<ThriftAsyncConnectionFactoryImpl.ConnectionData> connectionDataRef) throws ConnectionException {
 
-			@Override
-			public void open() throws ConnectionException {
-				try {
-					clientSock = new TNonblockingSocket(
-						      pool.getHost().getIpAddress(), pool.getHost().getPort());
-					cassandraClient = 
-						new Cassandra.AsyncClient(
-							new TBinaryProtocol.Factory(), acm, clientSock);
-					// cassandraClient.setTimeout(timeout);
-					
-					final CountDownLatch latch = new CountDownLatch(1);
-					cassandraClient.set_keyspace(keyspaceName, new AsyncMethodCallback<set_keyspace_call>() {
-						@Override
-						public void onComplete(set_keyspace_call response) {
-							latch.countDown();
-						}
+        try {
+            TAsyncClientManager     acm = new TAsyncClientManager();
 
-						@Override
-						public void onError(Exception exception) {
-							// TODO Auto-generated method stub
-							
-						}
-					});
-				} catch (IOException e) {
-					throw new TransportException(e);
-				} catch (TException e) {
-					throw new TransportException(e);
-				}
-			}
+            TNonblockingSocket      clientSock = new TNonblockingSocket(
+                      pool.getHost().getIpAddress(), pool.getHost().getPort());
+            connectionDataRef.set(new ConnectionData(acm, clientSock));
+            
+            return new Cassandra.AsyncClient(
+                    new TBinaryProtocol.Factory(), acm, clientSock);
+        }
+        catch (IOException e) {
+            throw new TransportException("Failed to open transport", e);	// TODO
+        }
+    }
 
-			@Override
-			public <R> FutureOperationResult<R> execute(
-					AsyncOperation<AsyncClient, R> op)
-					throws ConnectionException {
-				// TODO Auto-generated method stub
-				return null;
-			}
-			
-		};
-	}
+    @Override
+    protected void closeClient(Cassandra.AsyncClient client, ThriftAsyncConnectionFactoryImpl.ConnectionData connectionData) {
+        try {
+            connectionData.clientSock.flush();
+        } catch (TTransportException e) {
+            // ignore
+        }
+        finally {
+            try {
+                connectionData.clientSock.close();
+            }
+            finally {
+                connectionData.acm.stop();
+            }
+        }
+    }
 
+    @Override
+    protected boolean clientIsOpen(Cassandra.AsyncClient client, ThriftAsyncConnectionFactoryImpl.ConnectionData connectionData) {
+        return connectionData.clientSock != null && connectionData.clientSock.isOpen();
+    }
 }

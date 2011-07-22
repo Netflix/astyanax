@@ -53,21 +53,14 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
 	
 	@Override
 	public void returnConnection(Connection<CL> connection) {
-		connection.getHostConnectionPool().returnConnection(connection);
 		this.monitor.incConnectionReturned(connection.getHostConnectionPool().getHost());
-		
-		if (!connection.isOpen()) {
-			if (null != connection.getLastException() &&
-				badHostDetector.checkFailure(connection.getHostConnectionPool().getHost(), 
-						connection.getLastException())) {
-				this.markHostAsDown(connection.getHostConnectionPool(), connection.getLastException());
-			}
-		}
+		connection.getHostConnectionPool().returnConnection(connection);
 	}
 	
 	@Override
 	public final void addHost(Host host) {
-		HostConnectionPool<CL> pool = new SimpleHostConnectionPool<CL>(host, factory, config.getMaxConnsPerHost());
+		HostConnectionPool<CL> pool = new SimpleHostConnectionPool<CL>(
+				host, factory, config.getConnectionPoolMonitor(), config.getMaxConnsPerHost());
 		if (null == this.foundHosts.putIfAbsent(host, pool)) {
 			this.monitor.onHostAdded(host, new ImmutableHostConnectionPool<CL>(pool));
 			this.activeHosts.putIfAbsent(host, pool);
@@ -84,7 +77,7 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
 		if (pool != null) {
 			this.monitor.onHostRemoved(host);
 			pool.shutdown();
-			onHostDown(pool);
+			onHostDown(pool);	// Maybe add a different callback for onHostRemoved
 		}
 		this.activeHosts.remove(host);
 	}
@@ -108,7 +101,8 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
 	}
 	
 	private void reactivateHost(Host host) {
-		HostConnectionPool<CL> pool = new SimpleHostConnectionPool<CL>(host, factory, config.getMaxConnsPerHost());
+		HostConnectionPool<CL> pool = new SimpleHostConnectionPool<CL>(
+				host, factory, config.getConnectionPoolMonitor(), config.getMaxConnsPerHost());
 		this.monitor.onHostReactivated(host, new ImmutableHostConnectionPool<CL>(pool));
 		
 		foundHosts.put(host, pool);
@@ -131,7 +125,8 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
 			List<Host> hosts = entry.getValue();
 			if (hosts != null) {
 				for (Host host : hosts) {
-					HostConnectionPool<CL> pool = new SimpleHostConnectionPool<CL>(host, factory, config.getMaxConnsPerHost());
+					HostConnectionPool<CL> pool = new SimpleHostConnectionPool<CL>(
+							host, factory, config.getConnectionPoolMonitor(), config.getMaxConnsPerHost());
 					if (null == foundHosts.putIfAbsent(host, pool)) {
 						this.monitor.onHostAdded(host, new ImmutableHostConnectionPool<CL>(pool));
 						activeHosts.put(host, pool);

@@ -5,6 +5,7 @@
 package com.netflix.astyanax;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -58,6 +59,8 @@ public interface Serializer<T> {
 
   public List<ByteBuffer> toBytesList(List<T> list);
 
+  public List<ByteBuffer> toBytesList(Collection<T> list);
+  
   public List<T> fromBytesList(List<ByteBuffer> list);
 
   public ComparatorType getComparatorType();

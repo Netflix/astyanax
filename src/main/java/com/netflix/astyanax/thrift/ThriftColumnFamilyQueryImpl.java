@@ -4,42 +4,41 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Future;
 
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.Cassandra.Client;
 import org.apache.cassandra.thrift.ColumnParent;
+import org.apache.cassandra.thrift.Compression;
 import org.apache.cassandra.thrift.CounterSuperColumn;
-import org.apache.cassandra.thrift.IndexOperator;
+import org.apache.cassandra.thrift.CqlResult;
 import org.apache.cassandra.thrift.KeyRange;
+import org.apache.cassandra.thrift.SliceRange;
 import org.apache.cassandra.thrift.SuperColumn;
 
 import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
+import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.model.ColumnSlice;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.model.Rows;
+import com.netflix.astyanax.query.ColumnCountQuery;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.query.ColumnQuery;
-import com.netflix.astyanax.query.IndexColumnExpression;
-import com.netflix.astyanax.query.IndexOperationExpression;
+import com.netflix.astyanax.query.CqlQuery;
 import com.netflix.astyanax.query.IndexQuery;
-import com.netflix.astyanax.query.IndexValueExpression;
 import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.query.RowSliceQuery;
-import com.netflix.astyanax.serializers.BooleanSerializer;
-import com.netflix.astyanax.serializers.IntegerSerializer;
-import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.shallows.EmptyRowsImpl;
 
 /**
- * Implemention of all column family queries using the thrift API.
+ * Implementation of all column family queries using the thrift API.
  * @author elandau
  *
  * @param <K>
@@ -50,6 +49,8 @@ public class ThriftColumnFamilyQueryImpl<K,C> implements ColumnFamilyQuery<K,C> 
 	private String keyspaceName;
 	private ConsistencyLevel consistencyLevel;
 	private ColumnFamily<K,C> columnFamily;
+	private static final ByteBuffer EMPTY_BYTES = ByteBuffer.wrap(new byte[0]);
+	private static final SliceRange EVERYTHING = new SliceRange(EMPTY_BYTES, EMPTY_BYTES, false, Integer.MAX_VALUE);
 	
 	public ThriftColumnFamilyQueryImpl(ConnectionPool<Cassandra.Client> cp, String keyspaceName, ColumnFamily<K, C> columnFamily, ConsistencyLevel consistencyLevel) {
 		this.keyspaceName = keyspaceName;
@@ -61,9 +62,7 @@ public class ThriftColumnFamilyQueryImpl<K,C> implements ColumnFamilyQuery<K,C> 
 	// Single ROW query
 	@Override
 	public RowQuery<K, C> getKey(final K rowKey) {
-		return new RowQuery<K, C>() {
-			private ColumnSlice<C> slice;
-			
+		return new AbstractRowQueryImpl<K, C>(columnFamily.getColumnSerializer()) {
 			@Override
 			public ColumnQuery<C> getColumn(final C column) {
 				return new ColumnQuery<C>() {
@@ -107,7 +106,12 @@ public class ThriftColumnFamilyQueryImpl<K,C> implements ColumnFamilyQuery<K,C> 
 							}
 						});
 					}
-				};
+
+					@Override
+					public Future<OperationResult<Column<C>>> executeAsync() throws ConnectionException {
+		                throw new UnsupportedOperationException("Coming Soon");
+					}
+                };
 			}
 
 			@Override
@@ -119,7 +123,7 @@ public class ThriftColumnFamilyQueryImpl<K,C> implements ColumnFamilyQuery<K,C> 
 							List<ColumnOrSuperColumn> columnList =
 								client.get_slice(columnFamily.getKeySerializer().toByteBuffer(rowKey), 
 									new ColumnParent().setColumn_family(columnFamily.getName()),
-									ThriftConverter.getPredicate(slice, columnFamily.getColumnSerializer()),
+									predicate,
 									ThriftConverter.ToThriftConsistencyLevel(consistencyLevel));
 							
 							return new ThriftColumnOrSuperColumnListImpl<C>(columnList, columnFamily.getColumnSerializer());
@@ -132,37 +136,46 @@ public class ThriftColumnFamilyQueryImpl<K,C> implements ColumnFamilyQuery<K,C> 
 			}
 
 			@Override
-			public RowQuery<K, C> withColumnSlice(C... columns) {
-				slice = new ColumnSlice<C>(Arrays.asList(columns));
-				return this;
-			}
+			public ColumnCountQuery getCount() {
+				return new ColumnCountQuery() {
 
-			@Override
-			public RowQuery<K, C> withColumnRange(C startColumn, C endColumn, boolean reversed, int count) {
-				slice = new ColumnSlice<C>(startColumn, endColumn).setReversed(reversed).setLimit(count);
-				return this;
+					@Override
+					public OperationResult<Integer> execute() throws ConnectionException {
+						return connectionPool.executeWithFailover(new AbstractKeyspaceOperationImpl<Integer>(keyspaceName) {
+							@Override
+							public Integer execute(Client client) throws ConnectionException, OperationException {
+								try {
+									return client.get_count(columnFamily.getKeySerializer().toByteBuffer(rowKey), 
+											new ColumnParent().setColumn_family(columnFamily.getName()),
+											predicate,
+											ThriftConverter.ToThriftConsistencyLevel(consistencyLevel));
+								} 
+								catch (Exception e) {
+									throw ThriftConverter.ToConnectionPoolException(e);
+								}
+							}
+						});
+					}
+
+					@Override
+					public Future<OperationResult<Integer>> executeAsync() throws ConnectionException {
+		                throw new UnsupportedOperationException("Coming Soon");
+					}
+					
+				};
 			}
+			
+            @Override
+            public Future<OperationResult<ColumnList<C>>> executeAsync() throws ConnectionException {
+                throw new UnsupportedOperationException("Coming Soon");
+            }
 		};
 	}
 
 	@Override
 	public RowSliceQuery<K, C> getKeyRange(final K startKey, final K endKey,
 			final String startToken, final String endToken, final int count) {
-		return new RowSliceQuery<K,C>() {
-			private ColumnSlice<C> slice;
-
-			@Override
-			public RowSliceQuery<K, C> withColumnSlice(C... columns) {
-				slice = new ColumnSlice<C>(Arrays.asList(columns));
-				return this;
-			}
-
-			@Override
-			public RowSliceQuery<K, C> withColumnRange(C startColumn, C endColumn, boolean reversed, int count) {
-				slice = new ColumnSlice<C>(startColumn, endColumn).setReversed(reversed).setLimit(count);
-				return this;
-			}
-
+		return new AbstractRowSliceQueryImpl<K,C>(columnFamily.getColumnSerializer()) {
 			@Override
 			public OperationResult<Rows<K, C>> execute() throws ConnectionException {
 				return connectionPool.executeWithFailover(new AbstractKeyspaceOperationImpl<Rows<K, C>>(keyspaceName) {
@@ -183,7 +196,7 @@ public class ThriftColumnFamilyQueryImpl<K,C> implements ColumnFamilyQuery<K,C> 
 						try {
 							keySlices = client.get_range_slices(
 									new ColumnParent().setColumn_family(columnFamily.getName()),
-									ThriftConverter.getPredicate(slice, columnFamily.getColumnSerializer()),
+									predicate,
 									range, 
 									ThriftConverter.ToThriftConsistencyLevel(consistencyLevel));
 							
@@ -200,26 +213,17 @@ public class ThriftColumnFamilyQueryImpl<K,C> implements ColumnFamilyQuery<K,C> 
 					}
 				});
 			}
+
+            @Override
+            public Future<OperationResult<Rows<K, C>>> executeAsync() throws ConnectionException {
+                throw new UnsupportedOperationException("Coming Soon");
+            }
 		};
 	}
 
 	@Override
 	public RowSliceQuery<K, C> getKeySlice(final K... keys) {
-		return new RowSliceQuery<K,C>() {
-			private ColumnSlice<C> slice;
-
-			@Override
-			public RowSliceQuery<K, C> withColumnSlice(C... columns) {
-				slice = new ColumnSlice<C>(Arrays.asList(columns));
-				return this;
-			}
-
-			@Override
-			public RowSliceQuery<K, C> withColumnRange(C startColumn, C endColumn, boolean reversed, int count) {
-				slice = new ColumnSlice<C>(startColumn, endColumn).setReversed(reversed).setLimit(count);
-				return this;
-			}
-
+		return new AbstractRowSliceQueryImpl<K,C>(columnFamily.getColumnSerializer()) {
 			@Override
 			public OperationResult<Rows<K, C>> execute() throws ConnectionException {
 				return connectionPool.executeWithFailover(new AbstractKeyspaceOperationImpl<Rows<K, C>>(keyspaceName) {
@@ -231,7 +235,7 @@ public class ThriftColumnFamilyQueryImpl<K,C> implements ColumnFamilyQuery<K,C> 
 							cfmap = client.multiget_slice(
 									columnFamily.getKeySerializer().toBytesList(Arrays.asList(keys)),
 									new ColumnParent().setColumn_family(columnFamily.getName()),
-									ThriftConverter.getPredicate(slice, columnFamily.getColumnSerializer()),
+									predicate,
 									ThriftConverter.ToThriftConsistencyLevel(consistencyLevel));
 							if (cfmap == null) {
 								return new EmptyRowsImpl<K,C>();
@@ -246,6 +250,11 @@ public class ThriftColumnFamilyQueryImpl<K,C> implements ColumnFamilyQuery<K,C> 
 					}
 				});
 			}
+
+            @Override
+            public Future<OperationResult<Rows<K, C>>> executeAsync() throws ConnectionException {
+                throw new UnsupportedOperationException("Coming Soon");
+            }
 		};
 	}
 
@@ -256,123 +265,9 @@ public class ThriftColumnFamilyQueryImpl<K,C> implements ColumnFamilyQuery<K,C> 
 		return this;
 	}
 
-	static interface IndexExpression<K,C> extends 
-		IndexColumnExpression<K,C>, 
-		IndexOperationExpression<K,C>, 
-		IndexValueExpression<K,C>
-	{
-		
-	}
-	
 	@Override	
 	public IndexQuery<K, C> searchWithIndex() {
-		return new IndexQuery<K,C>() {
-			
-			private final org.apache.cassandra.thrift.IndexClause indexClause =
-				new org.apache.cassandra.thrift.IndexClause();
-
-			private ColumnSlice<C> slice;
-			
-			@Override
-			public IndexQuery<K, C> withColumnSlice(C... columns) {
-				slice = new ColumnSlice<C>(Arrays.asList(columns));
-				return this;
-			}
-
-			@Override
-			public IndexQuery<K, C> withColumnRange(C startColumn, C endColumn, boolean reversed, int count) {
-				slice = new ColumnSlice<C>(startColumn, endColumn).setReversed(reversed).setLimit(count);
-				return this;
-			}
-			
-			@Override
-			public IndexQuery<K, C> setLimit(int count) {
-				indexClause.setCount(count);
-				return this;
-			}
-
-			@Override
-			public IndexQuery<K, C> setStartKey(K key) {
-				indexClause.setStart_key(columnFamily.getKeySerializer().toByteBuffer(key));
-				return this;
-			}
-		
-			private IndexQuery<K,C> getThisQuery() {
-				return this;
-			}
-			
-			@Override
-			public IndexColumnExpression<K, C> addExpression() {
-				return new IndexExpression<K,C>() {
-					private final org.apache.cassandra.thrift.IndexExpression
-						internalExpression = new org.apache.cassandra.thrift.IndexExpression();
-
-					@Override
-					public IndexOperationExpression<K, C> whereColumn(C columnName) {
-						internalExpression.setColumn_name(columnFamily.getColumnSerializer().toBytes(columnName));
-						return this;
-					}
-
-					@Override
-					public IndexValueExpression<K, C> equals() {
-						internalExpression.setOp(IndexOperator.EQ);
-						return this;
-					}
-
-					@Override
-					public IndexValueExpression<K, C> greaterThan() {
-						internalExpression.setOp(IndexOperator.GT);
-						return this;
-					}
-
-					@Override
-					public IndexValueExpression<K, C> lessThan() {
-						internalExpression.setOp(IndexOperator.LT);
-						return this;
-					}
-
-					@Override
-					public IndexValueExpression<K, C> greaterThanEquals() {
-						internalExpression.setOp(IndexOperator.GTE);
-						return this;
-					}
-
-					@Override
-					public IndexValueExpression<K, C> lessThanEquals() {
-						internalExpression.setOp(IndexOperator.LTE);
-						return this;
-					}
-
-					@Override
-					public IndexQuery<K, C> value(String value) {
-						internalExpression.setValue(StringSerializer.get().toBytes(value));
-						indexClause.addToExpressions(internalExpression);
-						return getThisQuery();
-					}
-
-					@Override
-					public IndexQuery<K, C> value(long value) {
-						internalExpression.setValue(LongSerializer.get().toBytes(value));
-						indexClause.addToExpressions(internalExpression);
-						return getThisQuery();
-					}
-
-					@Override
-					public IndexQuery<K, C> value(int value) {
-						internalExpression.setValue(IntegerSerializer.get().toBytes(value));
-						indexClause.addToExpressions(internalExpression);
-						return getThisQuery();
-					}
-
-					@Override
-					public IndexQuery<K, C> value(boolean value) {
-						internalExpression.setValue(BooleanSerializer.get().toBytes(value));
-						indexClause.addToExpressions(internalExpression);
-						return getThisQuery();
-					}
-				};
-			}
-
+		return new AbstractIndexQueryImpl<K,C>(columnFamily) {
 			@Override
 			public OperationResult<Rows<K, C>> execute() throws ConnectionException {
 				return connectionPool.executeWithFailover(new AbstractKeyspaceOperationImpl<Rows<K, C>>(keyspaceName) {
@@ -385,7 +280,7 @@ public class ThriftColumnFamilyQueryImpl<K,C> implements ColumnFamilyQuery<K,C> 
 							cfmap = client.get_indexed_slices(
 									new ColumnParent().setColumn_family(columnFamily.getName()),
 									indexClause,
-									ThriftConverter.getPredicate(slice, columnFamily.getColumnSerializer()),
+									predicate,
 									ThriftConverter.ToThriftConsistencyLevel(consistencyLevel));
 							
 							if (cfmap == null) {
@@ -400,6 +295,51 @@ public class ThriftColumnFamilyQueryImpl<K,C> implements ColumnFamilyQuery<K,C> 
 						}
 					}
 				});
+			}
+
+            @Override
+            public Future<OperationResult<Rows<K, C>>> executeAsync() throws ConnectionException {
+                throw new UnsupportedOperationException("Coming Soon");
+            }
+		};
+	}
+
+	@Override
+	public CqlQuery<K, C> withCql(final String cql) {
+		return new CqlQuery<K,C>() {
+			private boolean useCompression = false;
+			 
+			@Override
+			public OperationResult<Rows<K, C>> execute() throws ConnectionException {
+				return connectionPool.executeWithFailover(new AbstractKeyspaceOperationImpl<Rows<K, C>>(keyspaceName) {
+					@Override
+					public Rows<K, C> execute(Client client) throws ConnectionException, OperationException {
+						try {
+							CqlResult result = client.execute_cql_query(StringSerializer.get().toByteBuffer(cql), 
+									useCompression ? Compression.GZIP : Compression.NONE);
+							switch (result.getType()) {
+							case INT:
+								// TODO:
+								break;
+							case VOID:
+								break;
+							}
+							return new ThriftCqlRowsImpl<K,C>(result.getRows(), columnFamily.getKeySerializer(), columnFamily.getColumnSerializer());
+						}
+						catch (Exception e) {
+							throw ThriftConverter.ToConnectionPoolException(e);
+						}
+					}
+				}); 
+			}
+            @Override
+            public Future<OperationResult<Rows<K, C>>> executeAsync() throws ConnectionException {
+                throw new UnsupportedOperationException("Coming Soon");
+            }
+			@Override
+			public CqlQuery<K, C> useCompression() {
+				useCompression = true;
+				return this;
 			}
 		};
 	}

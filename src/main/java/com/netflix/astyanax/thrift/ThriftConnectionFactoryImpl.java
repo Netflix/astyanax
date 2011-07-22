@@ -1,67 +1,64 @@
 package com.netflix.astyanax.thrift;
 
-import java.net.SocketTimeoutException;
-import java.util.concurrent.atomic.AtomicLong;
-
-import org.apache.cassandra.thrift.Cassandra;
-import org.apache.cassandra.thrift.InvalidRequestException;
-import org.apache.cassandra.thrift.Cassandra.Client;
-import org.apache.thrift.TException;
-import org.apache.thrift.protocol.TBinaryProtocol;
-import org.apache.thrift.transport.TFramedTransport;
-import org.apache.thrift.transport.TSocket;
-import org.apache.thrift.transport.TTransport;
-import org.apache.thrift.transport.TTransportException;
-
-import com.netflix.astyanax.connectionpool.AsyncOperation;
-import com.netflix.astyanax.connectionpool.Connection;
-import com.netflix.astyanax.connectionpool.ConnectionFactory;
-import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
-import com.netflix.astyanax.connectionpool.FutureOperationResult;
-import com.netflix.astyanax.connectionpool.HostConnectionPool;
-import com.netflix.astyanax.connectionpool.Operation;
-import com.netflix.astyanax.connectionpool.OperationResult;
-import com.netflix.astyanax.connectionpool.exceptions.BadRequestException;
+import com.netflix.astyanax.connectionpool.*;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.TimeoutException;
 import com.netflix.astyanax.connectionpool.exceptions.TransportException;
 import com.netflix.astyanax.connectionpool.impl.OperationResultImpl;
+import org.apache.cassandra.thrift.InvalidRequestException;
+import org.apache.thrift.TException;
+import org.apache.thrift.transport.TTransportException;
+
+import java.net.SocketTimeoutException;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Factory to create Cassandra.Client connections.  All connections 
  * 
  * @author elandau
- *
+ * <C> Client class type
+ * <D> ConnectionData (context)
  */
-public class ThriftConnectionFactoryImpl implements ConnectionFactory<Cassandra.Client> {
+public abstract class ThriftConnectionFactoryImpl<CL, D> implements ConnectionFactory<CL> {
 	
-	private static final String NAME_FORMAT = "ThriftConnection<%s-%d>";
 	private final AtomicLong idCounter = new AtomicLong(0);
-	private final ConnectionPoolConfiguration config;
-	
-	public ThriftConnectionFactoryImpl(ConnectionPoolConfiguration config) {
+    private final String nameFormat;
+
+    protected final ConnectionPoolConfiguration config;
+
+    protected ThriftConnectionFactoryImpl(ConnectionPoolConfiguration config, String nameFormat) {
 		this.config = config;
-	}
-	
+        this.nameFormat = nameFormat;
+    }
+
+    abstract protected void setKeyspace(CL client, String keyspaceName) throws TException, InvalidRequestException;
+
+    abstract protected CL createClient(HostConnectionPool<CL> pool, AtomicReference<D> connectionDataHolder) throws ConnectionException;
+
+    abstract protected void closeClient(CL client, D connectionData);
+
+    abstract protected boolean clientIsOpen(CL client, D connectionData);
+
 	@Override
-	public Connection<Client> createConnection(
-			final HostConnectionPool<Client> pool) {
-		return new Connection<Cassandra.Client>() {
+	public Connection<CL> createConnection(
+			final HostConnectionPool<CL> pool) {
+		return new Connection<CL>() {
 			private final long id = idCounter.incrementAndGet();
-			private TTransport transport;
-			private Cassandra.Client cassandraClient;
+			private CL cassandraClient;
 			private ConnectionException lastException = null;
 			private String keyspaceName;
+            private D connectionData;
 			
 			@Override
 			public <R> OperationResult<R> execute(
-					Operation<Cassandra.Client, R> op) throws ConnectionException {
+					Operation<CL, R> op) throws ConnectionException {
 				try {
 					if (op.getKeyspace() != null && op.getKeyspace().compareTo(keyspaceName) != 0) {
 						this.keyspaceName = op.getKeyspace();
 						try {
-							cassandraClient.set_keyspace(keyspaceName);
-						} catch (Exception e) {
+                            setKeyspace(cassandraClient, keyspaceName);
+                        } catch (Exception e) {
 							throw ThriftConverter.ToConnectionPoolException(e);
 						}
 					}
@@ -86,46 +83,24 @@ public class ThriftConnectionFactoryImpl implements ConnectionFactory<Cassandra.
 					throw lastException;
 				}
 			}
-			
-			@Override
-			public <R> FutureOperationResult<R> execute(
-					AsyncOperation<Client, R> op)
-					throws ConnectionException {
-				// TODO Auto-generated method stub
-				return null;
-			}
 
-			@Override
-			public void open() throws ConnectionException, BadRequestException {
+            @Override
+			public void open() throws ConnectionException {
 				// 1.  Is it already open?
-				if (isOpen()) {
+				if (this.cassandraClient != null && isOpen()) {
 					throw new IllegalStateException("Open called on already open connection");
 				}
-				
-				// 2.  Attempt to connect the socket
-				TSocket socket = null;
-		        try {
-					socket = new TSocket(pool.getHost().getIpAddress(), 
-							pool.getHost().getPort(), config.getSocketTimeout());
 
-			        this.transport = new TFramedTransport(socket);
-			        this.transport.open();
-		        } 
-			    catch (TTransportException e) {
-			    	// Thrift exceptions aren't very good in reporting, so we have to catch the exception here and
-			    	// add details to it.
-			    	throw new TransportException("Failed to open transport", e);	// TODO
-			    }
-			    
-			    // 3.  Create a client object instance and set the keyspace
-				this.cassandraClient = new Cassandra.Client(new TBinaryProtocol(transport));
+                AtomicReference<D> connectionDataHolder = new AtomicReference<D>();
+				this.cassandraClient = createClient(pool, connectionDataHolder);
+                connectionData = connectionDataHolder.get();
 				try {
 					if (config.getKeyspaceName() != null) {
 						this.keyspaceName = config.getKeyspaceName();
-						this.cassandraClient.set_keyspace(this.keyspaceName);
-					}
+                        setKeyspace(cassandraClient, keyspaceName);
+                    }
 		        	// TODO: What about timeout exceptions
-				} 
+				}
 				catch (TTransportException e) {
 					if (e.getCause() instanceof SocketTimeoutException) {
 						throw new TimeoutException(pool.getHost() + " Timed out trying to set keyspace " + this.keyspaceName, e);
@@ -134,36 +109,26 @@ public class ThriftConnectionFactoryImpl implements ConnectionFactory<Cassandra.
 				}
 				catch (InvalidRequestException e) {
 			    	throw new com.netflix.astyanax.connectionpool.exceptions.BadRequestException(pool.getHost().getName() + " Failed to set keyspace: " + keyspaceName, e);	// TODO
-				} 
+				}
 				catch (TException e) {
 			    	throw new com.netflix.astyanax.connectionpool.exceptions.BadRequestException(pool.getHost().getName() + " Failed to set keyspace: " + keyspaceName, e);	// TODO
-				}			
+				}
 			}
-			
-			@Override
+
+            @Override
 			public void close() {
 				if (isOpen()) {
-					try {
-						transport.flush();
-					} catch (TTransportException e) {
-					} 
-					finally {
-						try {
-							transport.close();
-						}
-						finally {
-						}
-					}
+                    closeClient(cassandraClient, connectionData);
 				}
 			}
 
 			@Override
 			public boolean isOpen() {
-				return transport != null && transport.isOpen();
+				return clientIsOpen(cassandraClient, connectionData);
 			}
 
 			@Override
-			public HostConnectionPool<Client> getHostConnectionPool() {
+			public HostConnectionPool<CL> getHostConnectionPool() {
 				return pool;
 			}
 
@@ -174,7 +139,7 @@ public class ThriftConnectionFactoryImpl implements ConnectionFactory<Cassandra.
 			
 			@Override
 			public String toString() {
-			    return String.format(NAME_FORMAT, pool.getHost().getHostName(), id);
+			    return String.format(nameFormat, pool.getHost().getHostName(), id);
 			}
 
 			/**

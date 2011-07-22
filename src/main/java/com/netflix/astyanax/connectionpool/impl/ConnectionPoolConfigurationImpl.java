@@ -4,7 +4,8 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.google.common.base.Preconditions;
+import com.google.inject.internal.Preconditions;
+import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.Clock;
 import com.netflix.astyanax.KeyspaceTracers;
 import com.netflix.astyanax.connectionpool.BadHostDetector;
@@ -22,7 +23,7 @@ import com.netflix.astyanax.shallows.EmptyConnectionPoolMonitor;
 import com.netflix.astyanax.shallows.EmptyKeyspaceTracers;
 import com.netflix.astyanax.shallows.EmptyNodeDiscoveryFactoryImpl;
 
-public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfiguration {
+public class ConnectionPoolConfigurationImpl implements AstyanaxConfiguration {
     /**
      * Default values
      */
@@ -41,21 +42,21 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     public static final String DEFAULT_RING_IP_FILTER = null;
     public static final ConnectionPoolMonitor DEFAULT_MONITOR = new EmptyConnectionPoolMonitor();
     public static final KeyspaceTracers DEFAULT_KEYSPACE_TRACERS = new EmptyKeyspaceTracers();
-    public static final Factory<LoadBalancingStrategy> DEFAULT_LOAD_BALACING_STRATEGY = new Factory<LoadBalancingStrategy>() {
+    public static final ConnectionPoolConfiguration.Factory<LoadBalancingStrategy> DEFAULT_LOAD_BALACING_STRATEGY = new ConnectionPoolConfiguration.Factory<LoadBalancingStrategy>() {
 		@Override
 		public LoadBalancingStrategy createInstance(
 				ConnectionPoolConfiguration config) {
 			return new RoundRobinLoadBalancingStrategy(config);
 		}
     };
-    public static final Factory<FailoverStrategy> DEFAULT_FAILOVER_STRATEGY = new Factory<FailoverStrategy>() {
+    public static final ConnectionPoolConfiguration.Factory<FailoverStrategy> DEFAULT_FAILOVER_STRATEGY = new ConnectionPoolConfiguration.Factory<FailoverStrategy>() {
 		@Override
 		public FailoverStrategy createInstance(
 				ConnectionPoolConfiguration config) {
 			return new FailoverStrategyImpl(config.getMaxFailoverCount(), config.getFailoverWaitTime());
 		}
     };
-    public static final Factory<ExhaustedStrategy> DEFAULT_EXHAUSTED_STRATEGY = new Factory<ExhaustedStrategy>() {
+    public static final ConnectionPoolConfiguration.Factory<ExhaustedStrategy> DEFAULT_EXHAUSTED_STRATEGY = new ConnectionPoolConfiguration.Factory<ExhaustedStrategy>() {
 		@Override
 		public ExhaustedStrategy createInstance(
 				ConnectionPoolConfiguration config) {
@@ -63,8 +64,8 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
 		}
     };
     
-	private final String keyspaceName;
-	private final String clusterName;
+	private String keyspaceName;
+	private String clusterName;
     
     private boolean isRingDescribeEnabled = DEFAULT_ENABLE_RING_DESCRIBE;
     private boolean isDebugEnabled = DEFAULT_DEBUG_ENABLED;
@@ -84,9 +85,9 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
 	private String ringIpFilter = DEFAULT_RING_IP_FILTER;
 	private Clock clock = new MillisecondsClock();
 	private NodeDiscoveryFactory nodeDiscoveryFactory = EmptyNodeDiscoveryFactoryImpl.get();
-	private Factory<LoadBalancingStrategy> loadBalancingStrategyFactory = DEFAULT_LOAD_BALACING_STRATEGY;
-	private Factory<ExhaustedStrategy> exhaustedStrategyFactory = DEFAULT_EXHAUSTED_STRATEGY;
-	private Factory<FailoverStrategy> failoverStrategyFactory = DEFAULT_FAILOVER_STRATEGY;
+	private ConnectionPoolConfiguration.Factory<LoadBalancingStrategy> loadBalancingStrategyFactory = DEFAULT_LOAD_BALACING_STRATEGY;
+	private ConnectionPoolConfiguration.Factory<ExhaustedStrategy> exhaustedStrategyFactory = DEFAULT_EXHAUSTED_STRATEGY;
+	private ConnectionPoolConfiguration.Factory<FailoverStrategy> failoverStrategyFactory = DEFAULT_FAILOVER_STRATEGY;
 	private ConnectionPoolMonitor monitor = DEFAULT_MONITOR;
 	private KeyspaceTracers keyspaceTracers = DEFAULT_KEYSPACE_TRACERS;
 	private BadHostDetector badHostDetector = new BadHostDetectorImpl(3, 1000);
@@ -94,6 +95,10 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
 	public ConnectionPoolConfigurationImpl(String clusterName, String keyspaceName) {
 		this.keyspaceName = keyspaceName;
 		this.clusterName = clusterName;
+	}
+	
+	public ConnectionPoolConfigurationImpl() {
+		
 	}
 	
 	/* (non-Javadoc)
@@ -114,6 +119,10 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
 	@Override
 	public String getKeyspaceName() {
 		return this.keyspaceName;
+	}
+	
+	public void setKeyspaceName(String keyspaceName) {
+		this.keyspaceName = keyspaceName;
 	}
 	
 	/* (non-Javadoc)
@@ -280,11 +289,11 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
 	}
 
 	@Override
-	public Factory<LoadBalancingStrategy> getLoadBlancingPolicyFactory() {
+	public ConnectionPoolConfiguration.Factory<LoadBalancingStrategy> getLoadBlancingPolicyFactory() {
 		return this.loadBalancingStrategyFactory;
 	}
 	
-	public void setLoadBlancingStrategyFactory(Factory<LoadBalancingStrategy> factory) {
+	public void setLoadBlancingStrategyFactory(ConnectionPoolConfiguration.Factory<LoadBalancingStrategy> factory) {
 		this.loadBalancingStrategyFactory = factory;
 	}
 	
@@ -345,26 +354,30 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
 	}
 
 	@Override
-	public Factory<ExhaustedStrategy> getExhaustedStrategyFactory() {
+	public ConnectionPoolConfiguration.Factory<ExhaustedStrategy> getExhaustedStrategyFactory() {
 		return this.exhaustedStrategyFactory;
 	}
 
-	public void setExhaustedStrategyFactory(Factory<ExhaustedStrategy> exhaustedStrategyFactory) {
+	public void setExhaustedStrategyFactory(ConnectionPoolConfiguration.Factory<ExhaustedStrategy> exhaustedStrategyFactory) {
 		this.exhaustedStrategyFactory = exhaustedStrategyFactory;
 	}
 
 	@Override
-	public Factory<FailoverStrategy> getFailoverStrategyFactory() {
+	public ConnectionPoolConfiguration.Factory<FailoverStrategy> getFailoverStrategyFactory() {
 		return this.failoverStrategyFactory;
 	}
 
-	public void setFailoverStrategyFactory(Factory<FailoverStrategy> failoverStrategyFactory) {
+	public void setFailoverStrategyFactory(ConnectionPoolConfiguration.Factory<FailoverStrategy> failoverStrategyFactory) {
 		this.failoverStrategyFactory = failoverStrategyFactory;
 	}
 
 	@Override
 	public String getClusterName() {
 		return this.clusterName;
+	}
+	
+	public void setClusterName(String clusterName) {
+		this.clusterName = clusterName;
 	}
 
 	@Override

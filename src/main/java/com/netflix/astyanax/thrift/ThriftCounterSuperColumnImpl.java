@@ -1,6 +1,9 @@
 package com.netflix.astyanax.thrift;
 
+import java.nio.ByteBuffer;
+import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 import org.apache.cassandra.thrift.CounterColumn;
 
@@ -57,4 +60,33 @@ public class ThriftCounterSuperColumnImpl<C> implements Column<C> {
 		return true;
 	}
 
+	@Override
+	public byte[] getByteArrayValue() {
+		throw new UnsupportedOperationException(
+				"CounterSuperColumn \'" + this.name+ "\' has no value");
+	}
+
+	@Override
+	public boolean getBooleanValue() {
+		throw new UnsupportedOperationException(
+				"CounterSuperColumn \'" + this.name+ "\' has no value");
+	}
+
+	@Override
+	public ByteBuffer getByteBufferValue() {
+		throw new UnsupportedOperationException(
+				"CounterSuperColumn \'" + this.name+ "\' has no value");
+	}
+
+	@Override
+	public Date getDateValue() {
+		throw new UnsupportedOperationException(
+				"CounterSuperColumn \'" + this.name+ "\' has no value");
+	}
+
+	@Override
+	public UUID getUUIDValue() {
+		throw new UnsupportedOperationException(
+				"CounterSuperColumn \'" + this.name+ "\' has no value");
+	}
 }

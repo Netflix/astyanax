@@ -34,6 +34,7 @@ public interface ColumnList<C> extends Iterable<Column<C>>{
      * @param colSer
      * @return
      * @throws NetflixCassandraException 
+     * @deprecated	Super columns should be replaced with composite columns
      */
     <C2> Column<C2> getSuperColumn(C columnName, Serializer<C2> colSer);
     
@@ -41,7 +42,8 @@ public interface ColumnList<C> extends Iterable<Column<C>>{
      * Get super column by index
      * @param idx
      * @return
-     * @throws NetflixCassandraException 
+     * @throws NetflixCassandraException
+     * @deprecated	Super columns should be replaced with composite columns 
      */
     <C2> Column<C2> getSuperColumn(int idx, Serializer<C2> colSer);
     
@@ -64,6 +66,7 @@ public interface ColumnList<C> extends Iterable<Column<C>>{
      * then use getSuperColumn to call children.  Otherwise call getColumnByIndex
      * and getColumnByName to get the standard columns in the list.
      * @return
+     * @deprecated	Super columns should be replaced with composite columns
      */
     boolean isSuperColumn();
 }

@@ -15,6 +15,8 @@
  ******************************************************************************/
 package com.netflix.astyanax.query;
 
+import java.util.Date;
+
 public interface IndexValueExpression<K,C>  {
 	
 	public IndexQuery<K,C> value(String value);
@@ -24,4 +26,6 @@ public interface IndexValueExpression<K,C>  {
 	public IndexQuery<K,C> value(int value);
 
 	public IndexQuery<K,C> value(boolean value);
+	
+	public IndexQuery<K,C> value(Date value);
 }

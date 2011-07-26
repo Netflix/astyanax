@@ -50,6 +50,7 @@ public class RoundRobinConnectionPoolImpl<CL> extends AbstractHostPartitionConne
             private boolean isDone = false;
             private boolean doFailover = false;
             private HostConnectionPool<CL> pool;
+            private Connection<CL> connection = null;
 
             // Constructor
             {
@@ -68,6 +69,14 @@ public class RoundRobinConnectionPoolImpl<CL> extends AbstractHostPartitionConne
 
             public Host getHost() {
                 return (pool != null) ? pool.getHost() : Host.NO_HOST;
+            }
+
+            @Override
+            public void releaseOperation() {
+                if ( connection != null ) {
+                    returnConnection(connection);
+                    connection = null;
+                }
             }
 
             @Override
@@ -93,7 +102,6 @@ public class RoundRobinConnectionPoolImpl<CL> extends AbstractHostPartitionConne
                     pool = pools.get(index++);
 
                     // 2. Try to get a connection
-                    Connection<CL> connection = null;
                     try {
                         long startTime = System.currentTimeMillis();
                         connection = pool.borrowConnection(exhaustedStrategy.getWaitTime());
@@ -108,11 +116,6 @@ public class RoundRobinConnectionPoolImpl<CL> extends AbstractHostPartitionConne
                     catch (ConnectionException e) {
                         informException(e);
                     }
-                    finally {
-                        if ( connection != null ) {
-                            returnConnection(connection);
-                        }
-                    }
 
                 }
                 throw new TimeoutException("Operation failed too many times");
@@ -120,28 +123,33 @@ public class RoundRobinConnectionPoolImpl<CL> extends AbstractHostPartitionConne
 
             @Override
             public void informException(ConnectionException connectionException) throws ConnectionException {
-                monitor.incOperationFailure(getHost(), connectionException);
-                
-                if (   connectionException instanceof TimeoutException 
-                	|| connectionException instanceof TransportException 
-                	|| connectionException instanceof UnknownException) {
-                    if (badHostDetector.checkFailure(getHost(), connectionException)) {
-                        markHostAsDown(pool, connectionException);
+                try {
+                    monitor.incOperationFailure(getHost(), connectionException);
+
+                    if (   connectionException instanceof TimeoutException
+                        || connectionException instanceof TransportException
+                        || connectionException instanceof UnknownException) {
+                        if (badHostDetector.checkFailure(getHost(), connectionException)) {
+                            markHostAsDown(pool, connectionException);
+                        }
+                    }
+
+                    // Got a ConnectionException.  This could be either an application
+                    // error or an error getting a connection from the connection pool
+                    // Have a connection but failed to execute it
+                    if (!connectionException.isRetryable()) {
+                        isDone = true;
+                        throw connectionException;
+                    }
+
+                    doFailover = --retryCount > 0;
+                    if (false == doFailover) {
+                        isDone = true;
+                        throw new PoolTimeoutException("Timed out trying to borrow a connection.  " + connectionException.getMessage());
                     }
                 }
-                
-            	// Got a ConnectionException.  This could be either an application
-            	// error or an error getting a connection from the connection pool
-                // Have a connection but failed to execute it
-                if (!connectionException.isRetryable()) {
-                    isDone = true;
-                    throw connectionException;
-                }
-
-                doFailover = --retryCount > 0;
-                if (false == doFailover) {
-                    isDone = true;
-                    throw new PoolTimeoutException("Timed out trying to borrow a connection.  " + connectionException.getMessage());
+                finally {
+                    releaseOperation();
                 }
             }
         };
@@ -151,7 +159,12 @@ public class RoundRobinConnectionPoolImpl<CL> extends AbstractHostPartitionConne
 	public <R> OperationResult<R> executeWithFailover(Operation<CL, R> op)
 			throws ConnectionException {
         ExecuteWithFailover<CL, R> withFailover = newExecuteWithFailover();
-        return withFailover.tryOperation(op);
+        try {
+            return withFailover.tryOperation(op);
+        }
+        finally {
+            withFailover.releaseOperation();
+        }
     }
 	
 	@Override 

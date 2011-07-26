@@ -18,6 +18,7 @@ package com.netflix.astyanax.thrift;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 
 import org.apache.cassandra.thrift.IndexOperator;
 import org.apache.cassandra.thrift.SlicePredicate;
@@ -32,6 +33,7 @@ import com.netflix.astyanax.query.IndexQuery;
 import com.netflix.astyanax.query.IndexValueExpression;
 import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.serializers.BooleanSerializer;
+import com.netflix.astyanax.serializers.DateSerializer;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
@@ -185,6 +187,13 @@ public abstract class AbstractIndexQueryImpl<K,C> implements IndexQuery<K,C> {
 			@Override
 			public IndexQuery<K, C> value(boolean value) {
 				internalExpression.setValue(BooleanSerializer.get().toBytes(value));
+				indexClause.addToExpressions(internalExpression);
+				return getThisQuery();
+			}
+
+			@Override
+			public IndexQuery<K, C> value(Date value) {
+				internalExpression.setValue(DateSerializer.get().toBytes(value));
 				indexClause.addToExpressions(internalExpression);
 				return getThisQuery();
 			}

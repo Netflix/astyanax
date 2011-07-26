@@ -29,14 +29,12 @@ import java.math.BigInteger;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public abstract class AbstractAsyncOperationImpl<R, A extends TAsyncMethodCall> implements
         Callable<OperationResult<R>>,
         AsyncMethodCallback<A>,
         AsyncOperation<R,A> {
-    private final ExecutorService executorService;
     private final String keyspaceName;
     private final BigInteger key;
     private final BlockingQueue<AsyncResult<R>> queue = new ArrayBlockingQueue<AsyncResult<R>>(1);
@@ -45,10 +43,8 @@ public abstract class AbstractAsyncOperationImpl<R, A extends TAsyncMethodCall> 
     private final AtomicBoolean isCanceled = new AtomicBoolean(false);
 
     public AbstractAsyncOperationImpl(ConnectionPool<Cassandra.AsyncClient> connectionPool,
-                                      ExecutorService executorService,
                                       String keyspaceName,
                                       BigInteger key) throws ConnectionException {
-        this.executorService = executorService;
         this.keyspaceName = keyspaceName;
         this.key = key;
         startTicks = System.currentTimeMillis();
@@ -56,45 +52,44 @@ public abstract class AbstractAsyncOperationImpl<R, A extends TAsyncMethodCall> 
     }
 
     public AbstractAsyncOperationImpl(ConnectionPool<Cassandra.AsyncClient> connectionPool,
-                                      ExecutorService executorService,
                                       String keyspaceName) throws ConnectionException {
-        this(connectionPool, executorService, keyspaceName, null);
+        this(connectionPool, keyspaceName, null);
     }
 
-    public void     start()
-    {
-        executorService.submit(
-            new Callable<Object>() {
-                @Override
-                public Object call() throws Exception {
-                    executeWithFailover.tryOperation(
-                        new Operation<Cassandra.AsyncClient, R>() {
-                            @Override
-                            public R execute(Cassandra.AsyncClient client) throws ConnectionException {
-                                startOperation(client);
-                                return null;
-                            }
+    public void     start() {
+        executeWithFailover.releaseOperation();     // in case one is open
 
-                            @Override
-                            public BigInteger getKey() {
-                                return key;
-                            }
+        try {
+            executeWithFailover.tryOperation(
+                new Operation<Cassandra.AsyncClient, R>() {
+                    @Override
+                    public R execute(Cassandra.AsyncClient client) throws ConnectionException {
+                        startOperation(client);
+                        return null;
+                    }
 
-                            @Override
-                            public String getKeyspace() {
-                                return keyspaceName;
-                            }
-                        }
-                    );
-                    return null;
+                    @Override
+                    public BigInteger getKey() {
+                        return key;
+                    }
+
+                    @Override
+                    public String getKeyspace() {
+                        return keyspaceName;
+                    }
                 }
-            }
-        );
+            );
+        }
+        catch (ConnectionException e) {
+            offerException(e);
+        }
     }
 
     @Override
     public OperationResult<R> call() throws Exception {
         AsyncResult<R>      asyncResult = queue.take();
+        executeWithFailover.releaseOperation();
+
         if ( asyncResult.exception != null ) {
             throw asyncResult.exception;
         }
@@ -114,7 +109,8 @@ public abstract class AbstractAsyncOperationImpl<R, A extends TAsyncMethodCall> 
 
     @Override
     public void onError(Exception e) {
-        offerException(ThriftConverter.ToConnectionPoolException(e));
+        ConnectionException converted = ThriftConverter.ToConnectionPoolException(e);
+        offerException(converted);
     }
 
     public void cancel() {
@@ -128,16 +124,21 @@ public abstract class AbstractAsyncOperationImpl<R, A extends TAsyncMethodCall> 
                 start();
             }
             else {
-                queue.offer(new AsyncResult<R>(null, e));
+                offerToQueue(new AsyncResult<R>(null, e));
             }
         }
         catch (Exception finalException) {
-            queue.offer(new AsyncResult<R>(null, finalException));
+            offerToQueue(new AsyncResult<R>(null, finalException));
         }
     }
 
     protected void offerResult(R result) {
-        queue.offer(new AsyncResult<R>(result, null));
+        offerToQueue(new AsyncResult<R>(result, null));
+    }
+
+    private void offerToQueue(AsyncResult<R> result) {
+        executeWithFailover.releaseOperation();
+        queue.offer(result);
     }
 
 }

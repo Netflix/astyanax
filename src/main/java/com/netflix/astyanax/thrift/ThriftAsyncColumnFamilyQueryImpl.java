@@ -33,16 +33,21 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 public class ThriftAsyncColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C> {
     private final ConnectionPool<Cassandra.AsyncClient> connectionPool;
+    private final ExecutorService executorService;
     private final String keyspaceName;
     private final ColumnFamily<K,C> columnFamily;
     private ConsistencyLevel consistencyLevel;
 
-    public ThriftAsyncColumnFamilyQueryImpl(ConnectionPool<Cassandra.AsyncClient> connectionPool, String keyspaceName, ConsistencyLevel consistencyLevel, ColumnFamily<K, C> columnFamily) {
+    public ThriftAsyncColumnFamilyQueryImpl(ConnectionPool<Cassandra.AsyncClient> connectionPool, ExecutorService executorService,
+                                            String keyspaceName, ConsistencyLevel consistencyLevel,
+                                            ColumnFamily<K, C> columnFamily) {
         this.connectionPool = connectionPool;
+        this.executorService = executorService;
         this.keyspaceName = keyspaceName;
         this.consistencyLevel = consistencyLevel;
         this.columnFamily = columnFamily;
@@ -63,7 +68,7 @@ public class ThriftAsyncColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery
                     public Future<OperationResult<Column<C>>> executeAsync() throws ConnectionException {
                         AbstractAsyncOperationImpl<Column<C>, Cassandra.AsyncClient.get_call> operation = new AbstractAsyncOperationImpl<Column<C>, Cassandra.AsyncClient.get_call>(
                                 connectionPool,
-                                null, keyspaceName
+                                keyspaceName
                         ) {
                             @Override
                             public void startOperation(Cassandra.AsyncClient client) throws ConnectionException {
@@ -116,7 +121,7 @@ public class ThriftAsyncColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery
                             public void trace(OperationResult<Column<C>> columnOperationResult) {
                             }
                         };
-                        return AsyncFuture.make(operation);
+                        return AsyncFuture.make(executorService, operation);
                     }
                 };
             }
@@ -131,7 +136,7 @@ public class ThriftAsyncColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery
                 AbstractAsyncOperationImpl<ColumnList<C>, Cassandra.AsyncClient.get_slice_call> operation
                 	= new AbstractAsyncOperationImpl<ColumnList<C>, Cassandra.AsyncClient.get_slice_call>(
                         connectionPool,
-                        null, keyspaceName
+                        keyspaceName
                 ) {
                     @Override
                     public void startOperation(Cassandra.AsyncClient client) throws ConnectionException {
@@ -161,7 +166,7 @@ public class ThriftAsyncColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery
                     public void trace(OperationResult<ColumnList<C>> columnListOperationResult) {
                     }
                 };
-                return AsyncFuture.make(operation);
+                return AsyncFuture.make(executorService, operation);
             }
 
 			@Override
@@ -178,7 +183,7 @@ public class ThriftAsyncColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery
 		                AbstractAsyncOperationImpl<Integer, Cassandra.AsyncClient.get_count_call> operation
 		                	= new AbstractAsyncOperationImpl<Integer, Cassandra.AsyncClient.get_count_call>(
 		                        connectionPool,
-		                        null, keyspaceName) {
+                                keyspaceName) {
 		                    @Override
 		                    public void startOperation(Cassandra.AsyncClient client) throws ConnectionException {
 		                        try {
@@ -205,7 +210,7 @@ public class ThriftAsyncColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery
 		                    public void trace(OperationResult<Integer> result) {
 		                    }
 		                };
-		                return AsyncFuture.make(operation);
+		                return AsyncFuture.make(executorService, operation);
 					}
 					
 				};
@@ -231,7 +236,7 @@ public class ThriftAsyncColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery
             public Future<OperationResult<Rows<K, C>>> executeAsync() throws ConnectionException {
                 AbstractAsyncOperationImpl<Rows<K, C>, Cassandra.AsyncClient.get_range_slices_call> operation = new AbstractAsyncOperationImpl<Rows<K, C>, Cassandra.AsyncClient.get_range_slices_call>(
                         connectionPool,
-                        null, keyspaceName
+                        keyspaceName
                 ) {
                     @Override
                     public void startOperation(Cassandra.AsyncClient client) throws ConnectionException {
@@ -278,7 +283,7 @@ public class ThriftAsyncColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery
                     public void trace(OperationResult<Rows<K, C>> rowsOperationResult) {
                     }
                 };
-                return AsyncFuture.make(operation);
+                return AsyncFuture.make(executorService, operation);
             }
         };
     }
@@ -295,7 +300,7 @@ public class ThriftAsyncColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery
             public Future<OperationResult<Rows<K, C>>> executeAsync() throws ConnectionException {
                 AbstractAsyncOperationImpl<Rows<K, C>, Cassandra.AsyncClient.multiget_slice_call> operation = new AbstractAsyncOperationImpl<Rows<K, C>, Cassandra.AsyncClient.multiget_slice_call>(
                         connectionPool,
-                        null, keyspaceName
+                        keyspaceName
                 ) {
                     @Override
                     public void startOperation(Cassandra.AsyncClient client) throws ConnectionException {
@@ -331,7 +336,7 @@ public class ThriftAsyncColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery
                     public void trace(OperationResult<Rows<K, C>> rowsOperationResult) {
                     }
                 };
-                return AsyncFuture.make(operation);
+                return AsyncFuture.make(executorService, operation);
             }
         };
     }
@@ -347,7 +352,7 @@ public class ThriftAsyncColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery
             @Override
             public Future<OperationResult<Rows<K, C>>> executeAsync() throws ConnectionException {
                 AbstractAsyncOperationImpl<Rows<K, C>, Cassandra.AsyncClient.get_indexed_slices_call> operation = new AbstractAsyncOperationImpl<Rows<K, C>, Cassandra.AsyncClient.get_indexed_slices_call>(
-                        connectionPool,  null, keyspaceName) {
+                        connectionPool, keyspaceName) {
                     @Override
                     public void startOperation(Cassandra.AsyncClient client) throws ConnectionException {
                         try {
@@ -382,7 +387,7 @@ public class ThriftAsyncColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery
                     public void trace(OperationResult<Rows<K, C>> rowsOperationResult) {
                     }
                 };
-                return AsyncFuture.make(operation);
+                return AsyncFuture.make(executorService, operation);
             }
         };
     }
@@ -400,7 +405,7 @@ public class ThriftAsyncColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery
             @Override
             public Future<OperationResult<Rows<K, C>>> executeAsync() throws ConnectionException {
                 AbstractAsyncOperationImpl<Rows<K, C>, Cassandra.AsyncClient.execute_cql_query_call> operation = new AbstractAsyncOperationImpl<Rows<K, C>, Cassandra.AsyncClient.execute_cql_query_call>(
-                        connectionPool, null, keyspaceName) {
+                        connectionPool, keyspaceName) {
                     @Override
                     public void startOperation(Cassandra.AsyncClient client) throws ConnectionException {
                         try {
@@ -433,7 +438,7 @@ public class ThriftAsyncColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery
                     public void trace(OperationResult<Rows<K, C>> rowsOperationResult) {
                     }
                 };
-                return AsyncFuture.make(operation);
+                return AsyncFuture.make(executorService, operation);
             }
             
 			@Override

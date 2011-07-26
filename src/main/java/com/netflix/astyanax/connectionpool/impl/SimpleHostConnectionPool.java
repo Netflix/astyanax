@@ -18,6 +18,8 @@ package com.netflix.astyanax.connectionpool.impl;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -40,6 +42,8 @@ import com.netflix.astyanax.connectionpool.exceptions.TimeoutException;
  *
  */
 public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
+	private static ExecutorService executor = Executors.newSingleThreadExecutor();
+	
 	/**
 	 * List of available connections.  This list does not include connections
 	 * that are currently borrowed.
@@ -160,13 +164,7 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
 	@Override
 	public void returnConnection(Connection<CL> connection) {
 		if (connection.isOpen()) {
-			try {
-				this.availableConnections.put(connection);
-			} catch (InterruptedException e) {
-	            Thread.currentThread().interrupt();
-				this.activeCount.getAndDecrement();
-				connection.close();
-			}
+			this.availableConnections.add(connection);
 		}
 		else {
 			this.activeCount.getAndDecrement();
@@ -193,13 +191,23 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
 	 */
 	@Override
 	public void shutdown() {
-		List<Connection<CL>> conns = new ArrayList<Connection<CL>>();
-		int count = availableConnections.drainTo(conns);
-		this.activeCount.addAndGet(-count);
-		
-		for (Connection<CL> connection : conns) {
-			connection.close();
-		}
+		executor.submit(new Runnable() {
+			@Override
+			public void run() {
+				// Loop as long as we have active connections.  We are essentially
+				// waiting for all connections 
+				while (activeCount.get() > 0) {
+					try {
+						Connection<CL> connection = availableConnections.take();
+						activeCount.decrementAndGet();
+						connection.close();
+						
+					} catch (InterruptedException e) {
+						Thread.currentThread().interrupt();
+					}
+				}
+			}
+		});
 	}
 
 	@Override

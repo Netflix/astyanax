@@ -35,7 +35,10 @@ public class ExecutionHelper {
             throw new UnknownException(e);
         }
         catch (ExecutionException e) {
-            throw ThriftConverter.ToConnectionPoolException(e);
+        	if (e.getCause() instanceof ConnectionException) {
+        		throw (ConnectionException)e.getCause();
+        	}
+            throw new UnknownException(e);
         }
     }
 

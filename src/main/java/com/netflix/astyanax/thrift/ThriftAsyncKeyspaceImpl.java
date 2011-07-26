@@ -94,7 +94,7 @@ public final class ThriftAsyncKeyspaceImpl implements Keyspace {
                 AbstractAsyncOperationImpl<ColumnList<C>, Cassandra.AsyncClient.get_slice_call> operation =
                     new AbstractAsyncOperationImpl<ColumnList<C>, Cassandra.AsyncClient.get_slice_call>(
                         connectionPool,
-                            executorService, config.getKeyspaceName(),
+                            config.getKeyspaceName(),
                         partitioner.getToken(columnFamily.getKeySerializer().toByteBuffer(rowKey)).token) {
                     @Override
                     public void startOperation(Cassandra.AsyncClient client) throws ConnectionException {
@@ -126,7 +126,7 @@ public final class ThriftAsyncKeyspaceImpl implements Keyspace {
                     }
                 };
 
-                return AsyncFuture.make(operation);
+                return AsyncFuture.make(executorService, operation);
             }
 		};
 	}
@@ -146,8 +146,7 @@ public final class ThriftAsyncKeyspaceImpl implements Keyspace {
                 if (keys.getKeys() != null) {
                     operation = new AbstractAsyncOperationImpl<Rows<K, C>, Cassandra.AsyncClient.multiget_slice_call>(
                         connectionPool,
-                        executorService,
-                        config.getKeyspaceName()
+                            config.getKeyspaceName()
                     ) {
                         @Override
                         public void startOperation(Cassandra.AsyncClient client) throws ConnectionException {
@@ -190,7 +189,7 @@ public final class ThriftAsyncKeyspaceImpl implements Keyspace {
                 else {
                     operation = new AbstractAsyncOperationImpl<Rows<K, C>, Cassandra.AsyncClient.get_range_slices_call>(
                         connectionPool,
-                            executorService, config.getKeyspaceName()
+                            config.getKeyspaceName()
                     ) {
                         @Override
                         public void startOperation(Cassandra.AsyncClient client) throws ConnectionException {
@@ -241,7 +240,7 @@ public final class ThriftAsyncKeyspaceImpl implements Keyspace {
                     };
                 }
 
-                return AsyncFuture.make(operation);
+                return AsyncFuture.make(executorService, operation);
 			}
 		};
 	}
@@ -259,7 +258,7 @@ public final class ThriftAsyncKeyspaceImpl implements Keyspace {
 			public Future<OperationResult<Column<C>>> executeAsync() throws ConnectionException {
 				AbstractAsyncOperationImpl<Column<C>, Cassandra.AsyncClient.get_call> operation = new AbstractAsyncOperationImpl<Column<C>, Cassandra.AsyncClient.get_call>(
                     connectionPool,
-                        executorService, config.getKeyspaceName(),
+                        config.getKeyspaceName(),
                     partitioner.getToken(columnFamily.getKeySerializer().toByteBuffer(key)).token
                 ) {
                     @Override
@@ -308,7 +307,7 @@ public final class ThriftAsyncKeyspaceImpl implements Keyspace {
                         tracers.incRowQuery(ThriftAsyncKeyspaceImpl.this, result.getHost(), result.getLatency());
                     }
                 };
-                return AsyncFuture.make(operation);
+                return AsyncFuture.make(executorService, operation);
 			}
 		};
 	}
@@ -323,7 +322,7 @@ public final class ThriftAsyncKeyspaceImpl implements Keyspace {
                     partitioner.getToken(getMutationMap().keySet().iterator().next()).token : null;
 				AbstractAsyncOperationImpl<Void, Cassandra.AsyncClient.batch_mutate_call> operation = new AbstractAsyncOperationImpl<Void, Cassandra.AsyncClient.batch_mutate_call>(
                     connectionPool,
-                        executorService, config.getKeyspaceName(),
+                        config.getKeyspaceName(),
                     key
                 ) {
                     @Override
@@ -346,7 +345,7 @@ public final class ThriftAsyncKeyspaceImpl implements Keyspace {
                         tracers.incMutation(ThriftAsyncKeyspaceImpl.this, result.getHost(), result.getLatency());
                     }
                 };
-                return AsyncFuture.make(operation);
+                return AsyncFuture.make(executorService, operation);
             }
 		};
 	}
@@ -355,7 +354,7 @@ public final class ThriftAsyncKeyspaceImpl implements Keyspace {
 	public List<TokenRange> describeRing() throws ConnectionException {
         AbstractAsyncOperationImpl<List<TokenRange>, Cassandra.AsyncClient.describe_ring_call> operation = new AbstractAsyncOperationImpl<List<TokenRange>, Cassandra.AsyncClient.describe_ring_call>(
             connectionPool,
-                executorService, config.getKeyspaceName()
+                config.getKeyspaceName()
         ) {
             @Override
             public void startOperation(Cassandra.AsyncClient client) throws ConnectionException {
@@ -391,7 +390,7 @@ public final class ThriftAsyncKeyspaceImpl implements Keyspace {
             }
         };
         try {
-            return AsyncFuture.make(operation).get().getResult();
+            return AsyncFuture.make(executorService, operation).get().getResult();
         }
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -411,7 +410,7 @@ public final class ThriftAsyncKeyspaceImpl implements Keyspace {
             public Future<OperationResult<Void>> executeAsync() throws ConnectionException {
                 AbstractAsyncOperationImpl<Void, Cassandra.AsyncClient.add_call> operation = new AbstractAsyncOperationImpl<Void, Cassandra.AsyncClient.add_call>(
                     connectionPool,
-                        executorService, config.getKeyspaceName()
+                        config.getKeyspaceName()
                 ) {
                     @Override
                     public void startOperation(Cassandra.AsyncClient client) throws ConnectionException {
@@ -440,45 +439,23 @@ public final class ThriftAsyncKeyspaceImpl implements Keyspace {
                         tracers.incMutation(ThriftAsyncKeyspaceImpl.this, result.getHost(), result.getLatency());
                     }
                 };
-                return AsyncFuture.make(operation);
+                return AsyncFuture.make(executorService, operation);
             }
         };
 	}
 
 	@Override
 	public <K, C> ColumnFamilyQuery<K,C> prepareQuery(ColumnFamily<K, C> cf) {
-		return new ThriftAsyncColumnFamilyQueryImpl<K, C>(connectionPool, config.getKeyspaceName(), config.getDefaultReadConsistencyLevel(), cf);
+		return new ThriftAsyncColumnFamilyQueryImpl<K, C>(connectionPool, executorService, 
+                config.getKeyspaceName(), config.getDefaultReadConsistencyLevel(), cf);
 	}
 
 	@Override
 	public <K, C> ColumnMutation prepareColumnMutation(
 			ColumnFamily<K, C> columnFamily, K rowKey, C column) {
-		return new AbstractThriftColumnMutationImpl(
-				columnFamily.getKeySerializer().toByteBuffer(rowKey),
-				columnFamily.getColumnSerializer().toByteBuffer(column),
-				config.getClock(),
-				config.getDefaultReadConsistencyLevel(),
-				config.getDefaultWriteConsistencyLevel()) {
-
-			@Override
-			public Execution<Void> incrementCounterColumn(long amount) {
-				// TODO Auto-generated method stub
-				return null;
-			}
-
-			@Override
-			public Execution<Void> deleteColumn() {
-				// TODO Auto-generated method stub
-				return null;
-			}
-
-			@Override
-			public Execution<Void> insertValue(ByteBuffer value,
-					Integer ttl) {
-				// TODO Auto-generated method stub
-				return null;
-			}
-		
-		};
+		return new AbstractAsyncThriftColumnMutationImpl<K, C>(this, connectionPool, columnFamily, config.getKeyspaceName(),
+                executorService, tracers, rowKey, column, config.getClock(),
+                config.getDefaultReadConsistencyLevel(), config.getDefaultWriteConsistencyLevel());
 	}
+
 }

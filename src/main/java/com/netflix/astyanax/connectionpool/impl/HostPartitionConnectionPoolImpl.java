@@ -202,6 +202,7 @@ public class HostPartitionConnectionPoolImpl<CL> implements ConnectionPool<CL> {
             private int retryCount = 0;
             private boolean isDone = false;
             private Host host;
+            private Connection<CL> connection = null;
 
             @Override
             public Host getHost() {
@@ -209,10 +210,17 @@ public class HostPartitionConnectionPoolImpl<CL> implements ConnectionPool<CL> {
             }
 
             @Override
+            public void releaseOperation() {
+                if ( connection != null ) {
+                    returnConnection(connection);
+                    connection = null;
+                }
+            }
+
+            @Override
             public OperationResult<R> tryOperation(Operation<CL, R> operation) throws ConnectionException {
                 while (!isDone) {
                     // First try to get a connection
-                    Connection<CL> connection;
                     try {
                         connection = borrowConnection(operation);
                         host = connection.getHostConnectionPool().getHost();
@@ -229,9 +237,6 @@ public class HostPartitionConnectionPoolImpl<CL> implements ConnectionPool<CL> {
                     catch (ConnectionException e) {
                         informException(e);
                     }
-                    finally {
-                        returnConnection(connection);
-                    }
                 }
 
                 throw new TimeoutException("Operation failed too many times");
@@ -239,32 +244,34 @@ public class HostPartitionConnectionPoolImpl<CL> implements ConnectionPool<CL> {
 
             @Override
             public void informException(ConnectionException e) throws ConnectionException {
-                if ( e instanceof ConnectionException )
-                {
-                    // These are failures trying to open a new connection
+                // These are failures trying to open a new connection
+                try {
                     ConnectionException connectionException = (ConnectionException)e;
                     if (!connectionException.isRetryable()){
                         isDone = true;
                         throw e;
                     }
-                }
 
-                // Apply the retry strategy
-                if (++retryCount < failoverStrategy.getMaxRetries()) {
-                    monitor.incFailover();
-                    try {
-                        if (failoverStrategy.getWaitTime() > 0) {
-                            Thread.sleep(failoverStrategy.getWaitTime());
+                    // Apply the retry strategy
+                    if (++retryCount < failoverStrategy.getMaxRetries()) {
+                        monitor.incFailover();
+                        try {
+                            if (failoverStrategy.getWaitTime() > 0) {
+                                Thread.sleep(failoverStrategy.getWaitTime());
+                            }
+                        } catch (InterruptedException dummy) {
+                            Thread.currentThread().interrupt();
+                            isDone = true;
+                            throw new TimeoutException("Interrupted sleeping between retries");
                         }
-                    } catch (InterruptedException dummy) {
-                        Thread.currentThread().interrupt();
+                    }
+                    else {
                         isDone = true;
-                        throw new TimeoutException("Interrupted sleeping between retries");
+                        throw new TimeoutException("Operation failed too many times");
                     }
                 }
-                else {
-                    isDone = true;
-                    throw new TimeoutException("Operation failed too many times");
+                finally {
+                    releaseOperation();
                 }
             }
         };
@@ -279,6 +286,9 @@ public class HostPartitionConnectionPoolImpl<CL> implements ConnectionPool<CL> {
         }
         catch (Exception e) {
             throw new OperationException(e);
+        }
+        finally {
+            withFailover.releaseOperation();
         }
     }
 }

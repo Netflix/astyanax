@@ -22,5 +22,7 @@ public interface ExecuteWithFailover<CL, R> {
 
     public OperationResult<R> tryOperation(Operation<CL, R> operation) throws ConnectionException;
 
+    public void releaseOperation();
+
     public void informException(ConnectionException e) throws ConnectionException;
 }

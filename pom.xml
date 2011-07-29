@@ -8,24 +8,6 @@
     <artifactId>astyanax</artifactId>
     <version>0.8.1-SNAPSHOT</version>
 
-    <repositories>
-		<repository>
-			<releases>
-				<enabled>true</enabled>
-				<updatePolicy>interval:30</updatePolicy>
-				<checksumPolicy>fail</checksumPolicy>
-			</releases>
-			<snapshots>
-				<enabled>false</enabled>
-				<updatePolicy>daily</updatePolicy>
-				<checksumPolicy>fail</checksumPolicy>
-			</snapshots>
-			<id>eaio.com</id>
-			<name>eaio.com repository</name>
-			<url>http://eaio.com/maven2</url>
-		</repository>
-	</repositories>
-
     <scm>
         <connection>scm:git:git@github.com:Netflix/astyanax.git</connection>
     </scm>
@@ -62,10 +44,10 @@
         </dependency>
         
         <dependency>
-			<groupId>com.eaio.uuid</groupId>
-			<artifactId>uuid</artifactId>
-			<version>3.2</version>
-		</dependency>
+          <groupId>com.github.stephenc.eaio-uuid</groupId>
+          <artifactId>uuid</artifactId>
+          <version>3.2.0</version>
+        </dependency>
     </dependencies>
 
     <build>

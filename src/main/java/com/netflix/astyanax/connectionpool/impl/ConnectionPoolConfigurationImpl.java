@@ -23,6 +23,7 @@ import com.google.inject.internal.Preconditions;
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.Clock;
 import com.netflix.astyanax.KeyspaceTracers;
+import com.netflix.astyanax.clock.MillisecondsClock;
 import com.netflix.astyanax.connectionpool.BadHostDetector;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
 import com.netflix.astyanax.connectionpool.ConnectionPoolFactory;

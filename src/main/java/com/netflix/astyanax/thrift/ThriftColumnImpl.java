@@ -42,10 +42,12 @@ import com.netflix.astyanax.serializers.UUIDSerializer;
 public class ThriftColumnImpl<C> implements Column<C> {
 	private final byte[] value;
 	private final C name;
+	private final long timestamp;
 	
-	public ThriftColumnImpl(C name, byte[] value) {
+	public ThriftColumnImpl(C name, byte[] value, long timestamp) {
 		this.value = value;
 		this.name = name;
+		this.timestamp = timestamp;
 	}
 	
 	@Override
@@ -108,5 +110,10 @@ public class ThriftColumnImpl<C> implements Column<C> {
 	@Override
 	public UUID getUUIDValue() {
 		return UUIDSerializer.get().fromBytes(value);
+	}
+
+	@Override
+	public long getTimestamp() {
+		return this.timestamp;
 	}
 }

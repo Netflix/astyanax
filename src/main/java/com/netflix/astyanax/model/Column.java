@@ -19,7 +19,6 @@ import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.UUID;
 
-import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Serializer;
 
 /**
@@ -39,6 +38,13 @@ public interface Column<C> {
 	 */
 	C getName();
 
+	/**
+	 * Returns the column timestamp.  Not to be confused with column values
+	 * that happen to be time values.
+	 * @return
+	 */
+	long getTimestamp();
+	
 	/**
 	 * Return the value 
 	 * 

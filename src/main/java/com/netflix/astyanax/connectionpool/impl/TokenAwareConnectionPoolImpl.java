@@ -306,6 +306,7 @@ public class TokenAwareConnectionPoolImpl<CL> extends RoundRobinConnectionPoolIm
 		//		index where the token would have been inserted into the list.
 		//		We convert this index (which is negative) to the index of the
 		//		previous position in the list.
+		@SuppressWarnings("unchecked")
 		int j = Collections.binarySearch(partitions, token, tokenComparator);
 		if (j < 0) {
 			j = -j - 2;

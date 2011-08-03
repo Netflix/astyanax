@@ -104,4 +104,10 @@ public class ThriftCounterSuperColumnImpl<C> implements Column<C> {
 		throw new UnsupportedOperationException(
 				"CounterSuperColumn \'" + this.name+ "\' has no value");
 	}
+
+	@Override
+	public long getTimestamp() {
+		throw new UnsupportedOperationException(
+				"CounterSuperColumn \'" + this.name+ "\' has no timestamp");
+	}
 }

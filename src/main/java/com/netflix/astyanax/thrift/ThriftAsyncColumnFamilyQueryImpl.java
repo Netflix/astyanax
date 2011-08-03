@@ -96,7 +96,7 @@ public class ThriftAsyncColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery
 								
                                 if (cosc.isSetColumn()) {
                                     org.apache.cassandra.thrift.Column c = cosc.getColumn();
-                                    return new ThriftColumnImpl<C>(columnFamily.getColumnSerializer().fromBytes(c.getName()), c.getValue());
+                                    return new ThriftColumnImpl<C>(columnFamily.getColumnSerializer().fromBytes(c.getName()), c.getValue(), c.getTimestamp());
                                 }
                                 else if (cosc.isSetSuper_column()) {
                                     // TODO: Super columns should be deprecated
@@ -447,4 +447,10 @@ public class ThriftAsyncColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery
 				return this;
 			}
 		};
-	}}
+	}
+
+	@Override
+	public AllRowsQuery<K, C> getAllRows() {
+		throw new UnsupportedOperationException("Coming soon");
+	}
+}

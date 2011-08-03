@@ -101,5 +101,11 @@ public class ThriftCounterColumnImpl<C> implements Column<C> {
 		throw new UnsupportedOperationException(
 				"CounterColumn \'" + this.name+ "\' has no UUID value. Call getLongValue().");
 	}
+	
+	@Override
+	public long getTimestamp() {
+		throw new UnsupportedOperationException(
+				"CounterColumn \'" + this.name+ "\' has no timestamp");
+	}
 
 }

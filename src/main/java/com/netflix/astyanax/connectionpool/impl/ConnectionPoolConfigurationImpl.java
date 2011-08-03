@@ -23,7 +23,10 @@ import com.google.inject.internal.Preconditions;
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.Clock;
 import com.netflix.astyanax.KeyspaceTracers;
+import com.netflix.astyanax.clock.MillisecondsClock;
 import com.netflix.astyanax.connectionpool.BadHostDetector;
+import com.netflix.astyanax.connectionpool.ConnectionFactory;
+import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
 import com.netflix.astyanax.connectionpool.ConnectionPoolFactory;
 import com.netflix.astyanax.connectionpool.ConnectionPoolMonitor;
@@ -84,8 +87,15 @@ public class ConnectionPoolConfigurationImpl implements AstyanaxConfiguration {
     
     private boolean isRingDescribeEnabled = DEFAULT_ENABLE_RING_DESCRIBE;
     private boolean isDebugEnabled = DEFAULT_DEBUG_ENABLED;
-    private ConnectionPoolFactory connectionPoolFactory = null;
-	private int autoDiscoveryDelay = DEFAULT_AUTO_DISCOVERY_DELAY_IN_SECONDS;
+    private ConnectionPoolFactory connectionPoolFactory = new ConnectionPoolFactory() {
+		@Override
+		public <CL> ConnectionPool<CL> createConnectionPool(
+				ConnectionPoolConfiguration config,
+				ConnectionFactory<CL> connectionFactory) {
+			return new RoundRobinConnectionPoolImpl<CL>(config, connectionFactory);
+		}
+    };
+    private int autoDiscoveryDelay = DEFAULT_AUTO_DISCOVERY_DELAY_IN_SECONDS;
 	private ConsistencyLevel defaultReadConsistencyLevel = ConsistencyLevel.CL_ONE;
 	private ConsistencyLevel defaultWriteConsistencyLevel = ConsistencyLevel.CL_ONE;
 	private int maxConnsPerPartition = DEFAULT_MAX_ACTIVE_PER_PARTITION;

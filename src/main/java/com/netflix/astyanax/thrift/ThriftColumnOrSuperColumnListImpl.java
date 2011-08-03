@@ -91,7 +91,8 @@ public class ThriftColumnOrSuperColumnListImpl<C> implements ColumnList<C> {
 					org.apache.cassandra.thrift.Column c = column.getColumn();
 					return new ThriftColumnImpl<C>(
 							colSer.fromBytes(c.getName()), 
-							c.getValue());
+							c.getValue(),
+							c.getTimestamp());
 				}
 				else {
 					throw new RuntimeException("Unknwon column type");
@@ -115,7 +116,8 @@ public class ThriftColumnOrSuperColumnListImpl<C> implements ColumnList<C> {
 		else if (column.isSetColumn()) {
 			return new ThriftColumnImpl<C>(
 					columnName, 
-					column.getColumn().getValue());
+					column.getColumn().getValue(),
+					column.getColumn().getTimestamp());
 		}
 		else if (column.isSetCounter_column()) {
 			return new ThriftCounterColumnImpl<C>(
@@ -136,7 +138,8 @@ public class ThriftColumnOrSuperColumnListImpl<C> implements ColumnList<C> {
 		else if (column.isSetColumn()) {
 			return new ThriftColumnImpl<C>(
 					this.colSer.fromBytes(column.getColumn().getName()), 
-					column.getColumn().getValue());
+					column.getColumn().getValue(),
+					column.getColumn().getTimestamp());
 		}
 		else if (column.isSetCounter_column()) {
 			return new ThriftCounterColumnImpl<C>(

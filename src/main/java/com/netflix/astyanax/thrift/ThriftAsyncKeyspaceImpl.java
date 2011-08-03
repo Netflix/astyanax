@@ -283,7 +283,7 @@ public final class ThriftAsyncKeyspaceImpl implements Keyspace {
 						}
                         if (column.isSetColumn()) {
                             org.apache.cassandra.thrift.Column c = column.getColumn();
-                            return new ThriftColumnImpl<C>(path.getSerializer().fromBytes(c.getName()), c.getValue());
+                            return new ThriftColumnImpl<C>(path.getSerializer().fromBytes(c.getName()), c.getValue(), c.getTimestamp());
                         }
                         else if (column.isSetSuper_column()) {
                             SuperColumn sc = column.getSuper_column();

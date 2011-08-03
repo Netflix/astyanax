@@ -84,4 +84,9 @@ public class EmptyColumn<C> implements Column<C> {
 	public UUID getUUIDValue() {
 		throw new UnsupportedOperationException();
 	}
+
+	@Override
+	public long getTimestamp() {
+		throw new UnsupportedOperationException();
+	}
 }

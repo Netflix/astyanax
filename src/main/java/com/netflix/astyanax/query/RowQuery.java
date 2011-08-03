@@ -18,7 +18,6 @@ package com.netflix.astyanax.query;
 import java.nio.ByteBuffer;
 
 import com.netflix.astyanax.Execution;
-import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.ColumnList;

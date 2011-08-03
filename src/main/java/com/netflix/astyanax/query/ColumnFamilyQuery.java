@@ -16,7 +16,6 @@
 package com.netflix.astyanax.query;
 
 import com.netflix.astyanax.model.ConsistencyLevel;
-
 /**
  * Top level column family query lets you choose the type of query being performed
  * at the key level.  Single key, key range or a key slice.
@@ -54,6 +53,12 @@ public interface ColumnFamilyQuery<K, C> {
 	 * @return
 	 */
 	RowSliceQuery<K,C> getKeySlice(K... keys);
+	
+	/**
+	 * Query to get an iterator to all rows in the column family
+	 * @return
+	 */
+	AllRowsQuery<K,C> getAllRows();
 	
 	/**
 	 * Prepare a CQL Query

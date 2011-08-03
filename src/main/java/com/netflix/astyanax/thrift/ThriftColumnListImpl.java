@@ -62,7 +62,8 @@ public class ThriftColumnListImpl<C> implements ColumnList<C> {
 				org.apache.cassandra.thrift.Column c = base.next();
 				return new ThriftColumnImpl<C>(
 						colSer.fromBytes(c.getName()), 
-						c.getValue());
+						c.getValue(),
+						c.getTimestamp());
 			}
 
 			@Override
@@ -86,7 +87,8 @@ public class ThriftColumnListImpl<C> implements ColumnList<C> {
 		org.apache.cassandra.thrift.Column c = lookup.get(columnName);
 		return new ThriftColumnImpl<C>(
 				colSer.fromBytes(c.getName()), 
-				c.getValue());
+				c.getValue(),
+				c.getTimestamp());
 	}
 
 	@Override
@@ -94,7 +96,8 @@ public class ThriftColumnListImpl<C> implements ColumnList<C> {
 		org.apache.cassandra.thrift.Column c = columns.get(idx);
 		return new ThriftColumnImpl<C>(
 				colSer.fromBytes(c.getName()), 
-				c.getValue());
+				c.getValue(),
+				c.getTimestamp());
 	}
 	
 	public C getNameByIndex(int idx) {

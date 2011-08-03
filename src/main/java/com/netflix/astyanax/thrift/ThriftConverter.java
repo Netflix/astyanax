@@ -17,8 +17,6 @@ package com.netflix.astyanax.thrift;
 
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 
 import org.apache.cassandra.thrift.ColumnParent;

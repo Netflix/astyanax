@@ -29,19 +29,18 @@ import org.apache.cassandra.thrift.Compression;
 import org.apache.cassandra.thrift.CounterSuperColumn;
 import org.apache.cassandra.thrift.CqlResult;
 import org.apache.cassandra.thrift.KeyRange;
-import org.apache.cassandra.thrift.SliceRange;
 import org.apache.cassandra.thrift.SuperColumn;
 
 import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
-import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.model.Rows;
+import com.netflix.astyanax.query.AllRowsQuery;
 import com.netflix.astyanax.query.ColumnCountQuery;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.query.ColumnQuery;
@@ -64,8 +63,6 @@ public class ThriftColumnFamilyQueryImpl<K,C> implements ColumnFamilyQuery<K,C> 
 	private String keyspaceName;
 	private ConsistencyLevel consistencyLevel;
 	private ColumnFamily<K,C> columnFamily;
-	private static final ByteBuffer EMPTY_BYTES = ByteBuffer.wrap(new byte[0]);
-	private static final SliceRange EVERYTHING = new SliceRange(EMPTY_BYTES, EMPTY_BYTES, false, Integer.MAX_VALUE);
 	
 	public ThriftColumnFamilyQueryImpl(ConnectionPool<Cassandra.Client> cp, String keyspaceName, ColumnFamily<K, C> columnFamily, ConsistencyLevel consistencyLevel) {
 		this.keyspaceName = keyspaceName;
@@ -95,7 +92,7 @@ public class ThriftColumnFamilyQueryImpl<K,C> implements ColumnFamilyQuery<K,C> 
 										ThriftConverter.ToThriftConsistencyLevel(consistencyLevel));
 									if (cosc.isSetColumn()) {
 										org.apache.cassandra.thrift.Column c = cosc.getColumn();
-										return new ThriftColumnImpl<C>(columnFamily.getColumnSerializer().fromBytes(c.getName()), c.getValue());
+										return new ThriftColumnImpl<C>(columnFamily.getColumnSerializer().fromBytes(c.getName()), c.getValue(), c.getTimestamp());
 									}
 									else if (cosc.isSetSuper_column()) {
 										// TODO: Super columns should be deprecated
@@ -355,6 +352,60 @@ public class ThriftColumnFamilyQueryImpl<K,C> implements ColumnFamilyQuery<K,C> 
 			public CqlQuery<K, C> useCompression() {
 				useCompression = true;
 				return this;
+			}
+		};
+	}
+
+	@Override
+	public AllRowsQuery<K, C> getAllRows() {
+		return new AbstractThriftAllRowsQueryImpl<K,C>(columnFamily) {
+			private AbstractThriftAllRowsQueryImpl<K,C> getThisQuery() {
+				return this;
+			}
+			
+			protected List<org.apache.cassandra.thrift.KeySlice> getNextBlock() throws ConnectionException {
+				return connectionPool.executeWithFailover(new AbstractKeyspaceOperationImpl<List<org.apache.cassandra.thrift.KeySlice>>(keyspaceName) {
+					@Override
+					public List<org.apache.cassandra.thrift.KeySlice> execute(Client client)
+							throws ConnectionException, OperationException {
+						try {
+							return client.get_range_slices(
+									new ColumnParent().setColumn_family(columnFamily.getName()),
+									predicate,
+									range, 
+									ThriftConverter.ToThriftConsistencyLevel(consistencyLevel));
+						}
+						catch (Exception e) {
+							throw ThriftConverter.ToConnectionPoolException(e);
+						}
+					}
+				}).getResult();
+			}
+
+			@Override
+			public OperationResult<Rows<K, C>> execute() throws ConnectionException {
+				return connectionPool.executeWithFailover(new AbstractKeyspaceOperationImpl<Rows<K, C>>(keyspaceName) {
+					@Override
+					public Rows<K, C> execute(Client client)
+							throws ConnectionException, OperationException {
+						try {
+							List<org.apache.cassandra.thrift.KeySlice> fistBlock = client.get_range_slices(
+									new ColumnParent().setColumn_family(columnFamily.getName()),
+									predicate,
+									range, 
+									ThriftConverter.ToThriftConsistencyLevel(consistencyLevel));
+							return new ThriftAllRowsImpl<K,C>(getThisQuery(), columnFamily, fistBlock);
+						}
+						catch (Exception e) {
+							throw ThriftConverter.ToConnectionPoolException(e);
+						}
+					}
+				});
+			}
+
+			@Override
+			public Future<OperationResult<Rows<K, C>>> executeAsync() throws ConnectionException {
+                throw new UnsupportedOperationException("Coming Soon");
 			}
 		};
 	}

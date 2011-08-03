@@ -16,7 +16,6 @@
 package com.netflix.astyanax.thrift;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 
@@ -31,7 +30,6 @@ import com.netflix.astyanax.query.IndexColumnExpression;
 import com.netflix.astyanax.query.IndexOperationExpression;
 import com.netflix.astyanax.query.IndexQuery;
 import com.netflix.astyanax.query.IndexValueExpression;
-import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.serializers.BooleanSerializer;
 import com.netflix.astyanax.serializers.DateSerializer;
 import com.netflix.astyanax.serializers.IntegerSerializer;

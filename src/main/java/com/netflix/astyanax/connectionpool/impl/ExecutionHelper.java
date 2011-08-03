@@ -19,7 +19,6 @@ import com.netflix.astyanax.Execution;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.UnknownException;
-import com.netflix.astyanax.thrift.ThriftConverter;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;

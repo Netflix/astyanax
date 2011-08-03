@@ -17,7 +17,6 @@ package com.netflix.astyanax.thrift;
 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
@@ -36,7 +35,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.AstyanaxConfiguration;
-import com.netflix.astyanax.Clock;
 import com.netflix.astyanax.ColumnMutation;
 import com.netflix.astyanax.CounterMutation;
 import com.netflix.astyanax.Execution;
@@ -54,7 +52,6 @@ import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ColumnPath;
 import com.netflix.astyanax.model.ColumnType;
-import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.model.KeySlice;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.model.Rows;
@@ -239,7 +236,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 									ThriftConverter.ToThriftConsistencyLevel(consistencyLevel));
 							if (column.isSetColumn()) {
 								org.apache.cassandra.thrift.Column c = column.getColumn();
-								return new ThriftColumnImpl<C>(path.getSerializer().fromBytes(c.getName()), c.getValue());
+								return new ThriftColumnImpl<C>(path.getSerializer().fromBytes(c.getName()), c.getValue(), c.getTimestamp());
 							}
 							else if (column.isSetSuper_column()) {
 								SuperColumn sc = column.getSuper_column();

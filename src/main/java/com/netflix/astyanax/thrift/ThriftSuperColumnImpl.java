@@ -23,11 +23,6 @@ import java.util.UUID;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.serializers.BooleanSerializer;
-import com.netflix.astyanax.serializers.ByteBufferSerializer;
-import com.netflix.astyanax.serializers.BytesArraySerializer;
-import com.netflix.astyanax.serializers.DateSerializer;
-import com.netflix.astyanax.serializers.UUIDSerializer;
 
 public class ThriftSuperColumnImpl<C> implements Column<C> {
 	private final List<org.apache.cassandra.thrift.Column> columns;
@@ -105,5 +100,11 @@ public class ThriftSuperColumnImpl<C> implements Column<C> {
 	public UUID getUUIDValue() {
 		throw new UnsupportedOperationException(
 				"SuperColumn \'" + this.name+ "\' has no value");
+	}
+
+	@Override
+	public long getTimestamp() {
+		throw new UnsupportedOperationException(
+				"SuperColumn \'" + this.name+ "\' has no timestamp");
 	}
 }

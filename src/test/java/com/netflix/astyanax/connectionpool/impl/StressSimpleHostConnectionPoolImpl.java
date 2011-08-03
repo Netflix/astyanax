@@ -24,7 +24,7 @@ public class StressSimpleHostConnectionPoolImpl {
 	public static void main(String[] args) {
 		Host host = new Host("127.0.0.1", MockHostType.GOOD_IMMEDIATE.ordinal());
 		final SimpleHostConnectionPool pool = new SimpleHostConnectionPool<MockClient>(
-				host, new MockConnectionFactory(), 3);
+				host, new MockConnectionFactory(), null, 3);
 		
 		int numThreads = 100;
 		final int numOperations = 100;

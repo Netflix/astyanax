@@ -24,6 +24,8 @@ import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.Clock;
 import com.netflix.astyanax.KeyspaceTracers;
 import com.netflix.astyanax.connectionpool.BadHostDetector;
+import com.netflix.astyanax.connectionpool.ConnectionFactory;
+import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
 import com.netflix.astyanax.connectionpool.ConnectionPoolFactory;
 import com.netflix.astyanax.connectionpool.ConnectionPoolMonitor;
@@ -37,6 +39,7 @@ import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.shallows.EmptyConnectionPoolMonitor;
 import com.netflix.astyanax.shallows.EmptyKeyspaceTracers;
 import com.netflix.astyanax.shallows.EmptyNodeDiscoveryFactoryImpl;
+import com.netflix.astyanax.thrift.ThriftSyncConnectionFactoryImpl;
 
 public class ConnectionPoolConfigurationImpl implements AstyanaxConfiguration {
     /**
@@ -84,7 +87,7 @@ public class ConnectionPoolConfigurationImpl implements AstyanaxConfiguration {
     
     private boolean isRingDescribeEnabled = DEFAULT_ENABLE_RING_DESCRIBE;
     private boolean isDebugEnabled = DEFAULT_DEBUG_ENABLED;
-    private ConnectionPoolFactory connectionPoolFactory = null;
+    private ConnectionPoolFactory connectionPoolFactory;
 	private int autoDiscoveryDelay = DEFAULT_AUTO_DISCOVERY_DELAY_IN_SECONDS;
 	private ConsistencyLevel defaultReadConsistencyLevel = ConsistencyLevel.CL_ONE;
 	private ConsistencyLevel defaultWriteConsistencyLevel = ConsistencyLevel.CL_ONE;
@@ -110,6 +113,7 @@ public class ConnectionPoolConfigurationImpl implements AstyanaxConfiguration {
 	public ConnectionPoolConfigurationImpl(String clusterName, String keyspaceName) {
 		this.keyspaceName = keyspaceName;
 		this.clusterName = clusterName;
+		
 	}
 	
 	public ConnectionPoolConfigurationImpl() {
@@ -277,9 +281,22 @@ public class ConnectionPoolConfigurationImpl implements AstyanaxConfiguration {
 	
 	@Override
 	public ConnectionPoolFactory getConnectionPoolFactory() {
-		return this.connectionPoolFactory;
+	  if ( this.connectionPoolFactory == null) {
+	    this.connectionPoolFactory = new ConnectionPoolFactory() {        
+
+	      @Override
+	      public <CL> ConnectionPool<CL> createConnectionPool(
+	          ConnectionPoolConfiguration config,
+	          ConnectionFactory<CL> connectionFactory) {
+	        // TODO Auto-generated method stub
+	        return new HostPartitionConnectionPoolImpl(config, new ThriftSyncConnectionFactoryImpl(config));
+	      }
+	    };
+	  }
+
+	  return this.connectionPoolFactory;
 	}
-	
+
 	public void setConnectionPoolFactory(ConnectionPoolFactory factory) {
 		this.connectionPoolFactory = factory;
 	}

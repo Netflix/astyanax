@@ -1,37 +1,54 @@
 package com.netflix.astyanax.thrift;
 
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
-import org.apache.cassandra.dht.RandomPartitioner;
 import org.apache.cassandra.thrift.KeyRange;
 import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
 
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.ExceptionCallback;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnSlice;
 import com.netflix.astyanax.query.AllRowsQuery;
+import com.netflix.astyanax.query.RowSliceQuery;
 
 public abstract class AbstractThriftAllRowsQueryImpl<K,C> implements AllRowsQuery<K,C> {
 	
 	protected SlicePredicate predicate = new SlicePredicate().setSlice_range(ThriftUtils.RANGE_ALL);
-	protected KeyRange range = new KeyRange().setCount(100).setStart_token("0").setEnd_token("0");
-	
+	// protected KeyRange range = new KeyRange().setCount(100).setStart_token("0").setEnd_token("0");
+	private int blockSize = 100;
 	private ColumnFamily<K, C> columnFamily;
 	private boolean repeatLastToken = true;
-	private final RandomPartitioner partitioner = new RandomPartitioner();
+    private ExceptionCallback exceptionCallback;
 
 	public AbstractThriftAllRowsQueryImpl(ColumnFamily<K, C> columnFamily) {
 		this.columnFamily = columnFamily;
 	}
 	
+    public AllRowsQuery<K,C> setExceptionCallback(ExceptionCallback cb) {
+        exceptionCallback = cb;
+        return this;
+    }
+    
+    protected ExceptionCallback getExceptionCallback() {
+        return this.exceptionCallback;
+    }
+    
 	@Override 
 	public AllRowsQuery<K, C> withColumnSlice(C... columns) {
-    	predicate.setColumn_names(columnFamily.getColumnSerializer().toBytesList(Arrays.asList(columns))).setSlice_rangeIsSet(false);
+		if (columns != null)
+			predicate.setColumn_names(columnFamily.getColumnSerializer().toBytesList(Arrays.asList(columns))).setSlice_rangeIsSet(false);
+		return this;
+	}
+
+    @Override
+	public AllRowsQuery<K, C> withColumnSlice(Collection<C> columns) {
+    	if (columns != null)
+    		predicate.setColumn_names(columnFamily.getColumnSerializer().toBytesList(columns)).setSlice_rangeIsSet(false);
 		return this;
 	}
 
@@ -75,24 +92,18 @@ public abstract class AbstractThriftAllRowsQueryImpl<K,C> implements AllRowsQuer
 
 	@Override
 	public AllRowsQuery<K, C> setBlockSize(int blockSize) {
-		range.setCount(blockSize);
+		return setRowLimit(blockSize);
+	}
+	
+	@Override
+	public AllRowsQuery<K,C> setRowLimit(int rowLimit) {
+		this.blockSize = rowLimit;
 		return this;
 	}
 
+
 	public int getBlockSize() {
-		return range.getCount();
-	}
-	
-	public void setLastRowKey(ByteBuffer rowKey) {
-		// Determine the start token for the next page
-		String token = partitioner.getToken(rowKey).toString();
-		if (repeatLastToken) {
-			BigInteger intToken = new BigInteger(token).subtract(new BigInteger("1"));
-			range.setStart_token(intToken.toString());
-		}
-		else {
-			range.setStart_token(token);
-		}
+		return blockSize;
 	}
 	
 	@Override
@@ -101,6 +112,10 @@ public abstract class AbstractThriftAllRowsQueryImpl<K,C> implements AllRowsQuer
 		return this;
 	}
 	
-	protected abstract List<org.apache.cassandra.thrift.KeySlice> getNextBlock() throws ConnectionException;
+	public boolean getRepeatLastToken() {
+	    return this.repeatLastToken;
+	}
+	
+	protected abstract List<org.apache.cassandra.thrift.KeySlice> getNextBlock(KeyRange range);
 }
 

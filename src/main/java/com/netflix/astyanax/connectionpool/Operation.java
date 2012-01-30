@@ -37,14 +37,14 @@ public interface Operation<CL, R> {
 	 * @throws OperationException 
 	 * @throws NetflixCassandraException 
 	 */
-	R execute(CL client) throws ConnectionException, OperationException;
+	R execute(CL client) throws ConnectionException;
 
 	/**
 	 * Return the unique key on which the operation is performed or null
 	 * if the operation is performed on multiple keys.
 	 * @return
 	 */
-	BigInteger getKey();
+	BigInteger getToken();
 
 	/**
 	 * Return keyspace for this operation.  Return null if using the current
@@ -52,4 +52,12 @@ public interface Operation<CL, R> {
 	 * @return
 	 */
 	String getKeyspace();
+	
+	/**
+	 * Return the host to run on or null to select a host using the load blancer.
+	 * Failover is disabled for this scenario.
+	 * @param host
+	 * @return
+	 */
+	Host getPinnedHost();
 }

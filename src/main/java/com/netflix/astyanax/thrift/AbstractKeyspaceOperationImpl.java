@@ -15,26 +15,24 @@
  ******************************************************************************/
 package com.netflix.astyanax.thrift;
 
-import java.math.BigInteger;
+import com.netflix.astyanax.CassandraOperationTracer;
+import com.netflix.astyanax.connectionpool.Host;
 
-import org.apache.cassandra.thrift.Cassandra;
-
-import com.netflix.astyanax.connectionpool.Operation;
-
-public abstract class AbstractKeyspaceOperationImpl<R> implements Operation<Cassandra.Client, R>{
+public abstract class AbstractKeyspaceOperationImpl<R> extends AbstractOperationImpl<R> {
 	private String keyspaceName;
 	
-	public AbstractKeyspaceOperationImpl(String keyspaceName) {
+	public AbstractKeyspaceOperationImpl(CassandraOperationTracer tracer, Host pinnedHost, String keyspaceName) {
+		super(tracer, pinnedHost);
 		this.keyspaceName = keyspaceName;
 	}
 
-	@Override
-	public String getKeyspace() {
-		return this.keyspaceName;
+	public AbstractKeyspaceOperationImpl(CassandraOperationTracer tracer, String keyspaceName) {
+		super(tracer);
+		this.keyspaceName = keyspaceName;
 	}
 	
 	@Override
-	public BigInteger getKey() {
-		return null;
+	public String getKeyspace() {
+		return this.keyspaceName;
 	}
 }

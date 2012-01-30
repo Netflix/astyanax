@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import com.eaio.uuid.UUIDGen;
 import com.netflix.astyanax.Clock;
+import com.netflix.astyanax.clock.MicrosecondsSyncClock;
 
 /**
  * Utilitary class to generate TimeUUID (type 1)
@@ -15,7 +16,8 @@ import com.netflix.astyanax.Clock;
 public final class TimeUUIDUtils {
 	
   static final long NUM_100NS_INTERVALS_SINCE_UUID_EPOCH = 0x01b21dd213814000L;
-
+  static final Clock microsClock = new MicrosecondsSyncClock();
+  
   /**
    * Gets a new and unique time uuid in milliseconds. It is useful to use in a TimeUUIDType sorted column family.
    *
@@ -23,6 +25,10 @@ public final class TimeUUIDUtils {
    */
   public static java.util.UUID getUniqueTimeUUIDinMillis() {
     return new java.util.UUID(UUIDGen.newTime(), UUIDGen.getClockSeqAndNode());
+  }
+  
+  public static java.util.UUID getUniqueTimeUUIDinMicros() {
+      return new java.util.UUID(createTimeFromMicros(microsClock.getCurrentTime()), UUIDGen.getClockSeqAndNode());
   }
 
   /**
@@ -49,7 +55,11 @@ public final class TimeUUIDUtils {
   public static java.util.UUID getTimeUUID(long time) {
     return new java.util.UUID(createTime(time), UUIDGen.getClockSeqAndNode());
   }
-
+  
+  public static java.util.UUID getMicrosTimeUUID(long time) {
+      return new java.util.UUID(createTimeFromMicros(time), UUIDGen.getClockSeqAndNode());
+  }
+  
   private static long createTime(long currentTime) {
     long time;
 
@@ -67,6 +77,22 @@ public final class TimeUUIDUtils {
     return time;
   }
 
+  private static long createTimeFromMicros(long currentTime) {
+      long time;
+
+      // UTC time
+      long timeToUse = (currentTime * 10) + NUM_100NS_INTERVALS_SINCE_UUID_EPOCH;
+
+      // time low
+      time = timeToUse << 32;
+
+      // time mid
+      time |= (timeToUse & 0xFFFF00000000L) >> 16;
+
+      // time hi and version
+      time |= 0x1000 | ((timeToUse >> 48) & 0x0FFF); // version 1
+      return time;
+    }
 
   /**
    * Returns an instance of uuid. Useful for when you read out of cassandra
@@ -93,6 +119,10 @@ public final class TimeUUIDUtils {
     return (uuid.timestamp() - NUM_100NS_INTERVALS_SINCE_UUID_EPOCH) / 10000;
   }
 
+  public static long getMicrosTimeFromUUID(UUID uuid) {
+      return (uuid.timestamp() - NUM_100NS_INTERVALS_SINCE_UUID_EPOCH) / 10;
+  }
+  
   /**
    * As byte array.
    * This method is often used in conjunction with @link {@link #getTimeUUID()}

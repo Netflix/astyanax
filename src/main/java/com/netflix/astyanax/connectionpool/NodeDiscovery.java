@@ -15,6 +15,8 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool;
 
+import org.joda.time.DateTime;
+
 /**
  * Interface for a module that periodically updates the nodes in a connection
  * pool.  
@@ -23,7 +25,43 @@ package com.netflix.astyanax.connectionpool;
  *
  */
 public interface NodeDiscovery {
+	/**
+	 * Start the node discovery thread
+	 */
 	void start();
 	
+	/**
+	 * Stop the node discovery thread
+	 */
 	void shutdown();
+	
+	/**
+	 * Get the last refresh time in the discovery thread
+	 * @return
+	 */
+	DateTime getLastRefreshTime();
+	
+	/**
+	 * Get the number of refreshes
+	 * @return
+	 */
+	long getRefreshCount();
+	
+	/**
+	 * Get total number of errors encountered during a refresh
+	 * @return
+	 */
+	long getErrorCount();
+	
+	/**
+	 * Get the last exception that was encountered
+	 * @return
+	 */
+	Exception getLastException();
+
+	/**
+	 * Get the raw list of nodes from the underlying refresh mechanism
+	 * @return
+	 */
+	String getRawHostList();
 }

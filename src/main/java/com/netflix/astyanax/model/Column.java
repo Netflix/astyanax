@@ -37,6 +37,12 @@ public interface Column<C> {
 	 * @return
 	 */
 	C getName();
+	
+	/**
+	 * Return the raw byet buffer for the column name
+	 * @return
+	 */
+	ByteBuffer getRawName();
 
 	/**
 	 * Returns the column timestamp.  Not to be confused with column values
@@ -66,6 +72,12 @@ public interface Column<C> {
 	 * @return
 	 */
 	int getIntegerValue();
+	
+	/**
+	 * Return value as a double
+	 * @return
+	 */
+	double getDoubleValue();
 	
 	/**
 	 * Return value as a long.  Use this to get the value of a counter column

@@ -1,8 +1,12 @@
 package com.netflix.astyanax.query;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
 
+import com.netflix.astyanax.ExceptionCallback;
 import com.netflix.astyanax.Execution;
+import com.netflix.astyanax.RowCallback;
+import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.ColumnSlice;
 import com.netflix.astyanax.model.Rows;
@@ -48,11 +52,26 @@ import com.netflix.astyanax.model.Rows;
  */
 public interface AllRowsQuery<K,C> extends Execution<Rows<K,C>> {
 	/**
-	 * Maximum number of keys to return for each incremental query to Cassandra
+	 * @deprecated Use setRowLimit instead
+	 */
+	AllRowsQuery<K,C> setBlockSize(int blockSize);
+	
+	/**
+	 * Maximum number of rows to return for each incremental query to Cassandra.
+	 * This limit also represents the page size when paginating.
 	 * @param blockSize
 	 * @return
 	 */
-	AllRowsQuery<K,C> setBlockSize(int blockSize);
+	AllRowsQuery<K,C> setRowLimit(int rowLimit);
+	
+	/**
+	 * Sets the exception handler to use when handling exceptions inside
+	 * Iterator.next().   This gives the caller a chance to implement 
+	 * a backoff strategy or stop the iteration.
+	 * @param cb
+	 * @return
+	 */
+	AllRowsQuery<K,C> setExceptionCallback(ExceptionCallback cb);
 	
 	/**
 	 * If true will repeat the last token in the previous block.  
@@ -68,6 +87,13 @@ public interface AllRowsQuery<K,C> extends Execution<Rows<K,C>> {
 	 */
 	AllRowsQuery<K, C> withColumnSlice(C... columns);
 
+	/**
+	 * Specify a non-contiguous set of columns to retrieve.
+	 * @param columns
+	 * @return
+	 */
+	AllRowsQuery<K, C> withColumnSlice(Collection<C> columns);
+		
 	/**
 	 * Use this when your application caches the column slice.
 	 * @param slice
@@ -106,4 +132,14 @@ public interface AllRowsQuery<K,C> extends Execution<Rows<K,C>> {
 	 * @return
 	 */
 	AllRowsQuery<K, C> withColumnRange(ByteBufferRange range);	
+	
+    /**
+     * Execute the operation in a separate thread for each token range and provide the results 
+     * in a callback.  
+     * 
+     * @param predicate
+     * @return
+     * @throws ConnectionException 
+     */
+	void executeWithCallback(RowCallback<K,C> callback) throws ConnectionException;
 }

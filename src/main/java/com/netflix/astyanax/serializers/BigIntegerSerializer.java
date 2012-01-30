@@ -3,6 +3,8 @@ package com.netflix.astyanax.serializers;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 
+import org.apache.cassandra.db.marshal.IntegerType;
+
 /**
  * Serializer implementation for BigInteger
  * 
@@ -38,6 +40,23 @@ public final class BigIntegerSerializer extends AbstractSerializer<BigInteger> {
   @Override
   public ComparatorType getComparatorType() {
     return ComparatorType.INTEGERTYPE;
+  }
+
+  @Override
+  public ByteBuffer fromString(String str) {
+	return IntegerType.instance.fromString(str);
+  }
+	
+  @Override
+  public String getString(ByteBuffer byteBuffer) {
+	return IntegerType.instance.getString(byteBuffer);
+  }
+
+  @Override
+  public ByteBuffer getNext(ByteBuffer byteBuffer) {
+	BigInteger bigint = fromByteBuffer(byteBuffer.duplicate());
+	bigint = bigint.add(new BigInteger("1"));
+	return toByteBuffer(bigint);
   }
 
 }

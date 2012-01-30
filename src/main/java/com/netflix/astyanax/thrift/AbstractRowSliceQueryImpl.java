@@ -17,6 +17,7 @@ package com.netflix.astyanax.thrift;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collection;
 
 import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
@@ -36,7 +37,16 @@ public abstract class AbstractRowSliceQueryImpl<K, C> implements RowSliceQuery<K
 	
 	@Override
 	public RowSliceQuery<K, C> withColumnSlice(C... columns) {
-    	predicate.setColumn_names(serializer.toBytesList(Arrays.asList(columns))).setSlice_rangeIsSet(false);
+		if (columns != null) {
+			predicate.setColumn_names(serializer.toBytesList(Arrays.asList(columns))).setSlice_rangeIsSet(false);
+		}
+		return this;
+	}
+
+    @Override
+	public RowSliceQuery<K, C> withColumnSlice(Collection<C> columns) {
+    	if (columns != null)
+    		predicate.setColumn_names(serializer.toBytesList(columns)).setSlice_rangeIsSet(false);
 		return this;
 	}
 

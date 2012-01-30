@@ -21,16 +21,21 @@ package com.netflix.astyanax.connectionpool.exceptions;
  * @author elandau
  *
  */
-public class MaxConnsPerHostReachedException extends ConnectionException {
-	public MaxConnsPerHostReachedException(String message) {
-		super(message, true);
+public class MaxConnsPerHostReachedException extends ConnectionException implements IsRetryableException {
+	/**
+     * 
+     */
+    private static final long serialVersionUID = 3153033457028147246L;
+
+    public MaxConnsPerHostReachedException(String message) {
+		super(message);
 	}
 	
 	public MaxConnsPerHostReachedException(Throwable t) {
-		super(t, true);
+		super(t);
 	}
 	
 	public MaxConnsPerHostReachedException(String message, Throwable cause) {
-        super(message, cause, true);
+        super(message, cause);
     }
 }

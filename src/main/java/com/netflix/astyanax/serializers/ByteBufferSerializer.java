@@ -4,6 +4,8 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.cassandra.db.marshal.BytesType;
+
 /**
  * The BytesExtractor is a simple identity function. It supports the Extractor
  * interface and implements the fromBytes and toBytes as simple identity
@@ -56,5 +58,15 @@ public final class ByteBufferSerializer extends AbstractSerializer<ByteBuffer>{
   @Override
   public <V> Map<ByteBuffer, V> fromBytesMap(Map<ByteBuffer, V> map) {
     return map;
+  }
+  
+  @Override
+  public ByteBuffer fromString(String str) {
+    return BytesType.instance.fromString(str);
+  }
+  
+  @Override
+  public String getString(ByteBuffer byteBuffer) {
+    return BytesType.instance.getString(byteBuffer);
   }
 }

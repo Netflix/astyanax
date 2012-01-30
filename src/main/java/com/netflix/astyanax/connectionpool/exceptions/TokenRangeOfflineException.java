@@ -17,15 +17,20 @@ package com.netflix.astyanax.connectionpool.exceptions;
 
 public class TokenRangeOfflineException extends ConnectionException {
 		
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 4269482200208592843L;
+
     public TokenRangeOfflineException(String message) {
-        super(message, false);
+        super(message);
     }
 
     public TokenRangeOfflineException(Throwable cause) {
-        super(cause, false);
+        super(cause);
     }
 
     public TokenRangeOfflineException(String message, Throwable cause) {
-        super(message, cause, false);
+        super(message, cause);
     }
 }

@@ -89,4 +89,14 @@ public class EmptyColumn<C> implements Column<C> {
 	public long getTimestamp() {
 		throw new UnsupportedOperationException();
 	}
+
+	@Override
+	public double getDoubleValue() {
+		throw new UnsupportedOperationException();
+	}
+
+    @Override
+    public ByteBuffer getRawName() {
+        throw new UnsupportedOperationException();
+    }
 }

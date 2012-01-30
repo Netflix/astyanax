@@ -17,15 +17,8 @@ package com.netflix.astyanax.connectionpool.impl;
 
 import java.util.concurrent.LinkedBlockingQueue;
 
-import org.cliffc.high_scale_lib.NonBlockingHashMap;
-
 import com.netflix.astyanax.connectionpool.BadHostDetector;
-import com.netflix.astyanax.connectionpool.Host;
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.exceptions.OperationException;
-import com.netflix.astyanax.connectionpool.exceptions.TimeoutException;
-import com.netflix.astyanax.connectionpool.exceptions.TransportException;
-import com.netflix.astyanax.connectionpool.exceptions.UnknownException;
+import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
 
 /**
  * BadHostDetector which marks the host as failed if there is a transport
@@ -35,40 +28,48 @@ import com.netflix.astyanax.connectionpool.exceptions.UnknownException;
  */
 public class BadHostDetectorImpl implements BadHostDetector {
 	
-	private final NonBlockingHashMap<Host, LinkedBlockingQueue<Long>> errors;
-	private final int timeoutCounter;
-	private final int timeoutWindow;
+	private final LinkedBlockingQueue<Long> timeouts;
+	private final ConnectionPoolConfiguration config;
 	
-	public BadHostDetectorImpl(int timeoutCounter, int timeoutWindow) {
-		this.errors = new NonBlockingHashMap<Host, LinkedBlockingQueue<Long>>();
-		this.timeoutCounter = timeoutCounter;
-		this.timeoutWindow = timeoutWindow;
+	public BadHostDetectorImpl(ConnectionPoolConfiguration config) {
+		this.timeouts = new LinkedBlockingQueue<Long>();
+		this.config = config;
+	}
+	
+	public String toString() {
+		return new StringBuilder()
+			.append("BadHostDetectorImpl[")
+			.append("count=").append(config.getMaxTimeoutCount())
+			.append(",window=").append(config.getTimeoutWindow())
+			.append("]")
+			.toString();
 	}
 	
 	@Override
-	public boolean checkFailure(Host host, ConnectionException e) {
-		if (e instanceof TransportException || e instanceof UnknownException) {
-			return true;
-		}
-		else if (e instanceof OperationException) {
-			return false;
-		}
-		else if (e instanceof TimeoutException) {
-			long currentTimeMillis = System.currentTimeMillis();
-			
-			errors.putIfAbsent(host, new LinkedBlockingQueue<Long>());
-			errors.get(host).add(currentTimeMillis);
-			
-			// Determine if the host exceeded timeoutCounter exceptions in
-			// the timeoutWindow, in which case this is determined to be a
-			// failure
-			if (errors.get(host).size() > timeoutCounter) {
-				Long last = errors.get(host).remove();
-				if (last.longValue() < (currentTimeMillis - timeoutWindow)) {
-					return true;
+	public Instance createInstance() {
+		return new Instance() {
+			@Override
+			public boolean addTimeoutSample() {
+				long currentTimeMillis = System.currentTimeMillis();
+				
+				timeouts.add(currentTimeMillis);
+				
+				// Determine if the host exceeded timeoutCounter exceptions in
+				// the timeoutWindow, in which case this is determined to be a
+				// failure
+				if (timeouts.size() > config.getMaxTimeoutCount()) {
+					Long last = timeouts.remove();
+					if ((currentTimeMillis - last.longValue()) < config.getTimeoutWindow()) {
+						return true;
+					}
 				}
+				return false;
 			}
-		}
-		return false;
+		};
+	}
+
+	@Override
+	public void removeInstance(Instance instance) {
+		// NOOP
 	}
 }

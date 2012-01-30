@@ -2,6 +2,8 @@ package com.netflix.astyanax.serializers;
 
 import java.nio.ByteBuffer;
 
+import org.apache.cassandra.db.marshal.BooleanType;
+
 /**
  * Converts bytes to Boolean and vice versa
  * 
@@ -35,6 +37,26 @@ public final class BooleanSerializer extends AbstractSerializer<Boolean> {
     }
     byte b = bytes.get();
     return b == (byte) 1;
+  }
+
+  @Override
+  public ByteBuffer getNext(ByteBuffer byteBuffer) {
+	  throw new IllegalStateException("Boolean columns can't be paginated");
+  }
+  
+  @Override
+  public ByteBuffer fromString(String str) {	
+	  return BooleanType.instance.fromString(str);
+  }
+
+  @Override
+  public String getString(ByteBuffer byteBuffer) {
+	  return fromByteBuffer(byteBuffer).toString();
+  }
+  
+  @Override
+  public ComparatorType getComparatorType() {
+    return ComparatorType.BOOLEANTYPE;
   }
 
 }

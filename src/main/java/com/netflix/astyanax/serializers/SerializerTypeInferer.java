@@ -1,6 +1,7 @@
 package com.netflix.astyanax.serializers;
 
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.UUID;
 
@@ -28,12 +29,16 @@ public class SerializerTypeInferer {
       serializer = LongSerializer.get();
     } else if (value instanceof Integer) {
       serializer = IntegerSerializer.get();
+    } else if (value instanceof Short) {
+      serializer = ShortSerializer.get();
     } else if (value instanceof BigInteger) {
       serializer = BigIntegerSerializer.get();
     } else if (value instanceof Boolean) {
       serializer = BooleanSerializer.get();
     } else if (value instanceof byte[]) {
       serializer = BytesArraySerializer.get();
+    } else if (value instanceof ByteBuffer) {
+      serializer = ByteBufferSerializer.get();
     } else if (value instanceof Date) {
       serializer = DateSerializer.get();
     } else {
@@ -55,10 +60,14 @@ public class SerializerTypeInferer {
       serializer = LongSerializer.get();
     } else if (valueClass.equals(Integer.class) || valueClass.equals(int.class)) {
       serializer = IntegerSerializer.get();
+    } else if (valueClass.equals(Short.class) || valueClass.equals(short.class)) {
+      serializer = ShortSerializer.get();
     } else if (valueClass.equals(Boolean.class)
         || valueClass.equals(boolean.class)) {
       serializer = BooleanSerializer.get();
     } else if (valueClass.equals(byte[].class)) {
+      serializer = BytesArraySerializer.get();
+    } else if (valueClass.equals(ByteBuffer.class)) {
       serializer = ByteBufferSerializer.get();
     } else if (valueClass.equals(Date.class)) {
       serializer = DateSerializer.get();

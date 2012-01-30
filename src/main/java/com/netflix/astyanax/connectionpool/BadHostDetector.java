@@ -15,8 +15,6 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool;
 
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-
 /**
  * Interface for algorithm to detect when a host is considered down.
  * Once a host is considered to be down it will be added to the retry service
@@ -24,12 +22,15 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
  *
  */
 public interface BadHostDetector {
-	/**
-	 * Check if the host is down given the exception that occurred.  
-	 * 
-	 * @param host
-	 * @param e	Exception that caused a connection to fail.
-	 * @return
-	 */
-	public boolean checkFailure(Host host, ConnectionException e);
+	public interface Instance {
+		/**
+		 * Add a timeout sample and return false if the host should be quarantined
+		 * @return true to quarantine or false to continue using this host
+		 */
+		boolean addTimeoutSample();
+	}
+	
+	Instance createInstance();
+	
+	void removeInstance(Instance instance);
 }

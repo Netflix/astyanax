@@ -2,6 +2,8 @@ package com.netflix.astyanax.serializers;
 
 import java.nio.ByteBuffer;
 
+import org.apache.cassandra.db.marshal.LongType;
+
 /**
  * Converts bytes to Long and vise a versa
  * 
@@ -26,11 +28,16 @@ public final class LongSerializer extends AbstractSerializer<Long> {
 
   @Override
   public Long fromByteBuffer(ByteBuffer byteBuffer) {
-    if ((byteBuffer == null) || (byteBuffer.remaining() < 8)) {
+    if (byteBuffer == null) {
       return null;
     }
-    long l = byteBuffer.getLong();
-    return l;
+    else if (byteBuffer.remaining() == 8) {
+    	return byteBuffer.getLong();
+    }
+    else if (byteBuffer.remaining() == 4) {
+    	return (long)byteBuffer.getInt();
+    }
+    return null;
   }
 
   @Override
@@ -38,4 +45,22 @@ public final class LongSerializer extends AbstractSerializer<Long> {
     return ComparatorType.LONGTYPE;
   }
 
+  @Override
+  public ByteBuffer fromString(String str) {
+	return LongType.instance.fromString(str);
+  }
+	
+  @Override
+  public String getString(ByteBuffer byteBuffer) {
+      return LongType.instance.getString(byteBuffer);
+  }
+  
+  @Override
+  public ByteBuffer getNext(ByteBuffer byteBuffer) {
+	Long val = fromByteBuffer(byteBuffer.duplicate());
+	if (val == Long.MAX_VALUE) {
+		throw new ArithmeticException("Can't paginate past max long");
+	}
+	return toByteBuffer(val+1);
+  }
 }

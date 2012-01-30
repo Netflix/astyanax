@@ -35,11 +35,11 @@ public interface Serializer<T> {
    * @param obj
    * @return
    */
-  public ByteBuffer toByteBuffer(T obj);
+  ByteBuffer toByteBuffer(T obj);
 
-  public byte[] toBytes(T obj);
+  byte[] toBytes(T obj);
 
-  public T fromBytes(byte[] bytes);
+  T fromBytes(byte[] bytes);
 
   /**
    * Extract an object of type T from the bytes.
@@ -47,22 +47,38 @@ public interface Serializer<T> {
    * @param bytes
    * @return
    */
-  public T fromByteBuffer(ByteBuffer byteBuffer);
+  T fromByteBuffer(ByteBuffer byteBuffer);
 
-  public Set<ByteBuffer> toBytesSet(List<T> list);
+  Set<ByteBuffer> toBytesSet(List<T> list);
 
-  public List<T> fromBytesSet(Set<ByteBuffer> list);
+  List<T> fromBytesSet(Set<ByteBuffer> list);
 
-  public <V> Map<ByteBuffer, V> toBytesMap(Map<T, V> map);
+  <V> Map<ByteBuffer, V> toBytesMap(Map<T, V> map);
 
-  public <V> Map<T, V> fromBytesMap(Map<ByteBuffer, V> map);
+  <V> Map<T, V> fromBytesMap(Map<ByteBuffer, V> map);
 
-  public List<ByteBuffer> toBytesList(List<T> list);
+  List<ByteBuffer> toBytesList(List<T> list);
 
-  public List<ByteBuffer> toBytesList(Collection<T> list);
+  List<ByteBuffer> toBytesList(Collection<T> list);
   
-  public List<T> fromBytesList(List<ByteBuffer> list);
+  List<T> fromBytesList(List<ByteBuffer> list);
 
-  public ComparatorType getComparatorType();
+  ComparatorType getComparatorType();
+  
+  /**
+   * Return the byte buffer for the next value in sorted order for the matching comparator type.
+   * This is used for paginating columns.
+   * @param byteBuffer
+   * @return
+   */
+  ByteBuffer getNext(ByteBuffer byteBuffer);
+  
+  /**
+   * Create a ByteBuffer by first parsing the type out of a string
+   * @param string
+   * @return
+   */
+  ByteBuffer fromString(String string);
 
+  String getString(ByteBuffer byteBuffer);
 }

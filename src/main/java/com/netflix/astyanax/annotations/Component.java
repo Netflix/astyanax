@@ -29,4 +29,5 @@ import java.lang.annotation.ElementType;
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Component {
+    int ordinal() default -1;
 }

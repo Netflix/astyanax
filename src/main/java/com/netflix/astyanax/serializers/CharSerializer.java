@@ -17,6 +17,9 @@ public class CharSerializer extends AbstractSerializer<Character> {
 
 	@Override
 	public ByteBuffer toByteBuffer(Character obj) {
+		if (obj == null) 
+			return null;
+		
 		ByteBuffer buffer = ByteBuffer.allocate(Character.SIZE / Byte.SIZE);
 
 		buffer.putChar(obj);
@@ -31,7 +34,22 @@ public class CharSerializer extends AbstractSerializer<Character> {
 			return null;
 		}
 		return bytes.getChar();
-
 	}
 
+	@Override
+	public ByteBuffer fromString(String str) {
+	    if (str == null || str.length() == 0) 
+	        return null;
+	    return toByteBuffer(str.charAt(0));
+	}
+
+    @Override
+    public String getString(ByteBuffer byteBuffer) {
+        return fromByteBuffer(byteBuffer).toString();
+    }
+
+    @Override
+	public ByteBuffer getNext(ByteBuffer byteBuffer) {
+		throw new IllegalStateException("Char columns can't be paginated");
+	}
 }

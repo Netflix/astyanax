@@ -15,7 +15,11 @@
  ******************************************************************************/
 package com.netflix.astyanax.query;
 
+import java.util.Collection;
+
+import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.model.ConsistencyLevel;
+import com.netflix.astyanax.retry.RetryPolicy;
 /**
  * Top level column family query lets you choose the type of query being performed
  * at the key level.  Single key, key range or a key slice.
@@ -25,7 +29,26 @@ import com.netflix.astyanax.model.ConsistencyLevel;
  * @param <C>
  */
 public interface ColumnFamilyQuery<K, C> {
+	/**
+	 * Set the consistency level for this operations.  
+	 * @param consistencyLevel
+	 * @return
+	 */
 	ColumnFamilyQuery<K, C> setConsistencyLevel(ConsistencyLevel consistencyLevel);
+	
+	/**
+	 * Set the retry policy to use instead of the default
+	 * @param consistencyLevel
+	 * @return
+	 */
+	ColumnFamilyQuery<K, C> withRetryPolicy(RetryPolicy retry);
+	
+	/**
+	 * Run the query on the specified host
+	 * @param host
+	 * @return
+	 */
+	ColumnFamilyQuery<K, C> pinToHost(Host host);
 	
 	/**
 	 * Query a single key
@@ -49,10 +72,19 @@ public interface ColumnFamilyQuery<K, C> {
 	
 	/**
 	 * Query a non-contiguous set of keys.
+	 * 
 	 * @param keys
 	 * @return
 	 */
 	RowSliceQuery<K,C> getKeySlice(K... keys);
+	
+	/**
+	 * Query a non-contiguous set of keys.
+	 * 
+	 * @param keys
+	 * @return
+	 */
+	RowSliceQuery<K,C> getKeySlice(Collection<K> keys);
 	
 	/**
 	 * Query to get an iterator to all rows in the column family

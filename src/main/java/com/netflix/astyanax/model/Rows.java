@@ -34,6 +34,12 @@ public interface Rows<K, C> extends Iterable<Row<K,C>> {
 	 */
 	Row<K,C> getRow(K key);
 
+	/**
+	 * Return a row by it's index in the response.
+	 * @param i
+	 */
+	Row<K,C> getRowByIndex(int i);
+    
     /** 
      * Get the number of rows in the list
      * 
@@ -47,5 +53,4 @@ public interface Rows<K, C> extends Iterable<Row<K,C>> {
      * @return
      */
     boolean isEmpty();
-	
 }

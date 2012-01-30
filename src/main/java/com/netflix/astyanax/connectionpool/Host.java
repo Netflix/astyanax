@@ -17,6 +17,11 @@ package com.netflix.astyanax.connectionpool;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import com.google.common.collect.Sets;
 
 public class Host {
 
@@ -25,8 +30,11 @@ public class Host {
 	private final int port;
 	private final String name;
 	private final String url;
+	private String id;
+	private Set<String> alternateIpAddress = Sets.newHashSet();
 	
 	public static final Host NO_HOST = new Host();
+	public static Pattern ipPattern = Pattern.compile("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$");
 	
 	private Host() {
 		this.host = "None";
@@ -41,15 +49,22 @@ public class Host {
 		String tempHost = parseHostFromUrl(url2);
 	    this.port = parsePortFromUrl(url2, defaultPort);
 	    
+	    Matcher match = ipPattern.matcher(tempHost);
 	    String workHost;
 	    String workIpAddress;
-	    try {
-	    	InetAddress address = InetAddress.getByName(tempHost);
-	    	workHost 		    = address.getHostName();
-	    	workIpAddress 		= address.getHostAddress();
-	    } catch (UnknownHostException e) {
-	    	workHost			= tempHost;
-	    	workIpAddress 		= tempHost;
+	    if (match.matches()) {
+	    	workHost = tempHost;
+	    	workIpAddress = tempHost;
+	    }
+	    else {
+		    try {
+		    	InetAddress address = InetAddress.getByName(tempHost);
+		    	workHost 		    = address.getHostName();
+		    	workIpAddress 		= address.getHostAddress();
+		    } catch (UnknownHostException e) {
+		    	workHost			= tempHost;
+		    	workIpAddress 		= tempHost;
+		    }
 	    }
 	    this.host = workHost;
 	    this.ipAddress = workIpAddress;
@@ -113,5 +128,23 @@ public class Host {
 
 	public int getPort() {
 		return this.port;
+	}
+	
+	public Set<String> getAlternateIpAddresses() {
+		return this.alternateIpAddress;
+	}
+	
+	public Host addAlternateIpAddress(String ipAddress) {
+		this.alternateIpAddress.add(ipAddress);
+		return this;
+	}
+	
+	public String getId() {
+		return this.id;
+	}
+	
+	public Host setId(String id) {
+		this.id = id;
+		return this;
 	}
 }

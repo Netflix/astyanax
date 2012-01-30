@@ -15,6 +15,8 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool;
 
+import java.util.Map;
+
 /**
  * Monitoring interface to receive notification of pool events.  A concrete
  * monitor will make event stats available to a monitoring application and
@@ -24,9 +26,12 @@ package com.netflix.astyanax.connectionpool;
 public interface ConnectionPoolMonitor {
 	/**
 	 * Errors trying to execute an operation
+	 * @param reason
 	 * @param host
 	 */
-	void incOperationFailure(Host host, Exception e);
+	void incOperationFailure(Host host, Exception reason);
+	
+	long getOperationFailureCount();
 
 	/**
 	 * Succeeded in executing an operation
@@ -35,19 +40,32 @@ public interface ConnectionPoolMonitor {
 	 */
 	void incOperationSuccess(Host host, long latency);
 	
-	// void incInvalidState(Host host);
-
+	long getOperationSuccessCount();
+	
 	/**
-	 * Attempt to create a connection
+	 * Created a connection successfully
 	 */
 	void incConnectionCreated(Host host);
+	
+	long getConnectionCreatedCount();
+	
+	/**
+	 * Closed a connection
+	 * @param reason
+	 * TODO:  Make the host available to this
+	 */
+	void incConnectionClosed(Host host, Exception reason);
+	
+	long getConnectionClosedCount();
 	
 	/**
 	 * Attempt to create a connection failed
 	 * @param host
-	 * @param e
+	 * @param reason
 	 */
-	void incConnectionCreateFailed(Host host, Exception e);
+	void incConnectionCreateFailed(Host host, Exception reason);
+	
+	long getConnectionCreateFailedCount();
 	
 	/**
 	 * Incremented for each connection borrowed
@@ -56,26 +74,36 @@ public interface ConnectionPoolMonitor {
 	 */
 	void incConnectionBorrowed(Host host, long delay);
 
+	long getConnectionBorrowedCount();
+	
 	/**
 	 * Incremented for each connection returned.
 	 * @param host Host to which connection is returned
 	 */
 	void incConnectionReturned(Host host);
 
+	long getConnectionReturnedCount();
+
 	/**
 	 * Timeout trying to get a connection from the pool
 	 */
 	void incPoolExhaustedTimeout();
 
+	long getPoolExhaustedTimeoutCount();
+	
 	/**
 	 * Timeout waiting for a response from the cluster
 	 */
 	void incOperationTimeout();
+	
+	long getOperationTimeoutCount();
 
 	/**
-	 * An operation failed due to a connection error.
+	 * An operation failed by the connection pool will attempt to fail over to another host/connection.
 	 */
-	void incFailover();
+	void incFailover(Host host, Exception reason);
+	
+	long getFailoverCount();
 	
 	/**
 	 * A host was added and given the associated pool.  The pool is immutable
@@ -110,4 +138,12 @@ public interface ConnectionPoolMonitor {
 	 * There were no active hosts in the pool to borrow from. 
 	 */
 	void incNoHosts();
+	
+	long getNoHostCount();
+	
+	/**
+	 * Return a mapping of all hosts and their statistics
+	 * @return
+	 */
+	Map<Host, HostStats> getHostStats();
 }

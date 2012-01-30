@@ -15,16 +15,21 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.exceptions;
 
-public class TimeoutException extends ConnectionException {
-	public TimeoutException(String message) {
-		super(message, true);
+public class TimeoutException extends ConnectionException implements IsRetryableException, IsDeadConnectionException, IsTimeoutException  {
+	/**
+     * 
+     */
+    private static final long serialVersionUID = -3485969997380336227L;
+
+    public TimeoutException(String message) {
+		super(message);
 	}
 	
 	public TimeoutException(Throwable t) {
-		super(t, true);
+		super(t);
 	}
 	
 	public TimeoutException(String message, Throwable cause) {
-        super(message, cause, true);
+        super(message, cause);
     }
 }

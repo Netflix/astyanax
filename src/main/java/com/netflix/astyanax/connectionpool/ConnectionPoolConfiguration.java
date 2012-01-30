@@ -17,39 +17,21 @@ package com.netflix.astyanax.connectionpool;
 
 import java.util.List;
 
+import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
+
 public interface ConnectionPoolConfiguration {
-	public interface Factory<T> {
-		T createInstance(ConnectionPoolConfiguration config);
-	}
+	/**
+	 * TODO
+	 * @return
+	 */
+	LatencyScoreStrategy getLatencyScoreStrategy();
 	
 	/**
-	 * Factory that creates the connection pool for a keyspace
+	 * TODO
 	 * @return
 	 */
-	ConnectionPoolFactory getConnectionPoolFactory();
+	BadHostDetector getBadHostDetector();
 	
-	/**
-	 * Factory that creates the node discovery implementation to be used by 
-	 * the connection pool
-	 * @return
-	 */
-	NodeDiscoveryFactory getNodeDiscoveryFactory();
-
-	/**
-	 * Prefix filter to apply when doing a ring describe.  This filter is used
-	 * to remove nodes in other regions.
-	 * 
-	 * TODO: List of filters
-	 * @return
-	 */
-	String getRingIpFilter();
-
-	/**
-	 * True if auto discovery should use a ring_describe
-	 * @return
-	 */
-	boolean isRingDescribeEnabled();
-
 	/**
 	 * Data port to be used when no port is specified to a list of seeds or
 	 * when doing a ring describe since the ring describe does not include 
@@ -59,24 +41,10 @@ public interface ConnectionPoolConfiguration {
 	int getPort();
 
 	/**
-	 * Start and interval delay trying to discover new nodes.
+	 * Unique name assigned to this connection pool
 	 * @return
 	 */
-	int getAutoDiscoveryDelay();
-
-	/**
-	 * Keyspace name for this connection pool.  A connection pool is associated
-	 * with only one keyspace
-	 * @return
-	 */
-	String getKeyspaceName();
-
-	/**
-	 * Application name in discovery with which the cluster nodes register.
-	 * This name is used to refresh hosts from discovery.
-	 * @return
-	 */
-	String getClusterName();
+	String getName();
 
 	/**
 	 * Maximum number of connections to allocate for a single host's pool
@@ -84,57 +52,30 @@ public interface ConnectionPoolConfiguration {
 	 */
 	int getMaxConnsPerHost();
 
-
 	/**
-	 * Return algorithm implementation for detecting when a host is down.
-	 * @see com.netflix.astyanax.connectionpool.BadHostDetector
+	 * Initial number of connections created when a connection pool is started
 	 * @return
 	 */
-	BadHostDetector getBadHostDetector();
+	int getInitConnsPerHost();
 
+	/**
+	 * Maximum number of connections in the pool, not used by all connection pool implementations
+	 * @return
+	 */
+	int getMaxConns();
+	
 	/**
 	 * Maximum amount of time to wait for a connection to free up when a connection
 	 * pool is exhausted.  
 	 * @return
 	 */
 	int getMaxTimeoutWhenExhausted();
-
+	
 	/**
 	 * Get the max number of failover attempts
 	 * @return
 	 */
 	int getMaxFailoverCount();
-
-	/**
-	 * Get the time to wait between failover attempts
-	 * @return
-	 */
-	int getFailoverWaitTime();
-
-	/**
-	 * Get the max number of retries when a host pool is exhausted
-	 * @return
-	 */
-	int getMaxExhaustedRetries();
-	
-	/**
-	 * Return strategy to use when determining which host pool to select
-	 * next for an operation. 
-	 * @return
-	 */
-	Factory<LoadBalancingStrategy> getLoadBlancingPolicyFactory();
-	
-	/**
-	 * TODO
-	 * @return
-	 */
-	Factory<ExhaustedStrategy> getExhaustedStrategyFactory();
-	
-	/**
-	 * TODO
-	 * @return
-	 */
-	Factory<FailoverStrategy> getFailoverStrategyFactory();
 
 	/**
 	 * Return the backoff strategy to use.
@@ -144,14 +85,6 @@ public interface ConnectionPoolConfiguration {
 	 */
 	RetryBackoffStrategy getRetryBackoffStrategy();
 
-	/**
-	 * Return Monitor object to receive all connection pool notification 
-	 * and counter increments. 
-	 * @see com.netflix.astyanax.connectionpool.ConnectionPoolMonitor
-	 * @return
-	 */
-	ConnectionPoolMonitor getConnectionPoolMonitor();
-	
 	/**
 	 * List of comma delimited host:port combinations.  If port is not provided
 	 * then getPort() will be used by default.  This list must contain at 
@@ -169,9 +102,107 @@ public interface ConnectionPoolConfiguration {
 	List<Host> getSeedHosts();
 	
 	/**
-	 * Socket connect/read/write timeout
+	 * Socket read/write timeout
 	 * @return
 	 */
 	int getSocketTimeout();
+
+	/**
+	 * Socket connect timeout
+	 * @return
+	 */
+	int getConnectTimeout();
+
+	/**
+	 * Window size for limiting the number of connection open requests
+	 * @return
+	 */
+	int getConnectionLimiterWindowSize();
+	
+	/**
+	 * Maximum number of connection attempts in a given window
+	 * @return
+	 */
+	int getConnectionLimiterMaxPendingCount();
+	
+	/**
+	 * Latency samples window size for scoring algorithm
+	 * @return
+	 */
+	int getLatencyAwareWindowSize();
+
+	/**
+	 * Sentinel compare value for Phi Accrual 
+	 * @return
+	 */
+	float getLatencyAwareSentinelCompare();
+
+	/**
+	 * Return the threshold after which a host will not be considered good enough for 
+	 * executing operations.  
+	 * @return  Valid values are 0 to 1
+	 */
+	float getLatencyAwareBadnessThreshold();
+	
+	/**
+	 * 
+	 * @return
+	 */
+	int getLatencyAwareUpdateInterval();
+
+	/**
+	 * 
+	 * @return
+	 */
+	int getLatencyAwareResetInterval();
+	
+	/**
+	 * Maximum number of pending connect attempts per host
+	 * @return
+	 */
+	int getMaxPendingConnectionsPerHost();
+
+	/**
+	 * Get max number of blocked clients for a host.  
+	 * @return
+	 */
+	int getMaxBlockedThreadsPerHost();
+	
+	/**
+	 * Shut down a host if it times out too many time within this window
+	 * @return
+	 */
+	int getTimeoutWindow();
+	
+	/**
+	 * Number of allowed timeouts within getTimeoutWindow() milliseconds
+	 * @return
+	 */
+	int getMaxTimeoutCount();
+
+	/**
+	 * TODO
+	 * @return
+	 */
+	int getRetrySuspendWindow();
+
+	/**
+	 * TODO
+	 * @return
+	 */
+	int  getRetryMaxDelaySlice();
+	
+	/**
+	 * TODO
+	 * @return
+	 */
+	int getRetryDelaySlice();
+	
+	/**
+	 * Maximum allowed operations per connections before forcing the 
+	 * connection to close
+	 * @return
+	 */
+	int getMaxOperationsPerConnection();
 
 }

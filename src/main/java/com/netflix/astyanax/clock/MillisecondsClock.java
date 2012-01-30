@@ -23,4 +23,8 @@ public class MillisecondsClock implements Clock {
 	public long getCurrentTime() {
 		return System.currentTimeMillis();
 	}
+	
+	public String toString() {
+		return "MillisecondsClock";
+	}
 }

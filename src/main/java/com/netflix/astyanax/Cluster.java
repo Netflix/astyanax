@@ -15,8 +15,12 @@
  ******************************************************************************/
 package com.netflix.astyanax;
 
+import java.util.List;
+import java.util.Map;
+
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
+import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 
@@ -56,6 +60,21 @@ public interface Cluster {
 	 */
 	String describePartitioner() throws ConnectionException;
 
+	Map<String, List<String>> describeSchemaVersions() throws ConnectionException;
+	
+	/**
+	 * Prepare a column family definition.  Call execute() on the returned object
+	 * to create the column family.
+	 * @return
+	 */
+	ColumnFamilyDefinition makeColumnFamilyDefinition();
+
+	/**
+	 * Make a column definitio to be added to a ColumnFamilyDefinition
+	 * @return
+	 */
+	ColumnDefinition makeColumnDefinition();
+	
 	/**
 	 * Delete the column family from the keyspace
 	 * @param columnFamilyName
@@ -63,24 +82,24 @@ public interface Cluster {
 	 * @throws OperationException
 	 * @throws ConnectionException
 	 */
-	String dropColumnFamily(String keyspaceName, String columnFamilyName) throws OperationException, ConnectionException;
+	String dropColumnFamily(String keyspaceName, String columnFamilyName) throws ConnectionException;
 
 	/**
-	 * Delete a keyspace from the cluster
-	 * @param keyspaceName
-	 * @return
-	 * @throws OperationException
+	 * Add a column family to an existing keyspace
+	 * @param def - Created by calling prepareColumnFamilyDefinition();
+	 * @return 
 	 * @throws ConnectionException
 	 */
-	String dropKeyspace(String keyspaceName) throws OperationException, ConnectionException;
+	String addColumnFamily(ColumnFamilyDefinition def) throws ConnectionException;
 
 	/**
-	 * Prepare a column family definition.  Call execute() on the returned object
-	 * to create the column family.
-	 * @return
+	 * Update an existing column family 
+	 * @param def - Created by calling prepareColumnFamilyDefinition();
+	 * @return 
+	 * @throws ConnectionException
 	 */
-	ColumnFamilyDefinition prepareColumnFamilyDefinition();
-
+	String updateColumnFamily(ColumnFamilyDefinition def) throws ConnectionException;
+	
 	/**
 	 * Prepare a keyspace definition.  Call execute() on the returned object
 	 * to create the keyspace.
@@ -90,5 +109,62 @@ public interface Cluster {
 	 * 
 	 * @return
 	 */
-	KeyspaceDefinition prepareKeyspaceDefinition();
+	KeyspaceDefinition makeKeyspaceDefinition();
+	
+	/**
+	 * Return details about all keyspaces in the cluster
+	 * @return
+	 * @throws ConnectionException
+	 */
+	List<KeyspaceDefinition> describeKeyspaces() throws ConnectionException;
+	
+	/**
+	 * Describe a single keyspace
+	 * @param ksName
+	 * @return
+	 * @throws ConnectionException 
+	 */
+    KeyspaceDefinition describeKeyspace(String ksName) throws ConnectionException;
+    
+	/**
+	 * Return a keyspace client.  Note that this keyspace will use the same connection
+	 * pool as the cluster and any other keyspaces created from this cluster instance.  As
+	 * a result each keyspace operation is likely to have some overhead for switching
+	 * keyspaces.
+	 * 
+	 * @return
+	 */
+	Keyspace getKeyspace(String keyspace);
+	
+	/**
+	 * Delete a keyspace from the cluster
+	 * @param keyspaceName
+	 * @return
+	 * @throws OperationException
+	 * @throws ConnectionException
+	 */
+	String dropKeyspace(String keyspaceName) throws ConnectionException;
+
+	/**
+	 * Add a new keyspace to the cluster.  The keyspace object may include column families as well.
+	 * Create a KeyspaceDefinition object by calling prepareKeyspaceDefinition().
+	 * 
+	 * @param def
+	 * @return 
+	 */
+	String addKeyspace(KeyspaceDefinition def) throws ConnectionException;
+	
+	/**
+	 * Update a new keyspace in the cluster.  The keyspace object may include column families as well.
+	 * Create a KeyspaceDefinition object by calling prepareKeyspaceDefinition().
+	 * 
+	 * @param def
+	 */
+	String updateKeyspace(KeyspaceDefinition def) throws ConnectionException;
+	
+	/**
+	 * Configuration object for this Cluster
+	 * @return
+	 */
+	AstyanaxConfiguration getConfig();
 }

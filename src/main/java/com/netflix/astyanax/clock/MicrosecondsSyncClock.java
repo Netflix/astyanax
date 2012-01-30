@@ -15,8 +15,6 @@
  ******************************************************************************/
 package com.netflix.astyanax.clock;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import com.netflix.astyanax.Clock;
 
 /**
@@ -24,20 +22,30 @@ import com.netflix.astyanax.Clock;
  */
 public class MicrosecondsSyncClock implements Clock {
 	private static final long serialVersionUID = -4671061000963496156L;
-	private static final long ONE_THOUSAND = 1000L;
+    private static long lastTime = -1;
+    private static final long ONE_THOUSAND = 1000L;
 
-	private static AtomicInteger counter = new AtomicInteger(0);
-
-	public MicrosecondsSyncClock() {
-	  
-	}
-  
-	@Override
-	public long getCurrentTime() {
-		// The following simulates a microseconds resolution by advancing a static counter
-		// every time a client calls the createClock method, simulating a tick.
-		long us = System.currentTimeMillis() * ONE_THOUSAND;
-		return us + counter.getAndIncrement() % ONE_THOUSAND;
-  	}
+    @Override
+    public long getCurrentTime() {
+      // The following simulates a microseconds resolution by advancing a static counter
+      // every time a client calls the createClock method, simulating a tick.
+      long us = System.currentTimeMillis() * ONE_THOUSAND;
+      // Synchronized to guarantee unique time within and across threads.
+      synchronized (MicrosecondsSyncClock.class) {
+        if (us > lastTime) {
+          lastTime = us;
+        } else {
+          // the time i got from the system is equals or less
+          // (hope not - clock going backwards)
+          // One more "microsecond"
+          us = ++lastTime;
+        }
+      }
+      return us;
+    }
+    
+    public String toString() {
+        return "MicrosecondsSyncClock";
+    }
 
 }

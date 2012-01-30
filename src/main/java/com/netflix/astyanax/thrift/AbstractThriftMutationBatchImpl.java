@@ -16,17 +16,19 @@
 package com.netflix.astyanax.thrift;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.netflix.astyanax.clock.ConstantClock;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.impl.ExecutionHelper;
 
+import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.Mutation;
 import org.apache.commons.codec.binary.Hex;
 
@@ -34,7 +36,10 @@ import com.netflix.astyanax.Clock;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.model.ColumnFamily;
-import com.netflix.astyanax.model.ConsistencyLevel;
+import com.netflix.astyanax.serializers.ByteBufferOutputStream;
+import com.netflix.astyanax.serializers.IntegerSerializer;
+import com.netflix.astyanax.serializers.LongSerializer;
+import com.netflix.astyanax.serializers.StringSerializer;
 
 /**
  * Basic implementation of a mutation batch using the thrift data structures.
@@ -47,17 +52,21 @@ import com.netflix.astyanax.model.ConsistencyLevel;
  */
 public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
 
-	protected ConsistencyLevel consistencyLevel;
-	protected long timeout;
-	protected final Clock clock;
+	protected Clock clock;
+	protected Clock sysClock;
 	
-    private Map<ByteBuffer, Map<String, List<Mutation>>> mutationMap 
-    	= new HashMap<ByteBuffer, Map<String, List<Mutation>>>();
+	enum ColumnType {
+		NULL,
+		STANDARD,
+		COUNTER,
+		DELETION,
+		ROW_DELETION,
+	};
+	
+    private Map<ByteBuffer, Map<String, List<Mutation>>> mutationMap = Maps.newHashMap();
     
-    public AbstractThriftMutationBatchImpl(Clock clock, ConsistencyLevel consistencyLevel, int timeout) {
-    	this.consistencyLevel = consistencyLevel;
-    	this.timeout = timeout;
-    	this.clock = clock;
+    public AbstractThriftMutationBatchImpl(Clock clock) {
+    	this.clock = this.sysClock = clock;
     }
     
     @Override
@@ -70,7 +79,7 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
 
     @Override
     public void discardMutations() {
-        this.mutationMap = new HashMap<ByteBuffer, Map<String, List<Mutation>>>();
+        this.mutationMap = Maps.newHashMap();
     }
     
 	@Override
@@ -123,6 +132,63 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
 		return sb.toString();
 	}
 	
+	protected ByteBuffer toByteBuffer() throws Exception {
+		if (mutationMap.isEmpty()) {
+			throw new Exception("Mutation is empty");
+		}
+		if (mutationMap.size() > 1) {
+			throw new Exception("Transaction mutation limited to one key only");
+		}
+		
+		ByteBufferOutputStream out = new ByteBufferOutputStream();
+		
+		Map<String, List<Mutation>> cfs = mutationMap.entrySet().iterator().next().getValue();
+		out.write(IntegerSerializer.get().toByteBuffer(cfs.size()));
+		for (Entry<String, List<Mutation>> cf : cfs.entrySet()) {
+			if (cf.getValue().size() > 0) {
+				out.write(StringSerializer.get().toByteBuffer(cf.getKey()));
+				out.write(IntegerSerializer.get().toByteBuffer(cf.getValue().size()));
+				for (Mutation m : cf.getValue()) {
+					if (m.isSetDeletion()) {
+					}
+					else {
+						ColumnOrSuperColumn cosc = m.getColumn_or_supercolumn();
+						if (cosc.isSetColumn()) {
+							out.write(ColumnType.STANDARD.ordinal());
+							out.write(cosc.getColumn().bufferForName().duplicate());
+							out.write(cosc.getColumn().bufferForValue().duplicate());
+							out.write(LongSerializer.get().toByteBuffer(cosc.getColumn().getTimestamp()));
+							out.write(cosc.getColumn().getTtl());
+						}
+						else if (cosc.isSetCounter_column()) {
+							out.write(ColumnType.STANDARD.ordinal());
+							out.write(cosc.getCounter_column().bufferForName().duplicate());
+							out.write(LongSerializer.get().toByteBuffer(cosc.getCounter_column().getValue()));
+						}
+						else if (cosc.isSetSuper_column() || cosc.isSetCounter_super_column()) {
+							throw new Exception("Counter column not supported");
+						}
+						else {
+							out.write(ColumnType.NULL.ordinal());
+						}
+					}
+				}
+			}
+		}
+		
+		return out.getByteBuffer();
+	}
+	
+	public static AbstractThriftMutationBatchImpl fromByteBuffer(ByteBuffer blob) {
+		int cfCount = IntegerSerializer.get().fromByteBuffer(blob);
+		while (cfCount-- > 0) {
+			String cfName = StringSerializer.get().fromByteBuffer(blob);
+			int mCount = IntegerSerializer.get().fromByteBuffer(blob);
+		}
+		// TODO
+		return null;
+	}
+	
 	/**
 	 * Get or add a column family mutation to this row
 	 * 
@@ -133,14 +199,14 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
 	    Map<String, List<Mutation>> innerMutationMap = mutationMap.get(
 	    		colFamily.getKeySerializer().toByteBuffer(key));
 	    if (innerMutationMap == null) {
-	    	innerMutationMap = new HashMap<String, List<Mutation>>();
+	    	innerMutationMap = Maps.newHashMap();
 	    	mutationMap.put(colFamily.getKeySerializer().toByteBuffer(key), 
 	    					innerMutationMap);
 	    }
 	    
 	    List<Mutation> innerMutationList = innerMutationMap.get(colFamily.getName());
 	    if (innerMutationList == null) {
-	    	innerMutationList = new ArrayList<Mutation>();
+	    	innerMutationList = Lists.newArrayList();
 	    	innerMutationMap.put(colFamily.getName(), innerMutationList);
 	    }
 	    return innerMutationList;
@@ -182,18 +248,21 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
 	}
 	
 	@Override
-	public MutationBatch setConsistencyLevel(
-			ConsistencyLevel consistencyLevel) {
-		this.consistencyLevel = consistencyLevel;
+	public MutationBatch setTimeout(long timeout) {
 		return this;
 	}
 
 	@Override
-	public MutationBatch setTimeout(long timeout) {
-		this.timeout = timeout;
+	public MutationBatch setTimestamp(long timestamp) {
+		this.clock = new ConstantClock(timestamp);
 		return this;
 	}
-
+	
+	@Override
+	public MutationBatch lockCurrentTimestamp() {
+		setTimestamp(this.sysClock.getCurrentTime());
+		return this;
+	}
 
     @Override
     public OperationResult<Void> execute() throws ConnectionException {

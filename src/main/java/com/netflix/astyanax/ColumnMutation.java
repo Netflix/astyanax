@@ -20,9 +20,12 @@ import java.util.Date;
 import java.util.UUID;
 
 import com.netflix.astyanax.model.ConsistencyLevel;
+import com.netflix.astyanax.retry.RetryPolicy;
 
 public interface ColumnMutation {
 	ColumnMutation setConsistencyLevel(ConsistencyLevel consistencyLevel);
+	
+	ColumnMutation withRetryPolicy(RetryPolicy retry);
 	
 	Execution<Void> putValue(String value, Integer ttl);
 
@@ -42,9 +45,13 @@ public interface ColumnMutation {
 
 	Execution<Void> putValue(UUID value, Integer ttl);
 	
+	<T> Execution<Void> putValue(T value, Serializer<T> serializer, Integer ttl);
+	
 	Execution<Void> putEmptyColumn(Integer ttl);
 	
 	Execution<Void> incrementCounterColumn(long amount);
 	
 	Execution<Void> deleteColumn();
+	
+	Execution<Void> deleteCounterColumn();
 }

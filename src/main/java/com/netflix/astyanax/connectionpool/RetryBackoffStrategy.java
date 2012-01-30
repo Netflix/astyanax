@@ -22,18 +22,33 @@ package com.netflix.astyanax.connectionpool;
  *
  */
 public interface RetryBackoffStrategy {
+	public interface Callback {
+		boolean tryConnect(int attemptCount);
+	}
+	
 	public interface Instance {
+		/**
+		 * Start the reconnect process
+		 */
+		void begin();
+		
+		/**
+		 * Called when a connection was established successfully
+		 */
+		void success();
+		
 		/**
 		 * Return the next backoff delay in the strategy
 		 * @return
 		 */
-		long nextDelay();
+		long getNextDelay();
 
 		/**
-		 * nextTimeout should take into account that the host is being
-		 * suspended.  
+		 * Suspend the host for being bad (i.e. timing out too much)
 		 */
-		void suspend();		
+		void suspend();
+		
+		int getAttemptCount();
 	};
 	
 	/**

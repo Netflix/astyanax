@@ -32,4 +32,5 @@ public class TypeInferringSerializer<T> extends AbstractSerializer<T> implements
     throw new IllegalStateException(
         "The type inferring serializer can only be used for data going to the database, and not data coming from the database");
   }
+
 }

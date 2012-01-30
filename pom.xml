@@ -1,18 +1,62 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.netflix.astyanax</groupId>
     <artifactId>astyanax</artifactId>
-    <version>0.8.1-SNAPSHOT</version>
+    <version>0.8.9</version>
+
+    <parent>
+      <groupId>org.sonatype.oss</groupId>
+      <artifactId>oss-parent</artifactId>
+      <version>7</version>
+    </parent>
+
+    <profiles>
+        <profile>
+            <id>artifactory</id>
+            <distributionManagement>
+                <snapshotRepository>
+                    <id>netflix-artifactory-snapshots</id>
+                    <name>Netflix Artifactory Snapshots</name>
+                    <url>http://artifacts/libs-snapshots-local</url>
+                </snapshotRepository>
+                <repository>
+                    <id>netflix-artifactory-releases</id>
+                    <name>Netflix Artifactory Releases</name>
+                    <url>http://artifacts/libs-releases-local</url>
+                </repository>
+            </distributionManagement>
+        </profile>
+    </profiles>
+
+    <licenses>
+      <license>
+        <name>The Apache Software License, Version 2.0</name>
+        <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        <distribution>repo</distribution>
+      </license>
+    </licenses>
 
     <scm>
         <connection>scm:git:git@github.com:Netflix/astyanax.git</connection>
+        <url>scm:git:git@github.com:Netflix/astyanax.git</url>
+        <developerConnection>scm:git:git@github.com:Netflix/astyanax.git</developerConnection>
     </scm>
 
     <dependencies>
+        <dependency>
+            <groupId>joda-time</groupId>
+            <artifactId>joda-time</artifactId>
+            <version>2.0</version>
+        </dependency>
+    
+        <dependency>
+            <groupId>org.apache.servicemix.bundles</groupId>
+            <artifactId>org.apache.servicemix.bundles.commons-csv</artifactId>
+            <version>1.0-r706900_3</version>
+        </dependency>
+
         <dependency>
             <groupId>commons-lang</groupId>
             <artifactId>commons-lang</artifactId>
@@ -49,22 +93,51 @@
           <version>3.2.0</version>
         </dependency>
     </dependencies>
-
+    
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-release-plugin</artifactId>
                 <version>2.2</version>
                 <configuration>
-                    <goals>install</goals>
+                    <goals>deploy</goals>
                 </configuration>
             </plugin>
 
             <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-javadoc-plugin</artifactId>
-              <version>2.8</version>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.8</version>
+                <configuration>
+                    <reportOutputDirectory>${project.basedir}</reportOutputDirectory>
+                    <destDir>doc</destDir>
+                </configuration>
+                <executions>
+                  <execution>
+                    <id>aggregate</id>
+                    <goals>
+                      <goal>aggregate</goal>
+                    </goals>
+                    <phase>site</phase>
+                  </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.10</version>
             </plugin>
 
             <plugin>
@@ -77,6 +150,12 @@
                   <phase>verify</phase>
                   <goals>
                     <goal>jar-no-fork</goal>
+                  </goals>
+                </execution>
+                <execution>
+                  <id>deploy-sources</id>
+                  <goals>
+                    <goal>jar</goal>
                   </goals>
                 </execution>
               </executions>

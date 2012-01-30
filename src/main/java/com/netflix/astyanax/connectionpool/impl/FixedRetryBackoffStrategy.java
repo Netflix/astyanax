@@ -30,9 +30,10 @@ public class FixedRetryBackoffStrategy implements RetryBackoffStrategy{
 	public Instance createInstance() {
 		return new RetryBackoffStrategy.Instance() {
 			private boolean isSuspended = false;
+			private int attemptCount = 0;
 			
 			@Override
-			public long nextDelay() {
+			public long getNextDelay() {
 				if (isSuspended) {
 					isSuspended = false;
 					return suspendTime;
@@ -41,8 +42,21 @@ public class FixedRetryBackoffStrategy implements RetryBackoffStrategy{
 			}
 
 			@Override
+			public int getAttemptCount() {
+				return attemptCount;
+			}
+
+			@Override
+			public void begin() {
+				attemptCount = 0;
+			}
+
+			@Override
+			public void success() {
+			}
+
+			@Override
 			public void suspend() {
-				isSuspended = true;
 			}
 		};
 	}

@@ -15,18 +15,22 @@
  ******************************************************************************/
 package com.netflix.astyanax.ddl;
 
+import java.util.List;
 import java.util.Map;
 
-import com.netflix.astyanax.Execution;
-
-public interface KeyspaceDefinition extends Execution<String> {
+public interface KeyspaceDefinition {
 
 	KeyspaceDefinition setName(String name);
+	String getName();
 
 	KeyspaceDefinition setStrategyClass(String strategyClass);
+	String getStrategyClass();
 
 	KeyspaceDefinition setStrategyOptions(Map<String, String> options);
-
-	ColumnFamilyDefinition beginColumnFamily();
-
+	KeyspaceDefinition addStrategyOption(String name, String value);
+	Map<String, String> getStrategyOptions();
+	
+	KeyspaceDefinition addColumnFamily(ColumnFamilyDefinition cfDef);
+	List<ColumnFamilyDefinition> getColumnFamilyList();
+	ColumnFamilyDefinition getColumnFamily(String columnFamily);
 }

@@ -2,6 +2,8 @@ package com.netflix.astyanax.serializers;
 
 import java.nio.ByteBuffer;
 
+import org.apache.cassandra.db.marshal.IntegerType;
+
 /**
  * {@link Serializer} for {@link Short}s (no pun intended).
  * 
@@ -34,4 +36,24 @@ public final class ShortSerializer extends AbstractSerializer<Short> {
     return in;
   }
 
+  @Override
+  public ByteBuffer fromString(String str) {
+	// Verify value is a short
+	return toByteBuffer(Short.parseShort(str));
+  }
+	
+  @Override
+  public String getString(ByteBuffer byteBuffer) {
+	return IntegerType.instance.getString(byteBuffer);
+  }
+    
+  @Override
+  public ByteBuffer getNext(ByteBuffer byteBuffer) {
+	Short val = fromByteBuffer(byteBuffer.duplicate());
+  	if (val == Short.MAX_VALUE) {
+  		throw new ArithmeticException("Can't paginate past max short");
+  	}
+  	val++;
+  	return toByteBuffer(val);
+  }
 }

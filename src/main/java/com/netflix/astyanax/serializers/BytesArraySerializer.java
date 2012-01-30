@@ -2,6 +2,8 @@ package com.netflix.astyanax.serializers;
 
 import java.nio.ByteBuffer;
 
+import org.apache.cassandra.db.marshal.BytesType;
+
 import com.netflix.astyanax.Serializer;
 
 /**
@@ -35,5 +37,15 @@ public final class BytesArraySerializer extends AbstractSerializer<byte[]>
     byte[] bytes = new byte[byteBuffer.remaining()];
     byteBuffer.get(bytes, 0, bytes.length);
     return bytes;
+  }
+  
+  @Override
+  public ByteBuffer fromString(String str) {
+    return BytesType.instance.fromString(str);
+  }
+  
+  @Override
+  public String getString(ByteBuffer byteBuffer) {
+    return BytesType.instance.getString(byteBuffer);
   }
 }

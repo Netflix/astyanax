@@ -3,6 +3,8 @@ package com.netflix.astyanax.serializers;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
+import org.apache.cassandra.db.marshal.AsciiType;
+
 /**
  * Almost identical to StringSerializer except we use the US-ASCII character set
  * code
@@ -40,4 +42,13 @@ public final class AsciiSerializer extends AbstractSerializer<String> {
     return ComparatorType.ASCIITYPE;
   }
 
+	@Override
+	public ByteBuffer fromString(String str) {
+	    return AsciiType.instance.fromString(str);
+	}
+
+    @Override
+    public String getString(ByteBuffer byteBuffer) {
+        return AsciiType.instance.getString(byteBuffer);
+    }
 }

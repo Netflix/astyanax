@@ -16,10 +16,13 @@
 package com.netflix.astyanax.query;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
 
 import com.netflix.astyanax.Execution;
+import com.netflix.astyanax.RowCopier;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ByteBufferRange;
+import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ColumnSlice;
 
@@ -42,6 +45,14 @@ public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
 	 */
 	ColumnQuery<C> getColumn(C column);
 
+	/**
+	 * Specify a non-contiguous set of columns to retrieve.
+	 * 
+	 * @param columns
+	 * @return
+	 */
+	RowQuery<K, C> withColumnSlice(Collection<C> columns);
+	
 	/**
 	 * Specify a non-contiguous set of columns to retrieve.
 	 * 
@@ -93,6 +104,27 @@ public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
 	 */
 	RowQuery<K, C> withColumnRange(ByteBufferRange range);
 
+	@Deprecated
+	/**
+	 * Use autoPaginate instead
+	 */
+	RowQuery<K, C> setIsPaginating();
+	
+	/**
+	 * When used in conjunction with a column range this will call subsequent
+	 * calls to execute() to get the next block of columns. 
+	 * @return
+	 */
+	RowQuery<K, C> autoPaginate(boolean enabled);
+	
+	/**
+	 * Copy the results of the query to another column family
+	 * @param columnFamily
+	 * @param otherRowKey
+	 * @return
+	 */
+	RowCopier<K, C> copyTo(ColumnFamily<K,C> columnFamily, K rowKey);
+	
 	/**
 	 * Returns the number of columns in the response without returning any data
 	 * @return

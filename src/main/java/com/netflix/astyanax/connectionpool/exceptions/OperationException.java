@@ -25,16 +25,21 @@ package com.netflix.astyanax.connectionpool.exceptions;
  *
  */
 public class OperationException extends ConnectionException {
-	public OperationException(String message) {
-		super(message, false);
+	/**
+     * 
+     */
+    private static final long serialVersionUID = -369210846483113052L;
+
+    public OperationException(String message) {
+		super(message);
 	}
 	
 	public OperationException(Throwable t) {
-		super(t, false);
+		super(t);
 	}
 	
 	public OperationException(String message, Throwable cause) {
-        super(message, cause, false);
+        super(message, cause);
     }
 
 }

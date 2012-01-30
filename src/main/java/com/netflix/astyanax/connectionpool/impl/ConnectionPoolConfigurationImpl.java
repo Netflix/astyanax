@@ -15,139 +15,94 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.impl;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.google.inject.internal.Preconditions;
-import com.netflix.astyanax.AstyanaxConfiguration;
-import com.netflix.astyanax.Clock;
-import com.netflix.astyanax.KeyspaceTracers;
-import com.netflix.astyanax.clock.MillisecondsClock;
+import com.google.common.base.Preconditions;
 import com.netflix.astyanax.connectionpool.BadHostDetector;
-import com.netflix.astyanax.connectionpool.ConnectionFactory;
-import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
-import com.netflix.astyanax.connectionpool.ConnectionPoolFactory;
-import com.netflix.astyanax.connectionpool.ConnectionPoolMonitor;
-import com.netflix.astyanax.connectionpool.ExhaustedStrategy;
-import com.netflix.astyanax.connectionpool.FailoverStrategy;
 import com.netflix.astyanax.connectionpool.Host;
-import com.netflix.astyanax.connectionpool.LoadBalancingStrategy;
-import com.netflix.astyanax.connectionpool.NodeDiscoveryFactory;
+import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
 import com.netflix.astyanax.connectionpool.RetryBackoffStrategy;
-import com.netflix.astyanax.model.ConsistencyLevel;
-import com.netflix.astyanax.shallows.EmptyConnectionPoolMonitor;
-import com.netflix.astyanax.shallows.EmptyKeyspaceTracers;
-import com.netflix.astyanax.shallows.EmptyNodeDiscoveryFactoryImpl;
+import com.netflix.astyanax.shallows.EmptyBadHostDetectorImpl;
+import com.netflix.astyanax.shallows.EmptyLatencyScoreStrategyImpl;
+import com.netflix.astyanax.util.StringUtils;
 
-public class ConnectionPoolConfigurationImpl implements AstyanaxConfiguration {
+public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfiguration {
     /**
      * Default values
      */
-    public static final Integer DEFAULT_MAX_TIME_WHEN_EXHAUSTED = 2000;
-    public static final Integer DEFAULT_AUTO_DISCOVERY_DELAY_IN_SECONDS = 30;
-    public static final Integer DEFAULT_SOCKET_TIMEOUT = 2000;	// ms
-    public static final Integer DEFAULT_MAX_ACTIVE_PER_PARTITION = 3;
-    public static final Integer DEFAULT_PORT = 7102;
-    public static final Integer DEFAULT_FAILOVER_COUNT = 0;
-    public static final Integer DEFAULT_FAILOVER_WAIT_TIME = 0;
-    public static final Integer DEFAULT_MAX_EXHAUSTED_RETRIES = 0;
-    public static final ConsistencyLevel DEFAULT_READ_CONSISTENCY = ConsistencyLevel.CL_ONE;
-    public static final ConsistencyLevel DEFAULT_WRITE_CONSISTENCY = ConsistencyLevel.CL_ONE;
-    public static final Boolean DEFAULT_ENABLE_RING_DESCRIBE = true;
-    public static final Boolean DEFAULT_DEBUG_ENABLED = false;
-    public static final String DEFAULT_RING_IP_FILTER = null;
-    public static final ConnectionPoolMonitor DEFAULT_MONITOR = new EmptyConnectionPoolMonitor();
-    public static final KeyspaceTracers DEFAULT_KEYSPACE_TRACERS = new EmptyKeyspaceTracers();
-    public static final ConnectionPoolConfiguration.Factory<LoadBalancingStrategy> DEFAULT_LOAD_BALACING_STRATEGY = new ConnectionPoolConfiguration.Factory<LoadBalancingStrategy>() {
-		@Override
-		public LoadBalancingStrategy createInstance(
-				ConnectionPoolConfiguration config) {
-			return new RoundRobinLoadBalancingStrategy(config);
-		}
-    };
-    public static final ConnectionPoolConfiguration.Factory<FailoverStrategy> DEFAULT_FAILOVER_STRATEGY = new ConnectionPoolConfiguration.Factory<FailoverStrategy>() {
-		@Override
-		public FailoverStrategy createInstance(
-				ConnectionPoolConfiguration config) {
-			return new FailoverStrategyImpl(config.getMaxFailoverCount(), config.getFailoverWaitTime());
-		}
-    };
-    public static final ConnectionPoolConfiguration.Factory<ExhaustedStrategy> DEFAULT_EXHAUSTED_STRATEGY = new ConnectionPoolConfiguration.Factory<ExhaustedStrategy>() {
-		@Override
-		public ExhaustedStrategy createInstance(
-				ConnectionPoolConfiguration config) {
-			return new ExhaustedStrategyImpl(config.getMaxExhaustedRetries(), config.getMaxTimeoutWhenExhausted());
-		}
-    };
+    public static final int DEFAULT_MAX_TIME_WHEN_EXHAUSTED = 2000;
+    public static final int DEFAULT_SOCKET_TIMEOUT = 11000;	// ms
+    public static final int DEFAULT_CONNECT_TIMEOUT = 2000;	// ms
+    public static final int DEFAULT_MAX_ACTIVE_PER_PARTITION = 3;
+    public static final int DEFAULT_INIT_PER_PARTITION = 0;
+    public static final int DEFAULT_PORT = 7102;
+    public static final int DEFAULT_FAILOVER_COUNT = -1;
+    public static final int DEFAULT_FAILOVER_WAIT_TIME = 0;
+    public static final int DEFAULT_MAX_CONNS = 1;
+    public static final int DEFAULT_LATENCY_AWARE_WINDOW_SIZE = 100;
+    public static final float DEFAULT_LATENCY_AWARE_SENTINEL_COMPARE = 0.768f;
+    public static final int DEFAULT_LATENCY_AWARE_UPDATE_INTERVAL = 1000;
+    public static final int DEFAULT_LATENCY_AWARE_RESET_INTERVAL = 20000;
+    public static final float DEFAULT_LATENCY_AWARE_BADNESS_THRESHOLD = 0.10f;
+    public static final int DEFAULT_CONNECTION_LIMITER_WINDOW_SIZE = 2000;
+    public static final int DEFAULT_CONNECTION_LIMITER_MAX_PENDING_COUNT = 20;
+    public static final int DEFAULT_MAX_WAIT_FOR_PENDING_CONNECTION = 20;
+    public static final int DEFAULT_MAX_PENDING_CONNECTIONS_PER_HOST = 2;
+    public static final int DEFAULT_MAX_BLOCKED_THREADS_PER_HOST = 2;
+    public static final int DEFAULT_MAX_TIMEOUT_COUNT = 3;
+    public static final int DEFAULT_TIMEOUT_WINDOW = 10000;
+    public static final int DEFAULT_RETRY_SUSPEND_WINDOW = 20000;
+    public static final int DEFAULT_RETRY_DELAY_SLICE = 1000;
+    public static final int DEFAULT_RETRY_MAX_DELAY_SLICE = 10;
+    public static final int DEFAULT_MAX_OPERATIONS_PER_CONNECTION = 10000;
+	public static final BadHostDetector DEFAULT_BAD_HOST_DETECTOR = EmptyBadHostDetectorImpl.getInstance();
+	
+	private final String name;
     
-	private String keyspaceName;
-	private String clusterName;
-    
-    private boolean isRingDescribeEnabled = DEFAULT_ENABLE_RING_DESCRIBE;
-    private boolean isDebugEnabled = DEFAULT_DEBUG_ENABLED;
-    private ConnectionPoolFactory connectionPoolFactory = new ConnectionPoolFactory() {
-		@Override
-		public <CL> ConnectionPool<CL> createConnectionPool(
-				ConnectionPoolConfiguration config,
-				ConnectionFactory<CL> connectionFactory) {
-			return new RoundRobinConnectionPoolImpl<CL>(config, connectionFactory);
-		}
-    };
-    private int autoDiscoveryDelay = DEFAULT_AUTO_DISCOVERY_DELAY_IN_SECONDS;
-	private ConsistencyLevel defaultReadConsistencyLevel = ConsistencyLevel.CL_ONE;
-	private ConsistencyLevel defaultWriteConsistencyLevel = ConsistencyLevel.CL_ONE;
 	private int maxConnsPerPartition = DEFAULT_MAX_ACTIVE_PER_PARTITION;
+	private int initConnsPerPartition = DEFAULT_INIT_PER_PARTITION;
+	private int maxConns = DEFAULT_MAX_CONNS;
 	private int port = DEFAULT_PORT;
 	private int socketTimeout = DEFAULT_SOCKET_TIMEOUT;
+	private int connectTimeout = DEFAULT_CONNECT_TIMEOUT;
 	private int maxFailoverCount = DEFAULT_FAILOVER_COUNT;
-	private int failoverWaitTime = DEFAULT_FAILOVER_WAIT_TIME;
-	private int maxExhaustedRetries = DEFAULT_MAX_EXHAUSTED_RETRIES;
+	private int latencyAwareWindowSize = DEFAULT_LATENCY_AWARE_WINDOW_SIZE;
+	private float latencyAwareSentinelCompare = DEFAULT_LATENCY_AWARE_SENTINEL_COMPARE;
+	private float latencyAwareBadnessThreshold = DEFAULT_LATENCY_AWARE_BADNESS_THRESHOLD;
+	private int latencyAwareUpdateInterval = DEFAULT_LATENCY_AWARE_UPDATE_INTERVAL;
+	private int latencyAwareResetInterval = DEFAULT_LATENCY_AWARE_RESET_INTERVAL;
+		
+	private int connectionLimiterWindowSize = DEFAULT_CONNECTION_LIMITER_WINDOW_SIZE;
+	private int connectionLimiterMaxPendingCount = DEFAULT_CONNECTION_LIMITER_MAX_PENDING_COUNT;
+	private int maxPendingConnectionsPerHost = DEFAULT_MAX_PENDING_CONNECTIONS_PER_HOST;
+	private int maxBlockedThreadsPerHost = DEFAULT_MAX_BLOCKED_THREADS_PER_HOST;
+	private int maxTimeoutCount = DEFAULT_MAX_TIMEOUT_COUNT;
+	private int timeoutWindow = DEFAULT_TIMEOUT_WINDOW;
+	private int retrySuspendWindow = DEFAULT_RETRY_SUSPEND_WINDOW;
+	private int retryDelaySlice = DEFAULT_RETRY_DELAY_SLICE;
+	private int retryMaxDelaySlice = DEFAULT_RETRY_MAX_DELAY_SLICE;
+	private int maxOperationsPerConnection = DEFAULT_MAX_OPERATIONS_PER_CONNECTION;
+	
 	private String seeds = null;
 	private int maxTimeoutWhenExhausted = DEFAULT_MAX_TIME_WHEN_EXHAUSTED;
-	private RetryBackoffStrategy hostRetryBackoffStrategy = new ExponentialRetryBackoffStrategy(10, 1000, 10000);
-	private String ringIpFilter = DEFAULT_RING_IP_FILTER;
-	private Clock clock = new MillisecondsClock();
-	private NodeDiscoveryFactory nodeDiscoveryFactory = EmptyNodeDiscoveryFactoryImpl.get();
-	private ConnectionPoolConfiguration.Factory<LoadBalancingStrategy> loadBalancingStrategyFactory = DEFAULT_LOAD_BALACING_STRATEGY;
-	private ConnectionPoolConfiguration.Factory<ExhaustedStrategy> exhaustedStrategyFactory = DEFAULT_EXHAUSTED_STRATEGY;
-	private ConnectionPoolConfiguration.Factory<FailoverStrategy> failoverStrategyFactory = DEFAULT_FAILOVER_STRATEGY;
-	private ConnectionPoolMonitor monitor = DEFAULT_MONITOR;
-	private KeyspaceTracers keyspaceTracers = DEFAULT_KEYSPACE_TRACERS;
-	private BadHostDetector badHostDetector = new BadHostDetectorImpl(3, 1000);
+	private RetryBackoffStrategy hostRetryBackoffStrategy = null;
+	private LatencyScoreStrategy latencyScoreStrategy = new EmptyLatencyScoreStrategyImpl();
+	private BadHostDetector badHostDetector = DEFAULT_BAD_HOST_DETECTOR;
 	
-	public ConnectionPoolConfigurationImpl(String clusterName, String keyspaceName) {
-		this.keyspaceName = keyspaceName;
-		this.clusterName = clusterName;
-	}
-	
-	public ConnectionPoolConfigurationImpl() {
-		
-	}
-	
-	/* (non-Javadoc)
-	 * @see com.netflix.cassandra.ConnectionPoolConfiguration#isRingDescribeEnabled()
-	 */
-	@Override
-	public boolean isRingDescribeEnabled() {
-		return isRingDescribeEnabled;
-	}
-	
-	public void setIsRingDescribeEnabled(boolean enabled) {
-		this.isRingDescribeEnabled = enabled;
+	public ConnectionPoolConfigurationImpl(String name) {
+		this.name = name;
+		this.badHostDetector = new BadHostDetectorImpl(this);
+		this.hostRetryBackoffStrategy = new ExponentialRetryBackoffStrategy(this);
 	}
 	
 	/* (non-Javadoc)
 	 * @see com.netflix.cassandra.ConnectionPoolConfiguration#getKeyspaceName()
 	 */
 	@Override
-	public String getKeyspaceName() {
-		return this.keyspaceName;
-	}
-	
-	public void setKeyspaceName(String keyspaceName) {
-		this.keyspaceName = keyspaceName;
+	public String getName() {
+		return this.name;
 	}
 	
 	/* (non-Javadoc)
@@ -158,8 +113,22 @@ public class ConnectionPoolConfigurationImpl implements AstyanaxConfiguration {
 		return socketTimeout;
 	}
 	
-	public void setSocketTimeout(int socketTimeout) { 
+	public ConnectionPoolConfigurationImpl setSocketTimeout(int socketTimeout) { 
 		this.socketTimeout = socketTimeout;
+		return this;
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.netflix.cassandra.ConnectionPoolConfiguration#getConnectTimeout()
+	 */
+	@Override
+	public int getConnectTimeout() {
+		return connectTimeout;
+	}
+	
+	public ConnectionPoolConfigurationImpl setConnectTimeout(int connectTimeout) { 
+		this.connectTimeout = connectTimeout;
+		return this;
 	}
 	
 	/* (non-Javadoc)
@@ -170,8 +139,9 @@ public class ConnectionPoolConfigurationImpl implements AstyanaxConfiguration {
 		return this.seeds;
 	}
 	
-	public void setSeeds(String seeds) {
+	public ConnectionPoolConfigurationImpl setSeeds(String seeds) {
 		this.seeds = seeds;
+		return this;
 	}
 	
 	/* (non-Javadoc)
@@ -182,8 +152,9 @@ public class ConnectionPoolConfigurationImpl implements AstyanaxConfiguration {
 		return this.maxTimeoutWhenExhausted;
 	}
 	
-	public void setMaxTimeoutWhenExhausted(int timeout) {
+	public ConnectionPoolConfigurationImpl setMaxTimeoutWhenExhausted(int timeout) {
 		this.maxTimeoutWhenExhausted = timeout;
+		return this;
 	}
 	
 	/* (non-Javadoc)
@@ -194,8 +165,9 @@ public class ConnectionPoolConfigurationImpl implements AstyanaxConfiguration {
 		return this.port;
 	}
 	
-	public void setPort(int port) {
+	public ConnectionPoolConfigurationImpl setPort(int port) {
 		this.port = port;
+		return this;
 	}
 	
 	/* (non-Javadoc)
@@ -206,34 +178,26 @@ public class ConnectionPoolConfigurationImpl implements AstyanaxConfiguration {
 		return this.maxConnsPerPartition;
 	}
 	
-	public void setMaxConnsPerHost(int maxConns) {
+	public ConnectionPoolConfigurationImpl setMaxConnsPerHost(int maxConns) {
+	    Preconditions.checkArgument(maxConns > 0, "maxConnsPerHost must be >0");
 		this.maxConnsPerPartition = maxConns;
+		return this;
 	}
 	
 	/* (non-Javadoc)
-	 * @see com.netflix.cassandra.ConnectionPoolConfiguration#getDefaultReadConsistencyLevel()
+	 * @see com.netflix.cassandra.ConnectionPoolConfiguration#getInitConnsPerHost()
 	 */
 	@Override
-	public ConsistencyLevel getDefaultReadConsistencyLevel() {
-		return this.defaultReadConsistencyLevel;
+	public int getInitConnsPerHost() {
+		return this.initConnsPerPartition;
 	}
 	
-	public void setDefaultReadConsistencyLevel(ConsistencyLevel cl) {
-		this.defaultReadConsistencyLevel = cl;
+	public ConnectionPoolConfigurationImpl setInitConnsPerHost(int initConns) {
+        Preconditions.checkArgument(initConns >= 0, "initConnsPerHost must be >0");
+		this.initConnsPerPartition = initConns;
+		return this;
 	}
 	
-	/* (non-Javadoc)
-	 * @see com.netflix.cassandra.ConnectionPoolConfiguration#getDefaultWriteConsistencyLevel()
-	 */
-	@Override
-	public ConsistencyLevel getDefaultWriteConsistencyLevel() {
-		return this.defaultWriteConsistencyLevel;
-	}
-	
-	public void setDefaultWriteConsistencyLevel(ConsistencyLevel cl) {
-		this.defaultWriteConsistencyLevel = cl;
-	}
-
 	/* (non-Javadoc)
 	 * @see com.netflix.cassandra.ConnectionPoolConfiguration#getRetryBackoffStrategy()
 	 */
@@ -242,32 +206,9 @@ public class ConnectionPoolConfigurationImpl implements AstyanaxConfiguration {
 		return this.hostRetryBackoffStrategy;
 	}
 	
-	public void setRetryBackoffStrategy(RetryBackoffStrategy hostRetryBackoffStrategy) {
+	public ConnectionPoolConfigurationImpl setRetryBackoffStrategy(RetryBackoffStrategy hostRetryBackoffStrategy) {
 		this.hostRetryBackoffStrategy = hostRetryBackoffStrategy;
-	}
-	
-	/* (non-Javadoc)
-	 * @see com.netflix.cassandra.ConnectionPoolConfiguration#getAutoDiscoveryDelay()
-	 */
-	@Override
-	public int getAutoDiscoveryDelay() {
-		return this.autoDiscoveryDelay;
-	}
-	
-	public void setAutoDiscoveryDelay(int seconds) {
-		this.autoDiscoveryDelay = seconds;
-	}
-	
-	/* (non-Javadoc)
-	 * @see com.netflix.cassandra.ConnectionPoolConfiguration#getRingIpFilter()
-	 */
-	@Override
-	public String getRingIpFilter() {
-		return this.ringIpFilter;
-	}
-	
-	public void setRingIpFilter(String filter) {
-		this.ringIpFilter = filter;
+		return this;
 	}
 	
 	/* (non-Javadoc)
@@ -276,133 +217,15 @@ public class ConnectionPoolConfigurationImpl implements AstyanaxConfiguration {
 	@Override
 	public List<Host> getSeedHosts() {
 		List<Host> hosts = new ArrayList<Host>();
-		for (String seed : seeds.split(",")) {
-			seed = seed.trim();
-			if (seed.length() > 0) {
-				hosts.add(new Host(seed, this.port));
+		if (seeds != null) {
+			for (String seed : seeds.split(",")) {
+				seed = seed.trim();
+				if (seed.length() > 0) {
+					hosts.add(new Host(seed, this.port));
+				}
 			}
 		}
 		return hosts;
-	}
-	
-	@Override
-	public ConnectionPoolFactory getConnectionPoolFactory() {
-		return this.connectionPoolFactory;
-	}
-	
-	public void setConnectionPoolFactory(ConnectionPoolFactory factory) {
-		this.connectionPoolFactory = factory;
-	}
-
-	@Override
-	public NodeDiscoveryFactory getNodeDiscoveryFactory() {
-		return this.nodeDiscoveryFactory;
-	}
-	
-	public void setNodeDiscoveryFactory(NodeDiscoveryFactory factory) {
-		Preconditions.checkNotNull(factory, "NodeDiscoveryFactory cannot be null");
-		this.nodeDiscoveryFactory = factory;
-	}
-
-	@Override
-	public Clock getClock() {
-		return this.clock;
-	}
-	
-	public void setClock(Clock clock) {
-		this.clock = clock;
-	}
-
-	@Override
-	public ConnectionPoolConfiguration.Factory<LoadBalancingStrategy> getLoadBlancingPolicyFactory() {
-		return this.loadBalancingStrategyFactory;
-	}
-	
-	public void setLoadBlancingStrategyFactory(ConnectionPoolConfiguration.Factory<LoadBalancingStrategy> factory) {
-		this.loadBalancingStrategyFactory = factory;
-	}
-	
-	public String toString() {
-		Field[] fields = getClass().getSuperclass().getDeclaredFields();
-		StringBuilder sb = new StringBuilder();
-		for (Field field : fields) {
-			if (Character.isLowerCase(field.getName().charAt(0))) {
-				if (field.getType() == int.class) {
-					
-				}
-				if (sb.length() == 0) {
-					sb.append("ConnectionPoolConfigurationImpl[");
-				}
-				else {
-					sb.append(',');
-				}
-				sb.append(field.getName()).append('=');
-				try {
-					Object value = field.get(this);
-					sb.append(value);
-				} catch (IllegalArgumentException e) {
-					sb.append("***");
-				} catch (IllegalAccessException e) {
-					sb.append("***");
-				}
-			}
-		}
-		sb.append("]");
-		return sb.toString();
-	}
-
-	@Override
-	public ConnectionPoolMonitor getConnectionPoolMonitor() {
-		return this.monitor;
-	}
-	
-	public void setConnectionPoolMonitor(ConnectionPoolMonitor monitor) {
-		this.monitor = monitor;
-	}
-
-	@Override
-	public KeyspaceTracers getKeyspaceTracers() {
-		return keyspaceTracers;
-	}
-	
-	public void setKeyspaceTracers(KeyspaceTracers keyspaceTracers) {
-		this.keyspaceTracers = keyspaceTracers;
-	}
-
-	@Override
-	public BadHostDetector getBadHostDetector() {
-		return badHostDetector;
-	}
-	
-	public void setBadHostDetector(BadHostDetector detector) {
-		this.badHostDetector = detector;
-	}
-
-	@Override
-	public ConnectionPoolConfiguration.Factory<ExhaustedStrategy> getExhaustedStrategyFactory() {
-		return this.exhaustedStrategyFactory;
-	}
-
-	public void setExhaustedStrategyFactory(ConnectionPoolConfiguration.Factory<ExhaustedStrategy> exhaustedStrategyFactory) {
-		this.exhaustedStrategyFactory = exhaustedStrategyFactory;
-	}
-
-	@Override
-	public ConnectionPoolConfiguration.Factory<FailoverStrategy> getFailoverStrategyFactory() {
-		return this.failoverStrategyFactory;
-	}
-
-	public void setFailoverStrategyFactory(ConnectionPoolConfiguration.Factory<FailoverStrategy> failoverStrategyFactory) {
-		this.failoverStrategyFactory = failoverStrategyFactory;
-	}
-
-	@Override
-	public String getClusterName() {
-		return this.clusterName;
-	}
-	
-	public void setClusterName(String clusterName) {
-		this.clusterName = clusterName;
 	}
 
 	@Override
@@ -410,34 +233,193 @@ public class ConnectionPoolConfigurationImpl implements AstyanaxConfiguration {
 		return this.maxFailoverCount;
 	}
 
-	public void setMaxFailoverCount(int maxFailoverCount) {
+	public ConnectionPoolConfigurationImpl setMaxFailoverCount(int maxFailoverCount) {
 		this.maxFailoverCount = maxFailoverCount;
+		return this;
 	}
 
 	@Override
-	public int getFailoverWaitTime() {
-		return this.failoverWaitTime;
+	public int getMaxConns() {
+		return this.maxConns;
 	}
 	
-	public  void setFailoverWaitTime(int failoverWaitTime) {
-		this.failoverWaitTime = failoverWaitTime;
+	public ConnectionPoolConfigurationImpl setMaxConns(int maxConns) {
+		this.maxConns = maxConns;
+		return this;
 	}
 
 	@Override
-	public int getMaxExhaustedRetries() {
-		return maxExhaustedRetries;
+	public int getLatencyAwareWindowSize() {
+		return this.latencyAwareWindowSize;
 	}
 	
-	public void setMaxExhaustedRetries(int maxExhaustedRetries) {
-		this.maxExhaustedRetries = maxExhaustedRetries;
+	public ConnectionPoolConfigurationImpl setLatencyAwareWindowSize(int latencyAwareWindowSize) {
+		this.latencyAwareWindowSize = latencyAwareWindowSize;
+		return this;
 	}
 
 	@Override
-	public boolean isDebugEnabled() {
-		return this.isDebugEnabled;
+	public float getLatencyAwareSentinelCompare() {
+		return latencyAwareSentinelCompare;
 	}
 	
-	public void setIsDebugEnabled(boolean isDebugEnabled) {
-		this.isDebugEnabled = isDebugEnabled;
+	public ConnectionPoolConfigurationImpl setLatencyAwareSentinelCompare(float latencyAwareSentinelCompare) {
+		this.latencyAwareSentinelCompare = latencyAwareSentinelCompare;
+		return this;
 	}
+
+	@Override
+	public float getLatencyAwareBadnessThreshold() {
+		return this.latencyAwareBadnessThreshold;
+	}
+
+	public ConnectionPoolConfigurationImpl setLatencyAwareBadnessThreshold(float threshold) {
+		this.latencyAwareBadnessThreshold = threshold;
+		return this;
+	}
+
+	@Override
+	public int getConnectionLimiterWindowSize() {
+		return this.connectionLimiterWindowSize;
+	}
+	
+	public ConnectionPoolConfigurationImpl setConnectionLimiterWindowSize(int pendingConnectionWindowSize) {
+		this.connectionLimiterWindowSize = pendingConnectionWindowSize;
+		return this;
+	}
+
+	@Override
+	public int getConnectionLimiterMaxPendingCount() {
+		return this.connectionLimiterMaxPendingCount;
+	}
+	
+	public ConnectionPoolConfigurationImpl setConnectionLimiterMaxPendingCount(int connectionLimiterMaxPendingCount) {
+		this.connectionLimiterMaxPendingCount = connectionLimiterMaxPendingCount;
+		return this;
+	}
+
+	@Override
+	public int getMaxPendingConnectionsPerHost() {
+		return this.maxPendingConnectionsPerHost;
+	}
+	
+	public ConnectionPoolConfigurationImpl setMaxPendingConnectionsPerHost(int maxPendingConnectionsPerHost) {
+		this.maxPendingConnectionsPerHost = maxPendingConnectionsPerHost;
+		return this;
+	}
+
+	@Override
+	public int getMaxBlockedThreadsPerHost() {
+		return this.maxBlockedThreadsPerHost;
+	}
+	
+	public ConnectionPoolConfigurationImpl setMaxBlockedThreadsPerHost(int maxBlockedThreadsPerHost) {
+		this.maxBlockedThreadsPerHost = maxBlockedThreadsPerHost;
+		return this;
+	}
+
+	@Override
+	public int getTimeoutWindow() {
+		return this.timeoutWindow;
+	}
+
+	public ConnectionPoolConfigurationImpl setTimeoutWindow(int timeoutWindow) {
+		this.timeoutWindow = timeoutWindow;
+		return this;
+	}
+	
+	@Override
+	public int getMaxTimeoutCount() {
+		return this.maxTimeoutCount;
+	}
+	
+	public ConnectionPoolConfigurationImpl setMaxTimeoutCount(int maxTimeoutCount) {
+		this.maxTimeoutCount = maxTimeoutCount;
+		return this;
+	}
+
+	@Override
+	public int getLatencyAwareUpdateInterval() {
+		return latencyAwareUpdateInterval;
+	}
+	
+	public ConnectionPoolConfigurationImpl setLatencyAwareUpdateInterval(int latencyAwareUpdateInterval) {
+		this.latencyAwareUpdateInterval = latencyAwareUpdateInterval;
+		return this;
+	}
+
+	@Override
+	public int getLatencyAwareResetInterval() {
+		return latencyAwareResetInterval;
+	}
+	
+	public ConnectionPoolConfigurationImpl setLatencyAwareResetInterval(int latencyAwareResetInterval) {
+		this.latencyAwareResetInterval = latencyAwareResetInterval;
+		return this;
+	}
+
+	@Override
+	public int getRetrySuspendWindow() {
+		return this.retrySuspendWindow;
+	}
+	
+	public ConnectionPoolConfigurationImpl setRetrySuspendWindow(int retrySuspendWindow) {
+		this.retrySuspendWindow = retrySuspendWindow;
+		return this;
+	}
+
+	@Override
+	public int getMaxOperationsPerConnection() {
+		return maxOperationsPerConnection;
+	}
+	
+	public ConnectionPoolConfigurationImpl setMaxOperationsPerConnection(int maxOperationsPerConnection) {
+		this.maxOperationsPerConnection = maxOperationsPerConnection;
+		return this;
+	}
+
+	@Override
+	public LatencyScoreStrategy getLatencyScoreStrategy() {
+		return this.latencyScoreStrategy;
+	}
+	
+	public ConnectionPoolConfigurationImpl setLatencyScoreStrategy(LatencyScoreStrategy latencyScoreStrategy) {
+		this.latencyScoreStrategy = latencyScoreStrategy;
+		return this;
+	}
+
+	@Override
+	public BadHostDetector getBadHostDetector() {
+		return badHostDetector;
+	}
+	
+	public ConnectionPoolConfigurationImpl setBadHostDetector(BadHostDetector badHostDetector) {
+		this.badHostDetector = badHostDetector;
+		return this;
+	}
+
+	@Override
+	public int getRetryMaxDelaySlice() {
+		return retryMaxDelaySlice;
+	}
+	
+	public ConnectionPoolConfigurationImpl setRetryMaxDelaySlice(int retryMaxDelaySlice) {
+		this.retryMaxDelaySlice = retryMaxDelaySlice;
+		return this;
+	}
+	
+	@Override
+	public int getRetryDelaySlice() {
+		return this.retryDelaySlice;
+	}
+	
+	public ConnectionPoolConfigurationImpl setRetryDelaySlice(int retryDelaySlice) {
+		this.retryDelaySlice = retryDelaySlice;
+		return this;
+	}
+	
+	public String toString() {
+		return StringUtils.joinClassGettersValues(this, "CpConfig", ConnectionPoolConfigurationImpl.class);
+	}
+	
 }

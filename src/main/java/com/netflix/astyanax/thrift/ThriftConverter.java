@@ -15,10 +15,21 @@
  ******************************************************************************/
 package com.netflix.astyanax.thrift;
 
-import java.net.SocketTimeoutException;
-import java.nio.ByteBuffer;
-import java.util.Iterator;
-
+import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.connectionpool.exceptions.BadRequestException;
+import com.netflix.astyanax.connectionpool.exceptions.ConnectionAbortedException;
+import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.connectionpool.exceptions.OperationTimeoutException;
+import com.netflix.astyanax.connectionpool.exceptions.ThriftStateException;
+import com.netflix.astyanax.connectionpool.exceptions.TimeoutException;
+import com.netflix.astyanax.connectionpool.exceptions.TokenRangeOfflineException;
+import com.netflix.astyanax.connectionpool.exceptions.TransportException;
+import com.netflix.astyanax.connectionpool.exceptions.UnknownException;
+import com.netflix.astyanax.model.ColumnFamily;
+import com.netflix.astyanax.model.ColumnPath;
+import com.netflix.astyanax.model.ColumnSlice;
+import com.netflix.astyanax.model.ColumnType;
+import com.netflix.astyanax.model.ConsistencyLevel;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.NotFoundException;
@@ -27,38 +38,27 @@ import org.apache.cassandra.thrift.SliceRange;
 import org.apache.cassandra.thrift.TimedOutException;
 import org.apache.cassandra.thrift.UnavailableException;
 import org.apache.log4j.Logger;
+import org.apache.thrift.TApplicationException;
 import org.apache.thrift.TException;
+import org.apache.thrift.protocol.TProtocolException;
 import org.apache.thrift.transport.TTransportException;
 
-import com.netflix.astyanax.Serializer;
-import com.netflix.astyanax.connectionpool.exceptions.BadRequestException;
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.exceptions.NoAvailableHostsException;
-import com.netflix.astyanax.connectionpool.exceptions.TimeoutException;
-import com.netflix.astyanax.connectionpool.exceptions.TransportException;
-import com.netflix.astyanax.connectionpool.exceptions.UnknownException;
-import com.netflix.astyanax.model.ColumnFamily;
-import com.netflix.astyanax.model.ColumnPath;
-import com.netflix.astyanax.model.ColumnSlice;
-import com.netflix.astyanax.model.ColumnType;
-import com.netflix.astyanax.model.ConsistencyLevel;
+import java.net.SocketTimeoutException;
+import java.nio.ByteBuffer;
+import java.util.Iterator;
 
 public class ThriftConverter {
-    private static final Logger LOG = Logger.getLogger(ThriftConverter.class);
-	
+    private static final Logger LOGGER = Logger.getLogger(ThriftConverter.class);
+
 	/**
 	 * Construct a Hector ColumnParent based on the information in the query and
 	 * the type of column family being queried.
 	 * 
 	 * @param <K>
-	 * @param client
-	 * @param query
+	 * @param columnFamily
+	 * @param path
 	 * @return
 	 * @throws BadRequestException 
-	 * @throws NotFoundException
-	 * @throws InvalidRequestException
-	 * @throws TException
-	 * @throws NetflixCassandraException 
 	 */
 	public static <K> ColumnParent getColumnParent(ColumnFamily<?,?> columnFamily, ColumnPath<?> path) 
 			throws BadRequestException {
@@ -77,18 +77,15 @@ public class ThriftConverter {
 	 * Construct a Thrift ColumnPath based on the information in the query and
 	 * the type of column family being queried.
 	 * @param <K>
-	 * @param client
-	 * @param query
+	 * @param columnFamily
+	 * @param path
 	 * @return
 	 * @throws NotFoundException
 	 * @throws InvalidRequestException
 	 * @throws TException
-	 * @throws NetflixCassandraException 
 	 */
 	public static <K> org.apache.cassandra.thrift.ColumnPath getColumnPath(
-			ColumnFamily<?,?> columnFamily, ColumnPath<?> path) 
-			throws BadRequestException {
-		
+			ColumnFamily<?,?> columnFamily, ColumnPath<?> path) throws BadRequestException {
 		org.apache.cassandra.thrift.ColumnPath cp = new org.apache.cassandra.thrift.ColumnPath();
 		cp.setColumn_family(columnFamily.getName());
 		if (path != null) {
@@ -150,31 +147,47 @@ public class ThriftConverter {
 	 * @return
 	 */
 	public static ConnectionException ToConnectionPoolException(Exception e) {
-		LOG.trace(e.getCause());
+		if (e instanceof ConnectionException) {
+			return (ConnectionException)e;
+		}
+		LOGGER.debug(e.getMessage());
 		if (e instanceof InvalidRequestException) {
 			return new com.netflix.astyanax.connectionpool.exceptions.BadRequestException(e);
 		} 
+		else if (e instanceof TProtocolException) {
+			return new com.netflix.astyanax.connectionpool.exceptions.BadRequestException(e);
+		}
 		else if (e instanceof UnavailableException) {
-			return new NoAvailableHostsException(e);
+			return new TokenRangeOfflineException(e);
 		}
 		else if (e instanceof SocketTimeoutException) {
 			return new TimeoutException(e);
 		}
 		else if (e instanceof TimedOutException) {
-			return new TimeoutException(e);
+			return new OperationTimeoutException(e);
 		} 
 		else if (e instanceof NotFoundException) {
 			return new com.netflix.astyanax.connectionpool.exceptions.NotFoundException(e);
 		}
+		else if (e instanceof TApplicationException) {
+			return new ThriftStateException(e);
+		}
 		else if (e instanceof TTransportException) {
-			if (e.getCause() instanceof SocketTimeoutException) {
-				return new TimeoutException(e);
+			if (e.getCause() != null) {
+				if (e.getCause() instanceof SocketTimeoutException) {
+					return new TimeoutException(e);
+				}
+				if (e.getCause().getMessage() != null) {
+					if (e.getCause().getMessage().toLowerCase().contains("connection abort") ||
+					    e.getCause().getMessage().toLowerCase().contains("connection reset")) {
+						return new ConnectionAbortedException(e);
+					}
+				}
 			}
 			return new TransportException(e);
 		}
 		else {
-			if (e instanceof RuntimeException)
-				throw (RuntimeException)e;
+			// e.getCause().printStackTrace();
 			return new UnknownException(e);
 		}
 	}

@@ -17,15 +17,16 @@ package com.netflix.astyanax;
 
 import java.util.List;
 
+import com.netflix.astyanax.connectionpool.Operation;
+import com.netflix.astyanax.connectionpool.OperationResult;
+import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.model.Column;
+import com.netflix.astyanax.connectionpool.exceptions.OperationException;
+import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.model.ColumnFamily;
-import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.model.ColumnPath;
-import com.netflix.astyanax.model.KeySlice;
-import com.netflix.astyanax.model.Rows;
-import com.netflix.astyanax.model.TokenRange;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
+import com.netflix.astyanax.retry.RetryPolicy;
+import com.netflix.astyanax.serializers.UnknownComparatorException;
 
 /**
  * Interface providing access to mutate and query columns from a cassandra keyspace.
@@ -33,7 +34,13 @@ import com.netflix.astyanax.query.ColumnFamilyQuery;
  * @author elandau
  *
  */
-public interface Keyspace {
+public interface Keyspace  {
+	/**
+	 * Return the configuration object used to set up this keyspace
+	 * @return
+	 */
+	AstyanaxConfiguration getConfig();
+	
     /** 
      * Returns keyspace name
      * @return
@@ -45,7 +52,26 @@ public interface Keyspace {
      * @return
      * @throws ConnectionException 
      */
-	public List<TokenRange> describeRing() throws ConnectionException;
+	List<TokenRange> describeRing() throws ConnectionException;
+	
+	/**
+	 * Return a complete description of the keyspace and its column families
+	 * @return
+	 * @throws ConnectionException
+	 */
+	KeyspaceDefinition describeKeyspace() throws ConnectionException;
+
+	/**
+	 * Return the serializer package for a specific column family.  This requires a call
+	 * to the Cassandra cluster and is therefore cached to reduce load on Cassandra
+	 * and since this data rarely changes.
+	 * 
+	 * @param columnFamily
+	 * @param ignoreErrors
+	 * @return
+	 * @throws ConnectionException
+	 */
+	SerializerPackage getSerializerPackage(String cfName, boolean ignoreErrors) throws ConnectionException, UnknownComparatorException;
 
 	/**
 	 * Prepare a batch mutation object.  It is possible to create multiple
@@ -55,7 +81,7 @@ public interface Keyspace {
 	 * @return
 	 * @throws ConnectionException
 	 */
-	public MutationBatch prepareMutationBatch();
+	MutationBatch prepareMutationBatch();
 	
 	/**
 	 * Starting point for constructing a query.  From the column family the
@@ -69,70 +95,7 @@ public interface Keyspace {
 	 * 				constructing the query and the response.
 	 * @return
 	 */
-	public <K, C> ColumnFamilyQuery<K,C> prepareQuery(ColumnFamily<K, C> cf);
-	
-	/**
-	 * Query for columns in a single row.  Must call .execute() to perform
-	 * the query.
-	 * @param <C>
-	 * @param columnFamily
-	 * @param rowKey
-	 * @return
-	 * @throws ConnectionException
-	 */
-	@Deprecated
-	public <K,C> Query<K,C,ColumnList<C>> prepareGetRowQuery(ColumnFamily<K,?> columnFamily, Serializer<C> columnSerializer, K rowKey);
-	
-	/**
-	 * Query all rows in the key slice. Must call .execute() to perform the query.
-	 * @param <K>
-	 * @param <C>
-	 * @param columnFamily
-	 * @param args
-	 * @return
-	 */
-	@Deprecated
-	public <K,C> Query<K,C,Rows<K,C>> prepareGetMultiRowQuery(ColumnFamily<K,?> columnFamily, Serializer<C> columnSerializer, KeySlice<K> keys);
-
-	/**
-	 * Query for a specific column within a row. Must call .execute() to perform the query.
-	 * @param <K>
-	 * @param <C>
-	 * @param columnFamily
-	 * @param path
-	 * @return
-	 */
-	@Deprecated
-	public <K,C> Query<K,C,Column<C>> prepareGetColumnQuery(ColumnFamily<K,?> columnFamily, K rowKey, ColumnPath<C> path);
-
-	/**
-	 * Mutation for a single counter.  Must call .execute() to perform the query.
-	 * Counters can also be updated using the prepateMutation()
-	 * 
-	 * <pre>
-	 * {@code
-     *	  ColumnFamily<String, String> cf = new ColumnFamily<String, String>(
-     *			"ColumnFamilyName",
-     *			StringSerializer.get(),	// key serializer 
-     *			StringSerializer.get(), // column name serializer
-     *			ColumnType.STANDARD);
-	 *    
-	 *    Keyspace ks = ...
-	 * 	  ks.prepareCounterMutation(someColumnFamily, rowKey, path, amount)
-	 * 		  .execute();
-	 * }
-	 * </pre>
-	 * @param <K>
-	 * @param <C>
-	 * @param columnFamily
-	 * @param rowKey
-	 * @param path
-	 * @param amount - Amount to modify the counter.  Positive numbers increment.
-	 * 				   Negative numbers decrement.
-	 * @return Returns the mutation object.  The client must call execute() on 
-	 * 			the mutation to perform the operation.
-	 */
-	public <K,C> CounterMutation<K, C> prepareCounterMutation(ColumnFamily<K,C> columnFamily, K rowKey, ColumnPath<C> path, long amount);
+	<K, C> ColumnFamilyQuery<K,C> prepareQuery(ColumnFamily<K, C> cf);
 	
 	/**
 	 * Mutation for a single column
@@ -141,15 +104,37 @@ public interface Keyspace {
 	 * @param columnFamily
 	 * @return
 	 */
-	public <K,C> ColumnMutation prepareColumnMutation(ColumnFamily<K,C> columnFamily, K rowKey, C column);
+	<K,C> ColumnMutation prepareColumnMutation(ColumnFamily<K,C> columnFamily, K rowKey, C column);
 	
 	/**
-	 * Terminate the keyspace and connection pool
+	 * Delete all rows in a column family
+	 * @param <K>
+	 * @param <C>
+	 * @param columnFamily
+	 * @return
+	 * @throws ConnectionException 
+	 * @throws OperationException 
 	 */
-	void shutdown();
+	<K,C> OperationResult<Void> truncateColumnFamily(ColumnFamily<K,C> columnFamily) throws OperationException, ConnectionException;
+	
+	/**
+	 * This method is used for testing purposes only.  It is used to inject errors in the 
+	 * connection pool.
+	 * 
+	 * @param operation
+	 * @return
+	 * @throws ConnectionException
+	 */
+	OperationResult<Void> testOperation(Operation<?, ?> operation) throws ConnectionException;
 
 	/**
-	 * Start any threads or other tasks within the Keyspace
+	 * This method is used for testing purposes only.  It is used to inject errors in the 
+	 * connection pool.
+	 * 
+	 * @param operation
+	 * @return
+	 * @throws ConnectionException
 	 */
-	void start();
+	OperationResult<Void> testOperation(Operation<?, ?> operation, RetryPolicy retry) throws ConnectionException;
+
 }

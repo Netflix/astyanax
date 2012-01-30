@@ -3,14 +3,13 @@ package com.netflix.astyanax.serializers;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.annotations.Component;
-import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.Equality;
 import com.netflix.astyanax.model.RangeEndpoint;
-import com.netflix.astyanax.util.RangeBuilder;
 
 /**
  * Serializer for a Pojo annotated with Component field annotations
@@ -32,15 +31,16 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T>  {
 	 *
 	 * @param <P>
 	 */
-	public static class ComponentSerializer<P> {
+	public static class ComponentSerializer<P> implements Comparable<ComponentSerializer<?>> {
 		private Field field;
 		private Serializer<P> serializer;
+		private int ordinal;
 		
-		@SuppressWarnings("unchecked")
-		public ComponentSerializer(Field field, Serializer<P> serializer) {
+		public ComponentSerializer(Field field, Serializer<P> serializer, int ordinal) {
 			this.field = field;
 			this.field.setAccessible(true);
 			this.serializer = serializer;
+			this.ordinal = ordinal;
 		}
 		
 		public Field getField() {
@@ -61,6 +61,11 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T>  {
 		    ByteBuffer buf = serializer.toByteBuffer((P)value);
 			return buf;
 		}
+
+        @Override
+        public int compareTo(ComponentSerializer<?> other) {
+            return this.ordinal - other.ordinal;
+        }
 	}
 	
 	private List<ComponentSerializer<?>> components; 
@@ -73,9 +78,11 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T>  {
 		for (Field field : clazz.getDeclaredFields()) {
 			Component annotation = field.getAnnotation(Component.class);
 			if (annotation != null) {
-				components.add(makeComponent(field, SerializerTypeInferer.getSerializer(field.getType())));
+				components.add(makeComponent(field, SerializerTypeInferer.getSerializer(field.getType()), annotation.ordinal()));
 			}
 		}
+		
+		Collections.sort(this.components);
 	}
 	
 	@Override
@@ -102,6 +109,7 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T>  {
 
 	@Override
 	public T fromByteBuffer(ByteBuffer byteBuffer) {
+		byteBuffer = byteBuffer.duplicate();
 		try {
 			T obj = createContents(clazz);
 			for (ComponentSerializer<?> serializer : components) {
@@ -110,7 +118,7 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T>  {
 					serializer.deserialize(obj, data);
 					byte end_of_component = byteBuffer.get();
 					if (end_of_component != END_OF_COMPONENT) {
-						// TODO: warning?
+						throw new RuntimeException("Invalid composite column.  Expected END_OF_COMPONENT.");
 					}
 				}
 				else {
@@ -145,16 +153,16 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T>  {
 		return copy;
 	}
 	  
-	private static <P> ComponentSerializer<P> makeComponent(Field field, Serializer<P> serializer) {
-		return new ComponentSerializer<P>(field, serializer);
+	private static <P> ComponentSerializer<P> makeComponent(Field field, Serializer<P> serializer, int ordinal) {
+		return new ComponentSerializer<P>(field, serializer, ordinal);
 	}
 	
 	private T createContents(Class<T> clazz) throws InstantiationException, IllegalAccessException {
         return clazz.newInstance();
     }
 	
-	public RangeBuilder buildRange() {
-		return new RangeBuilder() {
+	public CompositeRangeBuilder buildRange() {
+		return new CompositeRangeBuilder() {
 		    private int position = 0;
 		    
 			public void nextComponent() {

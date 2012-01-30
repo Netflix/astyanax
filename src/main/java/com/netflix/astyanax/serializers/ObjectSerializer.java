@@ -58,5 +58,4 @@ public class ObjectSerializer extends AbstractSerializer<Object> implements
   public static ObjectSerializer get() {
     return INSTANCE;
   }
-
 }

@@ -15,16 +15,30 @@
  ******************************************************************************/
 package com.netflix.astyanax.shallows;
 
-import org.apache.log4j.Logger;
-
 import com.netflix.astyanax.connectionpool.ConnectionPoolMonitor;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
+import com.netflix.astyanax.connectionpool.HostStats;
+
+import java.util.Map;
+
+import org.apache.log4j.Logger;
 
 public class EmptyConnectionPoolMonitor implements ConnectionPoolMonitor {
-	private static Logger LOG = Logger.getLogger(EmptyConnectionPoolMonitor.class);
+    private static final Logger LOGGER = Logger.getLogger(EmptyConnectionPoolMonitor.class);
+
+	private static EmptyConnectionPoolMonitor instance = new EmptyConnectionPoolMonitor();
+	public static EmptyConnectionPoolMonitor getInstance() {
+		return instance;
+	}
 	
-	public static EmptyConnectionPoolMonitor instance = new EmptyConnectionPoolMonitor();
+	private EmptyConnectionPoolMonitor() {
+		
+	}
+	
+	public String toString() {
+		return "EmptyConnectionPoolMonitor";
+	}
 	
 	@Override
 	public void incOperationSuccess(Host host, long latency) {
@@ -48,28 +62,26 @@ public class EmptyConnectionPoolMonitor implements ConnectionPoolMonitor {
 
 	@Override
 	public void onHostAdded(Host host, HostConnectionPool<?> pool) {
-		LOG.info(String.format("Added host " + host));
+		LOGGER.info(String.format("Added host " + host));
 	}
 
 	@Override
 	public void onHostRemoved(Host host) {
-		LOG.info(String.format("Remove host " + host));
+		LOGGER.info(String.format("Remove host " + host));
 	}
 
 	@Override
 	public void onHostDown(Host host, Exception reason) {
-		LOG.warn(String.format("Downed host " + host + " reason=\"" + reason + "\""));
+		LOGGER.warn(String.format("Downed host " + host + " reason=\"" + reason + "\""));
 	}
 
 	@Override
 	public void onHostReactivated(Host host, HostConnectionPool<?> pool) {
-		LOG.info(String.format("Reactivating host " + host));
+		LOGGER.info(String.format("Reactivating host " + host));
 	}
 
 	@Override
-	public void incFailover() {
-		// TODO Auto-generated method stub
-		
+	public void incFailover(Host host, Exception e) {
 	}
 
 	@Override
@@ -86,5 +98,69 @@ public class EmptyConnectionPoolMonitor implements ConnectionPoolMonitor {
 
 	@Override
 	public void incOperationFailure(Host host, Exception e) {
+	}
+
+	@Override
+	public void incConnectionClosed(Host host, Exception e) {
+	}
+
+	@Override
+	public Map<Host, HostStats> getHostStats() {
+		return null;
+	}
+
+	@Override
+	public long getOperationFailureCount() {
+		return 0;
+	}
+
+	@Override
+	public long getOperationSuccessCount() {
+		return 0;
+	}
+
+	@Override
+	public long getConnectionCreatedCount() {
+		return 0;
+	}
+
+	@Override
+	public long getConnectionClosedCount() {
+		return 0;
+	}
+
+	@Override
+	public long getConnectionCreateFailedCount() {
+		return 0;
+	}
+
+	@Override
+	public long getConnectionBorrowedCount() {
+		return 0;
+	}
+
+	@Override
+	public long getConnectionReturnedCount() {
+		return 0;
+	}
+
+	@Override
+	public long getPoolExhaustedTimeoutCount() {
+		return 0;
+	}
+
+	@Override
+	public long getOperationTimeoutCount() {
+		return 0;
+	}
+
+	@Override
+	public long getFailoverCount() {
+		return 0;
+	}
+
+	@Override
+	public long getNoHostCount() {
+		return 0;
 	}
 }

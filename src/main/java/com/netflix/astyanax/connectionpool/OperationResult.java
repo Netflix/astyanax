@@ -15,6 +15,8 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool;
 
+import java.util.concurrent.TimeUnit;
+
 
 public interface OperationResult<R> {
 	/**
@@ -31,8 +33,29 @@ public interface OperationResult<R> {
 	
 	/**
 	 * Return the length of time to perform the operation.  Does not include
-	 * connection pool overhead.
+	 * connection pool overhead.  This time is in nanoseconds
 	 * @return
 	 */
 	long getLatency();
+	
+	/**
+	 * Return the length of time to perform the operation.  Does not include
+	 * connection pool overhead.  
+	 * @param units
+	 * @return
+	 */
+	long getLatency(TimeUnit units);
+	
+	/**
+	 * Return the number of times the operation had to be retried.  This includes retries for
+	 * aborted connections.
+	 * @return
+	 */
+	int getAttemptsCount();
+	
+	/**
+	 * Set the number of attempts executing this connection
+	 * @param count
+	 */
+	void setAttemptsCount(int count);
 }

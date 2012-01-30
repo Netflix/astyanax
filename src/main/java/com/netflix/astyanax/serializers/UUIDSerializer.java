@@ -3,13 +3,15 @@ package com.netflix.astyanax.serializers;
 import java.nio.ByteBuffer;
 import java.util.UUID;
 
+import org.apache.cassandra.db.marshal.UUIDType;
+
 /**
  * A UUIDSerializer translates the byte[] to and from UUID types.
  * 
  * @author Ed Anuff
  * 
  */
-public final class UUIDSerializer extends AbstractSerializer<UUID> {
+public class UUIDSerializer extends AbstractSerializer<UUID> {
 
   private static final UUIDSerializer instance = new UUIDSerializer();
 
@@ -49,4 +51,18 @@ public final class UUIDSerializer extends AbstractSerializer<UUID> {
     return ComparatorType.UUIDTYPE;
   }
 
+  @Override
+  public ByteBuffer fromString(String str) {	
+	return UUIDType.instance.fromString(str);
+  }
+	
+  @Override
+  public String getString(ByteBuffer byteBuffer) {
+    return UUIDType.instance.getString(byteBuffer);
+  }
+
+  @Override	
+  public ByteBuffer getNext(ByteBuffer byteBuffer) {
+	throw new RuntimeException("UUIDSerializer.getNext() Not implemented.");
+  }
 }

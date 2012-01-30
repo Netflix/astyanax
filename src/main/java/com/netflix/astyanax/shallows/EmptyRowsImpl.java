@@ -42,4 +42,10 @@ public class EmptyRowsImpl<K,C> implements Rows<K,C> {
 	public boolean isEmpty() {
 		return true;
 	}
+
+    @Override
+    public Row<K, C> getRowByIndex(int i) {
+        // TODO Auto-generated method stub
+        return null;
+    }
 }

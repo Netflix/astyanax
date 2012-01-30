@@ -3,6 +3,8 @@ package com.netflix.astyanax.serializers;
 import java.nio.ByteBuffer;
 import java.util.Date;
 
+import org.apache.cassandra.db.marshal.DateType;
+
 /**
  * Converts bytes to Date and vice versa, by first converting the Date to or
  * from a long which represents the specified number of milliseconds since
@@ -35,4 +37,20 @@ public final class DateSerializer extends AbstractSerializer<Date> {
     }
     return new Date(LONG_SERIALIZER.fromByteBuffer(bytes));
   }
+  
+  @Override
+  public ByteBuffer fromString(String str) {	
+	return DateType.instance.fromString(str);
+  }
+  
+  @Override
+  public String getString(ByteBuffer byteBuffer) {
+	return DateType.instance.getString(byteBuffer);
+  }
+
+  @Override
+  public ByteBuffer getNext(ByteBuffer byteBuffer) {
+	return toByteBuffer(new Date(fromByteBuffer(byteBuffer).getTime() + 1));
+  }
+
 }

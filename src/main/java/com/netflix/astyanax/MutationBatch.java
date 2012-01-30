@@ -17,8 +17,10 @@ package com.netflix.astyanax;
 
 import java.util.Collection;
 
+import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
+import com.netflix.astyanax.retry.RetryPolicy;
 
 /**
  * Batch mutator which operates at the row level assuming the hierarchy: 
@@ -114,17 +116,45 @@ public interface MutationBatch extends Execution<Void>{
 	int getRowCount();
 
 	/**
+	 * Pin this operation to a specific host
+	 * @param host
+	 * @return
+	 */
+	MutationBatch pinToHost(Host host);
+	
+	/**
 	 * Set the consistency level for this mutation
 	 * @param consistencyLevel
 	 */
 	MutationBatch setConsistencyLevel(ConsistencyLevel consistencyLevel);
 	
 	/**
-	 * Set the timeout for this mutation.  Set a high timeout when mutating
-	 * a large number of rows
-	 * @param timeout In milliseconds
+	 * Set the retry policy to use instead of the one specified in the configuration
+	 * @param retry
+	 * @return
 	 */
+	MutationBatch withRetryPolicy(RetryPolicy retry);
+	
+	/**
+	 * Force all future mutations to have the same timestamp.  Make sure to call lockTimestamp
+	 * before doing any other operations otherwise previously created withRow mutations will
+	 * use the previous timestamp.
+	 * @return
+	 */
+	MutationBatch lockCurrentTimestamp();
+	
+	/**
+	 * This never really did anything :)
+	 * @param 
+	 */
+	@Deprecated
 	MutationBatch setTimeout(long timeout);
 	
+	/**
+	 * Set the timestamp for all subsequent operations on this mutation
+	 * @param timestamp
+	 * @return
+	 */
+	MutationBatch setTimestamp(long timestamp);
 
 }

@@ -16,6 +16,7 @@
 package com.netflix.astyanax.query;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
 
 import com.netflix.astyanax.Execution;
 import com.netflix.astyanax.model.ByteBufferRange;
@@ -27,8 +28,17 @@ public interface IndexQuery<K,C> extends Execution<Rows<K,C>> {
 	 * Limit the number of rows in the response
 	 * @param count
 	 * @return
+	 * @deprecated Use setRowLimit instead
 	 */
+	@Deprecated
 	IndexQuery<K,C> setLimit(int count);
+	
+	/**
+	 * Limits the number of rows returned
+	 * @param count
+	 * @return
+	 */
+	IndexQuery<K,C> setRowLimit(int count);
 
 	/**
 	 * ?
@@ -45,12 +55,28 @@ public interface IndexQuery<K,C> extends Execution<Rows<K,C>> {
 	IndexColumnExpression<K,C> addExpression();
 	
 	/**
+	 * Add a set of prepare index expressions.
+	 * 
+	 * @param expressions
+	 * @return
+	 */
+	IndexQuery<K,C> addPreparedExpressions(Collection<PreparedIndexExpression<K, C>> expressions);
+	
+	/**
 	 * Specify a non-contiguous set of columns to retrieve.
 	 * @param columns
 	 * @return
 	 */
 	IndexQuery<K, C> withColumnSlice(C... columns);
 
+	/**
+	 * Specify a non-contiguous set of columns to retrieve.
+	 * 
+	 * @param columns
+	 * @return
+	 */
+	IndexQuery<K, C> withColumnSlice(Collection<C> columns);
+	
 	/**
 	 * Use this when your application caches the column slice.
 	 * @param slice
@@ -67,8 +93,7 @@ public interface IndexQuery<K,C> extends Execution<Rows<K,C>> {
 	 * @param count			Maximum number of columns to return (similar to SQL LIMIT)
 	 * @return
 	 */
-	IndexQuery<K, C> withColumnRange(C startColumn, C endColumn,
-			boolean reversed, int count);
+	IndexQuery<K, C> withColumnRange(C startColumn, C endColumn, boolean reversed, int count);
 	
 	/**
 	 * Specify a range and provide pre-constructed start and end columns.
@@ -90,4 +115,19 @@ public interface IndexQuery<K,C> extends Execution<Rows<K,C>> {
 	 * @return
 	 */
 	IndexQuery<K, C> withColumnRange(ByteBufferRange range);
+	
+	/**
+	 * @return
+	 * @deprecated autoPaginateRows()
+	 */
+	IndexQuery<K, C> setIsPaginating();
+	
+	/**
+	 * Automatically sets the next start key so that the next call to execute
+	 * will fetch the next block of rows
+	 * 
+	 * @return
+	 */
+	IndexQuery<K, C> autoPaginateRows(boolean autoPaginate);
+
 }

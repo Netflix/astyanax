@@ -15,19 +15,25 @@
  ******************************************************************************/
 package com.netflix.astyanax;
 
-import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
+import java.util.concurrent.ExecutorService;
+
+import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
+import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.model.ConsistencyLevel;
+import com.netflix.astyanax.retry.RetryPolicy;
 
 /**
- * Interface defining all connection pool configuration parameters.
+ * Interface defining all astyanax API configuration parameters.
  * 
  * @author elandau
  *
  */
-public interface AstyanaxConfiguration extends ConnectionPoolConfiguration {
-	public interface Factory<T> {
-		T createInstance(AstyanaxConfiguration config);
-	}
+public interface AstyanaxConfiguration {
+	/**
+	 * TODO
+	 * @return
+	 */
+	RetryPolicy getRetryPolicy();
 	
 	/**
 	 * Default consistency level used when reading from the cluster.  This
@@ -53,15 +59,25 @@ public interface AstyanaxConfiguration extends ConnectionPoolConfiguration {
 	Clock getClock();
 	
 	/**
-	 * Return tracer to receive operation completion notification.
-	 * @see com.netflix.astyanax.connectionpool.KeyspaceTracers
+	 * Return the maximum number of allows async threads to executeAsync()
 	 * @return
 	 */
-	KeyspaceTracers getKeyspaceTracers();
+	ExecutorService getAsyncExecutor();
 
 	/**
-	 * If returns true then debug messages will be logged
+	 * Fixed delay for node disocvery refresh
+	 */
+	int getDiscoveryDelayInSeconds();
+
+	/**
+	 * Get type of node discovery to perform
 	 * @return
 	 */
-	public boolean isDebugEnabled();
+	NodeDiscoveryType getDiscoveryType();
+
+	/**
+	 * Type of connection pool to use for this instance
+	 * @return
+	 */
+	ConnectionPoolType getConnectionPoolType();
 }

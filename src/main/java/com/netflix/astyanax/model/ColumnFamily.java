@@ -16,6 +16,8 @@
 package com.netflix.astyanax.model;
 
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.impl.PreparedIndexExpressionImpl;
+import com.netflix.astyanax.query.PreparedIndexExpression;
 
 /**
  * Basic column family definition.  The column family definition encapsulates
@@ -90,5 +92,15 @@ public class ColumnFamily<K,C> {
 	 */
 	public ColumnType getType() {
 		return type;
+	}
+	
+	public PreparedIndexExpression<K, C> newIndexClause() {
+	    return new PreparedIndexExpressionImpl<K, C>(this.columnSerializer);
+	}
+	
+	public static <K,C> ColumnFamily<K,C> newColumnFamily(String columnFamilyName,
+        Serializer<K> keySerializer,
+        Serializer<C> columnSerializer) {
+	    return new ColumnFamily<K,C>(columnFamilyName, keySerializer, columnSerializer);
 	}
 }

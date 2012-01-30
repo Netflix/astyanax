@@ -16,24 +16,37 @@
 package com.netflix.astyanax.connectionpool.exceptions;
 
 
-public class BadConfigurationException extends ConnectionException {
-	private String parameter;
+public class BadConfigurationException extends OperationException {
+	/**
+     * 
+     */
+    private static final long serialVersionUID = -5029835858453307841L;
+    private String parameter;
 	private String value;
 	private String expected;
 	
     public BadConfigurationException(String parameter, String value, String expected) {
-        super(parameter + ":" + value + ":" + expected, false);
+        super("Bad configuration " + parameter + "=" + value + " (expected: " + expected + ")");
     }
 
     public BadConfigurationException(Throwable cause) {
-        super(cause, false);
+        super(cause);
     }
 
     public BadConfigurationException(String parameter, String value, String expected, Throwable cause) {
-        super(parameter + ":" + value + ":" + expected, cause, false);
+        super("Bad configuration " + parameter + "=" + value + " (expected: " + expected + ")", cause);
+    }
+
+    public BadConfigurationException(String parameter, String value, Throwable cause) {
+        super("Bad configuration " + parameter + "=" + value, cause);
     }
 
 	public String getParameter() { return parameter; }
 	public String getValue() { return value; }
 	public String getExpected() { return expected; }
+	
+    @Override
+    public String getMessage() {
+        return this.getOriginalMessage();
+    }
 }

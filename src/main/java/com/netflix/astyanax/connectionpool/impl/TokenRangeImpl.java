@@ -17,8 +17,8 @@ package com.netflix.astyanax.connectionpool.impl;
 
 import java.util.List;
 
-import com.google.inject.internal.ImmutableList;
-import com.netflix.astyanax.model.TokenRange;
+import com.google.common.collect.ImmutableList;
+import com.netflix.astyanax.connectionpool.TokenRange;
 
 public class TokenRangeImpl implements TokenRange {
 

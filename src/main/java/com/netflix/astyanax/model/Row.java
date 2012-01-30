@@ -15,6 +15,8 @@
  ******************************************************************************/
 package com.netflix.astyanax.model;
 
+import java.nio.ByteBuffer;
+
 
 /**
  * Instance of a row with key type K and column name type C.  
@@ -32,6 +34,12 @@ public interface Row<K, C>  {
 	 * @return
 	 */
 	K getKey();
+	
+	/**
+	 * Return the raw byte buffer for this key
+	 * @return
+	 */
+	ByteBuffer getRawKey();
 	
 	/**
 	 * Child columns of the row.  Note that if a ColumnPath was provided to a 

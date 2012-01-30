@@ -17,6 +17,11 @@ package com.netflix.astyanax.connectionpool.exceptions;
 
 public class NotFoundException extends OperationException {
 	
+    /**
+     * 
+     */
+    private static final long serialVersionUID = -575277476194276973L;
+
     public NotFoundException(String message) {
         super(message);
     }

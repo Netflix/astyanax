@@ -22,7 +22,7 @@ import java.util.UUID;
 import com.netflix.astyanax.Clock;
 import com.netflix.astyanax.ColumnMutation;
 import com.netflix.astyanax.Execution;
-import com.netflix.astyanax.model.ConsistencyLevel;
+import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.serializers.BooleanSerializer;
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
 import com.netflix.astyanax.serializers.BytesArraySerializer;
@@ -37,25 +37,14 @@ public abstract class AbstractThriftColumnMutationImpl implements ColumnMutation
 
 	protected final ByteBuffer key;
 	protected final ByteBuffer column;
-	protected ConsistencyLevel readConsistencyLevel;
-	protected ConsistencyLevel writeConsistencyLevel;
 	protected final Clock clock;
 	
-	public AbstractThriftColumnMutationImpl(ByteBuffer key, ByteBuffer column, Clock clock, ConsistencyLevel readCl, ConsistencyLevel writeCl) {
+	public AbstractThriftColumnMutationImpl(ByteBuffer key, ByteBuffer column, Clock clock) {
 		this.key = key;
 		this.column = column;
-		this.readConsistencyLevel = readCl;
-		this.writeConsistencyLevel = writeCl;
 		this.clock = clock;
 	}
 	
-	@Override
-	public ColumnMutation setConsistencyLevel(ConsistencyLevel consistencyLevel) {
-		readConsistencyLevel = consistencyLevel;
-		writeConsistencyLevel = consistencyLevel;
-		return this;
-	}
-
 	@Override
 	public Execution<Void> putValue(String value, Integer ttl) {
 		return insertValue(StringSerializer.get().toByteBuffer(value), ttl);
@@ -100,12 +89,17 @@ public abstract class AbstractThriftColumnMutationImpl implements ColumnMutation
 	public Execution<Void> putValue(UUID value, Integer ttl) {
 		return insertValue(UUIDSerializer.get().toByteBuffer(value), ttl);
 	}
+	
+	@Override
+	public <T> Execution<Void> putValue(T value, Serializer<T> serializer, Integer ttl) {
+		return insertValue(serializer.toByteBuffer(value), ttl);
+	}
 
 	@Override
 	public Execution<Void> putEmptyColumn(Integer ttl) {
 		return insertValue(ThriftUtils.EMPTY_BYTE_BUFFER, ttl);
 	}
 
-	public abstract Execution<Void> insertValue(ByteBuffer value, Integer ttl);
+	protected abstract Execution<Void> insertValue(ByteBuffer value, Integer ttl);
 
 }

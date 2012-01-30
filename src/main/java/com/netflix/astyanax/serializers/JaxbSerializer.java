@@ -161,4 +161,5 @@ public class JaxbSerializer extends AbstractSerializer<Object> {
     }
     return inputFactory.createXMLStreamReader(input);
   }
+
 }

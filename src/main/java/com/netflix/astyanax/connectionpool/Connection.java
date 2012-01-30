@@ -25,6 +25,11 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
  * @param <CL>
  */
 public interface Connection<CL> {
+    public interface AsyncOpenCallback<CL> {
+        void success(Connection<CL> conn);
+        void failure(Connection<CL> conn, ConnectionException e);
+    }
+    
 	/**
 	 * Execute an operation on the connection and return a result
 	 * 
@@ -33,35 +38,47 @@ public interface Connection<CL> {
 	 * @return
 	 * @throws ConnectionException 
 	 */
-	public <R> OperationResult<R> execute(Operation<CL, R> op) throws ConnectionException;
+	<R> OperationResult<R> execute(Operation<CL, R> op) throws ConnectionException;
 
 	/**
 	 * Shut down the connection.  isOpen() will now return false.
 	 */
-	public void close();
+	void close();
 
-	/**
-	 * Determine if the connection is open.
-	 * @return
-	 */
-	public boolean isOpen();
-	
 	/**
 	 * Get the parent host connection pool.
 	 * @return
 	 */
-	public HostConnectionPool<CL> getHostConnectionPool();
+	HostConnectionPool<CL> getHostConnectionPool();
+	
+	/**
+	 * Get the host for this connection
+	 * @return
+	 */
+	Host getHost();
 	
 	/**
 	 * Get the last exception that caused the connection to be closed
 	 * @return
 	 */
-	public ConnectionException getLastException();
+	ConnectionException getLastException();
 	
 	/**
-	 * Open a connection
+	 * Open a new connection
 	 * @throws ConnectionException 
 	 */
 	void open() throws ConnectionException;
+
+	/**
+	 * Open a connection asynchronously and call the callback on connection or
+	 * failure
+	 * @param callback
+	 */
+	void openAsync(AsyncOpenCallback<CL> callback);
 	
+	/**
+	 * Number of operations performed on this connections since it was opened
+	 * @return
+	 */
+	long getOperationCount();
 }

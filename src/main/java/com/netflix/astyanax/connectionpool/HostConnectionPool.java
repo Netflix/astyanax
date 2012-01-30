@@ -16,7 +16,6 @@
 package com.netflix.astyanax.connectionpool;
 
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 
 /**
  * Pool of connections for a single host
@@ -31,15 +30,58 @@ public interface HostConnectionPool<CL> {
 	 * @param timeout
 	 * @return
 	 * @throws ConnectionException
-	 * @throws OperationException 
 	 */
-	Connection<CL> borrowConnection(int timeout) throws ConnectionException, OperationException;
+	Connection<CL> borrowConnection(int timeout) throws ConnectionException;
 
 	/**
-	 * Return a connection to the host's pool
-	 * @param connection
+	 * This open is different from borrowConnection in that it actually creates
+	 * a new connection without waiting for one that may be idle.  openConnection
+	 * is still subject to all other connection pool limitations.
+	 * @return
+	 * @throws ConnectionException
 	 */
-	void returnConnection(Connection<CL> connection);
+	Connection<CL> openConnection() throws ConnectionException;
+	
+	/**
+	 * Return a connection to the host's pool.  May close the connection if the pool
+	 * is down or the last exception on the connection is determined to be fatal.
+	 * @param connection
+	 * @return True if connection was closed
+	 */
+	boolean returnConnection(Connection<CL> connection);
+	
+	/**
+	 * Close this connection and update internal state
+	 * @param connection
+	 * @return
+	 */
+	boolean closeConnection(Connection<CL> connection);
+	
+	/**
+	 * Shut down the host so no more connections may be created when borrowConnections
+	 * is called and connections will be terminated when returnConnection
+	 * is called.
+	 */
+	void markAsDown(ConnectionException reason);
+	
+	/**
+	 * Completely shut down this connection pool as part of a client shutdown
+	 */
+	void shutdown();
+	
+	/**
+	 * Create numConnections new connections and add them to the 
+	 * @throws ConnectionException 
+	 * @throws InterruptedException 
+	 * @returns Actual number of connections created
+	 */
+	int growConnections(int numConnections) throws ConnectionException, InterruptedException;
+
+	/**
+	 * Get the host to which this pool is associated
+	 * @return
+	 */
+	Host getHost();
 
 	/**
 	 * Get number of open connections including any that are currently borrowed
@@ -49,18 +91,17 @@ public interface HostConnectionPool<CL> {
 	int getActiveConnectionCount();
 
 	/**
-	 * Shut down the host so no more connections may be created when borrowConnections
-	 * is called and connections will be terminated when returnConnection
-	 * is called.
-	 */
-	void shutdown();
-	
-	/**
-	 * Get the host to which this pool is associated
+	 * Get the number of pending connection open attempts
 	 * @return
 	 */
-	Host getHost();
-
+	int getPendingConnectionCount();
+	
+	/**
+	 * Get number of threads blocked waiting for a free connection
+	 * @return
+	 */
+	int getBlockedThreadCount();
+	
 	/**
 	 * Return the number of idle active connections.  These are connections
 	 * that can be borrowed immediatley without having to make a new connection
@@ -68,5 +109,35 @@ public interface HostConnectionPool<CL> {
 	 * @return
 	 */
 	int getIdleConnectionCount();
+	
+	/**
+	 * Get number of currently borrowed connections
+	 * @return
+	 */
+	int getBusyConnectionCount();
+
+	/**
+	 * Determine if pool is shut down. 
+	 * @return
+	 */
+	boolean isShutdown();
+	
+	/**
+	 * Return implementation specific score to be used by weighted pool selection algorithms
+	 * @return
+	 */
+	double getScore();
+
+	/**
+	 * Get the average latency as calculated by the scoring strategy
+	 * @return
+	 */
+	double getMeanLatency();
+	
+	/**
+	 * Add a single latency sample after an operation on a connection belonging to this pool
+	 * @param lastLatency
+	 */
+	void addLatencySample(long lastLatency, long now);
 
 }

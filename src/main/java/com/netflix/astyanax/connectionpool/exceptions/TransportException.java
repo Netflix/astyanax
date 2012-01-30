@@ -15,16 +15,21 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.exceptions;
 
-public class TransportException extends ConnectionException {
-	public TransportException(String message) {
-		super(message, true);
+public class TransportException extends ConnectionException implements IsRetryableException, IsDeadConnectionException {
+	/**
+     * 
+     */
+    private static final long serialVersionUID = -1086321632073952243L;
+
+    public TransportException(String message) {
+		super(message);
 	}
 	
 	public TransportException(Throwable t) {
-		super(t, true);
+		super(t);
 	}
 
 	public TransportException(String message, Throwable cause) {
-        super(message, cause, true);
+        super(message, cause);
     }
 }

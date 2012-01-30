@@ -16,6 +16,7 @@
 package com.netflix.astyanax.query;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
 
 import com.netflix.astyanax.Execution;
 import com.netflix.astyanax.model.ByteBufferRange;
@@ -34,6 +35,14 @@ public interface RowSliceQuery<K, C> extends Execution<Rows<K,C>> {
 	 */
 	RowSliceQuery<K, C> withColumnSlice(C... columns);
 
+	/**
+	 * Specify a non-contiguous set of columns to retrieve.
+	 * 
+	 * @param columns
+	 * @return
+	 */
+	RowSliceQuery<K, C> withColumnSlice(Collection<C> columns);
+	
 	/**
 	 * Use this when your application caches the column slice.
 	 * @param slice

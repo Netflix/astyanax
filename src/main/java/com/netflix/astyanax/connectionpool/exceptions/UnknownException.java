@@ -15,16 +15,21 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.exceptions;
 
-public class UnknownException extends ConnectionException {
-	public UnknownException(String message) {
-		super(message, false);
+public class UnknownException extends OperationException implements IsDeadConnectionException {
+	/**
+     * 
+     */
+    private static final long serialVersionUID = -6204702276016512865L;
+
+    public UnknownException(String message) {
+		super(message);
 	}
 	
 	public UnknownException(Throwable t) {
-		super(t, false);
+		super(t);
 	}
 
 	public UnknownException(String message, Throwable cause) {
-        super(message, cause, false);
+        super(message, cause);
     }
 }

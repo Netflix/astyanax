@@ -17,6 +17,11 @@ package com.netflix.astyanax.connectionpool.exceptions;
 
 public class SerializationException extends RuntimeException {
 
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 9055130045549798400L;
+
     public SerializationException(String message) {
         super(message);
     }

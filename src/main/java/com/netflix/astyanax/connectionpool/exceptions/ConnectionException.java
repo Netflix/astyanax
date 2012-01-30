@@ -15,6 +15,10 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.exceptions;
 
+import java.util.concurrent.TimeUnit;
+
+import com.netflix.astyanax.connectionpool.Host;
+
 /**
  * Connection exception caused by an error in the connection pool or a transport
  * error related to the connection itself.  Application errors are derived from
@@ -24,31 +28,69 @@ package com.netflix.astyanax.connectionpool.exceptions;
  *
  */
 public abstract class ConnectionException extends Exception {
-	private boolean retryable = false;
+	/**
+     * 
+     */
+    private static final long serialVersionUID = -3476496346094715988L;
+    private Host host = Host.NO_HOST;
+	private long latency = 0;
+	private long latencyWithPool = 0;
+	private int attemptCount = 0;
 	
-	public ConnectionException(String message, boolean retryable) {
+	public ConnectionException(String message) {
 		super(message);
-		this.retryable = retryable;
 	}
 	
-	public ConnectionException(Throwable t, boolean retryable) {
+	public ConnectionException(Throwable t) {
 		super(t);
-		this.retryable = retryable;
 	}
 	
-	public ConnectionException(String message, Throwable cause, boolean retryable) {
+	public ConnectionException(String message, Throwable cause) {
         super(message, cause);
-		this.retryable = retryable;
     }
 	
-	/**
-	 * Determine if this type of exception is retryable from within the context
-	 * of the entire connection pool.  For example, if one host is down then 
-	 * the connection pool can try another host.  However, if the request is
-	 * illegal retrying will always result in the same exception.
-	 * @return
-	 */
-	public boolean isRetryable() {
-		return this.retryable;
+	public ConnectionException setHost(Host host) {
+		this.host = host;
+		return this;
+	}
+	
+	public Host getHost() {
+		return this.host;
+	}
+	
+	public ConnectionException setLatency(long latency) {
+		this.latency = latency;
+		return this;
+	}
+	
+	public long getLatency() {
+		return this.latency;
+	}
+	
+	public long getLatency(TimeUnit units) {
+		return units.convert(this.latency, TimeUnit.NANOSECONDS);
+	}
+	
+	public ConnectionException setLatencyWithPool(long latency) {
+		this.latencyWithPool = latency;
+		return this;
+	}
+	
+	public long getLatencyWithPool() {
+		return this.latencyWithPool;
+	}
+	
+	@Override
+	public String getMessage() {
+		return getClass().getSimpleName() + ": [host=" + host + ", latency=" + latency + "(" + latencyWithPool + "), attempts=" + attemptCount + "] " + super.getMessage();
+	}
+	
+	public String getOriginalMessage() {
+	    return super.getMessage();
+	}
+
+	public ConnectionException setAttempt(int attemptCount) {
+		this.attemptCount = attemptCount;
+		return this;
 	}
 }

@@ -125,4 +125,23 @@ public abstract class AbstractSerializer<T> implements Serializer<T> {
   public ComparatorType getComparatorType() {
     return ComparatorType.BYTESTYPE;
   }
+
+  @Override
+  public ByteBuffer fromString(String string) {
+      throw new UnsupportedOperationException();
+  }
+  
+  @Override
+  public String getString(ByteBuffer byteBuffer) {
+      throw new UnsupportedOperationException();
+  }
+
+
+  @Override
+  public ByteBuffer getNext(ByteBuffer byteBuffer) {
+	  ByteBufferOutputStream next = new ByteBufferOutputStream();
+	  next.write(byteBuffer);
+	  next.write((byte)0);
+	  return next.getByteBuffer(); 
+  }
 }

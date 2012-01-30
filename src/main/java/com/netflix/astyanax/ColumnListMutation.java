@@ -34,7 +34,7 @@ import com.netflix.astyanax.model.ColumnPath;
 public interface ColumnListMutation<C> {
 	/**
 	 * Generic call to insert a column value with a custom serializer.
-	 * User this only when you need a customer serializer otherwise use
+	 * User this only when you need a custom serializer otherwise use
 	 * the overloaded putColumn calls to insert common value types.
 	 * 
 	 * @param <V>

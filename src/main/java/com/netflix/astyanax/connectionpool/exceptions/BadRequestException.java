@@ -16,7 +16,12 @@
 package com.netflix.astyanax.connectionpool.exceptions;
 
 public class BadRequestException extends OperationException {
-	public BadRequestException(String message) {
+	/**
+     * 
+     */
+    private static final long serialVersionUID = -6046784540431794568L;
+
+    public BadRequestException(String message) {
 		super(message);
 	}
 	

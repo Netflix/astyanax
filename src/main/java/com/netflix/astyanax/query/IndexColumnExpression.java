@@ -21,6 +21,6 @@ public interface IndexColumnExpression<K,C> {
 	 * @param columnName
 	 * @return
 	 */
-	public IndexOperationExpression<K,C> whereColumn(C columnName);
+	IndexOperationExpression<K,C> whereColumn(C columnName);
 
 }

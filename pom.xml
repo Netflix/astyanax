@@ -4,13 +4,27 @@
 
     <groupId>com.netflix.astyanax</groupId>
     <artifactId>astyanax</artifactId>
-    <version>0.8.9</version>
+    <version>0.8.9-SNAPSHOT</version>
 
     <parent>
       <groupId>org.sonatype.oss</groupId>
       <artifactId>oss-parent</artifactId>
       <version>7</version>
     </parent>
+
+    <licenses>
+      <license>
+        <name>The Apache Software License, Version 2.0</name>
+        <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        <distribution>repo</distribution>
+      </license>
+    </licenses>
+
+    <scm>
+        <connection>scm:git:git@github.com:Netflix/astyanax.git</connection>
+        <url>scm:git:git@github.com:Netflix/astyanax.git</url>
+        <developerConnection>scm:git:git@github.com:Netflix/astyanax.git</developerConnection>
+    </scm>
 
     <profiles>
         <profile>
@@ -29,20 +43,6 @@
             </distributionManagement>
         </profile>
     </profiles>
-
-    <licenses>
-      <license>
-        <name>The Apache Software License, Version 2.0</name>
-        <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-        <distribution>repo</distribution>
-      </license>
-    </licenses>
-
-    <scm>
-        <connection>scm:git:git@github.com:Netflix/astyanax.git</connection>
-        <url>scm:git:git@github.com:Netflix/astyanax.git</url>
-        <developerConnection>scm:git:git@github.com:Netflix/astyanax.git</developerConnection>
-    </scm>
 
     <dependencies>
         <dependency>
@@ -84,7 +84,7 @@
         <dependency>
             <groupId>org.apache.cassandra</groupId>
             <artifactId>cassandra-all</artifactId>
-            <version>0.8.1</version>
+            <version>0.8.9</version>
         </dependency>
         
         <dependency>

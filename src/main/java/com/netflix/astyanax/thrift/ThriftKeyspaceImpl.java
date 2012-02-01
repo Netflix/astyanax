@@ -19,10 +19,8 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.cassandra.dht.RandomPartitioner;
 import org.apache.cassandra.thrift.Cassandra;
@@ -31,7 +29,6 @@ import org.apache.cassandra.thrift.Cassandra.Client;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.ColumnMutation;
 import com.netflix.astyanax.Execution;
@@ -64,7 +61,6 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     private final String ksName;
 	private final ExecutorService executor;
 	private final KeyspaceTracerFactory tracerFactory;
-	private final ConcurrentMap<String, KeyspaceDefinition> ksCache;
 	
     public ThriftKeyspaceImpl(String ksName, ConnectionPool<Cassandra.Client> pool, AstyanaxConfiguration config, final KeyspaceTracerFactory tracerFactory) {
         this.connectionPool = pool;
@@ -72,24 +68,6 @@ public final class ThriftKeyspaceImpl implements Keyspace {
         this.ksName = ksName;
     	this.executor = config.getAsyncExecutor();
     	this.tracerFactory = tracerFactory;
-        this.ksCache = new MapMaker()
-            .expireAfterWrite(1, TimeUnit.MINUTES)
-            .makeComputingMap(new Function<String, KeyspaceDefinition>() {
-                @Override
-                public KeyspaceDefinition apply(String ksName) {
-                    try {
-                        return executeOperation(new AbstractKeyspaceOperationImpl<KeyspaceDefinition>(
-                        		tracerFactory.newTracer(CassandraOperationType.DESCRIBE_KEYSPACE), getKeyspaceName()) {
-                            @Override
-                            public KeyspaceDefinition internalExecute(Cassandra.Client client) throws Exception {
-                                return new ThriftKeyspaceDefinitionImpl(client.describe_keyspace(getKeyspaceName()));
-                            }
-                        }, getConfig().getRetryPolicy().duplicate()).getResult();
-                    } catch (ConnectionException e) {
-                        throw new RuntimeException(e);
-                    }                    
-               }
-        }); 
 	}
 	
 	@Override
@@ -176,7 +154,13 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 	
 	@Override
 	public KeyspaceDefinition describeKeyspace() throws ConnectionException {
-        return this.ksCache.get(this.getKeyspaceName());
+        return executeOperation(new AbstractKeyspaceOperationImpl<KeyspaceDefinition>(
+        		tracerFactory.newTracer(CassandraOperationType.DESCRIBE_KEYSPACE), getKeyspaceName()) {
+            @Override
+            public KeyspaceDefinition internalExecute(Cassandra.Client client) throws Exception {
+                return new ThriftKeyspaceDefinitionImpl(client.describe_keyspace(getKeyspaceName()));
+            }
+        }, getConfig().getRetryPolicy().duplicate()).getResult();
 	}
 
 	public <K, C> ColumnFamilyQuery<K,C> prepareQuery(ColumnFamily<K, C> cf) {

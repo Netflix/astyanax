@@ -43,6 +43,11 @@ public class UniquenessConstraintWithPrefix<K> {
 		return this;
 	}
 	
+	public UniquenessConstraintWithPrefix<K> setConsistencyLevel(ConsistencyLevel consistencyLevel) {
+		this.consistencyLevel = consistencyLevel;
+		return this;
+	}
+	
 	public String isUnique(K key) throws ConnectionException {
 		String unique = uniqueColumnSupplier.get();
 		

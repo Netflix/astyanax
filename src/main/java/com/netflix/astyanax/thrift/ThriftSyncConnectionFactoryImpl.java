@@ -72,6 +72,7 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
 			private Cassandra.Client cassandraClient;
 	        private TFramedTransport transport;
 	        private TSocket socket;
+	        private int timeout = 0;
             private AtomicLong operationCounter = new AtomicLong();
             private AtomicBoolean closed = new AtomicBoolean(false);
             
@@ -82,6 +83,8 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
 			public <R> OperationResult<R> execute(Operation<Cassandra.Client, R> op) throws ConnectionException {
 				long startTime = System.nanoTime();
 				long latency = 0;
+				
+				setTimeout(cpConfig.getSocketTimeout());	// In case the configuration changed
 				
 				operationCounter.incrementAndGet();
 				
@@ -109,7 +112,6 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
 				
 				// Execute the operation
 				try {
-					socket.setTimeout(cpConfig.getSocketTimeout());	// In case the configuration changed
 					R result = op.execute(cassandraClient);
                     long now = System.nanoTime();
             		latency = now - startTime;
@@ -136,9 +138,9 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
 			        socket = new TSocket(getHost().getIpAddress(), getHost().getPort(), cpConfig.getConnectTimeout());
 			        socket.getSocket().setTcpNoDelay(true);
 			        socket.getSocket().setKeepAlive(true);
-			        socket.getSocket().setSoLinger(true, 0);
+			        socket.getSocket().setSoLinger(false, 0);
 			        
-			        socket.setTimeout(cpConfig.getSocketTimeout());
+			        setTimeout(cpConfig.getSocketTimeout());
 			        transport = new TFramedTransport(socket);
 			        transport.open();
 			        
@@ -251,6 +253,13 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
 			@Override
 			public Host getHost() {
 				return pool.getHost();
+			}
+			
+			public void setTimeout(int timeout) {
+				if (this.timeout != timeout) {
+			        socket.setTimeout(timeout);
+			        this.timeout = timeout;
+				}
 			}
 		};
 	}

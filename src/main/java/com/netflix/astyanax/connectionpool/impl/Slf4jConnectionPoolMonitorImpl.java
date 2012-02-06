@@ -5,10 +5,9 @@ import org.slf4j.LoggerFactory;
 
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
-import com.netflix.astyanax.fake.TestHostType;
 
 public class Slf4jConnectionPoolMonitorImpl extends CountingConnectionPoolMonitor {
-	private static final Logger LOG = LoggerFactory.getLogger(TestHostType.class);
+	private static final Logger LOG = LoggerFactory.getLogger(Slf4jConnectionPoolMonitorImpl.class);
 
 	@Override
 	public void incOperationFailure(Host host, Exception reason) {

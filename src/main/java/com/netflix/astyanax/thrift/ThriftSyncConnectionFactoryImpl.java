@@ -15,6 +15,21 @@
  ******************************************************************************/
 package com.netflix.astyanax.thrift;
 
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+
+import org.apache.cassandra.thrift.AuthenticationRequest;
+import org.apache.cassandra.thrift.Cassandra;
+import org.apache.cassandra.thrift.TBinaryProtocol;
+import org.apache.thrift.transport.TFramedTransport;
+import org.apache.thrift.transport.TSocket;
+import org.apache.thrift.transport.TTransportException;
+
+import com.google.common.base.Strings;
+import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.netflix.astyanax.CassandraOperationTracer;
 import com.netflix.astyanax.CassandraOperationType;
@@ -32,17 +47,6 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.ThrottledException;
 import com.netflix.astyanax.connectionpool.impl.OperationResultImpl;
 import com.netflix.astyanax.connectionpool.impl.SimpleRateLimiterImpl;
-
-import org.apache.cassandra.thrift.Cassandra;
-import org.apache.cassandra.thrift.TBinaryProtocol;
-import org.apache.thrift.transport.TFramedTransport;
-import org.apache.thrift.transport.TSocket;
-import org.apache.thrift.transport.TTransportException;
-
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassandra.Client> {
     private static final String NAME_FORMAT = "ThriftConnection<%s-%d>";
@@ -146,6 +150,14 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
 			        
 			        cassandraClient = new Cassandra.Client(new TBinaryProtocol(transport));
 			        monitor.incConnectionCreated(getHost());
+			     
+			        if (!Strings.isNullOrEmpty(cpConfig.getUsername()) && !Strings.isNullOrEmpty(cpConfig.getPassword())) {
+				        Map<String,String> credentials = Maps.newHashMapWithExpectedSize(2);
+				        credentials.put("username", cpConfig.getUsername());
+		                credentials.put("password", cpConfig.getPassword());
+				        cassandraClient.login(new AuthenticationRequest(credentials));
+			        }
+			     
 				}
 				catch (Exception e) {
 					closeClient();

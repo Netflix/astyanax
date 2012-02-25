@@ -204,5 +204,17 @@ public interface ConnectionPoolConfiguration {
 	 * @return
 	 */
 	int getMaxOperationsPerConnection();
+	
+	/**
+	 * Username nodes require for authentication.
+	 * @return
+	 */
+	String getUsername();
+	
+	/**
+	 * Password nodes require for authentication.
+	 * @return
+	 */
+	String getPassword();
 
 }

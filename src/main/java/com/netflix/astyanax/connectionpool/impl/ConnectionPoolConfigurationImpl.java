@@ -91,6 +91,9 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
 	private LatencyScoreStrategy latencyScoreStrategy = new EmptyLatencyScoreStrategyImpl();
 	private BadHostDetector badHostDetector = DEFAULT_BAD_HOST_DETECTOR;
 	
+	private String username;
+	private String password;
+	
 	public ConnectionPoolConfigurationImpl(String name) {
 		this.name = name;
 		this.badHostDetector = new BadHostDetectorImpl(this);
@@ -141,6 +144,34 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
 	
 	public ConnectionPoolConfigurationImpl setSeeds(String seeds) {
 		this.seeds = seeds;
+		return this;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration#getUsername()
+	 */
+	@Override
+	public String getUsername() {
+		return this.username;
+	}
+	
+	public ConnectionPoolConfigurationImpl setUsername(String username) {
+		this.username = username;
+		return this;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration#getPassword()
+	 */
+	@Override
+	public String getPassword() {
+		return this.password;
+	}
+	
+	public ConnectionPoolConfigurationImpl setPassword(String password) {
+		this.password = password;
 		return this;
 	}
 	

@@ -31,6 +31,7 @@ import org.apache.thrift.transport.TTransportException;
 import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.netflix.astyanax.AuthenticationStrategy;
 import com.netflix.astyanax.CassandraOperationTracer;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.KeyspaceTracerFactory;
@@ -151,13 +152,9 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
 			        cassandraClient = new Cassandra.Client(new TBinaryProtocol(transport));
 			        monitor.incConnectionCreated(getHost());
 			     
-			        if (!Strings.isNullOrEmpty(cpConfig.getUsername()) && !Strings.isNullOrEmpty(cpConfig.getPassword())) {
-				        Map<String,String> credentials = Maps.newHashMapWithExpectedSize(2);
-				        credentials.put("username", cpConfig.getUsername());
-		                credentials.put("password", cpConfig.getPassword());
-				        cassandraClient.login(new AuthenticationRequest(credentials));
-			        }
-			     
+			        final AuthenticationStrategy authenticationStrategy = cpConfig.getAuthenticationStrategy();
+			        authenticationStrategy.authenticate(cassandraClient);
+			        			     
 				}
 				catch (Exception e) {
 					closeClient();

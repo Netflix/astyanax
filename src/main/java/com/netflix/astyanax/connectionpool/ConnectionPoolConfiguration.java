@@ -17,7 +17,7 @@ package com.netflix.astyanax.connectionpool;
 
 import java.util.List;
 
-import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
+import com.netflix.astyanax.AuthenticationStrategy;
 
 public interface ConnectionPoolConfiguration {
 	/**
@@ -206,15 +206,9 @@ public interface ConnectionPoolConfiguration {
 	int getMaxOperationsPerConnection();
 	
 	/**
-	 * Username nodes require for authentication.
+	 * The AuthenticationStrategy in play.
 	 * @return
 	 */
-	String getUsername();
-	
-	/**
-	 * Password nodes require for authentication.
-	 * @return
-	 */
-	String getPassword();
+	AuthenticationStrategy getAuthenticationStrategy();
 
 }

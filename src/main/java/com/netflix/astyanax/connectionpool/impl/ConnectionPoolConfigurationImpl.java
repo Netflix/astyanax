@@ -19,11 +19,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.netflix.astyanax.AuthenticationStrategy;
 import com.netflix.astyanax.connectionpool.BadHostDetector;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
 import com.netflix.astyanax.connectionpool.RetryBackoffStrategy;
+import com.netflix.astyanax.impl.NoAuthenticationStrategyImpl;
 import com.netflix.astyanax.shallows.EmptyBadHostDetectorImpl;
 import com.netflix.astyanax.shallows.EmptyLatencyScoreStrategyImpl;
 import com.netflix.astyanax.util.StringUtils;
@@ -90,9 +92,9 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
 	private RetryBackoffStrategy hostRetryBackoffStrategy = null;
 	private LatencyScoreStrategy latencyScoreStrategy = new EmptyLatencyScoreStrategyImpl();
 	private BadHostDetector badHostDetector = DEFAULT_BAD_HOST_DETECTOR;
+
+	private AuthenticationStrategy authenticationStrategy = new NoAuthenticationStrategyImpl();
 	
-	private String username;
-	private String password;
 	
 	public ConnectionPoolConfigurationImpl(String name) {
 		this.name = name;
@@ -144,34 +146,6 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
 	
 	public ConnectionPoolConfigurationImpl setSeeds(String seeds) {
 		this.seeds = seeds;
-		return this;
-	}
-	
-	/*
-	 * (non-Javadoc)
-	 * @see com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration#getUsername()
-	 */
-	@Override
-	public String getUsername() {
-		return this.username;
-	}
-	
-	public ConnectionPoolConfigurationImpl setUsername(String username) {
-		this.username = username;
-		return this;
-	}
-	
-	/*
-	 * (non-Javadoc)
-	 * @see com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration#getPassword()
-	 */
-	@Override
-	public String getPassword() {
-		return this.password;
-	}
-	
-	public ConnectionPoolConfigurationImpl setPassword(String password) {
-		this.password = password;
 		return this;
 	}
 	
@@ -451,6 +425,16 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
 	
 	public String toString() {
 		return StringUtils.joinClassGettersValues(this, "CpConfig", ConnectionPoolConfigurationImpl.class);
+	}
+
+	public ConnectionPoolConfigurationImpl setAuthenticationStrategy(AuthenticationStrategy authenticationStrategy) {
+		this.authenticationStrategy = authenticationStrategy;
+		return this;
+	}
+	
+	@Override
+	public AuthenticationStrategy getAuthenticationStrategy() {
+		return authenticationStrategy;
 	}
 	
 }

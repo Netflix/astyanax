@@ -15,13 +15,11 @@
  ******************************************************************************/
 package com.netflix.astyanax;
 
-import org.apache.cassandra.thrift.AuthenticationException;
-import org.apache.cassandra.thrift.AuthorizationException;
-import org.apache.cassandra.thrift.Cassandra.Client;
-import org.apache.thrift.TException;
+import com.netflix.astyanax.connectionpool.exceptions.AuthenticationException;
 
-public interface AuthenticationStrategy {
 
-	public void authenticate(Client thriftClient) throws AuthenticationException, AuthorizationException, TException;
+public interface AuthenticationStrategy<T> {
+
+	public void authenticate(T client) throws AuthenticationException;
 	
 }

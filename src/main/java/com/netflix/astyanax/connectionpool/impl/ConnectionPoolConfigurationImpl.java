@@ -93,7 +93,7 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
 	private LatencyScoreStrategy latencyScoreStrategy = new EmptyLatencyScoreStrategyImpl();
 	private BadHostDetector badHostDetector = DEFAULT_BAD_HOST_DETECTOR;
 
-	private AuthenticationStrategy authenticationStrategy = new NoAuthenticationStrategyImpl();
+	private AuthenticationStrategy<?> authenticationStrategy = new NoAuthenticationStrategyImpl();
 	
 	
 	public ConnectionPoolConfigurationImpl(String name) {
@@ -427,13 +427,13 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
 		return StringUtils.joinClassGettersValues(this, "CpConfig", ConnectionPoolConfigurationImpl.class);
 	}
 
-	public ConnectionPoolConfigurationImpl setAuthenticationStrategy(AuthenticationStrategy authenticationStrategy) {
+	public ConnectionPoolConfigurationImpl setAuthenticationStrategy(AuthenticationStrategy<?> authenticationStrategy) {
 		this.authenticationStrategy = authenticationStrategy;
 		return this;
 	}
 	
 	@Override
-	public AuthenticationStrategy getAuthenticationStrategy() {
+	public AuthenticationStrategy<?> getAuthenticationStrategy() {
 		return authenticationStrategy;
 	}
 	

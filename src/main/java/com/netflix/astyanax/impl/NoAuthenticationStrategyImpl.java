@@ -15,18 +15,13 @@
  ******************************************************************************/
 package com.netflix.astyanax.impl;
 
-import org.apache.cassandra.thrift.AuthenticationException;
-import org.apache.cassandra.thrift.AuthorizationException;
-import org.apache.cassandra.thrift.Cassandra.Client;
-import org.apache.thrift.TException;
-
 import com.netflix.astyanax.AuthenticationStrategy;
 
 
-public class NoAuthenticationStrategyImpl implements AuthenticationStrategy {
+public class NoAuthenticationStrategyImpl implements AuthenticationStrategy<Object> {
 
 	@Override
-	public void authenticate(Client thriftClient) throws AuthenticationException, AuthorizationException, TException {
+	public void authenticate(Object client) {
 		// no operations as this is the strategy when no authentication is necessary
 	}
 

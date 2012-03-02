@@ -427,7 +427,7 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
 		return StringUtils.joinClassGettersValues(this, "CpConfig", ConnectionPoolConfigurationImpl.class);
 	}
 
-	public ConnectionPoolConfigurationImpl setAuthenticationStrategy(AuthenticationStrategy<?> authenticationStrategy) {
+	public ConnectionPoolConfiguration setAuthenticationStrategy(AuthenticationStrategy<?> authenticationStrategy) {
 		this.authenticationStrategy = authenticationStrategy;
 		return this;
 	}

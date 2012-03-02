@@ -209,6 +209,12 @@ public interface ConnectionPoolConfiguration {
 	 * The AuthenticationStrategy in play.
 	 * @return
 	 */
-	AuthenticationStrategy getAuthenticationStrategy();
+	AuthenticationStrategy<?> getAuthenticationStrategy();
+	
+	/**
+	 * The AuthenticationStrategy in play.
+	 * @return
+	 */
+	ConnectionPoolConfiguration setAuthenticationStrategy(AuthenticationStrategy<?> authenticationStrategy);
 
 }

@@ -21,5 +21,7 @@ import com.netflix.astyanax.connectionpool.exceptions.AuthenticationException;
 public interface AuthenticationStrategy<T> {
 
 	public void authenticate(T client) throws AuthenticationException;
+	public AuthenticationStrategy<T> setUsername(String username);
+	public AuthenticationStrategy<T> setPassword(String password);
 	
 }

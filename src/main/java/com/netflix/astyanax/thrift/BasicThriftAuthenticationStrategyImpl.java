@@ -28,8 +28,8 @@ import com.netflix.astyanax.AuthenticationStrategy;
 
 public class BasicThriftAuthenticationStrategyImpl implements AuthenticationStrategy<Client> {
 
-	private final String username;
-	private final String password;
+	private String username;
+	private String password;
 	
 	public BasicThriftAuthenticationStrategyImpl(final String username, final String password) {
 		this.username = username;
@@ -55,6 +55,18 @@ public class BasicThriftAuthenticationStrategyImpl implements AuthenticationStra
 			throw new com.netflix.astyanax.connectionpool.exceptions.AuthenticationException(e.getMessage(), e.getCause());
 		}
 		
+	}
+
+	@Override
+	public AuthenticationStrategy<Client> setUsername(final String username) {
+		this.username = username;
+		return this;
+	}
+
+	@Override
+	public AuthenticationStrategy<Client> setPassword(final String password) {
+		this.password = password;
+		return this;
 	}
 
 }

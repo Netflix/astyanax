@@ -25,4 +25,16 @@ public class NoAuthenticationStrategyImpl implements AuthenticationStrategy<Obje
 		// no operations as this is the strategy when no authentication is necessary
 	}
 
+	@Override
+	public AuthenticationStrategy<Object> setUsername(String username) {
+		// no operation
+		return this;
+	}
+
+	@Override
+	public AuthenticationStrategy<Object> setPassword(String password) {
+		// no operation
+		return this;
+	}
+
 }

@@ -212,7 +212,7 @@ public interface ConnectionPoolConfiguration {
 	AuthenticationStrategy<?> getAuthenticationStrategy();
 	
 	/**
-	 * The AuthenticationStrategy in play.
+	 * Set the AuthenticationStrategy in play.
 	 * @return
 	 */
 	ConnectionPoolConfiguration setAuthenticationStrategy(AuthenticationStrategy<?> authenticationStrategy);

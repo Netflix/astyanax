@@ -402,7 +402,8 @@ public class ThriftColumnFamilyQueryImpl<K,C> implements ColumnFamilyQuery<K,C> 
 
 					@Override
 					public BigInteger getToken() {
-						return partitioner.getToken(columnFamily.getKeySerializer().toByteBuffer(keys.iterator().next())).token;
+//						return partitioner.getToken(columnFamily.getKeySerializer().toByteBuffer(keys.iterator().next())).token;
+						return null;
 					}
 				}, retry);
 			}

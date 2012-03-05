@@ -103,6 +103,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 					public Void internalExecute(Client client) throws Exception {
 						client.batch_mutate(getMutationMap(), ThriftConverter.ToThriftConsistencyLevel(consistencyLevel));
 						discardMutations();
+						
 						return null;
 					}
 

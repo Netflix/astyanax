@@ -20,7 +20,7 @@ public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
 	private Clock clock = new MicrosecondsSyncClock();
 	private RetryPolicy retryPolicy = RunOnce.get();
 	private ExecutorService asyncExecutor = Executors.newFixedThreadPool(5, new ThreadFactoryBuilder().setDaemon(true).build());
-	private NodeDiscoveryType discoveryType = NodeDiscoveryType.DISCOVERY_SERVICE;
+	private NodeDiscoveryType discoveryType = NodeDiscoveryType.NONE;
 	private int discoveryIntervalInSeconds = 30;
 	private ConnectionPoolType connectionPoolType = ConnectionPoolType.ROUND_ROBIN;
 	

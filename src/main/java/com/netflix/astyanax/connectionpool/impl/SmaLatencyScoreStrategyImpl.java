@@ -15,30 +15,30 @@ import org.cliffc.high_scale_lib.NonBlockingHashSet;
 
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
 import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
 
 public class SmaLatencyScoreStrategyImpl implements LatencyScoreStrategy {
 
-	private final ConnectionPoolConfiguration config;
 	private final ScheduledExecutorService executor; 
 	private final Set<Instance> instances;
-	private final String name;
+	private final int updateInterval;
+	private final int resetInterval;
+	private final int windowSize;
+	private final double badnessThreshold;
 	
-	public SmaLatencyScoreStrategyImpl(ConnectionPoolConfiguration config) {
-		this(config, "SMA");
-	}
-	
-	public SmaLatencyScoreStrategyImpl(ConnectionPoolConfiguration config, String name) {
-		this.config = config;
+	public SmaLatencyScoreStrategyImpl(int updateInterval, int resetInterval, int windowSize, double badnessThreshold) {
+		this.updateInterval = updateInterval;
+		this.resetInterval = resetInterval;
+		this.badnessThreshold = badnessThreshold;
+		this.windowSize = windowSize;
+		
 		this.executor = Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder().setDaemon(true).build());	// TODO: is nThread==1 good?
 		this.instances = new NonBlockingHashSet<Instance>();
-		this.name = name;
 	}
 	
 	protected Instance internalCreateInstance() {
-		return new SmaLatencyScoreStrategyInstanceImpl(getConfig());
+		return new SmaLatencyScoreStrategyInstanceImpl(this);
 	}
 	
 	public final Instance createInstance() {
@@ -47,6 +47,22 @@ public class SmaLatencyScoreStrategyImpl implements LatencyScoreStrategy {
 		return instance;
 	}
 
+	public int getUpdateInterval() {
+		return updateInterval;
+	}
+	
+	public int getResetInterval() {
+		return resetInterval;
+	}
+	
+	public double getBadnessThreshold() {
+		return badnessThreshold;
+	}
+	
+	public int getWindowSize() {
+		return windowSize;
+	}
+	
 	@Override
 	public void start(final Listener listener) {
 		executor.schedule(new Runnable() {
@@ -56,9 +72,9 @@ public class SmaLatencyScoreStrategyImpl implements LatencyScoreStrategy {
 				long now = System.nanoTime();
 				update(now);
 				listener.onUpdate();
-				executor.schedule(this, config.getLatencyAwareUpdateInterval(), TimeUnit.MILLISECONDS);
+				executor.schedule(this, getUpdateInterval(), TimeUnit.MILLISECONDS);
 			}
-		}, new Random().nextInt(config.getLatencyAwareUpdateInterval()), 
+		}, new Random().nextInt(getUpdateInterval()), 
 		   TimeUnit.MILLISECONDS);
 	
 		executor.schedule(new Runnable() {
@@ -67,9 +83,9 @@ public class SmaLatencyScoreStrategyImpl implements LatencyScoreStrategy {
 				Thread.currentThread().setName(getName() + "_ScoreReset");
 				reset();
 				listener.onReset();
-				executor.schedule(this, config.getLatencyAwareResetInterval(), TimeUnit.MILLISECONDS);
+				executor.schedule(this, getResetInterval(), TimeUnit.MILLISECONDS);
 			}
-		}, new Random().nextInt(config.getLatencyAwareResetInterval()), 
+		}, new Random().nextInt(getResetInterval()), 
 		   TimeUnit.MILLISECONDS);		}
 
 	@Override
@@ -123,7 +139,7 @@ public class SmaLatencyScoreStrategyImpl implements LatencyScoreStrategy {
 			// Filter out pools with bad score
 			else {
 				double score = pool.getScore();
-				if ((score / firstScore - 1) > config.getLatencyAwareBadnessThreshold()) {
+				if ((score / firstScore - 1) > getBadnessThreshold()) {
 					hasBadHost = true;
 				}
 			}
@@ -138,20 +154,15 @@ public class SmaLatencyScoreStrategyImpl implements LatencyScoreStrategy {
 	}
 
 	public String getName() {
-		return this.name;
-	}
-	
-	public ConnectionPoolConfiguration getConfig() {
-		return config;
+		return "SMA";
 	}
 	
 	public String toString() {
 		return new StringBuilder().append(getName() + "[")
-			.append("win=").append(config.getLatencyAwareWindowSize())
-			.append(",rst=").append(config.getLatencyAwareResetInterval())
-			.append(",upd=").append(config.getLatencyAwareUpdateInterval())
-			.append(",trh=").append(config.getLatencyAwareBadnessThreshold())
-			.append(",sen=").append(config.getLatencyAwareSentinelCompare())
+			.append("win=").append(getWindowSize())
+			.append(",rst=").append(getResetInterval())
+			.append(",upd=").append(getUpdateInterval())
+			.append(",trh=").append(getBadnessThreshold())
 			.append("]")
 			.toString();
 	}

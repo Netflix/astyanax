@@ -70,6 +70,7 @@ public class ReverseIndexQuery<K,C,V> {
 	private V endValue;
 	private int keyLimit = 100;
 	private int columnLimit = 1000;
+	private int shardColumnLimit = 0;
 	private final AtomicLong pendingTasks = new AtomicLong();
 	private Callback<Row<K,C>> callback;
 	private IndexEntryCallback<K,V> indexCallback;
@@ -132,13 +133,28 @@ public class ReverseIndexQuery<K,C,V> {
 		return this;
 	}
 	
+	/**
+	 * Set the number shard keys to fetch for the first query
+	 * @param size
+	 * @return
+	 */
 	public ReverseIndexQuery<K, C, V> setShardBlockSize(int size) {
 		this.keyLimit = size;
 		return this;
 	}
 	
+	/**
+	 * Set the number columns to read from each shard when paginating.
+	 * @param size
+	 * @return
+	 */
 	public ReverseIndexQuery<K, C, V> setShardPageSize(int size) {
 		this.columnLimit = size;
+		return this;
+	}
+	
+	public ReverseIndexQuery<K, C, V> setShardNextPageSize(int size) {
+		this.shardColumnLimit = size;
 		return this;
 	}
 	
@@ -267,6 +283,11 @@ public class ReverseIndexQuery<K,C,V> {
 				V nextValue = value;
 				ColumnList<ByteBuffer> result = null;
 				List<K> batch = Lists.newArrayListWithCapacity(keyLimit);
+				
+				int pageSize = shardColumnLimit;
+				if (pageSize == 0)
+					pageSize = columnLimit;
+					
 				do {
 					// Get the first range in the index
 					RangeBuilder range = new RangeBuilder()
@@ -285,7 +306,7 @@ public class ReverseIndexQuery<K,C,V> {
 							.setConsistencyLevel(consistencyLevel)
 							.withRetryPolicy(retry)
 							.getKey(shard)
-							.withColumnRange(range.setLimit(columnLimit).build())
+							.withColumnRange(range.setLimit(pageSize).build())
 							.execute().getResult();
 					} catch (ConnectionException e) {
 						e.printStackTrace();
@@ -313,7 +334,7 @@ public class ReverseIndexQuery<K,C,V> {
 							}
 						}
 					}
-				} while (result != null && result.size() == columnLimit);
+				} while (result != null && result.size() == pageSize);
 				
 				if (!batch.isEmpty()) {
 					fetchDataBatch(batch);

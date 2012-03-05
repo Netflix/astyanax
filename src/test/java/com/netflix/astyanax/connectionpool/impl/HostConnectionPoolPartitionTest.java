@@ -22,7 +22,7 @@ public class HostConnectionPoolPartitionTest {
 
 	@Test
 	public void testPartition() {
-		LatencyScoreStrategy strategy = new SmaLatencyScoreStrategyImpl(null);
+		LatencyScoreStrategy strategy = new SmaLatencyScoreStrategyImpl(10000, 60000, 100, 4.0);
 		
 		HostConnectionPoolPartition partition = new HostConnectionPoolPartition(new BigInteger("1"), strategy);
 		
@@ -41,7 +41,7 @@ public class HostConnectionPoolPartitionTest {
 	
 	@Test
 	public void testTopology() {
-		LatencyScoreStrategy strategy = new SmaLatencyScoreStrategyImpl(null);
+		LatencyScoreStrategy strategy = new SmaLatencyScoreStrategyImpl(10000, 60000, 100, 4.0);
 		
 		int nHosts = 6;
 		int nReplicationFactor = 3;

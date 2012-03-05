@@ -3,24 +3,23 @@ package com.netflix.astyanax.connectionpool.impl;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
 import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
 
 public class SmaLatencyScoreStrategyInstanceImpl implements LatencyScoreStrategy.Instance {
 	private final LinkedBlockingQueue<Long> latencies = new LinkedBlockingQueue<Long>();
-	private final ConnectionPoolConfiguration config;
+	private final SmaLatencyScoreStrategyImpl strategy;
 	private volatile Double cachedScore = 0.0d;
 	private AtomicLong lastSampleTime = new AtomicLong(0);
 	
-	public SmaLatencyScoreStrategyInstanceImpl(ConnectionPoolConfiguration config) {
-		this.config = config;
+	public SmaLatencyScoreStrategyInstanceImpl(SmaLatencyScoreStrategyImpl strategy) {
+		this.strategy = strategy;
 	}
 	
 	@Override
 	public void addSample(long sample, long now) {
 		lastSampleTime.set(now);
 		latencies.add(sample);
-		if (latencies.size() > config.getLatencyAwareWindowSize()) {
+		if (latencies.size() > strategy.getWindowSize()) {
 			latencies.remove();
 		}
 	}
@@ -57,7 +56,7 @@ public class SmaLatencyScoreStrategyInstanceImpl implements LatencyScoreStrategy
 	      total += d;
 	      count++;
 	    }
-	    if (count == 0 || count < config.getLatencyAwareWindowSize()/2)
+	    if (count == 0 || count < strategy.getWindowSize()/2)
 	    	return 0;
 	    return total / count;
 	}

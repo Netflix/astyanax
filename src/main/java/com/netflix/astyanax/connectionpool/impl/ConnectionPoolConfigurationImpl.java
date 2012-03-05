@@ -19,11 +19,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.netflix.astyanax.AuthenticationStrategy;
 import com.netflix.astyanax.connectionpool.BadHostDetector;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
 import com.netflix.astyanax.connectionpool.RetryBackoffStrategy;
+import com.netflix.astyanax.impl.NoAuthenticationStrategyImpl;
 import com.netflix.astyanax.shallows.EmptyBadHostDetectorImpl;
 import com.netflix.astyanax.shallows.EmptyLatencyScoreStrategyImpl;
 import com.netflix.astyanax.util.StringUtils;
@@ -90,6 +92,9 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
 	private RetryBackoffStrategy hostRetryBackoffStrategy = null;
 	private LatencyScoreStrategy latencyScoreStrategy = new EmptyLatencyScoreStrategyImpl();
 	private BadHostDetector badHostDetector = DEFAULT_BAD_HOST_DETECTOR;
+
+	private AuthenticationStrategy<?> authenticationStrategy = new NoAuthenticationStrategyImpl();
+	
 	
 	public ConnectionPoolConfigurationImpl(String name) {
 		this.name = name;
@@ -420,6 +425,16 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
 	
 	public String toString() {
 		return StringUtils.joinClassGettersValues(this, "CpConfig", ConnectionPoolConfigurationImpl.class);
+	}
+
+	public ConnectionPoolConfiguration setAuthenticationStrategy(AuthenticationStrategy<?> authenticationStrategy) {
+		this.authenticationStrategy = authenticationStrategy;
+		return this;
+	}
+	
+	@Override
+	public AuthenticationStrategy<?> getAuthenticationStrategy() {
+		return authenticationStrategy;
 	}
 	
 }

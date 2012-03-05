@@ -136,19 +136,6 @@ public interface MutationBatch extends Execution<Void>{
 	MutationBatch withRetryPolicy(RetryPolicy retry);
 	
 	/**
-	 * Policy dictating how the batch will actually be executed.
-	 * 
-	 * SingleBatchPolicy - execute the entire batch in one shot
-	 * TokenAwareBatchPolicy - break up the batch by token and execute each batch in a separate thread
-	 * NMutationBatchPolicy - break up the batch for no more than N mutations in each batch
-	 * MaxSizeBatchPolicy - break up the batch so that the aggregate mutation size does not exceed a max size
-	 * 
-	 * @param policy
-	 * @return
-	 */
-	MutationBatch withBatchingPolicy(BatchPolicy policy);
-	
-	/**
 	 * Force all future mutations to have the same timestamp.  Make sure to call lockTimestamp
 	 * before doing any other operations otherwise previously created withRow mutations will
 	 * use the previous timestamp.

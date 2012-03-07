@@ -5,15 +5,22 @@ import org.slf4j.LoggerFactory;
 
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
+import com.netflix.astyanax.connectionpool.exceptions.HostDownException;
+import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
+import com.netflix.astyanax.connectionpool.exceptions.PoolTimeoutException;
 
 public class Slf4jConnectionPoolMonitorImpl extends CountingConnectionPoolMonitor {
 	private static final Logger LOG = LoggerFactory.getLogger(Slf4jConnectionPoolMonitorImpl.class);
 
 	@Override
 	public void incOperationFailure(Host host, Exception reason) {
+	    if (reason instanceof NotFoundException) {
+	        // Ignore this
+	        return;
+	    }
+	    
 		super.incOperationFailure(host, reason);
-		
-		LOG.info(reason.getMessage());
+		LOG.warn(reason.getMessage());
 	}
 
 	@Override
@@ -35,10 +42,16 @@ public class Slf4jConnectionPoolMonitorImpl extends CountingConnectionPoolMonito
 
 	@Override
 	public void incFailover(Host host, Exception reason) {
-		super.incFailover(host, reason);
 		if (reason != null) {
-			LOG.info(reason.getMessage());
+			if (reason instanceof HostDownException ||
+				reason instanceof PoolTimeoutException) {
+		    	// we don't need to log these
+		    }
+		    else {
+		    	LOG.warn(reason.getMessage());
+		    }
 		}
+		super.incFailover(host, reason);
 	}
 
 	@Override

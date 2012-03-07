@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
-import org.mortbay.log.Log;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
@@ -145,8 +144,6 @@ public class AstyanaxContext<Entity> {
     	    	break;
     	    	
     	    case RING_DESCRIBE:
-    	    	if (hostSupplier != null)
-    	    		Log.warn("Provided supplier will be ignored");
     	    	supplier = new RingDescribeHostSupplier(keyspace, cpConfig.getPort());
     	    	break;
     	    	

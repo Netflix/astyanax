@@ -15,7 +15,9 @@
  ******************************************************************************/
 package com.netflix.astyanax.thrift;
 
+import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.netflix.astyanax.AuthenticationCredentials;
 import com.netflix.astyanax.CassandraOperationTracer;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.KeyspaceTracerFactory;
@@ -29,16 +31,22 @@ import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.RateLimiter;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.connectionpool.exceptions.IsTimeoutException;
 import com.netflix.astyanax.connectionpool.exceptions.ThrottledException;
 import com.netflix.astyanax.connectionpool.impl.OperationResultImpl;
 import com.netflix.astyanax.connectionpool.impl.SimpleRateLimiterImpl;
 
+import org.apache.cassandra.thrift.AuthenticationException;
+import org.apache.cassandra.thrift.AuthenticationRequest;
+import org.apache.cassandra.thrift.AuthorizationException;
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.TBinaryProtocol;
+import org.apache.thrift.TException;
 import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransportException;
 
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -73,7 +81,7 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
 	        private TFramedTransport transport;
 	        private TSocket socket;
 	        private int timeout = 0;
-            private AtomicLong operationCounter = new AtomicLong();
+	        private AtomicLong operationCounter = new AtomicLong();
             private AtomicBoolean closed = new AtomicBoolean(false);
             
 			private volatile ConnectionException lastException = null;
@@ -83,12 +91,11 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
 			public <R> OperationResult<R> execute(Operation<Cassandra.Client, R> op) throws ConnectionException {
 				long startTime = System.nanoTime();
 				long latency = 0;
-				
 				setTimeout(cpConfig.getSocketTimeout());	// In case the configuration changed
 				
 				operationCounter.incrementAndGet();
 				
-				// Set a new keyspace, if it changed
+ 				// Set a new keyspace, if it changed
                 lastException = null;
 				if (op.getKeyspace() != null && (keyspaceName == null || !op.getKeyspace().equals(keyspaceName))) {
 					CassandraOperationTracer tracer = tracerFactory.newTracer(CassandraOperationType.SET_KEYSPACE).start();
@@ -103,7 +110,8 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
                 		long now = System.nanoTime();
                 		latency = now - startTime;
                     	lastException = ThriftConverter.ToConnectionPoolException(e).setLatency(latency);
-                		pool.addLatencySample(latency, now);
+    					if (e instanceof IsTimeoutException)
+    						pool.addLatencySample(latency, now);
                     	tracer.failure(lastException);
 						throw lastException;
 					}
@@ -122,7 +130,8 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
             		long now = System.nanoTime();
             		latency = now - startTime;
 					lastException = ThriftConverter.ToConnectionPoolException(e).setLatency(latency);
-            		pool.addLatencySample(latency, now);
+					if (e instanceof IsTimeoutException)
+						pool.addLatencySample(latency, now);
 					throw lastException;
 				}
 			}
@@ -146,6 +155,14 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
 			        
 			        cassandraClient = new Cassandra.Client(new TBinaryProtocol(transport));
 			        monitor.incConnectionCreated(getHost());
+			        
+			        AuthenticationCredentials credentials = cpConfig.getAuthenticationCredentials();
+			        if (credentials != null) {
+			        	Map<String,String> thriftCredentials = Maps.newHashMapWithExpectedSize(2);
+			        	thriftCredentials.put("username", credentials.getUsername());
+			        	thriftCredentials.put("password", credentials.getPassword());
+			        	cassandraClient.login(new AuthenticationRequest(thriftCredentials));
+			        }
 				}
 				catch (Exception e) {
 					closeClient();
@@ -257,7 +274,7 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
 			
 			public void setTimeout(int timeout) {
 				if (this.timeout != timeout) {
-			        socket.setTimeout(timeout);
+					socket.setTimeout(timeout);
 			        this.timeout = timeout;
 				}
 			}

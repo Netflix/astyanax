@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.netflix.astyanax.AuthenticationCredentials;
 import com.netflix.astyanax.connectionpool.BadHostDetector;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
 import com.netflix.astyanax.connectionpool.Host;
@@ -39,18 +40,16 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     public static final int DEFAULT_INIT_PER_PARTITION = 0;
     public static final int DEFAULT_PORT = 7102;
     public static final int DEFAULT_FAILOVER_COUNT = -1;
-    public static final int DEFAULT_FAILOVER_WAIT_TIME = 0;
     public static final int DEFAULT_MAX_CONNS = 1;
     public static final int DEFAULT_LATENCY_AWARE_WINDOW_SIZE = 100;
     public static final float DEFAULT_LATENCY_AWARE_SENTINEL_COMPARE = 0.768f;
-    public static final int DEFAULT_LATENCY_AWARE_UPDATE_INTERVAL = 1000;
-    public static final int DEFAULT_LATENCY_AWARE_RESET_INTERVAL = 20000;
+    public static final int DEFAULT_LATENCY_AWARE_UPDATE_INTERVAL = 10000;
+    public static final int DEFAULT_LATENCY_AWARE_RESET_INTERVAL = 60000;
     public static final float DEFAULT_LATENCY_AWARE_BADNESS_THRESHOLD = 0.10f;
     public static final int DEFAULT_CONNECTION_LIMITER_WINDOW_SIZE = 2000;
-    public static final int DEFAULT_CONNECTION_LIMITER_MAX_PENDING_COUNT = 20;
-    public static final int DEFAULT_MAX_WAIT_FOR_PENDING_CONNECTION = 20;
-    public static final int DEFAULT_MAX_PENDING_CONNECTIONS_PER_HOST = 2;
-    public static final int DEFAULT_MAX_BLOCKED_THREADS_PER_HOST = 2;
+    public static final int DEFAULT_CONNECTION_LIMITER_MAX_PENDING_COUNT = 50;
+    public static final int DEFAULT_MAX_PENDING_CONNECTIONS_PER_HOST = 5;
+    public static final int DEFAULT_MAX_BLOCKED_THREADS_PER_HOST = 10;
     public static final int DEFAULT_MAX_TIMEOUT_COUNT = 3;
     public static final int DEFAULT_TIMEOUT_WINDOW = 10000;
     public static final int DEFAULT_RETRY_SUSPEND_WINDOW = 20000;
@@ -90,6 +89,7 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
 	private RetryBackoffStrategy hostRetryBackoffStrategy = null;
 	private LatencyScoreStrategy latencyScoreStrategy = new EmptyLatencyScoreStrategyImpl();
 	private BadHostDetector badHostDetector = DEFAULT_BAD_HOST_DETECTOR;
+	private AuthenticationCredentials credentials = null;
 	
 	public ConnectionPoolConfigurationImpl(String name) {
 		this.name = name;
@@ -420,6 +420,16 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
 	
 	public String toString() {
 		return StringUtils.joinClassGettersValues(this, "CpConfig", ConnectionPoolConfigurationImpl.class);
+	}
+
+	@Override
+	public AuthenticationCredentials getAuthenticationCredentials() {
+		return credentials;
+	}
+	
+	public ConnectionPoolConfigurationImpl setAuthenticationCredentials(AuthenticationCredentials credentials) {
+		this.credentials = credentials;
+		return this;
 	}
 	
 }

@@ -15,31 +15,31 @@
  ******************************************************************************/
 package com.netflix.astyanax.thrift;
 
+import java.io.ByteArrayInputStream;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Map.Entry;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Maps.EntryTransformer;
 import com.netflix.astyanax.clock.ConstantClock;
-import com.netflix.astyanax.connectionpool.OperationResult;
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.impl.ExecutionHelper;
 
-import org.apache.cassandra.thrift.ColumnOrSuperColumn;
+import org.apache.cassandra.thrift.Cassandra.batch_mutate_args;
 import org.apache.cassandra.thrift.Mutation;
+import org.apache.cassandra.thrift.TBinaryProtocol;
 import org.apache.commons.codec.binary.Hex;
+import org.apache.thrift.TException;
+import org.apache.thrift.transport.TIOStreamTransport;
 
 import com.netflix.astyanax.Clock;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.serializers.ByteBufferOutputStream;
-import com.netflix.astyanax.serializers.IntegerSerializer;
-import com.netflix.astyanax.serializers.LongSerializer;
-import com.netflix.astyanax.serializers.StringSerializer;
 
 /**
  * Basic implementation of a mutation batch using the thrift data structures.
@@ -132,61 +132,55 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
 		return sb.toString();
 	}
 	
-	protected ByteBuffer toByteBuffer() throws Exception {
+	@Override
+	public ByteBuffer serialize() throws Exception {
 		if (mutationMap.isEmpty()) {
 			throw new Exception("Mutation is empty");
 		}
 		if (mutationMap.size() > 1) {
 			throw new Exception("Transaction mutation limited to one key only");
 		}
-		
+
 		ByteBufferOutputStream out = new ByteBufferOutputStream();
+		TIOStreamTransport transport = new TIOStreamTransport(out);
+		batch_mutate_args args = new batch_mutate_args();
+		args.setMutation_map(mutationMap);
 		
-		Map<String, List<Mutation>> cfs = mutationMap.entrySet().iterator().next().getValue();
-		out.write(IntegerSerializer.get().toByteBuffer(cfs.size()));
-		for (Entry<String, List<Mutation>> cf : cfs.entrySet()) {
-			if (cf.getValue().size() > 0) {
-				out.write(StringSerializer.get().toByteBuffer(cf.getKey()));
-				out.write(IntegerSerializer.get().toByteBuffer(cf.getValue().size()));
-				for (Mutation m : cf.getValue()) {
-					if (m.isSetDeletion()) {
-					}
-					else {
-						ColumnOrSuperColumn cosc = m.getColumn_or_supercolumn();
-						if (cosc.isSetColumn()) {
-							out.write(ColumnType.STANDARD.ordinal());
-							out.write(cosc.getColumn().bufferForName().duplicate());
-							out.write(cosc.getColumn().bufferForValue().duplicate());
-							out.write(LongSerializer.get().toByteBuffer(cosc.getColumn().getTimestamp()));
-							out.write(cosc.getColumn().getTtl());
-						}
-						else if (cosc.isSetCounter_column()) {
-							out.write(ColumnType.STANDARD.ordinal());
-							out.write(cosc.getCounter_column().bufferForName().duplicate());
-							out.write(LongSerializer.get().toByteBuffer(cosc.getCounter_column().getValue()));
-						}
-						else if (cosc.isSetSuper_column() || cosc.isSetCounter_super_column()) {
-							throw new Exception("Counter column not supported");
-						}
-						else {
-							out.write(ColumnType.NULL.ordinal());
-						}
-					}
-				}
-			}
+		try {
+			args.write(new TBinaryProtocol(transport));
+		}
+		catch (TException e) {
+			throw ThriftConverter.ToConnectionPoolException(e);
 		}
 		
 		return out.getByteBuffer();
 	}
 	
-	public static AbstractThriftMutationBatchImpl fromByteBuffer(ByteBuffer blob) {
-		int cfCount = IntegerSerializer.get().fromByteBuffer(blob);
-		while (cfCount-- > 0) {
-			String cfName = StringSerializer.get().fromByteBuffer(blob);
-			int mCount = IntegerSerializer.get().fromByteBuffer(blob);
+	@Override
+	public void deserialize(ByteBuffer data) throws Exception {
+		ByteArrayInputStream in = new ByteArrayInputStream(data.array());
+		TIOStreamTransport transport = new TIOStreamTransport(in);
+		batch_mutate_args args = new batch_mutate_args();
+		
+		try {
+			TBinaryProtocol bp = new TBinaryProtocol(transport);
+			bp.setReadLength(data.remaining());
+			args.read(bp);
+			mutationMap = args.getMutation_map();
 		}
-		// TODO
-		return null;
+		catch (TException e) {
+			throw ThriftConverter.ToConnectionPoolException(e);
+		}
+	}
+	
+	@Override
+	public Map<ByteBuffer, Set<String>> getRowKeys() {
+		return Maps.transformEntries(mutationMap, new EntryTransformer<ByteBuffer, Map<String, List<Mutation>>, Set<String>>() {
+			@Override
+			public Set<String> transformEntry(ByteBuffer key, Map<String, List<Mutation>> value) {
+				return value.keySet();
+			}
+		});
 	}
 	
 	/**
@@ -263,9 +257,4 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
 		setTimestamp(this.sysClock.getCurrentTime());
 		return this;
 	}
-
-    @Override
-    public OperationResult<Void> execute() throws ConnectionException {
-        return ExecutionHelper.blockingExecute(this);
-    }
 }

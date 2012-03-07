@@ -15,7 +15,10 @@
  ******************************************************************************/
 package com.netflix.astyanax;
 
+import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.Map;
+import java.util.Set;
 
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.model.ColumnFamily;
@@ -116,6 +119,12 @@ public interface MutationBatch extends Execution<Void>{
 	int getRowCount();
 
 	/**
+	 * Return a mapping of column families to rows being modified
+	 * @return
+	 */
+	Map<ByteBuffer, Set<String>> getRowKeys();
+	
+	/**
 	 * Pin this operation to a specific host
 	 * @param host
 	 * @return
@@ -134,6 +143,13 @@ public interface MutationBatch extends Execution<Void>{
 	 * @return
 	 */
 	MutationBatch withRetryPolicy(RetryPolicy retry);
+	
+	/**
+	 * Specify a write ahead log implementation to use for this mutation
+	 * @param manager
+	 * @return
+	 */
+	MutationBatch usingWriteAheadLog(WriteAheadLog manager);
 	
 	/**
 	 * Force all future mutations to have the same timestamp.  Make sure to call lockTimestamp
@@ -157,4 +173,20 @@ public interface MutationBatch extends Execution<Void>{
 	 */
 	MutationBatch setTimestamp(long timestamp);
 
+	/**
+	 * Serialize the entire mutation batch into a ByteBuffer.
+	 * @return
+	 * @throws Exception 
+	 */
+	ByteBuffer serialize() throws Exception;
+	
+	/**
+	 * Re-recreate a mutation batch from a serialized ByteBuffer created by a call to 
+	 * serialize().  Serialization of MutationBatches from different implementations is not 
+	 * guaranteed to match.
+	 * @param data
+	 * @throws Exception 
+	 */
+	void deserialize(ByteBuffer data) throws Exception;
+	
 }

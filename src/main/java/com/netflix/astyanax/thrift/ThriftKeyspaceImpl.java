@@ -18,6 +18,8 @@ package com.netflix.astyanax.thrift;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -35,6 +37,8 @@ import com.netflix.astyanax.Execution;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.KeyspaceTracerFactory;
 import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.WriteAheadEntry;
+import com.netflix.astyanax.WriteAheadLog;
 import com.netflix.astyanax.SerializerPackage;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.Host;
@@ -81,6 +85,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 			private ConsistencyLevel consistencyLevel = config.getDefaultWriteConsistencyLevel();
 			private RetryPolicy retry = config.getRetryPolicy().duplicate();
 			private Host pinnedHost;
+			private WriteAheadLog wal;
 			
 			@Override
 			public MutationBatch pinToHost(Host host) {
@@ -96,25 +101,39 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
 			@Override
 			public OperationResult<Void> execute() throws ConnectionException {
-                return executeOperation(new AbstractKeyspaceOperationImpl<Void>(
-                		tracerFactory.newTracer(CassandraOperationType.BATCH_MUTATE), 
-                		pinnedHost, getKeyspaceName()) {
-					@Override
-					public Void internalExecute(Client client) throws Exception {
-						client.batch_mutate(getMutationMap(), ThriftConverter.ToThriftConsistencyLevel(consistencyLevel));
-						discardMutations();
-						
-						return null;
-					}
-
-					@Override
-					public BigInteger getToken() {
-						if (getMutationMap().size() == 1)
-							return partitioner.getToken(getMutationMap().keySet().iterator().next()).token;
-						else 
+				WriteAheadEntry walEntry = null;
+				if (wal != null)
+					walEntry = wal.createEntry(this);
+				try {
+					OperationResult<Void> result = executeOperation(new AbstractKeyspaceOperationImpl<Void>(
+	                		tracerFactory.newTracer(CassandraOperationType.BATCH_MUTATE), 
+	                		pinnedHost, getKeyspaceName()) {
+						@Override
+						public Void internalExecute(Client client) throws Exception {
+							client.batch_mutate(getMutationMap(), ThriftConverter.ToThriftConsistencyLevel(consistencyLevel));
+							discardMutations();
 							return null;
+						}
+	
+						@Override
+						public BigInteger getToken() {
+							if (getMutationMap().size() == 1)
+								return partitioner.getToken(getMutationMap().keySet().iterator().next()).token;
+							else 
+								return null;
+						}
+					}, retry);
+					
+					if (walEntry != null) {
+						walEntry.remove();
 					}
-				}, retry);
+					return result;
+				}
+				catch (ConnectionException exception) {
+					if (walEntry != null)
+						walEntry.commit();
+					throw exception;
+				}
 			}
 
 			@Override
@@ -130,6 +149,12 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 			@Override
 			public MutationBatch withRetryPolicy(RetryPolicy retry) {
 				this.retry = retry;
+				return this;
+			}
+
+			@Override
+			public MutationBatch usingWriteAheadLog(WriteAheadLog manager) {
+				this.wal = manager;
 				return this;
 			}
 		};

@@ -28,6 +28,7 @@ public class RetryNTimes implements RetryPolicy {
 	public boolean allowRetry() {
 		if (max == -1 || attempts < max) {
 			attempts++;
+			return true;
 		}
 		return false;
 	}

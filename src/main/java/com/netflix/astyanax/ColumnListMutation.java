@@ -23,12 +23,10 @@ import com.netflix.astyanax.model.ColumnPath;
 
 
 /**
- * Abstraction for inserting columns either at the root of a row or 
- * in a super column. 
+ * Abstraction for batching column operations on a single row.
+ *  
  * @author elandau
  *
- * TODO: Composite putColumn
- * 
  * @param <C>
  */
 public interface ColumnListMutation<C> {
@@ -48,15 +46,7 @@ public interface ColumnListMutation<C> {
 			Serializer<V> valueSerializer, Integer ttl);
 
 	/**
-	 * Generic call to insert a super column.  Notice that this call receives
-	 * a column path which has a new serializer type for the sub column names.
-	 * Also, the object returned by this call differs from the parent column
-	 * and should therefore not be chained with any calls to add columns
-	 * to this serializer.
-	 * 
-	 * @param <SC>
-	 * @param superColumnPath
-	 * @return
+	 * @deprecated  Super columns are being phased out.  Use composite columns instead.
 	 */
 	<SC> ColumnListMutation<SC> withSuperColumn(ColumnPath<SC> superColumnPath);
 	

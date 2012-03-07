@@ -30,6 +30,9 @@ import com.netflix.astyanax.model.ColumnPath;
 import com.netflix.astyanax.model.ColumnSlice;
 import com.netflix.astyanax.model.ColumnType;
 import com.netflix.astyanax.model.ConsistencyLevel;
+
+import org.apache.cassandra.thrift.AuthenticationException;
+import org.apache.cassandra.thrift.AuthorizationException;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.NotFoundException;
@@ -172,6 +175,9 @@ public class ThriftConverter {
 		else if (e instanceof TApplicationException) {
 			return new ThriftStateException(e);
 		}
+		else if (e instanceof AuthenticationException || e instanceof AuthorizationException) {
+			return new com.netflix.astyanax.connectionpool.exceptions.AuthenticationException(e);
+		}	
 		else if (e instanceof TTransportException) {
 			if (e.getCause() != null) {
 				if (e.getCause() instanceof SocketTimeoutException) {

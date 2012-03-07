@@ -17,7 +17,7 @@ package com.netflix.astyanax.connectionpool;
 
 import java.util.List;
 
-import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
+import com.netflix.astyanax.AuthenticationCredentials;
 
 public interface ConnectionPoolConfiguration {
 	/**
@@ -205,4 +205,9 @@ public interface ConnectionPoolConfiguration {
 	 */
 	int getMaxOperationsPerConnection();
 
+	/**
+	 * Can return null if no login required
+	 * @return
+	 */
+	AuthenticationCredentials getAuthenticationCredentials();
 }

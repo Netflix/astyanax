@@ -63,31 +63,33 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
 	}
 	
 	@Override
+	@Deprecated
 	public ColumnFamilyDefinition setMemtableFlushAfterMins(int value) {
-		cfDef.setMemtable_flush_after_mins(value);
-		return this;
+		throw new RuntimeException("API Remove in Cassandra 1.0");
 	}
 
 	@Override
+	@Deprecated
 	public int getMemtableFlushAfterMins() {
-		return cfDef.getMemtable_flush_after_mins();
+		throw new RuntimeException("API Remove in Cassandra 1.0");
 	}
 	
 	@Override
+	@Deprecated
 	public ColumnFamilyDefinition setMemtableOperationsInMillions(double value) {
-		cfDef.setMemtable_operations_in_millions(value);
-		return this;
+		throw new RuntimeException("API Remove in Cassandra 1.0");
 	}
 	
 	@Override
+	@Deprecated
 	public double getMemtableOperationsInMillions() {
-		return cfDef.getMemtable_operations_in_millions();
+		throw new RuntimeException("API Remove in Cassandra 1.0");
 	}
 	
 	@Override
+	@Deprecated
 	public ColumnFamilyDefinition setMemtableThroughputInMb(int value) {
-		cfDef.setMemtable_throughput_in_mb(value);
-		return this;
+		throw new RuntimeException("API Remove in Cassandra 1.0");
 	}
 	
 	@Override
@@ -240,8 +242,9 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
 	}
 
 	@Override
+	@Deprecated
 	public int getMemtableThroughputInMb() {
-		return cfDef.memtable_throughput_in_mb;
+		throw new RuntimeException("API Remove in Cassandra 1.0");
 	}
 
 	@Override
@@ -261,7 +264,6 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
 
 	@Override
 	public boolean getReplicateOnWrite() {
-		// TODO: RENAME ME!!!
 		return cfDef.replicate_on_write;
 	}
 

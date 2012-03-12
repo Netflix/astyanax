@@ -41,7 +41,6 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionAbortedException
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.HostDownException;
 import com.netflix.astyanax.connectionpool.exceptions.IsDeadConnectionException;
-import com.netflix.astyanax.connectionpool.exceptions.IsTimeoutException;
 import com.netflix.astyanax.connectionpool.exceptions.MaxConnsPerHostReachedException;
 import com.netflix.astyanax.connectionpool.exceptions.PoolTimeoutException;
 import com.netflix.astyanax.connectionpool.exceptions.ThrottledException;
@@ -204,7 +203,7 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
 		
 		ConnectionException ce = connection.getLastException();
 		if (ce != null) {
-			if (ce instanceof IsTimeoutException) {
+			if (ce instanceof TimeoutException) {
 				if (badHostDetector.addTimeoutSample()) {
 					internalCloseConnection(connection);
 					retryContext.suspend();

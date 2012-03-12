@@ -26,13 +26,19 @@ public interface ColumnFamilyDefinition {
 	ColumnFamilyDefinition setKeyspace(String keyspace);
 	String getKeyspace();
 	
+	@Deprecated
 	ColumnFamilyDefinition setMemtableFlushAfterMins(int value);
+	@Deprecated
 	int getMemtableFlushAfterMins();
 	
+	@Deprecated
 	ColumnFamilyDefinition setMemtableOperationsInMillions(double value);
+	@Deprecated
 	double getMemtableOperationsInMillions();
 	
+	@Deprecated
 	ColumnFamilyDefinition setMemtableThroughputInMb(int value);
+	@Deprecated
 	int getMemtableThroughputInMb();
 	
 	ColumnFamilyDefinition setMergeShardsChance(double value);

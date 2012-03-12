@@ -18,8 +18,6 @@ package com.netflix.astyanax.thrift;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -102,8 +100,10 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 			@Override
 			public OperationResult<Void> execute() throws ConnectionException {
 				WriteAheadEntry walEntry = null;
-				if (wal != null)
-					walEntry = wal.createEntry(this);
+				if (wal != null) {
+					walEntry = wal.createEntry();
+					walEntry.writeMutation(this);
+				}
 				try {
 					OperationResult<Void> result = executeOperation(new AbstractKeyspaceOperationImpl<Void>(
 	                		tracerFactory.newTracer(CassandraOperationType.BATCH_MUTATE), 
@@ -125,13 +125,11 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 					}, retry);
 					
 					if (walEntry != null) {
-						walEntry.remove();
+						wal.removeEntry(walEntry);
 					}
 					return result;
 				}
 				catch (ConnectionException exception) {
-					if (walEntry != null)
-						walEntry.commit();
 					throw exception;
 				}
 			}

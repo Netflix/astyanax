@@ -1,19 +1,22 @@
 package com.netflix.astyanax;
 
+import com.netflix.astyanax.connectionpool.exceptions.WalException;
+
 /**
- * Write ahead log entry.  
  * 
  * @author elandau
- *
  */
 public interface WriteAheadEntry {
 	/**
-	 * Commit the entry to the WAL for retries
+	 * Fill a MutationBatch from the data in this entry
+	 * @param mutation
 	 */
-	void commit();
+	void readMutation(MutationBatch mutation) throws WalException;
 	
 	/**
-	 * Remove the entry from the WAL
+	 * Write the contents of this mutation to the WAL entry.  Shall be called only once.
+	 * @param mutation
+	 * @throws WalException
 	 */
-	void remove();
+	void writeMutation(MutationBatch mutation) throws WalException;
 }

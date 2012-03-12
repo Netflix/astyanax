@@ -19,6 +19,7 @@ import com.netflix.astyanax.Clock;
 
 /**
  * Clock which uses a rolling counter to avoid duplicates.
+ * @author Patricio Echague (pechague@gmail.com)
  */
 public class MicrosecondsSyncClock implements Clock {
 	private static final long serialVersionUID = -4671061000963496156L;

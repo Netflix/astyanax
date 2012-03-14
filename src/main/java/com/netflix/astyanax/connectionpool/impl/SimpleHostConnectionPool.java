@@ -41,6 +41,7 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionAbortedException
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.HostDownException;
 import com.netflix.astyanax.connectionpool.exceptions.IsDeadConnectionException;
+import com.netflix.astyanax.connectionpool.exceptions.IsTimeoutException;
 import com.netflix.astyanax.connectionpool.exceptions.MaxConnsPerHostReachedException;
 import com.netflix.astyanax.connectionpool.exceptions.PoolTimeoutException;
 import com.netflix.astyanax.connectionpool.exceptions.ThrottledException;
@@ -463,7 +464,7 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
 	
 	@Override
 	public void addLatencySample(long latency, long now) {
-		latencyStrategy.addSample(latency, now);
+		latencyStrategy.addSample(latency);
 	}
 	
 	private void discardIdleConnections() {

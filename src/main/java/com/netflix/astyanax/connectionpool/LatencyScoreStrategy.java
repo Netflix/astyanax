@@ -18,7 +18,7 @@ public interface LatencyScoreStrategy {
 		 * @param sample
 		 * @param now
 		 */
-		void addSample(long sample, long now);
+		void addSample(long sample);
 		
 		/**
 		 * Get the cached score for this endpoint
@@ -32,29 +32,21 @@ public interface LatencyScoreStrategy {
 		void reset();
 		
 		/**
-		 * Update the score for the current time
-		 * @param now
+		 * Update the score
 		 */
-		void update(long now);
+		void update();
 
 		/**
 		 * Get the mean for the sample window
 		 * @return
 		 */
 		double getMean();
-
-		/**
-		 * Time of last sample added by calling addSample
-		 * @return
-		 */
-		long getLastSampleTime();
 	}
 	
 	/**
 	 * Update all instance scores
-	 * @param now
 	 */
-	void update(long now);
+	void update();
 	
 	/**
 	 * Reset all instance scores

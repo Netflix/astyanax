@@ -2,7 +2,6 @@ package com.netflix.astyanax.connectionpool.impl;
 
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -33,7 +32,7 @@ public class SmaLatencyScoreStrategyImpl implements LatencyScoreStrategy {
 		this.badnessThreshold = badnessThreshold;
 		this.windowSize = windowSize;
 		
-		this.executor = Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder().setDaemon(true).build());	// TODO: is nThread==1 good?
+		this.executor = Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder().setDaemon(true).build());
 		this.instances = new NonBlockingHashSet<Instance>();
 	}
 	
@@ -69,8 +68,7 @@ public class SmaLatencyScoreStrategyImpl implements LatencyScoreStrategy {
 			@Override
 			public void run() {
 				Thread.currentThread().setName(getName() + "_ScoreUpdate");
-				long now = System.nanoTime();
-				update(now);
+				update();
 				listener.onUpdate();
 				executor.schedule(this, getUpdateInterval(), TimeUnit.MILLISECONDS);
 			}
@@ -118,38 +116,9 @@ public class SmaLatencyScoreStrategyImpl implements LatencyScoreStrategy {
 	
 	@Override
 	public <CL> List<HostConnectionPool<CL>> sortAndfilterPartition(List<HostConnectionPool<CL>> srcPools, AtomicBoolean prioritized) {
-		// Sort the candidate hosts by order of their score (low is good).  Then remove any host that
-		// is more than badness threshold worse than than best host
 		List<HostConnectionPool<CL>> pools = Lists.newArrayList(srcPools);
 		Collections.sort(pools, scoreComparator);
-		
-		boolean hasBadHost = false;
-		HostConnectionPool<?> firstPool = null;
-		Iterator<HostConnectionPool<CL>> iter = pools.iterator();
-		double firstScore = 0; 
-		while (iter.hasNext()) {
-			HostConnectionPool<CL> pool = iter.next();
-			// The first pool is used as the base for comparing.  
-			if (firstPool == null) {
-				if (pool.getScore() > 0) {
-					firstPool = pool;
-					firstScore = pool.getScore();
-				}
-			}
-			// Filter out pools with bad score
-			else {
-				double score = pool.getScore();
-				if ((score / firstScore - 1) > getBadnessThreshold()) {
-					hasBadHost = true;
-				}
-			}
-		}
-		
-		prioritized.set(!hasBadHost);
-		if (!hasBadHost) {
-			Collections.shuffle(pools);
-		} 
-		
+		prioritized.set(true);
 		return pools;
 	}
 
@@ -168,9 +137,9 @@ public class SmaLatencyScoreStrategyImpl implements LatencyScoreStrategy {
 	}
 
 	@Override
-	public void update(long now) {
+	public void update() {
 		for (Instance inst : instances) {
-			inst.update(now);
+			inst.update();
 		}
 	}
 

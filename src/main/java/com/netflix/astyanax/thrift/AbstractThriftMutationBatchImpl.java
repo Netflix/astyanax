@@ -137,9 +137,6 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
 		if (mutationMap.isEmpty()) {
 			throw new Exception("Mutation is empty");
 		}
-		if (mutationMap.size() > 1) {
-			throw new Exception("Transaction mutation limited to one key only");
-		}
 
 		ByteBufferOutputStream out = new ByteBufferOutputStream();
 		TIOStreamTransport transport = new TIOStreamTransport(out);

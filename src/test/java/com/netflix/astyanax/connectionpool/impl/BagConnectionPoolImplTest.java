@@ -134,7 +134,7 @@ public class BagConnectionPoolImplTest extends BaseConnectionPoolTest {
 				LOG.info(e.getMessage());
 			}
     	}
-    	Assert.assertEquals(5, monitor.getConnectionCreatedCount());
-		Assert.assertEquals(5, monitor.getConnectionClosedCount());
+    	Assert.assertEquals(15, monitor.getConnectionCreatedCount());
+		Assert.assertEquals(15, monitor.getConnectionClosedCount());
 	}
 }

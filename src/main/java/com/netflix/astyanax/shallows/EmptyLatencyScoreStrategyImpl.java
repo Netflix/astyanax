@@ -16,7 +16,7 @@ public class EmptyLatencyScoreStrategyImpl implements LatencyScoreStrategy {
 		return new Instance() {
 
 			@Override
-			public void addSample(long sample, long now) {
+			public void addSample(long sample) {
 			}
 
 			@Override
@@ -34,12 +34,7 @@ public class EmptyLatencyScoreStrategyImpl implements LatencyScoreStrategy {
 			}
 
 			@Override
-			public void update(long now) {
-			}
-
-			@Override
-			public long getLastSampleTime() {
-				return 0;
+			public void update() {
 			}
 		};
 	}
@@ -57,7 +52,7 @@ public class EmptyLatencyScoreStrategyImpl implements LatencyScoreStrategy {
 	}
 
 	@Override
-	public void update(long now) {
+	public void update() {
 	}
 
 	@Override

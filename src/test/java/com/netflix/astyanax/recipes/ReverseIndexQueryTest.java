@@ -14,6 +14,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Function;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Cluster;
 import com.netflix.astyanax.Keyspace;
@@ -112,6 +113,8 @@ public class ReverseIndexQueryTest {
     	    		.addColumnFamily(cluster.makeColumnFamilyDefinition()
 	    				.setName(CF_DATA.getName())
 	    				.setComparatorType("UTF8Type")
+//	    				.setKeyValidationClass("LongType")
+//	    				.setDefaultValidationClass("BytesType")
     	    		)
     	    		.addColumnFamily(cluster.makeColumnFamilyDefinition()
     	   				.setName(CF_INDEX.getName())
@@ -182,15 +185,16 @@ public class ReverseIndexQueryTest {
 			.toIndexValue(10000L)
 			.withIndexShards(new Shards.StringShardBuilder().setPrefix("B_").setShardCount(SHARD_COUNT).build())
 			.withColumnSlice(Arrays.asList("A"))
-			.forEach(new Callback<Row<Long, String>>() {
+			.forEach(new Function<Row<Long, String>, Void>() {
 				@Override
-				public void handle(Row<Long, String> row) {
+				public Void apply(Row<Long, String> row) {
 					StringBuilder sb = new StringBuilder();
 					for (Column<String> column : row.getColumns()) {
 						sb.append(column.getName()).append(", ");
 					}
 					counter.incrementAndGet();
 					LOG.info("Row: " + row.getKey() + " Columns: " + sb.toString());
+					return null;
 				}
 			})
 			.forEachIndexEntry(new IndexEntryCallback<Long, Long>() {

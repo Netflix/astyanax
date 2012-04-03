@@ -1921,7 +1921,6 @@ public class ThrifeKeyspaceImplTest {
             new JsonRowsWriter(new PrintWriter(System.out, true), keyspace.getSerializerPackage(CF_USERS.getName(), false))
                 .setRowsAsArray(true)
                 .setCountName("_count_")
-                .setIdName("_id_")
                 .setRowsName("_rows_")
                 .setNamesName("_names_")
                 .write(rows);
@@ -2054,7 +2053,6 @@ public class ThrifeKeyspaceImplTest {
 	        new JsonRowsWriter(new PrintWriter(System.out, true), keyspace.getSerializerPackage(CF_COMPOSITE_CSV.getName(), false))
 	            .setRowsAsArray(true)
 	            .setCountName("_count_")
-	            .setIdName("_id_")
 	            .setRowsName("_rows_")
 	            .setNamesName("_names_")
 	            .write(rows);

@@ -645,7 +645,7 @@ public class ThriftColumnFamilyQueryImpl<K,C> implements ColumnFamilyQuery<K,C> 
 														return partitioner.getToken(ByteBuffer.wrap(range.getStart_key())).token;
 													return null;
 												}
-                                            }, retry).getResult();
+                                            }, retry.duplicate()).getResult();
         
                                             // Notify the callback
                                             if (!ks.isEmpty()) {

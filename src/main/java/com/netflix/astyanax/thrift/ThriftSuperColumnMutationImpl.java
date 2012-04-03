@@ -48,18 +48,18 @@ import com.netflix.astyanax.serializers.UUIDSerializer;
  * @param <C>
  */
 public class ThriftSuperColumnMutationImpl<C> implements ColumnListMutation<C> {
-	private final Clock clock;
+	private long timestamp;
 	private final List<Mutation> mutationList;
 	private final ColumnPath<C> path;
 	private SuperColumn superColumn;
 	private SlicePredicate deletionPredicate;
-	private final static ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
+	private Integer defaultTtl = null; 
 	
-	public ThriftSuperColumnMutationImpl(Clock clock,
+	public ThriftSuperColumnMutationImpl(long timestamp,
 			List<Mutation> mutationList, 
 			ColumnPath<C> path) {
 		this.path = path;
-		this.clock = clock;
+		this.timestamp = timestamp;
 		this.mutationList = mutationList;
 	}
 	
@@ -69,10 +69,12 @@ public class ThriftSuperColumnMutationImpl<C> implements ColumnListMutation<C> {
 		Column column = new Column();
 		column.setName(path.getSerializer().toByteBuffer(columnName));
 		column.setValue(valueSerializer.toByteBuffer(value));
-		column.setTimestamp(clock.getCurrentTime());
-		if (ttl != null) {
+		column.setTimestamp(timestamp);
+		if (ttl != null)
 			column.setTtl(ttl);
-		}
+		else if (defaultTtl != null)
+			column.setTtl(defaultTtl);
+		
 		addMutation(column);
 		return this;
 	}
@@ -87,6 +89,7 @@ public class ThriftSuperColumnMutationImpl<C> implements ColumnListMutation<C> {
 		    		new ColumnOrSuperColumn().setSuper_column(superColumn));
 		    mutationList.add(mutation);
 		}	    
+		
 		superColumn.addToColumns(column);
 	}
 
@@ -139,11 +142,13 @@ public class ThriftSuperColumnMutationImpl<C> implements ColumnListMutation<C> {
 	public ColumnListMutation<C> putEmptyColumn(C columnName, Integer ttl) {
 		Column column = new Column();
 		column.setName(path.getSerializer().toByteBuffer(columnName));
-		column.setValue(EMPTY_BUFFER);
-		column.setTimestamp(clock.getCurrentTime());
-		if (ttl != null) {
+		column.setValue(ThriftUtils.EMPTY_BYTE_BUFFER);
+		column.setTimestamp(timestamp);
+		if (ttl != null)
 			column.setTtl(ttl);
-		}
+		else if (defaultTtl != null)
+			column.setTtl(defaultTtl);
+		
 		addMutation(column);
 		return this;
 	}
@@ -152,8 +157,10 @@ public class ThriftSuperColumnMutationImpl<C> implements ColumnListMutation<C> {
 	public ColumnListMutation<C> delete() {
 		Deletion d = new Deletion();
 		d.setSuper_column(path.get(0));
-		d.setTimestamp(clock.getCurrentTime());
+		d.setTimestamp(timestamp);
 	    mutationList.add(new Mutation().setDeletion(d));
+	    
+	    timestamp++;
 	    return this;
 	}
 
@@ -173,7 +180,7 @@ public class ThriftSuperColumnMutationImpl<C> implements ColumnListMutation<C> {
 		if (deletionPredicate == null) {
 			deletionPredicate = new SlicePredicate();
 			Deletion d = new Deletion();
-			d.setTimestamp(clock.getCurrentTime());
+			d.setTimestamp(timestamp);
 			d.setSuper_column(path.get(0));
 			d.setPredicate(deletionPredicate);
 			
@@ -184,4 +191,15 @@ public class ThriftSuperColumnMutationImpl<C> implements ColumnListMutation<C> {
 		return this;
 	}
 
+	@Override
+    public ColumnListMutation<C> setTimestamp(long timestamp) {
+	    this.timestamp = timestamp;
+	    return this;
+    }
+
+	@Override
+    public ColumnListMutation<C> setDefaultTtl(Integer ttl) {
+		this.defaultTtl = ttl;
+	    return this;
+    }
 }

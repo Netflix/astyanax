@@ -27,7 +27,6 @@ import org.apache.cassandra.thrift.Deletion;
 import org.apache.cassandra.thrift.Mutation;
 import org.apache.cassandra.thrift.SlicePredicate;
 
-import com.netflix.astyanax.Clock;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.model.ColumnPath;
@@ -50,21 +49,21 @@ import com.netflix.astyanax.serializers.UUIDSerializer;
 public class ThriftColumnFamilyMutationImpl<C> implements ColumnListMutation<C> {
 	private final Serializer<C> columnSerializer;
 	private final List<Mutation> mutationList;
-	private final Clock clock;
-	private final static ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
+	private long timestamp;
 	private SlicePredicate deletionPredicate;
+	private Integer defaultTtl = null;
 	
-	public ThriftColumnFamilyMutationImpl(Clock clock,
+	public ThriftColumnFamilyMutationImpl(Long timestamp,
 			List<Mutation> mutationList, 
 			Serializer<C> columnSerializer) {
 		this.mutationList = mutationList;
 		this.columnSerializer = columnSerializer;
-		this.clock = clock;
+		this.timestamp = timestamp;
 	}
 	
 	@Override
 	public <SC> ColumnListMutation<SC> withSuperColumn(ColumnPath<SC> superColumnPath) {
-		return new ThriftSuperColumnMutationImpl<SC>(clock, mutationList, 
+		return new ThriftSuperColumnMutationImpl<SC>(timestamp, mutationList, 
 				superColumnPath);
 	}
 	
@@ -75,15 +74,17 @@ public class ThriftColumnFamilyMutationImpl<C> implements ColumnListMutation<C> 
 		Column column = new Column();
 		column.setName(columnSerializer.toByteBuffer(columnName));
 		column.setValue(valueSerializer.toByteBuffer(value));
-		column.setTimestamp(clock.getCurrentTime());
-		if (ttl != null) {
+		column.setTimestamp(timestamp);
+		if (ttl != null)
 			column.setTtl(ttl);
-		}
+		else if (defaultTtl != null)
+			column.setTtl(defaultTtl);
 		
 		// 2.  Create a mutation and append to the mutation list.
 		Mutation mutation = new Mutation();
 	    mutation.setColumn_or_supercolumn(new ColumnOrSuperColumn().setColumn(column));
 		mutationList.add(mutation);
+		
 		return this;
 	}
 
@@ -136,11 +137,12 @@ public class ThriftColumnFamilyMutationImpl<C> implements ColumnListMutation<C> 
 	public ColumnListMutation<C> putEmptyColumn(C columnName, Integer ttl) {
 		Column column = new Column();
 		column.setName(columnSerializer.toByteBuffer(columnName));
-		column.setValue(EMPTY_BUFFER);
-		column.setTimestamp(clock.getCurrentTime());
-		if (ttl != null) {
+		column.setValue(ThriftUtils.EMPTY_BYTE_BUFFER);
+		column.setTimestamp(timestamp);
+		if (ttl != null)
 			column.setTtl(ttl);
-		}
+		else if (defaultTtl != null)
+			column.setTtl(defaultTtl);
 		
 		// 2.  Create a mutation and append to the mutation list.
 		Mutation mutation = new Mutation();
@@ -153,14 +155,16 @@ public class ThriftColumnFamilyMutationImpl<C> implements ColumnListMutation<C> 
 	public ColumnListMutation<C> delete() {
 		// Delete the entire row
 	    Deletion d = new Deletion()
-	    	.setTimestamp(clock.getCurrentTime());
+	    	.setTimestamp(timestamp);
 	    mutationList.add(new Mutation().setDeletion(d));
+	    
+	    // Increment the timestamp by 1 so subsequent puts on this column may be written
+	    timestamp++;
 		return this;
 	}
 
 	@Override
-	public ColumnListMutation<C> incrementCounterColumn(C columnName,
-			long amount) {
+	public ColumnListMutation<C> incrementCounterColumn(C columnName, long amount) {
 		// 1.  Set up the column with all the data
 		CounterColumn column = new CounterColumn();
 		column.setName(columnSerializer.toByteBuffer(columnName));
@@ -180,11 +184,23 @@ public class ThriftColumnFamilyMutationImpl<C> implements ColumnListMutation<C> 
 			deletionPredicate = new SlicePredicate();
 			Deletion d = new Deletion()
 				.setPredicate(deletionPredicate)
-				.setTimestamp(clock.getCurrentTime());
+				.setTimestamp(timestamp);
 			mutationList.add(new Mutation().setDeletion(d));
 		}
-		deletionPredicate.addToColumn_names(this.columnSerializer.toByteBuffer(columnName));
+		ByteBuffer bb = this.columnSerializer.toByteBuffer(columnName);
+		deletionPredicate.addToColumn_names(bb);
 	    return this;
 	}
 
+	@Override
+    public ColumnListMutation<C> setTimestamp(long timestamp) {
+		this.timestamp = timestamp;
+		return this;
+    }
+	
+	@Override
+    public ColumnListMutation<C> setDefaultTtl(Integer ttl) {
+		this.defaultTtl = ttl;
+		return this;
+    }
 }

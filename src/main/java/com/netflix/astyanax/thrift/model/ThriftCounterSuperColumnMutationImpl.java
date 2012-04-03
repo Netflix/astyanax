@@ -27,7 +27,6 @@ import org.apache.cassandra.thrift.Deletion;
 import org.apache.cassandra.thrift.Mutation;
 import org.apache.cassandra.thrift.SlicePredicate;
 
-import com.netflix.astyanax.Clock;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.model.ColumnPath;
@@ -42,17 +41,17 @@ import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.UUIDSerializer;
 
 public class ThriftCounterSuperColumnMutationImpl<C> implements ColumnListMutation<C> {
-	private final Clock clock;
+	private long timestamp;
 	private final List<Mutation> mutationList;
 	private final ColumnPath<C> path;
 	private CounterSuperColumn superColumn;
 	private SlicePredicate deletionPredicate;
-
-	public ThriftCounterSuperColumnMutationImpl(Clock clock,
+	
+	public ThriftCounterSuperColumnMutationImpl(long timestamp,
 			List<Mutation> mutationList, 
 			ColumnPath<C> path) {
 		this.path = path;
-		this.clock = clock;
+		this.timestamp = timestamp;
 		this.mutationList = mutationList;
 	}
 	
@@ -117,8 +116,9 @@ public class ThriftCounterSuperColumnMutationImpl<C> implements ColumnListMutati
 		// Delete the entire super column
 		Deletion d = new Deletion()
 			.setSuper_column(path.get(0))
-			.setTimestamp(clock.getCurrentTime());
+			.setTimestamp(timestamp);
 	    mutationList.add(new Mutation().setDeletion(d));
+	    timestamp++;
 	    return this;
 	}
 
@@ -154,7 +154,7 @@ public class ThriftCounterSuperColumnMutationImpl<C> implements ColumnListMutati
 		if (deletionPredicate == null) {
 			deletionPredicate = new SlicePredicate();
 			Deletion d = new Deletion()
-				.setTimestamp(clock.getCurrentTime())
+				.setTimestamp(timestamp)
 				.setSuper_column(path.get(0))
 				.setPredicate(deletionPredicate);
 			
@@ -164,4 +164,15 @@ public class ThriftCounterSuperColumnMutationImpl<C> implements ColumnListMutati
 		deletionPredicate.addToColumn_names(path.getSerializer().toByteBuffer(columnName));
 		return this;
 	}
+
+	@Override
+    public ColumnListMutation<C> setTimestamp(long timestamp) {
+		this.timestamp = timestamp;
+	    return this;
+    }
+
+	@Override
+    public ColumnListMutation<C> setDefaultTtl(Integer ttl) {
+		return this;
+    }
 }

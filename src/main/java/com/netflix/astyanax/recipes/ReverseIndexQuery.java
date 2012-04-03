@@ -9,6 +9,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.netflix.astyanax.Keyspace;
@@ -72,7 +73,7 @@ public class ReverseIndexQuery<K,C,V> {
 	private int columnLimit = 1000;
 	private int shardColumnLimit = 0;
 	private final AtomicLong pendingTasks = new AtomicLong();
-	private Callback<Row<K,C>> callback;
+	private Function<Row<K,C>, Void> callback;
 	private IndexEntryCallback<K,V> indexCallback;
 	private ConsistencyLevel consistencyLevel = ConsistencyLevel.CL_ONE;
 	private RetryPolicy retry = RunOnce.get();
@@ -113,7 +114,7 @@ public class ReverseIndexQuery<K,C,V> {
 		return this;
 	}
 	
-	public ReverseIndexQuery<K, C, V> forEach(Callback<Row<K,C>> callback) {
+	public ReverseIndexQuery<K, C, V> forEach(Function<Row<K,C>, Void> callback) {
 		this.callback = callback;
 		return this;
 	}
@@ -356,7 +357,7 @@ public class ReverseIndexQuery<K,C,V> {
 						.execute();
 					
 					for (Row<K, C> row : result.getResult()) {
-						callback.handle(row);
+						callback.apply(row);
 					}
 				} catch (ConnectionException e) {
 					e.printStackTrace();

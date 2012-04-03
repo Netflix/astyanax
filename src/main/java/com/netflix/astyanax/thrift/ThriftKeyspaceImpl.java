@@ -19,8 +19,10 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.cassandra.dht.RandomPartitioner;
 import org.apache.cassandra.thrift.Cassandra;
@@ -28,6 +30,8 @@ import org.apache.cassandra.thrift.CounterColumn;
 import org.apache.cassandra.thrift.Cassandra.Client;
 
 import com.google.common.base.Function;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.ColumnMutation;
@@ -63,13 +67,17 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     private final String ksName;
 	private final ExecutorService executor;
 	private final KeyspaceTracerFactory tracerFactory;
-	
+	private final Cache<String, Object> cache;
+
     public ThriftKeyspaceImpl(String ksName, ConnectionPool<Cassandra.Client> pool, AstyanaxConfiguration config, final KeyspaceTracerFactory tracerFactory) {
         this.connectionPool = pool;
         this.config = config;
         this.ksName = ksName;
     	this.executor = config.getAsyncExecutor();
     	this.tracerFactory = tracerFactory;
+    	this.cache = CacheBuilder.newBuilder()
+	        .expireAfterWrite(10, TimeUnit.MINUTES)
+	        .build();
 	}
 	
 	@Override
@@ -158,22 +166,32 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 		};
 	}
 	
-	@Override
+	@SuppressWarnings("unchecked")
+    @Override
 	public List<TokenRange> describeRing() throws ConnectionException {
-        return executeOperation(new AbstractKeyspaceOperationImpl<List<TokenRange>>(
-        		tracerFactory.newTracer(CassandraOperationType.DESCRIBE_RING), getKeyspaceName()) {
-			@Override
-			public List<TokenRange> internalExecute(Cassandra.Client client) throws Exception {
-				return Lists.transform(client.describe_ring(getKeyspaceName()), 
-						new Function<org.apache.cassandra.thrift.TokenRange, TokenRange>() {
-					@Override
-					public TokenRange apply(
-							org.apache.cassandra.thrift.TokenRange tr) {
-						return new TokenRangeImpl(tr.getStart_token(), tr.getEnd_token(), tr.getEndpoints());
-					}
-				});
-			}
-		}, this.getConfig().getRetryPolicy().duplicate()).getResult();
+		try {
+	        return (List<TokenRange>)this.cache.get(CassandraOperationType.DESCRIBE_RING.name(), new Callable<Object>() {
+	        	@Override
+	            public Object call() throws Exception {
+	                return executeOperation(new AbstractKeyspaceOperationImpl<List<TokenRange>>(
+	                		tracerFactory.newTracer(CassandraOperationType.DESCRIBE_RING), getKeyspaceName()) {
+	        			@Override
+	        			public List<TokenRange> internalExecute(Cassandra.Client client) throws Exception {
+	        				return Lists.transform(client.describe_ring(getKeyspaceName()), 
+	        						new Function<org.apache.cassandra.thrift.TokenRange, TokenRange>() {
+	        					@Override
+	        					public TokenRange apply(
+	        							org.apache.cassandra.thrift.TokenRange tr) {
+	        						return new TokenRangeImpl(tr.getStart_token(), tr.getEnd_token(), tr.getEndpoints());
+	        					}
+	        				});
+	        			}
+	        		}, getConfig().getRetryPolicy().duplicate()).getResult();
+	            }
+	        });
+        } catch (ExecutionException e) {
+        	return (List<TokenRange>)this.cache.asMap().get(CassandraOperationType.DESCRIBE_RING.name());
+        }
 	}
 	
 	@Override

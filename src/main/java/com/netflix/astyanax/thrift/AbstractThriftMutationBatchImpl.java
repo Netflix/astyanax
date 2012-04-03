@@ -26,7 +26,6 @@ import java.util.Map.Entry;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Maps.EntryTransformer;
-import com.netflix.astyanax.clock.ConstantClock;
 
 import org.apache.cassandra.thrift.Cassandra.batch_mutate_args;
 import org.apache.cassandra.thrift.Mutation;
@@ -52,27 +51,23 @@ import com.netflix.astyanax.serializers.ByteBufferOutputStream;
  */
 public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
 
-	protected Clock clock;
-	protected Clock sysClock;
+	protected long timestamp;
+	private Clock clock;
 	
-	enum ColumnType {
-		NULL,
-		STANDARD,
-		COUNTER,
-		DELETION,
-		ROW_DELETION,
-	};
-	
-    private Map<ByteBuffer, Map<String, List<Mutation>>> mutationMap = Maps.newHashMap();
+    private Map<ByteBuffer, Map<String, List<Mutation>>> mutationMap = Maps.newLinkedHashMap();
     
     public AbstractThriftMutationBatchImpl(Clock clock) {
-    	this.clock = this.sysClock = clock;
+    	this.clock = clock;
+    	this.timestamp = clock.getCurrentTime();
     }
     
     @Override
 	public <K,C> ColumnListMutation<C> withRow(ColumnFamily<K, C> columnFamily, K rowKey) {
+    	if (clock != null && mutationMap.isEmpty()) 
+    		this.timestamp = clock.getCurrentTime();
+    	
 		return new ThriftColumnFamilyMutationImpl<C>(
-				clock,
+				timestamp,
 				getColumnFamilyMutationList(columnFamily, rowKey),
 				columnFamily.getColumnSerializer());
 	}
@@ -203,7 +198,7 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
 	    return innerMutationList;
 	}
     
-	protected Map<ByteBuffer,Map<String,List<Mutation>>> getMutationMap() {
+	public Map<ByteBuffer,Map<String,List<Mutation>>> getMutationMap() {
 	    return mutationMap;
 	}
 	
@@ -245,13 +240,14 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
 
 	@Override
 	public MutationBatch setTimestamp(long timestamp) {
-		this.clock = new ConstantClock(timestamp);
+		this.clock = null;
+		this.timestamp = timestamp;
 		return this;
 	}
 	
 	@Override
+	@Deprecated
 	public MutationBatch lockCurrentTimestamp() {
-		setTimestamp(this.sysClock.getCurrentTime());
 		return this;
 	}
 }

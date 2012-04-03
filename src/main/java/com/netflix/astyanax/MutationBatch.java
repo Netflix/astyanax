@@ -155,8 +155,10 @@ public interface MutationBatch extends Execution<Void>{
 	 * Force all future mutations to have the same timestamp.  Make sure to call lockTimestamp
 	 * before doing any other operations otherwise previously created withRow mutations will
 	 * use the previous timestamp.
+	 * @deprecated Mutation timestamps are now locked by default.
 	 * @return
 	 */
+	@Deprecated
 	MutationBatch lockCurrentTimestamp();
 	
 	/**

@@ -12,12 +12,13 @@ public class MicrosecondsAsyncClock implements Clock {
     private static AtomicInteger counter = new AtomicInteger(0);
 
     public MicrosecondsAsyncClock() {
-      
+
     }
-  
+
     @Override
     public long getCurrentTime() {
-        // The following simulates a microseconds resolution by advancing a static counter
+        // The following simulates a microseconds resolution by advancing a
+        // static counter
         // every time a client calls the createClock method, simulating a tick.
         long us = System.currentTimeMillis() * ONE_THOUSAND;
         return us + counter.getAndIncrement() % ONE_THOUSAND;

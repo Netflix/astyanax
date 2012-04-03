@@ -23,12 +23,12 @@ import com.netflix.astyanax.Clock;
  */
 public class MillisecondsClock implements Clock {
 
-	@Override
-	public long getCurrentTime() {
-		return System.currentTimeMillis();
-	}
-	
-	public String toString() {
-		return "MillisecondsClock";
-	}
+    @Override
+    public long getCurrentTime() {
+        return System.currentTimeMillis();
+    }
+
+    public String toString() {
+        return "MillisecondsClock";
+    }
 }

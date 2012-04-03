@@ -19,23 +19,24 @@ package com.netflix.astyanax.connectionpool.exceptions;
  * No more connections may be opened on a host and no timeout was specified.
  * 
  * @author elandau
- *
+ * 
  */
-public class MaxConnsPerHostReachedException extends ConnectionException implements IsRetryableException {
-	/**
+public class MaxConnsPerHostReachedException extends ConnectionException
+        implements IsRetryableException {
+    /**
      * 
      */
     private static final long serialVersionUID = 3153033457028147246L;
 
     public MaxConnsPerHostReachedException(String message) {
-		super(message);
-	}
-	
-	public MaxConnsPerHostReachedException(Throwable t) {
-		super(t);
-	}
-	
-	public MaxConnsPerHostReachedException(String message, Throwable cause) {
+        super(message);
+    }
+
+    public MaxConnsPerHostReachedException(Throwable t) {
+        super(t);
+    }
+
+    public MaxConnsPerHostReachedException(String message, Throwable cause) {
         super(message, cause);
     }
 }

@@ -13,39 +13,39 @@ import com.netflix.astyanax.Serializer;
  * 
  */
 public final class BytesArraySerializer extends AbstractSerializer<byte[]>
-    implements Serializer<byte[]> {
+        implements Serializer<byte[]> {
 
-  private static final BytesArraySerializer instance = new BytesArraySerializer();
+    private static final BytesArraySerializer instance = new BytesArraySerializer();
 
-  public static BytesArraySerializer get() {
-    return instance;
-  }
-
-  @Override
-  public ByteBuffer toByteBuffer(byte[] obj) {
-    if (obj == null) {
-      return null;
+    public static BytesArraySerializer get() {
+        return instance;
     }
-    return ByteBuffer.wrap(obj);
-  }
 
-  @Override
-  public byte[] fromByteBuffer(ByteBuffer byteBuffer) {
-    if (byteBuffer == null) {
-      return null;
+    @Override
+    public ByteBuffer toByteBuffer(byte[] obj) {
+        if (obj == null) {
+            return null;
+        }
+        return ByteBuffer.wrap(obj);
     }
-    byte[] bytes = new byte[byteBuffer.remaining()];
-    byteBuffer.get(bytes, 0, bytes.length);
-    return bytes;
-  }
-  
-  @Override
-  public ByteBuffer fromString(String str) {
-    return BytesType.instance.fromString(str);
-  }
-  
-  @Override
-  public String getString(ByteBuffer byteBuffer) {
-    return BytesType.instance.getString(byteBuffer);
-  }
+
+    @Override
+    public byte[] fromByteBuffer(ByteBuffer byteBuffer) {
+        if (byteBuffer == null) {
+            return null;
+        }
+        byte[] bytes = new byte[byteBuffer.remaining()];
+        byteBuffer.get(bytes, 0, bytes.length);
+        return bytes;
+    }
+
+    @Override
+    public ByteBuffer fromString(String str) {
+        return BytesType.instance.fromString(str);
+    }
+
+    @Override
+    public String getString(ByteBuffer byteBuffer) {
+        return BytesType.instance.getString(byteBuffer);
+    }
 }

@@ -8,12 +8,12 @@ import org.apache.cassandra.utils.Pair;
 /**
  * 
  * @author elandau
- *
+ * 
  */
 public interface RecordReader {
-	List<Pair<String, String>> next() throws IOException;
+    List<Pair<String, String>> next() throws IOException;
 
-	void shutdown();
+    void shutdown();
 
-	void start() throws IOException;
+    void start() throws IOException;
 }

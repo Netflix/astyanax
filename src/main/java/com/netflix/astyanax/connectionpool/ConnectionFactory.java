@@ -19,10 +19,12 @@ import com.netflix.astyanax.connectionpool.exceptions.ThrottledException;
 
 /**
  * Factory used to create and open new connections on a host.
+ * 
  * @author elandau
- *
+ * 
  * @param <CL>
  */
 public interface ConnectionFactory<CL> {
-	Connection<CL> createConnection(HostConnectionPool<CL> pool) throws ThrottledException;
+    Connection<CL> createConnection(HostConnectionPool<CL> pool)
+            throws ThrottledException;
 }

@@ -24,60 +24,62 @@ import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.serializers.StringSerializer;
 
 public class ThriftColumnDefinitionImpl implements ColumnDefinition {
-	private final ColumnDef columnDef;
-	
-	public ThriftColumnDefinitionImpl() {
-		this.columnDef = new ColumnDef();
-	}
-	
-	public ThriftColumnDefinitionImpl(ColumnDef columnDef) {
-		this.columnDef = columnDef;
-	}
-	
-	ColumnDef getThriftColumnDefinition() {
-		return columnDef;
-	}
-	
-	@Override
-	public ColumnDefinition setName(String name) {
-		columnDef.setName(StringSerializer.get().toBytes(name));
-		return this;
-	}
+    private final ColumnDef columnDef;
 
-	@Override
-	public ColumnDefinition setValidationClass(String value) {
-		columnDef.setValidation_class(value);
-		return this;
-	}
-	
-	@Override
-	public String getName() {
-		return StringSerializer.get().fromByteBuffer(getRawName().duplicate());
-	}
+    public ThriftColumnDefinitionImpl() {
+        this.columnDef = new ColumnDef();
+    }
 
-	@Override
-	public String getValidationClass() {
-		return columnDef.getValidation_class();
-	}
+    public ThriftColumnDefinitionImpl(ColumnDef columnDef) {
+        this.columnDef = columnDef;
+    }
+
+    ColumnDef getThriftColumnDefinition() {
+        return columnDef;
+    }
+
+    @Override
+    public ColumnDefinition setName(String name) {
+        columnDef.setName(StringSerializer.get().toBytes(name));
+        return this;
+    }
+
+    @Override
+    public ColumnDefinition setValidationClass(String value) {
+        columnDef.setValidation_class(value);
+        return this;
+    }
+
+    @Override
+    public String getName() {
+        return StringSerializer.get().fromByteBuffer(getRawName().duplicate());
+    }
+
+    @Override
+    public String getValidationClass() {
+        return columnDef.getValidation_class();
+    }
 
     @Override
     public ByteBuffer getRawName() {
         return ByteBuffer.wrap(this.columnDef.getName());
     }
-    
+
     @Override
     public String getIndexName() {
         return this.columnDef.getIndex_name();
     }
-    
+
     @Override
     public String getIndexType() {
-        return this.columnDef.getIndex_type() == null ? null : this.columnDef.getIndex_type().name();
+        return this.columnDef.getIndex_type() == null ? null : this.columnDef
+                .getIndex_type().name();
     }
-    
+
     @Override
     public boolean hasIndex() {
-        return this.columnDef.getIndex_type() != null && this.columnDef.getIndex_type() == IndexType.KEYS;
+        return this.columnDef.getIndex_type() != null
+                && this.columnDef.getIndex_type() == IndexType.KEYS;
     }
 
     @Override

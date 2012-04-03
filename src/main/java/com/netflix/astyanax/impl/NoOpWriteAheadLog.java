@@ -7,29 +7,31 @@ import com.netflix.astyanax.connectionpool.exceptions.WalException;
 
 public class NoOpWriteAheadLog implements WriteAheadLog {
 
-	@Override
+    @Override
     public WriteAheadEntry createEntry() throws WalException {
-		return new WriteAheadEntry() {
-			@Override
-            public void readMutation(MutationBatch mutation) throws WalException {
+        return new WriteAheadEntry() {
+            @Override
+            public void readMutation(MutationBatch mutation)
+                    throws WalException {
             }
 
-			@Override
-            public void writeMutation(MutationBatch mutation) throws WalException {
+            @Override
+            public void writeMutation(MutationBatch mutation)
+                    throws WalException {
             }
-		};
+        };
     }
 
-	@Override
+    @Override
     public void removeEntry(WriteAheadEntry entry) {
     }
 
-	@Override
+    @Override
     public WriteAheadEntry readNextEntry() {
-	    return null;
+        return null;
     }
 
-	@Override
+    @Override
     public void retryEntry(WriteAheadEntry entry) {
     }
 

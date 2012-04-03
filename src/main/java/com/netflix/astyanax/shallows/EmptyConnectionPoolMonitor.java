@@ -25,142 +25,145 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 
 public class EmptyConnectionPoolMonitor implements ConnectionPoolMonitor {
-    private static final Logger LOGGER = Logger.getLogger(EmptyConnectionPoolMonitor.class);
+    private static final Logger LOGGER = Logger
+            .getLogger(EmptyConnectionPoolMonitor.class);
 
-	private static EmptyConnectionPoolMonitor instance = new EmptyConnectionPoolMonitor();
-	public static EmptyConnectionPoolMonitor getInstance() {
-		return instance;
-	}
-	
-	private EmptyConnectionPoolMonitor() {
-		
-	}
-	
-	public String toString() {
-		return "EmptyConnectionPoolMonitor";
-	}
-	
-	@Override
-	public void incOperationSuccess(Host host, long latency) {
-	}
+    private static EmptyConnectionPoolMonitor instance = new EmptyConnectionPoolMonitor();
 
-	@Override
-	public void incPoolExhaustedTimeout() {
-	}
+    public static EmptyConnectionPoolMonitor getInstance() {
+        return instance;
+    }
 
-	@Override
-	public void incOperationTimeout() {
-	}
+    private EmptyConnectionPoolMonitor() {
 
-	@Override
-	public void incConnectionBorrowed(Host host, long delay) {
-	}
+    }
 
-	@Override
-	public void incConnectionReturned(Host host) {
-	}
+    public String toString() {
+        return "EmptyConnectionPoolMonitor";
+    }
 
-	@Override
-	public void onHostAdded(Host host, HostConnectionPool<?> pool) {
-		LOGGER.info(String.format("Added host " + host));
-	}
+    @Override
+    public void incOperationSuccess(Host host, long latency) {
+    }
 
-	@Override
-	public void onHostRemoved(Host host) {
-		LOGGER.info(String.format("Remove host " + host));
-	}
+    @Override
+    public void incPoolExhaustedTimeout() {
+    }
 
-	@Override
-	public void onHostDown(Host host, Exception reason) {
-		LOGGER.warn(String.format("Downed host " + host + " reason=\"" + reason + "\""));
-	}
+    @Override
+    public void incOperationTimeout() {
+    }
 
-	@Override
-	public void onHostReactivated(Host host, HostConnectionPool<?> pool) {
-		LOGGER.info(String.format("Reactivating host " + host));
-	}
+    @Override
+    public void incConnectionBorrowed(Host host, long delay) {
+    }
 
-	@Override
-	public void incFailover(Host host, Exception e) {
-	}
+    @Override
+    public void incConnectionReturned(Host host) {
+    }
 
-	@Override
-	public void incConnectionCreated(Host host) {
-	}
+    @Override
+    public void onHostAdded(Host host, HostConnectionPool<?> pool) {
+        LOGGER.info(String.format("Added host " + host));
+    }
 
-	@Override
-	public void incConnectionCreateFailed(Host host, Exception e) {
-	}
+    @Override
+    public void onHostRemoved(Host host) {
+        LOGGER.info(String.format("Remove host " + host));
+    }
 
-	@Override
-	public void incNoHosts() {
-	}
+    @Override
+    public void onHostDown(Host host, Exception reason) {
+        LOGGER.warn(String.format("Downed host " + host + " reason=\"" + reason
+                + "\""));
+    }
 
-	@Override
-	public void incOperationFailure(Host host, Exception e) {
-	}
+    @Override
+    public void onHostReactivated(Host host, HostConnectionPool<?> pool) {
+        LOGGER.info(String.format("Reactivating host " + host));
+    }
 
-	@Override
-	public void incConnectionClosed(Host host, Exception e) {
-	}
+    @Override
+    public void incFailover(Host host, Exception e) {
+    }
 
-	@Override
-	public Map<Host, HostStats> getHostStats() {
-		return null;
-	}
+    @Override
+    public void incConnectionCreated(Host host) {
+    }
 
-	@Override
-	public long getOperationFailureCount() {
-		return 0;
-	}
+    @Override
+    public void incConnectionCreateFailed(Host host, Exception e) {
+    }
 
-	@Override
-	public long getOperationSuccessCount() {
-		return 0;
-	}
+    @Override
+    public void incNoHosts() {
+    }
 
-	@Override
-	public long getConnectionCreatedCount() {
-		return 0;
-	}
+    @Override
+    public void incOperationFailure(Host host, Exception e) {
+    }
 
-	@Override
-	public long getConnectionClosedCount() {
-		return 0;
-	}
+    @Override
+    public void incConnectionClosed(Host host, Exception e) {
+    }
 
-	@Override
-	public long getConnectionCreateFailedCount() {
-		return 0;
-	}
+    @Override
+    public Map<Host, HostStats> getHostStats() {
+        return null;
+    }
 
-	@Override
-	public long getConnectionBorrowedCount() {
-		return 0;
-	}
+    @Override
+    public long getOperationFailureCount() {
+        return 0;
+    }
 
-	@Override
-	public long getConnectionReturnedCount() {
-		return 0;
-	}
+    @Override
+    public long getOperationSuccessCount() {
+        return 0;
+    }
 
-	@Override
-	public long getPoolExhaustedTimeoutCount() {
-		return 0;
-	}
+    @Override
+    public long getConnectionCreatedCount() {
+        return 0;
+    }
 
-	@Override
-	public long getOperationTimeoutCount() {
-		return 0;
-	}
+    @Override
+    public long getConnectionClosedCount() {
+        return 0;
+    }
 
-	@Override
-	public long getFailoverCount() {
-		return 0;
-	}
+    @Override
+    public long getConnectionCreateFailedCount() {
+        return 0;
+    }
 
-	@Override
-	public long getNoHostCount() {
-		return 0;
-	}
+    @Override
+    public long getConnectionBorrowedCount() {
+        return 0;
+    }
+
+    @Override
+    public long getConnectionReturnedCount() {
+        return 0;
+    }
+
+    @Override
+    public long getPoolExhaustedTimeoutCount() {
+        return 0;
+    }
+
+    @Override
+    public long getOperationTimeoutCount() {
+        return 0;
+    }
+
+    @Override
+    public long getFailoverCount() {
+        return 0;
+    }
+
+    @Override
+    public long getNoHostCount() {
+        return 0;
+    }
 }

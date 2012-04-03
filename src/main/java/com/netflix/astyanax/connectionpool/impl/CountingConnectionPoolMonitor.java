@@ -27,12 +27,12 @@ public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
 
     public CountingConnectionPoolMonitor() {
     }
-    
+
     @Override
     public void incOperationFailure(Host host, Exception reason) {
         this.operationFailureCount.incrementAndGet();
     }
-    
+
     public long getOperationFailureCount() {
         return this.operationFailureCount.get();
     }
@@ -165,47 +165,45 @@ public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
     }
 
     public long getNumBusyConnections() {
-        return this.connectionBorrowCount.get() - this.connectionReturnCount.get();
+        return this.connectionBorrowCount.get()
+                - this.connectionReturnCount.get();
     }
-    
+
     public long getNumOpenConnections() {
-        return this.connectionCreateCount.get() - this.connectionClosedCount.get();
+        return this.connectionCreateCount.get()
+                - this.connectionClosedCount.get();
     }
-    
+
     public String toString() {
         // Build the complete status string
-        return new StringBuilder()
-            .append("CountingConnectionPoolMonitor(")
-            .append("Connections[")
-            .append("open=").append(getNumOpenConnections())
-            .append(",busy=").append(getNumBusyConnections())
-            .append(",create=").append(connectionCreateCount.get())
-            .append(",close=") .append(connectionClosedCount.get())
-            .append(",borrow=") .append(connectionBorrowCount.get())
-            .append(",return=") .append(connectionReturnCount.get())
-            .append("], Operations[")
-            .append("success=").append(operationSuccessCount.get())
-            .append(",failure=").append(operationFailureCount.get())
-            .append(",timeout=").append(operationTimeoutCount.get())
-            .append(",failover=").append(operationFailoverCount.get())
-            .append(",nohosts=").append(noHostsCount.get())
-            .append("], Hosts[")
-            .append("add=").append(hostAddedCount.get())
-            .append(",remove=").append(hostRemovedCount.get())
-            .append(",down=").append(hostDownCount.get())
-            .append(",reactivate=").append(hostReactivatedCount.get())
-            .append("])")
-            .toString();
+        return new StringBuilder().append("CountingConnectionPoolMonitor(")
+                .append("Connections[").append("open=")
+                .append(getNumOpenConnections()).append(",busy=")
+                .append(getNumBusyConnections()).append(",create=")
+                .append(connectionCreateCount.get()).append(",close=")
+                .append(connectionClosedCount.get()).append(",borrow=")
+                .append(connectionBorrowCount.get()).append(",return=")
+                .append(connectionReturnCount.get()).append("], Operations[")
+                .append("success=").append(operationSuccessCount.get())
+                .append(",failure=").append(operationFailureCount.get())
+                .append(",timeout=").append(operationTimeoutCount.get())
+                .append(",failover=").append(operationFailoverCount.get())
+                .append(",nohosts=").append(noHostsCount.get())
+                .append("], Hosts[").append("add=")
+                .append(hostAddedCount.get()).append(",remove=")
+                .append(hostRemovedCount.get()).append(",down=")
+                .append(hostDownCount.get()).append(",reactivate=")
+                .append(hostReactivatedCount.get()).append("])").toString();
     }
-    
+
     @Override
     public Map<Host, HostStats> getHostStats() {
         throw new UnsupportedOperationException("Not supported");
     }
 
-	@Override
-	public long getNoHostCount() {
-		return this.noHostsCount.get();
-	}
+    @Override
+    public long getNoHostCount() {
+        return this.noHostsCount.get();
+    }
 
 }

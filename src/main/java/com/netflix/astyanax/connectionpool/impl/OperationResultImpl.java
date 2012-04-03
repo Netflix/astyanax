@@ -21,46 +21,46 @@ import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.OperationResult;
 
 public class OperationResultImpl<R> implements OperationResult<R> {
-	
-	private final Host host;
-	private final R result;
-	private final long latency;
-	private int attemptCount = 0;
-	
-	public OperationResultImpl(Host host, R result, long latency) {
-		this.host = host;
-		this.result = result;
-		this.latency = latency;
-	}
-	
-	@Override
-	public Host getHost() {
-		return this.host;
-	}
 
-	@Override
-	public R getResult() {
-		return this.result;
-	}
+    private final Host host;
+    private final R result;
+    private final long latency;
+    private int attemptCount = 0;
 
-	@Override
-	public long getLatency() {
-		return this.latency;
-	}
+    public OperationResultImpl(Host host, R result, long latency) {
+        this.host = host;
+        this.result = result;
+        this.latency = latency;
+    }
 
-	@Override
-	public long getLatency(TimeUnit units) {
-		return units.convert(this.latency, TimeUnit.NANOSECONDS);
-	}
+    @Override
+    public Host getHost() {
+        return this.host;
+    }
 
-	@Override
-	public int getAttemptsCount() {
-		return attemptCount;
-	}
-	
-	@Override
-	public void setAttemptsCount(int count) {
-		this.attemptCount = count;
-	}
+    @Override
+    public R getResult() {
+        return this.result;
+    }
+
+    @Override
+    public long getLatency() {
+        return this.latency;
+    }
+
+    @Override
+    public long getLatency(TimeUnit units) {
+        return units.convert(this.latency, TimeUnit.NANOSECONDS);
+    }
+
+    @Override
+    public int getAttemptsCount() {
+        return attemptCount;
+    }
+
+    @Override
+    public void setAttemptsCount(int count) {
+        this.attemptCount = count;
+    }
 
 }

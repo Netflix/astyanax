@@ -24,7 +24,7 @@ import java.lang.annotation.ElementType;
  * Annotation for components of a composite type.
  * 
  * @author elandau
- *
+ * 
  */
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)

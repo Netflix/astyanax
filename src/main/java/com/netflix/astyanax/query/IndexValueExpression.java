@@ -21,25 +21,25 @@ import java.util.UUID;
 
 import com.netflix.astyanax.Serializer;
 
-public interface IndexValueExpression<K,C>  {
-	
-	IndexQuery<K,C> value(String value);
-	
-	IndexQuery<K,C> value(long value);
+public interface IndexValueExpression<K, C> {
 
-	IndexQuery<K,C> value(int value);
+    IndexQuery<K, C> value(String value);
 
-	IndexQuery<K,C> value(boolean value);
-	
-	IndexQuery<K,C> value(Date value);
-	
-    IndexQuery<K,C> value(byte[] value);
+    IndexQuery<K, C> value(long value);
 
-    IndexQuery<K,C> value(ByteBuffer value);
+    IndexQuery<K, C> value(int value);
 
-    IndexQuery<K,C> value(double value);
+    IndexQuery<K, C> value(boolean value);
 
-    IndexQuery<K,C> value(UUID value);
-	
-    <V> IndexQuery<K,C> value(V value, Serializer<V> valueSerializer);
+    IndexQuery<K, C> value(Date value);
+
+    IndexQuery<K, C> value(byte[] value);
+
+    IndexQuery<K, C> value(ByteBuffer value);
+
+    IndexQuery<K, C> value(double value);
+
+    IndexQuery<K, C> value(UUID value);
+
+    <V> IndexQuery<K, C> value(V value, Serializer<V> valueSerializer);
 }

@@ -15,69 +15,71 @@ import com.netflix.astyanax.connectionpool.JmxConnectionPoolMonitor;
 import com.netflix.astyanax.connectionpool.JmxConnectionPoolMonitorMBean;
 
 public class ConnectionPoolMBeanManager {
-	private static Logger LOG = LogManager.getLogger(ConnectionPoolMBeanManager.class);
-	
-	private MBeanServer mbs;
+    private static Logger LOG = LogManager
+            .getLogger(ConnectionPoolMBeanManager.class);
 
-	private static ConnectionPoolMBeanManager monitorInstance;
-	
-	private HashMap<String, JmxConnectionPoolMonitorMBean> monitors;
+    private MBeanServer mbs;
 
-	private ConnectionPoolMBeanManager() {
-		mbs = ManagementFactory.getPlatformMBeanServer();
-	    monitors = Maps.newHashMap();    
-	}
+    private static ConnectionPoolMBeanManager monitorInstance;
 
-	public static ConnectionPoolMBeanManager getInstance() {
-		if ( monitorInstance == null ) {
-			monitorInstance = new ConnectionPoolMBeanManager();
-	    }
-		return monitorInstance;
-	}
+    private HashMap<String, JmxConnectionPoolMonitorMBean> monitors;
 
-	public synchronized void registerMonitor(String name, ConnectionPool<?> pool) {
-		
-		String monitorName = generateMonitorName(name);
-		
-	    if ( !monitors.containsKey(monitorName) ) {
-			JmxConnectionPoolMonitorMBean mbean;
-	    	try {
-	    		LOG.info("Registering mbean: " + monitorName);
-	    		ObjectName oName = new ObjectName(monitorName);
-	    		mbean = new JmxConnectionPoolMonitor(pool);
-	    		monitors.put(monitorName, mbean);
-    			mbs.registerMBean(mbean, oName);
-		    
-	    	} catch (Exception e) {
-	    		LOG.error(e.getMessage());
-				monitors.remove(monitorName);
-	    	}
-	    }
-	}
-	
-	public synchronized void unregisterMonitor(String name, ConnectionPool<?> pool) {
-		String monitorName = generateMonitorName(name);
-		monitors.remove(monitorName);
-		try {
-			mbs.unregisterMBean(new ObjectName(monitorName));
-		} catch (Exception e) {
-			LOG.error(e.getMessage());
-		}
-	}
+    private ConnectionPoolMBeanManager() {
+        mbs = ManagementFactory.getPlatformMBeanServer();
+        monitors = Maps.newHashMap();
+    }
 
-	public synchronized JmxConnectionPoolMonitorMBean getCassandraMonitor(String name) {
-		String monitorName = generateMonitorName(name);
-		return monitors.get(monitorName);
-	}
-	
-	private String generateMonitorName(String name) {
-		StringBuilder sb = new StringBuilder();
-		sb.append("com.netflix.MonitoredResources");
-		sb.append(":type=ASTYANAX");
-		sb.append(",name=" + name);
-		sb.append(",ServiceType=connectionpool");
-		return sb.toString();
-	}
+    public static ConnectionPoolMBeanManager getInstance() {
+        if (monitorInstance == null) {
+            monitorInstance = new ConnectionPoolMBeanManager();
+        }
+        return monitorInstance;
+    }
 
+    public synchronized void registerMonitor(String name, ConnectionPool<?> pool) {
+
+        String monitorName = generateMonitorName(name);
+
+        if (!monitors.containsKey(monitorName)) {
+            JmxConnectionPoolMonitorMBean mbean;
+            try {
+                LOG.info("Registering mbean: " + monitorName);
+                ObjectName oName = new ObjectName(monitorName);
+                mbean = new JmxConnectionPoolMonitor(pool);
+                monitors.put(monitorName, mbean);
+                mbs.registerMBean(mbean, oName);
+
+            } catch (Exception e) {
+                LOG.error(e.getMessage());
+                monitors.remove(monitorName);
+            }
+        }
+    }
+
+    public synchronized void unregisterMonitor(String name,
+            ConnectionPool<?> pool) {
+        String monitorName = generateMonitorName(name);
+        monitors.remove(monitorName);
+        try {
+            mbs.unregisterMBean(new ObjectName(monitorName));
+        } catch (Exception e) {
+            LOG.error(e.getMessage());
+        }
+    }
+
+    public synchronized JmxConnectionPoolMonitorMBean getCassandraMonitor(
+            String name) {
+        String monitorName = generateMonitorName(name);
+        return monitors.get(monitorName);
+    }
+
+    private String generateMonitorName(String name) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("com.netflix.MonitoredResources");
+        sb.append(":type=ASTYANAX");
+        sb.append(",name=" + name);
+        sb.append(",ServiceType=connectionpool");
+        return sb.toString();
+    }
 
 }

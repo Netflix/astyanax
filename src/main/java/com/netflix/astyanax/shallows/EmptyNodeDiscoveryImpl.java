@@ -21,51 +21,51 @@ import com.netflix.astyanax.connectionpool.NodeDiscovery;
 
 public class EmptyNodeDiscoveryImpl implements NodeDiscovery {
 
-	private static final EmptyNodeDiscoveryImpl instance = new EmptyNodeDiscoveryImpl();
-	
-	private EmptyNodeDiscoveryImpl() {
-		
-	}
-	
-	public static EmptyNodeDiscoveryImpl get() {
-		return instance;
-	}
-	
-	@Override
-	public void start() {
-	}
+    private static final EmptyNodeDiscoveryImpl instance = new EmptyNodeDiscoveryImpl();
 
-	@Override
-	public void shutdown() {
-	}
-	
-	@Override
-	public DateTime getLastRefreshTime() {
-		return null;
-	}
+    private EmptyNodeDiscoveryImpl() {
 
-	@Override
-	public long getRefreshCount() {
-		return 0;
-	}
+    }
 
-	@Override
-	public long getErrorCount() {
-		return 0;
-	}
+    public static EmptyNodeDiscoveryImpl get() {
+        return instance;
+    }
 
-	@Override
-	public Exception getLastException() {
-		return null;
-	}
+    @Override
+    public void start() {
+    }
 
-	@Override
-	public String getRawHostList() {
-		return "";
-	}
-	
-	public String toString() {
-		return "EmptyNodeDiscovery";
-	}
+    @Override
+    public void shutdown() {
+    }
+
+    @Override
+    public DateTime getLastRefreshTime() {
+        return null;
+    }
+
+    @Override
+    public long getRefreshCount() {
+        return 0;
+    }
+
+    @Override
+    public long getErrorCount() {
+        return 0;
+    }
+
+    @Override
+    public Exception getLastException() {
+        return null;
+    }
+
+    @Override
+    public String getRawHostList() {
+        return "";
+    }
+
+    public String toString() {
+        return "EmptyNodeDiscovery";
+    }
 
 }

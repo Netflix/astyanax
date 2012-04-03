@@ -18,44 +18,44 @@ import com.netflix.astyanax.connectionpool.exceptions.SerializationException;
  * 
  */
 public class ObjectSerializer extends AbstractSerializer<Object> implements
-    Serializer<Object> {
+        Serializer<Object> {
 
-  private static final ObjectSerializer INSTANCE = new ObjectSerializer();
+    private static final ObjectSerializer INSTANCE = new ObjectSerializer();
 
-  @Override
-  public ByteBuffer toByteBuffer(Object obj) {
-    try {
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      ObjectOutputStream oos = new ObjectOutputStream(baos);
-      oos.writeObject(obj);
-      oos.close();
+    @Override
+    public ByteBuffer toByteBuffer(Object obj) {
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ObjectOutputStream oos = new ObjectOutputStream(baos);
+            oos.writeObject(obj);
+            oos.close();
 
-      return ByteBuffer.wrap(baos.toByteArray());
-    } catch (IOException ex) {
-      throw new RuntimeException(ex);
+            return ByteBuffer.wrap(baos.toByteArray());
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
     }
-  }
 
-  @Override
-  public Object fromByteBuffer(ByteBuffer bytes) {
-    if ((bytes == null) || !bytes.hasRemaining()) {
-      return null;
+    @Override
+    public Object fromByteBuffer(ByteBuffer bytes) {
+        if ((bytes == null) || !bytes.hasRemaining()) {
+            return null;
+        }
+        try {
+            int l = bytes.remaining();
+            ByteArrayInputStream bais = new ByteArrayInputStream(bytes.array(),
+                    bytes.arrayOffset() + bytes.position(), l);
+            ObjectInputStream ois = new ObjectInputStream(bais);
+            Object obj = ois.readObject();
+            bytes.position(bytes.position() + (l - ois.available()));
+            ois.close();
+            return obj;
+        } catch (Exception ex) {
+            throw new SerializationException(ex);
+        }
     }
-    try {
-      int l = bytes.remaining();
-      ByteArrayInputStream bais = new ByteArrayInputStream(bytes.array(),
-          bytes.arrayOffset() + bytes.position(), l);
-      ObjectInputStream ois = new ObjectInputStream(bais);
-      Object obj = ois.readObject();
-      bytes.position(bytes.position() + (l - ois.available()));
-      ois.close();
-      return obj;
-    } catch (Exception ex) {
-      throw new SerializationException(ex);
-    }
-  }
 
-  public static ObjectSerializer get() {
-    return INSTANCE;
-  }
+    public static ObjectSerializer get() {
+        return INSTANCE;
+    }
 }

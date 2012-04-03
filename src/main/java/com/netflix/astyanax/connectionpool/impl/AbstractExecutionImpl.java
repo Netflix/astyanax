@@ -7,20 +7,21 @@ import com.netflix.astyanax.connectionpool.exceptions.IsRetryableException;
 import com.netflix.astyanax.retry.RetryPolicy;
 
 public abstract class AbstractExecutionImpl<R> implements Execution<R> {
-	public OperationResult<R> executeWithRetry(RetryPolicy retry) throws ConnectionException {
-		ConnectionException lastException = null;
-		retry.begin();
-		do {
-			try {
-				return execute();
-			} catch (ConnectionException ex) {
-				if (ex instanceof IsRetryableException) 
-					lastException = ex;
-				else 
-					throw ex;
-			}
-		} while (retry.allowRetry());
-		
-		throw lastException;
-	}
+    public OperationResult<R> executeWithRetry(RetryPolicy retry)
+            throws ConnectionException {
+        ConnectionException lastException = null;
+        retry.begin();
+        do {
+            try {
+                return execute();
+            } catch (ConnectionException ex) {
+                if (ex instanceof IsRetryableException)
+                    lastException = ex;
+                else
+                    throw ex;
+            }
+        } while (retry.allowRetry());
+
+        throw lastException;
+    }
 }

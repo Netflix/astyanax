@@ -26,101 +26,107 @@ import com.netflix.astyanax.model.ColumnList;
 
 /**
  * Wrapper for a simple list of columns where each column has a scalar value.
+ * 
  * @author elandau
- *
+ * 
  * @param <C>
  */
 public class ThriftColumnListImpl<C> implements ColumnList<C> {
-	private final List<org.apache.cassandra.thrift.Column> columns;
-	private HashMap<C, org.apache.cassandra.thrift.Column> lookup;
-	private final Serializer<C> colSer;
-	
-	public ThriftColumnListImpl(List<org.apache.cassandra.thrift.Column> columns, Serializer<C> colSer) {
-        Preconditions.checkArgument(columns != null, "Columns must not be null");
-        Preconditions.checkArgument(colSer!= null, "Serializer must not be null");
-        
-		this.colSer = colSer;
-		this.columns = columns;
-	}
+    private final List<org.apache.cassandra.thrift.Column> columns;
+    private HashMap<C, org.apache.cassandra.thrift.Column> lookup;
+    private final Serializer<C> colSer;
 
-	@Override
-	public Iterator<Column<C>> iterator() {
-		class IteratorImpl implements Iterator<Column<C>> {
-			Iterator<org.apache.cassandra.thrift.Column> base;
-			
-			public IteratorImpl(Iterator<org.apache.cassandra.thrift.Column> base) {
-				this.base = base;
-			}
-			
-			@Override
-			public boolean hasNext() {
-				return base.hasNext();
-			}
+    public ThriftColumnListImpl(
+            List<org.apache.cassandra.thrift.Column> columns,
+            Serializer<C> colSer) {
+        Preconditions
+                .checkArgument(columns != null, "Columns must not be null");
+        Preconditions.checkArgument(colSer != null,
+                "Serializer must not be null");
 
-			@Override
-			public Column<C> next() {
-				org.apache.cassandra.thrift.Column c = base.next();
-				return new ThriftColumnImpl<C>(colSer.fromBytes(c.getName()), c);
-			}
+        this.colSer = colSer;
+        this.columns = columns;
+    }
 
-			@Override
-			public void remove() {
-				throw new UnsupportedOperationException("Iterator is immutable");
-			}
-		}
-		return new IteratorImpl(columns.iterator());
-	}
+    @Override
+    public Iterator<Column<C>> iterator() {
+        class IteratorImpl implements Iterator<Column<C>> {
+            Iterator<org.apache.cassandra.thrift.Column> base;
 
-	@Override
-	public Column<C> getColumnByName(C columnName) {
-		if (lookup == null) {
-			lookup = new HashMap<C, org.apache.cassandra.thrift.Column>();
-			for (org.apache.cassandra.thrift.Column column : columns) {
-				lookup.put(colSer.fromBytes(column.getName()), column);
-			}
-		}
-		
-		org.apache.cassandra.thrift.Column c = lookup.get(columnName);
-		if (c == null) {
-			return null;
-		}
-		return new ThriftColumnImpl<C>(colSer.fromBytes(c.getName()), c);
-	}
+            public IteratorImpl(
+                    Iterator<org.apache.cassandra.thrift.Column> base) {
+                this.base = base;
+            }
 
-	@Override
-	public Column<C> getColumnByIndex(int idx) {
-		org.apache.cassandra.thrift.Column c = columns.get(idx);
-		return new ThriftColumnImpl<C>(colSer.fromBytes(c.getName()), c);
-	}
-	
-	public C getNameByIndex(int idx) {
-		org.apache.cassandra.thrift.Column column = columns.get(idx);
-		return colSer.fromBytes(column.getName());
-	}
+            @Override
+            public boolean hasNext() {
+                return base.hasNext();
+            }
 
-	@Override
-	public <C2> Column<C2> getSuperColumn(C columnName, Serializer<C2> colSer) {
-		throw new UnsupportedOperationException();
-	}
+            @Override
+            public Column<C> next() {
+                org.apache.cassandra.thrift.Column c = base.next();
+                return new ThriftColumnImpl<C>(colSer.fromBytes(c.getName()), c);
+            }
 
-	@Override
-	public <C2> Column<C2> getSuperColumn(int idx, Serializer<C2> colSer) {
-		throw new UnsupportedOperationException();
-	}
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException("Iterator is immutable");
+            }
+        }
+        return new IteratorImpl(columns.iterator());
+    }
 
-	@Override
-	public boolean isEmpty() {
-		return columns.isEmpty();
-	}
+    @Override
+    public Column<C> getColumnByName(C columnName) {
+        if (lookup == null) {
+            lookup = new HashMap<C, org.apache.cassandra.thrift.Column>();
+            for (org.apache.cassandra.thrift.Column column : columns) {
+                lookup.put(colSer.fromBytes(column.getName()), column);
+            }
+        }
 
-	@Override
-	public int size() {
-		return columns.size();
-	}
+        org.apache.cassandra.thrift.Column c = lookup.get(columnName);
+        if (c == null) {
+            return null;
+        }
+        return new ThriftColumnImpl<C>(colSer.fromBytes(c.getName()), c);
+    }
 
-	@Override
-	public boolean isSuperColumn() {
-		return false;
-	}
+    @Override
+    public Column<C> getColumnByIndex(int idx) {
+        org.apache.cassandra.thrift.Column c = columns.get(idx);
+        return new ThriftColumnImpl<C>(colSer.fromBytes(c.getName()), c);
+    }
+
+    public C getNameByIndex(int idx) {
+        org.apache.cassandra.thrift.Column column = columns.get(idx);
+        return colSer.fromBytes(column.getName());
+    }
+
+    @Override
+    public <C2> Column<C2> getSuperColumn(C columnName, Serializer<C2> colSer) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public <C2> Column<C2> getSuperColumn(int idx, Serializer<C2> colSer) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return columns.isEmpty();
+    }
+
+    @Override
+    public int size() {
+        return columns.size();
+    }
+
+    @Override
+    public boolean isSuperColumn() {
+        return false;
+    }
 
 }

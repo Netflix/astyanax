@@ -12,51 +12,51 @@ import org.apache.cassandra.db.marshal.BooleanType;
  */
 public final class BooleanSerializer extends AbstractSerializer<Boolean> {
 
-  private static final BooleanSerializer instance = new BooleanSerializer();
+    private static final BooleanSerializer instance = new BooleanSerializer();
 
-  public static BooleanSerializer get() {
-    return instance;
-  }
-
-  @Override
-  public ByteBuffer toByteBuffer(Boolean obj) {
-    if (obj == null) {
-      return null;
+    public static BooleanSerializer get() {
+        return instance;
     }
-    boolean bool = obj;
-    byte[] b = new byte[1];
-    b[0] = bool ? (byte) 1 : (byte) 0;
 
-    return ByteBuffer.wrap(b);
-  }
+    @Override
+    public ByteBuffer toByteBuffer(Boolean obj) {
+        if (obj == null) {
+            return null;
+        }
+        boolean bool = obj;
+        byte[] b = new byte[1];
+        b[0] = bool ? (byte) 1 : (byte) 0;
 
-  @Override
-  public Boolean fromByteBuffer(ByteBuffer bytes) {
-    if ((bytes == null) || (bytes.remaining() < 1)) {
-      return null;
+        return ByteBuffer.wrap(b);
     }
-    byte b = bytes.get();
-    return b == (byte) 1;
-  }
 
-  @Override
-  public ByteBuffer getNext(ByteBuffer byteBuffer) {
-	  throw new IllegalStateException("Boolean columns can't be paginated");
-  }
-  
-  @Override
-  public ByteBuffer fromString(String str) {	
-	  return BooleanType.instance.fromString(str);
-  }
+    @Override
+    public Boolean fromByteBuffer(ByteBuffer bytes) {
+        if ((bytes == null) || (bytes.remaining() < 1)) {
+            return null;
+        }
+        byte b = bytes.get();
+        return b == (byte) 1;
+    }
 
-  @Override
-  public String getString(ByteBuffer byteBuffer) {
-	  return fromByteBuffer(byteBuffer).toString();
-  }
-  
-  @Override
-  public ComparatorType getComparatorType() {
-    return ComparatorType.BOOLEANTYPE;
-  }
+    @Override
+    public ByteBuffer getNext(ByteBuffer byteBuffer) {
+        throw new IllegalStateException("Boolean columns can't be paginated");
+    }
+
+    @Override
+    public ByteBuffer fromString(String str) {
+        return BooleanType.instance.fromString(str);
+    }
+
+    @Override
+    public String getString(ByteBuffer byteBuffer) {
+        return fromByteBuffer(byteBuffer).toString();
+    }
+
+    @Override
+    public ComparatorType getComparatorType() {
+        return ComparatorType.BOOLEANTYPE;
+    }
 
 }

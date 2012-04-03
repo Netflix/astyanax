@@ -24,49 +24,51 @@ import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 
-public abstract class AbstractOperationImpl<R> implements Operation<Cassandra.Client, R> {
-	private final CassandraOperationTracer tracer;
-	private final Host pinnedHost;
-	
-	public AbstractOperationImpl(CassandraOperationTracer tracer, Host host) {
-		this.tracer = tracer;
-		this.pinnedHost = host;
-	}
-	
-	public AbstractOperationImpl(CassandraOperationTracer tracer) {
-		this.tracer = tracer;
-		this.pinnedHost = null;
-	}
-	
-	@Override
-	public BigInteger getToken() {
-		return null;
-	}
+public abstract class AbstractOperationImpl<R> implements
+        Operation<Cassandra.Client, R> {
+    private final CassandraOperationTracer tracer;
+    private final Host pinnedHost;
 
-	@Override
-	public String getKeyspace() {
-		return null;
-	}
-	
-	@Override
-	public R execute(Cassandra.Client client) throws ConnectionException {
-		try {
-			tracer.start();
-			R result = internalExecute(client);
-			tracer.success();
-			return result;
-		}
-		catch (Exception e) {
-			ConnectionException ce = ThriftConverter.ToConnectionPoolException(e);
-			tracer.failure(ce);
-			throw ce;
-		}
-	}
-	
-	@Override
-	public Host getPinnedHost() {
-		return pinnedHost;
-	}
-	
-	protected abstract R internalExecute(Cassandra.Client client) throws Exception;
+    public AbstractOperationImpl(CassandraOperationTracer tracer, Host host) {
+        this.tracer = tracer;
+        this.pinnedHost = host;
+    }
+
+    public AbstractOperationImpl(CassandraOperationTracer tracer) {
+        this.tracer = tracer;
+        this.pinnedHost = null;
+    }
+
+    @Override
+    public BigInteger getToken() {
+        return null;
+    }
+
+    @Override
+    public String getKeyspace() {
+        return null;
+    }
+
+    @Override
+    public R execute(Cassandra.Client client) throws ConnectionException {
+        try {
+            tracer.start();
+            R result = internalExecute(client);
+            tracer.success();
+            return result;
+        } catch (Exception e) {
+            ConnectionException ce = ThriftConverter
+                    .ToConnectionPoolException(e);
+            tracer.failure(ce);
+            throw ce;
+        }
+    }
+
+    @Override
+    public Host getPinnedHost() {
+        return pinnedHost;
+    }
+
+    protected abstract R internalExecute(Cassandra.Client client)
+            throws Exception;
 }

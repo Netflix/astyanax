@@ -20,26 +20,26 @@ import java.nio.ByteBuffer;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.Row;
 
-public class ThriftRowImpl<K,C> implements Row<K,C> {
-	private final ColumnList<C> columns;
-	private final ByteBuffer rawkey;
-	private final K key;
-	
-	public ThriftRowImpl(K key, ByteBuffer byteBuffer, ColumnList<C> columns) {
-		this.key = key;
-		this.columns = columns;
-		this.rawkey = byteBuffer;
-	}
-	
-	@Override
-	public K getKey() {
-		return key;
-	}
+public class ThriftRowImpl<K, C> implements Row<K, C> {
+    private final ColumnList<C> columns;
+    private final ByteBuffer rawkey;
+    private final K key;
 
-	@Override
-	public ColumnList<C> getColumns() {
-		return columns;
-	}
+    public ThriftRowImpl(K key, ByteBuffer byteBuffer, ColumnList<C> columns) {
+        this.key = key;
+        this.columns = columns;
+        this.rawkey = byteBuffer;
+    }
+
+    @Override
+    public K getKey() {
+        return key;
+    }
+
+    @Override
+    public ColumnList<C> getColumns() {
+        return columns;
+    }
 
     @Override
     public ByteBuffer getRawKey() {

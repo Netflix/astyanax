@@ -26,58 +26,66 @@ import com.netflix.astyanax.retry.RetryPolicy;
  * Interface defining all astyanax API configuration parameters.
  * 
  * @author elandau
- *
+ * 
  */
 public interface AstyanaxConfiguration {
-	/**
-	 * TODO
-	 * @return
-	 */
-	RetryPolicy getRetryPolicy();
-	
-	/**
-	 * Default consistency level used when reading from the cluster.  This
-	 * value can be overwritten on the Query operations (returned by 
-	 * Keyspace.prepareXXQuery) by calling Query.setConsistencyLevel().
-	 * @return
-	 */
-	ConsistencyLevel getDefaultReadConsistencyLevel();
+    /**
+     * TODO
+     * 
+     * @return
+     */
+    RetryPolicy getRetryPolicy();
 
-	/**
-	 * Default consistency level used when reading from the cluster.  This
-	 * value can be overwritten on MutationBatch operation (returned by 
-	 * Keyspace.prepareMutationBatch) by calling MutationBatch.setConsistencyLevel().
-	 * @return
-	 */
-	ConsistencyLevel getDefaultWriteConsistencyLevel();
+    /**
+     * Default consistency level used when reading from the cluster. This value
+     * can be overwritten on the Query operations (returned by
+     * Keyspace.prepareXXQuery) by calling Query.setConsistencyLevel().
+     * 
+     * @return
+     */
+    ConsistencyLevel getDefaultReadConsistencyLevel();
 
-	/**
-	 * Return clock to use when setting timestamps for column insertion and 
-	 * deletion operations.
-	 * @return
-	 */
-	Clock getClock();
-	
-	/**
-	 * Return the maximum number of allows async threads to executeAsync()
-	 * @return
-	 */
-	ExecutorService getAsyncExecutor();
+    /**
+     * Default consistency level used when reading from the cluster. This value
+     * can be overwritten on MutationBatch operation (returned by
+     * Keyspace.prepareMutationBatch) by calling
+     * MutationBatch.setConsistencyLevel().
+     * 
+     * @return
+     */
+    ConsistencyLevel getDefaultWriteConsistencyLevel();
 
-	/**
-	 * Fixed delay for node disocvery refresh
-	 */
-	int getDiscoveryDelayInSeconds();
+    /**
+     * Return clock to use when setting timestamps for column insertion and
+     * deletion operations.
+     * 
+     * @return
+     */
+    Clock getClock();
 
-	/**
-	 * Get type of node discovery to perform
-	 * @return
-	 */
-	NodeDiscoveryType getDiscoveryType();
+    /**
+     * Return the maximum number of allows async threads to executeAsync()
+     * 
+     * @return
+     */
+    ExecutorService getAsyncExecutor();
 
-	/**
-	 * Type of connection pool to use for this instance
-	 * @return
-	 */
-	ConnectionPoolType getConnectionPoolType();
+    /**
+     * Fixed delay for node disocvery refresh
+     */
+    int getDiscoveryDelayInSeconds();
+
+    /**
+     * Get type of node discovery to perform
+     * 
+     * @return
+     */
+    NodeDiscoveryType getDiscoveryType();
+
+    /**
+     * Type of connection pool to use for this instance
+     * 
+     * @return
+     */
+    ConnectionPoolType getConnectionPoolType();
 }

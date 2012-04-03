@@ -19,18 +19,20 @@ import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.UUIDSerializer;
 
-public class PreparedIndexExpressionImpl<K, C> implements PreparedIndexExpression<K, C>, PreparedIndexOperationExpression<K,C>, PreparedIndexValueExpression<K,C> {
+public class PreparedIndexExpressionImpl<K, C> implements
+        PreparedIndexExpression<K, C>, PreparedIndexOperationExpression<K, C>,
+        PreparedIndexValueExpression<K, C> {
     private ByteBuffer value;
     private ByteBuffer column;
     private IndexOperator operator;
     private final Serializer<C> columnSerializer;
-    
+
     public PreparedIndexExpressionImpl(Serializer<C> columnSerializer) {
         this.columnSerializer = columnSerializer;
     }
-    
+
     @Override
-    public PreparedIndexOperationExpression<K,C> whereColumn(C columnName) {
+    public PreparedIndexOperationExpression<K, C> whereColumn(C columnName) {
         column = columnSerializer.toByteBuffer(columnName);
         return this;
     }
@@ -51,31 +53,31 @@ public class PreparedIndexExpressionImpl<K, C> implements PreparedIndexExpressio
     }
 
     @Override
-    public PreparedIndexValueExpression<K,C> equals() {
+    public PreparedIndexValueExpression<K, C> equals() {
         operator = IndexOperator.EQ;
         return this;
     }
 
     @Override
-    public PreparedIndexValueExpression<K,C> greaterThan() {
+    public PreparedIndexValueExpression<K, C> greaterThan() {
         operator = IndexOperator.GT;
         return this;
     }
 
     @Override
-    public PreparedIndexValueExpression<K,C> lessThan() {
+    public PreparedIndexValueExpression<K, C> lessThan() {
         operator = IndexOperator.LT;
         return this;
     }
 
     @Override
-    public PreparedIndexValueExpression<K,C> greaterThanEquals() {
+    public PreparedIndexValueExpression<K, C> greaterThanEquals() {
         operator = IndexOperator.GTE;
         return this;
     }
 
     @Override
-    public PreparedIndexValueExpression<K,C> lessThanEquals() {
+    public PreparedIndexValueExpression<K, C> lessThanEquals() {
         operator = IndexOperator.LTE;
         return this;
     }
@@ -135,7 +137,8 @@ public class PreparedIndexExpressionImpl<K, C> implements PreparedIndexExpressio
     }
 
     @Override
-    public <V> PreparedIndexExpression<K, C> value(V value, Serializer<V> valueSerializer) {
+    public <V> PreparedIndexExpression<K, C> value(V value,
+            Serializer<V> valueSerializer) {
         this.value = valueSerializer.toByteBuffer(value);
         return this;
     }

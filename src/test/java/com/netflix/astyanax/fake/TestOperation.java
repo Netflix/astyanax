@@ -23,24 +23,24 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 
 public class TestOperation implements Operation<TestClient, String> {
-	@Override
-	public String execute(TestClient client)
-			throws ConnectionException, OperationException {
-		return "RESULT";
-	}
+    @Override
+    public String execute(TestClient client) throws ConnectionException,
+            OperationException {
+        return "RESULT";
+    }
 
-	@Override
-	public BigInteger getToken() {
-		return null;
-	}
+    @Override
+    public BigInteger getToken() {
+        return null;
+    }
 
-	@Override
-	public String getKeyspace() {
-		return null;
-	}
+    @Override
+    public String getKeyspace() {
+        return null;
+    }
 
-	@Override
-	public Host getPinnedHost() {
-		return null;
-	}
+    @Override
+    public Host getPinnedHost() {
+        return null;
+    }
 }

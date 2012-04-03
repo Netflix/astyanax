@@ -22,14 +22,15 @@ import com.netflix.astyanax.model.CqlResult;
  * Interface for executing a CQL query.
  * 
  * @author elandau
- *
+ * 
  * @param <K>
  * @param <C>
  */
 public interface CqlQuery<K, C> extends Execution<CqlResult<K, C>> {
-	/**
-	 * Turns on compression for the response
-	 * @return
-	 */
-	CqlQuery<K,C> useCompression();
+    /**
+     * Turns on compression for the response
+     * 
+     * @return
+     */
+    CqlQuery<K, C> useCompression();
 }

@@ -20,17 +20,23 @@ import java.util.Map;
 
 public interface KeyspaceDefinition {
 
-	KeyspaceDefinition setName(String name);
-	String getName();
+    KeyspaceDefinition setName(String name);
 
-	KeyspaceDefinition setStrategyClass(String strategyClass);
-	String getStrategyClass();
+    String getName();
 
-	KeyspaceDefinition setStrategyOptions(Map<String, String> options);
-	KeyspaceDefinition addStrategyOption(String name, String value);
-	Map<String, String> getStrategyOptions();
-	
-	KeyspaceDefinition addColumnFamily(ColumnFamilyDefinition cfDef);
-	List<ColumnFamilyDefinition> getColumnFamilyList();
-	ColumnFamilyDefinition getColumnFamily(String columnFamily);
+    KeyspaceDefinition setStrategyClass(String strategyClass);
+
+    String getStrategyClass();
+
+    KeyspaceDefinition setStrategyOptions(Map<String, String> options);
+
+    KeyspaceDefinition addStrategyOption(String name, String value);
+
+    Map<String, String> getStrategyOptions();
+
+    KeyspaceDefinition addColumnFamily(ColumnFamilyDefinition cfDef);
+
+    List<ColumnFamilyDefinition> getColumnFamilyList();
+
+    ColumnFamilyDefinition getColumnFamily(String columnFamily);
 }

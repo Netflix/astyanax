@@ -18,7 +18,9 @@ package com.netflix.astyanax.connectionpool;
 import java.util.List;
 
 public interface TokenRange {
-	String getStartToken();
-	String getEndToken();
-	List<String> getEndpoints();
+    String getStartToken();
+
+    String getEndToken();
+
+    List<String> getEndpoints();
 }

@@ -33,4 +33,4 @@ public class DynamicComposite extends AbstractComposite {
         DynamicComposite composite = new DynamicComposite(l);
         return composite.serialize();
     }
-  }
+}

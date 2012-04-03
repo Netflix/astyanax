@@ -20,194 +20,221 @@ import java.util.List;
 import com.netflix.astyanax.AuthenticationCredentials;
 
 public interface ConnectionPoolConfiguration {
-	/**
-	 * TODO
-	 * @return
-	 */
-	LatencyScoreStrategy getLatencyScoreStrategy();
-	
-	/**
-	 * TODO
-	 * @return
-	 */
-	BadHostDetector getBadHostDetector();
-	
-	/**
-	 * Data port to be used when no port is specified to a list of seeds or
-	 * when doing a ring describe since the ring describe does not include 
-	 * a host
-	 * @return
-	 */
-	int getPort();
+    /**
+     * TODO
+     * 
+     * @return
+     */
+    LatencyScoreStrategy getLatencyScoreStrategy();
 
-	/**
-	 * Unique name assigned to this connection pool
-	 * @return
-	 */
-	String getName();
+    /**
+     * TODO
+     * 
+     * @return
+     */
+    BadHostDetector getBadHostDetector();
 
-	/**
-	 * Maximum number of connections to allocate for a single host's pool
-	 * @return
-	 */
-	int getMaxConnsPerHost();
+    /**
+     * Data port to be used when no port is specified to a list of seeds or when
+     * doing a ring describe since the ring describe does not include a host
+     * 
+     * @return
+     */
+    int getPort();
 
-	/**
-	 * Initial number of connections created when a connection pool is started
-	 * @return
-	 */
-	int getInitConnsPerHost();
+    /**
+     * Unique name assigned to this connection pool
+     * 
+     * @return
+     */
+    String getName();
 
-	/**
-	 * Maximum number of connections in the pool, not used by all connection pool implementations
-	 * @return
-	 */
-	int getMaxConns();
-	
-	/**
-	 * Maximum amount of time to wait for a connection to free up when a connection
-	 * pool is exhausted.  
-	 * @return
-	 */
-	int getMaxTimeoutWhenExhausted();
-	
-	/**
-	 * Get the max number of failover attempts
-	 * @return
-	 */
-	int getMaxFailoverCount();
+    /**
+     * Maximum number of connections to allocate for a single host's pool
+     * 
+     * @return
+     */
+    int getMaxConnsPerHost();
 
-	/**
-	 * Return the backoff strategy to use.
-	 * 
-	 * @see com.netflix.astyanax.connectionpool.RetryBackoffStrategy
-	 * @return
-	 */
-	RetryBackoffStrategy getRetryBackoffStrategy();
+    /**
+     * Initial number of connections created when a connection pool is started
+     * 
+     * @return
+     */
+    int getInitConnsPerHost();
 
-	/**
-	 * List of comma delimited host:port combinations.  If port is not provided
-	 * then getPort() will be used by default.  This list must contain at 
-	 * least one valid host other it would not be possible to do a ring describe.
-	 * @return
-	 */
-	String getSeeds();
+    /**
+     * Maximum number of connections in the pool, not used by all connection
+     * pool implementations
+     * 
+     * @return
+     */
+    int getMaxConns();
 
-	/**
-	 * Return a list of Host objects from the list of seeds returned by getSeeds().
-	 * This list must contain at least one valid host other it would not be 
-	 * possible to do a ring describe.
-	 * @return
-	 */
-	List<Host> getSeedHosts();
-	
-	/**
-	 * Socket read/write timeout
-	 * @return
-	 */
-	int getSocketTimeout();
+    /**
+     * Maximum amount of time to wait for a connection to free up when a
+     * connection pool is exhausted.
+     * 
+     * @return
+     */
+    int getMaxTimeoutWhenExhausted();
 
-	/**
-	 * Socket connect timeout
-	 * @return
-	 */
-	int getConnectTimeout();
+    /**
+     * Get the max number of failover attempts
+     * 
+     * @return
+     */
+    int getMaxFailoverCount();
 
-	/**
-	 * Window size for limiting the number of connection open requests
-	 * @return
-	 */
-	int getConnectionLimiterWindowSize();
-	
-	/**
-	 * Maximum number of connection attempts in a given window
-	 * @return
-	 */
-	int getConnectionLimiterMaxPendingCount();
-	
-	/**
-	 * Latency samples window size for scoring algorithm
-	 * @return
-	 */
-	int getLatencyAwareWindowSize();
+    /**
+     * Return the backoff strategy to use.
+     * 
+     * @see com.netflix.astyanax.connectionpool.RetryBackoffStrategy
+     * @return
+     */
+    RetryBackoffStrategy getRetryBackoffStrategy();
 
-	/**
-	 * Sentinel compare value for Phi Accrual 
-	 * @return
-	 */
-	float getLatencyAwareSentinelCompare();
+    /**
+     * List of comma delimited host:port combinations. If port is not provided
+     * then getPort() will be used by default. This list must contain at least
+     * one valid host other it would not be possible to do a ring describe.
+     * 
+     * @return
+     */
+    String getSeeds();
 
-	/**
-	 * Return the threshold after which a host will not be considered good enough for 
-	 * executing operations.  
-	 * @return  Valid values are 0 to 1
-	 */
-	float getLatencyAwareBadnessThreshold();
-	
-	/**
-	 * 
-	 * @return
-	 */
-	int getLatencyAwareUpdateInterval();
+    /**
+     * Return a list of Host objects from the list of seeds returned by
+     * getSeeds(). This list must contain at least one valid host other it would
+     * not be possible to do a ring describe.
+     * 
+     * @return
+     */
+    List<Host> getSeedHosts();
 
-	/**
-	 * 
-	 * @return
-	 */
-	int getLatencyAwareResetInterval();
-	
-	/**
-	 * Maximum number of pending connect attempts per host
-	 * @return
-	 */
-	int getMaxPendingConnectionsPerHost();
+    /**
+     * Socket read/write timeout
+     * 
+     * @return
+     */
+    int getSocketTimeout();
 
-	/**
-	 * Get max number of blocked clients for a host.  
-	 * @return
-	 */
-	int getMaxBlockedThreadsPerHost();
-	
-	/**
-	 * Shut down a host if it times out too many time within this window
-	 * @return
-	 */
-	int getTimeoutWindow();
-	
-	/**
-	 * Number of allowed timeouts within getTimeoutWindow() milliseconds
-	 * @return
-	 */
-	int getMaxTimeoutCount();
+    /**
+     * Socket connect timeout
+     * 
+     * @return
+     */
+    int getConnectTimeout();
 
-	/**
-	 * TODO
-	 * @return
-	 */
-	int getRetrySuspendWindow();
+    /**
+     * Window size for limiting the number of connection open requests
+     * 
+     * @return
+     */
+    int getConnectionLimiterWindowSize();
 
-	/**
-	 * TODO
-	 * @return
-	 */
-	int  getRetryMaxDelaySlice();
-	
-	/**
-	 * TODO
-	 * @return
-	 */
-	int getRetryDelaySlice();
-	
-	/**
-	 * Maximum allowed operations per connections before forcing the 
-	 * connection to close
-	 * @return
-	 */
-	int getMaxOperationsPerConnection();
+    /**
+     * Maximum number of connection attempts in a given window
+     * 
+     * @return
+     */
+    int getConnectionLimiterMaxPendingCount();
 
-	/**
-	 * Can return null if no login required
-	 * @return
-	 */
-	AuthenticationCredentials getAuthenticationCredentials();
+    /**
+     * Latency samples window size for scoring algorithm
+     * 
+     * @return
+     */
+    int getLatencyAwareWindowSize();
+
+    /**
+     * Sentinel compare value for Phi Accrual
+     * 
+     * @return
+     */
+    float getLatencyAwareSentinelCompare();
+
+    /**
+     * Return the threshold after which a host will not be considered good
+     * enough for executing operations.
+     * 
+     * @return Valid values are 0 to 1
+     */
+    float getLatencyAwareBadnessThreshold();
+
+    /**
+     * 
+     * @return
+     */
+    int getLatencyAwareUpdateInterval();
+
+    /**
+     * 
+     * @return
+     */
+    int getLatencyAwareResetInterval();
+
+    /**
+     * Maximum number of pending connect attempts per host
+     * 
+     * @return
+     */
+    int getMaxPendingConnectionsPerHost();
+
+    /**
+     * Get max number of blocked clients for a host.
+     * 
+     * @return
+     */
+    int getMaxBlockedThreadsPerHost();
+
+    /**
+     * Shut down a host if it times out too many time within this window
+     * 
+     * @return
+     */
+    int getTimeoutWindow();
+
+    /**
+     * Number of allowed timeouts within getTimeoutWindow() milliseconds
+     * 
+     * @return
+     */
+    int getMaxTimeoutCount();
+
+    /**
+     * TODO
+     * 
+     * @return
+     */
+    int getRetrySuspendWindow();
+
+    /**
+     * TODO
+     * 
+     * @return
+     */
+    int getRetryMaxDelaySlice();
+
+    /**
+     * TODO
+     * 
+     * @return
+     */
+    int getRetryDelaySlice();
+
+    /**
+     * Maximum allowed operations per connections before forcing the connection
+     * to close
+     * 
+     * @return
+     */
+    int getMaxOperationsPerConnection();
+
+    /**
+     * Can return null if no login required
+     * 
+     * @return
+     */
+    AuthenticationCredentials getAuthenticationCredentials();
 }

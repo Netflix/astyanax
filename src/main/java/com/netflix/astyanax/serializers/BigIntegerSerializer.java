@@ -12,51 +12,51 @@ import org.apache.cassandra.db.marshal.IntegerType;
  */
 public final class BigIntegerSerializer extends AbstractSerializer<BigInteger> {
 
-  private static final BigIntegerSerializer INSTANCE = new BigIntegerSerializer();
+    private static final BigIntegerSerializer INSTANCE = new BigIntegerSerializer();
 
-  public static BigIntegerSerializer get() {
-    return INSTANCE;
-  }
-
-  @Override
-  public BigInteger fromByteBuffer(ByteBuffer byteBuffer) {
-    if (byteBuffer == null) {
-      return null;
+    public static BigIntegerSerializer get() {
+        return INSTANCE;
     }
-    int length = byteBuffer.remaining();
-    byte[] bytes = new byte[length];
-    byteBuffer.duplicate().get(bytes);
-    return new BigInteger(bytes);
-  }
 
-  @Override
-  public ByteBuffer toByteBuffer(BigInteger obj) {
-    if (obj == null) {
-      return null;
+    @Override
+    public BigInteger fromByteBuffer(ByteBuffer byteBuffer) {
+        if (byteBuffer == null) {
+            return null;
+        }
+        int length = byteBuffer.remaining();
+        byte[] bytes = new byte[length];
+        byteBuffer.duplicate().get(bytes);
+        return new BigInteger(bytes);
     }
-    return ByteBuffer.wrap(obj.toByteArray());
-  }
 
-  @Override
-  public ComparatorType getComparatorType() {
-    return ComparatorType.INTEGERTYPE;
-  }
+    @Override
+    public ByteBuffer toByteBuffer(BigInteger obj) {
+        if (obj == null) {
+            return null;
+        }
+        return ByteBuffer.wrap(obj.toByteArray());
+    }
 
-  @Override
-  public ByteBuffer fromString(String str) {
-	return IntegerType.instance.fromString(str);
-  }
-	
-  @Override
-  public String getString(ByteBuffer byteBuffer) {
-	return IntegerType.instance.getString(byteBuffer);
-  }
+    @Override
+    public ComparatorType getComparatorType() {
+        return ComparatorType.INTEGERTYPE;
+    }
 
-  @Override
-  public ByteBuffer getNext(ByteBuffer byteBuffer) {
-	BigInteger bigint = fromByteBuffer(byteBuffer.duplicate());
-	bigint = bigint.add(new BigInteger("1"));
-	return toByteBuffer(bigint);
-  }
+    @Override
+    public ByteBuffer fromString(String str) {
+        return IntegerType.instance.fromString(str);
+    }
+
+    @Override
+    public String getString(ByteBuffer byteBuffer) {
+        return IntegerType.instance.getString(byteBuffer);
+    }
+
+    @Override
+    public ByteBuffer getNext(ByteBuffer byteBuffer) {
+        BigInteger bigint = fromByteBuffer(byteBuffer.duplicate());
+        bigint = bigint.add(new BigInteger("1"));
+        return toByteBuffer(bigint);
+    }
 
 }

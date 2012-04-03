@@ -21,76 +21,78 @@ import com.netflix.astyanax.connectionpool.Host;
 
 /**
  * Connection exception caused by an error in the connection pool or a transport
- * error related to the connection itself.  Application errors are derived from
+ * error related to the connection itself. Application errors are derived from
  * OperationException.
  * 
  * @author elandau
- *
+ * 
  */
 public abstract class ConnectionException extends Exception {
-	/**
+    /**
      * 
      */
     private static final long serialVersionUID = -3476496346094715988L;
     private Host host = Host.NO_HOST;
-	private long latency = 0;
-	private long latencyWithPool = 0;
-	private int attemptCount = 0;
-	
-	public ConnectionException(String message) {
-		super(message);
-	}
-	
-	public ConnectionException(Throwable t) {
-		super(t);
-	}
-	
-	public ConnectionException(String message, Throwable cause) {
+    private long latency = 0;
+    private long latencyWithPool = 0;
+    private int attemptCount = 0;
+
+    public ConnectionException(String message) {
+        super(message);
+    }
+
+    public ConnectionException(Throwable t) {
+        super(t);
+    }
+
+    public ConnectionException(String message, Throwable cause) {
         super(message, cause);
     }
-	
-	public ConnectionException setHost(Host host) {
-		this.host = host;
-		return this;
-	}
-	
-	public Host getHost() {
-		return this.host;
-	}
-	
-	public ConnectionException setLatency(long latency) {
-		this.latency = latency;
-		return this;
-	}
-	
-	public long getLatency() {
-		return this.latency;
-	}
-	
-	public long getLatency(TimeUnit units) {
-		return units.convert(this.latency, TimeUnit.NANOSECONDS);
-	}
-	
-	public ConnectionException setLatencyWithPool(long latency) {
-		this.latencyWithPool = latency;
-		return this;
-	}
-	
-	public long getLatencyWithPool() {
-		return this.latencyWithPool;
-	}
-	
-	@Override
-	public String getMessage() {
-		return getClass().getSimpleName() + ": [host=" + host + ", latency=" + latency + "(" + latencyWithPool + "), attempts=" + attemptCount + "] " + super.getMessage();
-	}
-	
-	public String getOriginalMessage() {
-	    return super.getMessage();
-	}
 
-	public ConnectionException setAttempt(int attemptCount) {
-		this.attemptCount = attemptCount;
-		return this;
-	}
+    public ConnectionException setHost(Host host) {
+        this.host = host;
+        return this;
+    }
+
+    public Host getHost() {
+        return this.host;
+    }
+
+    public ConnectionException setLatency(long latency) {
+        this.latency = latency;
+        return this;
+    }
+
+    public long getLatency() {
+        return this.latency;
+    }
+
+    public long getLatency(TimeUnit units) {
+        return units.convert(this.latency, TimeUnit.NANOSECONDS);
+    }
+
+    public ConnectionException setLatencyWithPool(long latency) {
+        this.latencyWithPool = latency;
+        return this;
+    }
+
+    public long getLatencyWithPool() {
+        return this.latencyWithPool;
+    }
+
+    @Override
+    public String getMessage() {
+        return getClass().getSimpleName() + ": [host=" + host + ", latency="
+                + latency + "(" + latencyWithPool + "), attempts="
+                + attemptCount + "] " + super.getMessage();
+    }
+
+    public String getOriginalMessage() {
+        return super.getMessage();
+    }
+
+    public ConnectionException setAttempt(int attemptCount) {
+        this.attemptCount = attemptCount;
+        return this;
+    }
 }

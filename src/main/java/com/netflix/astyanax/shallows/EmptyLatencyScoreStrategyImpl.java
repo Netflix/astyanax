@@ -8,64 +8,68 @@ import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
 
 public class EmptyLatencyScoreStrategyImpl implements LatencyScoreStrategy {
 
-	public static EmptyLatencyScoreStrategyImpl instance = new EmptyLatencyScoreStrategyImpl();
-	public static EmptyLatencyScoreStrategyImpl get() { return instance; }
-	
-	@Override
-	public Instance createInstance() {
-		return new Instance() {
+    public static EmptyLatencyScoreStrategyImpl instance = new EmptyLatencyScoreStrategyImpl();
 
-			@Override
-			public void addSample(long sample) {
-			}
+    public static EmptyLatencyScoreStrategyImpl get() {
+        return instance;
+    }
 
-			@Override
-			public double getScore() {
-				return 0;
-			}
+    @Override
+    public Instance createInstance() {
+        return new Instance() {
 
-			@Override
-			public void reset() {
-			}
+            @Override
+            public void addSample(long sample) {
+            }
 
-			@Override
-			public double getMean() {
-				return 0;
-			}
+            @Override
+            public double getScore() {
+                return 0;
+            }
 
-			@Override
-			public void update() {
-			}
-		};
-	}
+            @Override
+            public void reset() {
+            }
 
-	@Override
-	public void removeInstance(Instance instance) {
-	}
+            @Override
+            public double getMean() {
+                return 0;
+            }
 
-	@Override
-	public void start(Listener listener) {
-	}
+            @Override
+            public void update() {
+            }
+        };
+    }
 
-	@Override
-	public void shutdown() {
-	}
+    @Override
+    public void removeInstance(Instance instance) {
+    }
 
-	@Override
-	public void update() {
-	}
+    @Override
+    public void start(Listener listener) {
+    }
 
-	@Override
-	public void reset() {
-	}
+    @Override
+    public void shutdown() {
+    }
 
-	@Override
-	public <CL> List<HostConnectionPool<CL>> sortAndfilterPartition(List<HostConnectionPool<CL>> pools, AtomicBoolean prioritized) {
-		prioritized.set(false);
-		return pools;
-	}
+    @Override
+    public void update() {
+    }
 
-	public String toString() {
-		return "Empty[]";
-	}
+    @Override
+    public void reset() {
+    }
+
+    @Override
+    public <CL> List<HostConnectionPool<CL>> sortAndfilterPartition(
+            List<HostConnectionPool<CL>> pools, AtomicBoolean prioritized) {
+        prioritized.set(false);
+        return pools;
+    }
+
+    public String toString() {
+        return "Empty[]";
+    }
 }

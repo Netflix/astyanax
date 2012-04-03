@@ -8,12 +8,13 @@ import com.netflix.astyanax.model.DynamicComposite;
  * @author Todd Nine
  * 
  */
-public class DynamicCompositeSerializer extends AbstractSerializer<DynamicComposite> {
-	private static final DynamicCompositeSerializer instance = new DynamicCompositeSerializer();
+public class DynamicCompositeSerializer extends
+        AbstractSerializer<DynamicComposite> {
+    private static final DynamicCompositeSerializer instance = new DynamicCompositeSerializer();
 
-	public static DynamicCompositeSerializer get() {
-	    return instance;
-	}
+    public static DynamicCompositeSerializer get() {
+        return instance;
+    }
 
     @Override
     public ByteBuffer toByteBuffer(DynamicComposite obj) {
@@ -31,19 +32,20 @@ public class DynamicCompositeSerializer extends AbstractSerializer<DynamicCompos
     public ComparatorType getComparatorType() {
         return ComparatorType.DYNAMICCOMPOSITETYPE;
     }
-    
+
     @Override
     public ByteBuffer fromString(String string) {
         throw new UnsupportedOperationException();
     }
-    
+
     @Override
     public String getString(ByteBuffer byteBuffer) {
         throw new UnsupportedOperationException();
     }
 
-	@Override
-	public ByteBuffer getNext(ByteBuffer byteBuffer) {
-		throw new IllegalStateException("DynamicComposite columns can't be paginated this way.");
-	}
+    @Override
+    public ByteBuffer getNext(ByteBuffer byteBuffer) {
+        throw new IllegalStateException(
+                "DynamicComposite columns can't be paginated this way.");
+    }
 }

@@ -33,73 +33,76 @@ import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.UUIDSerializer;
 
-public abstract class AbstractThriftColumnMutationImpl implements ColumnMutation {
+public abstract class AbstractThriftColumnMutationImpl implements
+        ColumnMutation {
 
-	protected final ByteBuffer key;
-	protected final ByteBuffer column;
-	protected final Clock clock;
-	
-	public AbstractThriftColumnMutationImpl(ByteBuffer key, ByteBuffer column, Clock clock) {
-		this.key = key;
-		this.column = column;
-		this.clock = clock;
-	}
-	
-	@Override
-	public Execution<Void> putValue(String value, Integer ttl) {
-		return insertValue(StringSerializer.get().toByteBuffer(value), ttl);
-	}
+    protected final ByteBuffer key;
+    protected final ByteBuffer column;
+    protected final Clock clock;
 
-	@Override
-	public Execution<Void> putValue(byte[] value, Integer ttl) {
-		return insertValue(BytesArraySerializer.get().toByteBuffer(value), ttl);
-	}
+    public AbstractThriftColumnMutationImpl(ByteBuffer key, ByteBuffer column,
+            Clock clock) {
+        this.key = key;
+        this.column = column;
+        this.clock = clock;
+    }
 
-	@Override
-	public Execution<Void> putValue(int value, Integer ttl) {
-		return insertValue(IntegerSerializer.get().toByteBuffer(value), ttl);
-	}
+    @Override
+    public Execution<Void> putValue(String value, Integer ttl) {
+        return insertValue(StringSerializer.get().toByteBuffer(value), ttl);
+    }
 
-	@Override
-	public Execution<Void> putValue(long value, Integer ttl) {
-		return insertValue(LongSerializer.get().toByteBuffer(value), ttl);
-	}
+    @Override
+    public Execution<Void> putValue(byte[] value, Integer ttl) {
+        return insertValue(BytesArraySerializer.get().toByteBuffer(value), ttl);
+    }
 
-	@Override
-	public Execution<Void> putValue(boolean value, Integer ttl) {
-		return insertValue(BooleanSerializer.get().toByteBuffer(value), ttl);
-	}
+    @Override
+    public Execution<Void> putValue(int value, Integer ttl) {
+        return insertValue(IntegerSerializer.get().toByteBuffer(value), ttl);
+    }
 
-	@Override
-	public Execution<Void> putValue(ByteBuffer value, Integer ttl) {
-		return insertValue(ByteBufferSerializer.get().toByteBuffer(value), ttl);
-	}
+    @Override
+    public Execution<Void> putValue(long value, Integer ttl) {
+        return insertValue(LongSerializer.get().toByteBuffer(value), ttl);
+    }
 
-	@Override
-	public Execution<Void> putValue(Date value, Integer ttl) {
-		return insertValue(DateSerializer.get().toByteBuffer(value), ttl);
-	}
+    @Override
+    public Execution<Void> putValue(boolean value, Integer ttl) {
+        return insertValue(BooleanSerializer.get().toByteBuffer(value), ttl);
+    }
 
-	@Override
-	public Execution<Void> putValue(double value, Integer ttl) {
-		return insertValue(DoubleSerializer.get().toByteBuffer(value), ttl);
-	}
+    @Override
+    public Execution<Void> putValue(ByteBuffer value, Integer ttl) {
+        return insertValue(ByteBufferSerializer.get().toByteBuffer(value), ttl);
+    }
 
-	@Override
-	public Execution<Void> putValue(UUID value, Integer ttl) {
-		return insertValue(UUIDSerializer.get().toByteBuffer(value), ttl);
-	}
-	
-	@Override
-	public <T> Execution<Void> putValue(T value, Serializer<T> serializer, Integer ttl) {
-		return insertValue(serializer.toByteBuffer(value), ttl);
-	}
+    @Override
+    public Execution<Void> putValue(Date value, Integer ttl) {
+        return insertValue(DateSerializer.get().toByteBuffer(value), ttl);
+    }
 
-	@Override
-	public Execution<Void> putEmptyColumn(Integer ttl) {
-		return insertValue(ThriftUtils.EMPTY_BYTE_BUFFER, ttl);
-	}
+    @Override
+    public Execution<Void> putValue(double value, Integer ttl) {
+        return insertValue(DoubleSerializer.get().toByteBuffer(value), ttl);
+    }
 
-	protected abstract Execution<Void> insertValue(ByteBuffer value, Integer ttl);
+    @Override
+    public Execution<Void> putValue(UUID value, Integer ttl) {
+        return insertValue(UUIDSerializer.get().toByteBuffer(value), ttl);
+    }
+
+    @Override
+    public <T> Execution<Void> putValue(T value, Serializer<T> serializer,
+            Integer ttl) {
+        return insertValue(serializer.toByteBuffer(value), ttl);
+    }
+
+    @Override
+    public Execution<Void> putEmptyColumn(Integer ttl) {
+        return insertValue(ThriftUtils.EMPTY_BYTE_BUFFER, ttl);
+    }
+
+    protected abstract Execution<Void> insertValue(ByteBuffer value, Integer ttl);
 
 }

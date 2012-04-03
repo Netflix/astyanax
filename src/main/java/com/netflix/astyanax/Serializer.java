@@ -25,60 +25,62 @@ import com.netflix.astyanax.serializers.ComparatorType;
  * @author Ran Tavory
  * 
  * @param <T>
- *          The type to which data extraction should work.
+ *            The type to which data extraction should work.
  */
 public interface Serializer<T> {
 
-  /**
-   * Extract bytes from the obj of type T
-   * 
-   * @param obj
-   * @return
-   */
-  ByteBuffer toByteBuffer(T obj);
+    /**
+     * Extract bytes from the obj of type T
+     * 
+     * @param obj
+     * @return
+     */
+    ByteBuffer toByteBuffer(T obj);
 
-  byte[] toBytes(T obj);
+    byte[] toBytes(T obj);
 
-  T fromBytes(byte[] bytes);
+    T fromBytes(byte[] bytes);
 
-  /**
-   * Extract an object of type T from the bytes.
-   * 
-   * @param bytes
-   * @return
-   */
-  T fromByteBuffer(ByteBuffer byteBuffer);
+    /**
+     * Extract an object of type T from the bytes.
+     * 
+     * @param bytes
+     * @return
+     */
+    T fromByteBuffer(ByteBuffer byteBuffer);
 
-  Set<ByteBuffer> toBytesSet(List<T> list);
+    Set<ByteBuffer> toBytesSet(List<T> list);
 
-  List<T> fromBytesSet(Set<ByteBuffer> list);
+    List<T> fromBytesSet(Set<ByteBuffer> list);
 
-  <V> Map<ByteBuffer, V> toBytesMap(Map<T, V> map);
+    <V> Map<ByteBuffer, V> toBytesMap(Map<T, V> map);
 
-  <V> Map<T, V> fromBytesMap(Map<ByteBuffer, V> map);
+    <V> Map<T, V> fromBytesMap(Map<ByteBuffer, V> map);
 
-  List<ByteBuffer> toBytesList(List<T> list);
+    List<ByteBuffer> toBytesList(List<T> list);
 
-  List<ByteBuffer> toBytesList(Collection<T> list);
-  
-  List<T> fromBytesList(List<ByteBuffer> list);
+    List<ByteBuffer> toBytesList(Collection<T> list);
 
-  ComparatorType getComparatorType();
-  
-  /**
-   * Return the byte buffer for the next value in sorted order for the matching comparator type.
-   * This is used for paginating columns.
-   * @param byteBuffer
-   * @return
-   */
-  ByteBuffer getNext(ByteBuffer byteBuffer);
-  
-  /**
-   * Create a ByteBuffer by first parsing the type out of a string
-   * @param string
-   * @return
-   */
-  ByteBuffer fromString(String string);
+    List<T> fromBytesList(List<ByteBuffer> list);
 
-  String getString(ByteBuffer byteBuffer);
+    ComparatorType getComparatorType();
+
+    /**
+     * Return the byte buffer for the next value in sorted order for the
+     * matching comparator type. This is used for paginating columns.
+     * 
+     * @param byteBuffer
+     * @return
+     */
+    ByteBuffer getNext(ByteBuffer byteBuffer);
+
+    /**
+     * Create a ByteBuffer by first parsing the type out of a string
+     * 
+     * @param string
+     * @return
+     */
+    ByteBuffer fromString(String string);
+
+    String getString(ByteBuffer byteBuffer);
 }

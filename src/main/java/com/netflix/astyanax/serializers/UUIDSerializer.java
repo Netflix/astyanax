@@ -13,56 +13,56 @@ import org.apache.cassandra.db.marshal.UUIDType;
  */
 public class UUIDSerializer extends AbstractSerializer<UUID> {
 
-  private static final UUIDSerializer instance = new UUIDSerializer();
+    private static final UUIDSerializer instance = new UUIDSerializer();
 
-  public static UUIDSerializer get() {
-    return instance;
-  }
-
-  @Override
-  public ByteBuffer toByteBuffer(UUID uuid) {
-    if (uuid == null) {
-      return null;
-    }
-    long msb = uuid.getMostSignificantBits();
-    long lsb = uuid.getLeastSignificantBits();
-    byte[] buffer = new byte[16];
-
-    for (int i = 0; i < 8; i++) {
-      buffer[i] = (byte) (msb >>> 8 * (7 - i));
-    }
-    for (int i = 8; i < 16; i++) {
-      buffer[i] = (byte) (lsb >>> 8 * (7 - i));
+    public static UUIDSerializer get() {
+        return instance;
     }
 
-    return ByteBuffer.wrap(buffer);
-  }
+    @Override
+    public ByteBuffer toByteBuffer(UUID uuid) {
+        if (uuid == null) {
+            return null;
+        }
+        long msb = uuid.getMostSignificantBits();
+        long lsb = uuid.getLeastSignificantBits();
+        byte[] buffer = new byte[16];
 
-  @Override
-  public UUID fromByteBuffer(ByteBuffer bytes) {
-    if (bytes == null) {
-      return null;
+        for (int i = 0; i < 8; i++) {
+            buffer[i] = (byte) (msb >>> 8 * (7 - i));
+        }
+        for (int i = 8; i < 16; i++) {
+            buffer[i] = (byte) (lsb >>> 8 * (7 - i));
+        }
+
+        return ByteBuffer.wrap(buffer);
     }
-    return new UUID(bytes.getLong(), bytes.getLong());
-  }
 
-  @Override
-  public ComparatorType getComparatorType() {
-    return ComparatorType.UUIDTYPE;
-  }
+    @Override
+    public UUID fromByteBuffer(ByteBuffer bytes) {
+        if (bytes == null) {
+            return null;
+        }
+        return new UUID(bytes.getLong(), bytes.getLong());
+    }
 
-  @Override
-  public ByteBuffer fromString(String str) {	
-	return UUIDType.instance.fromString(str);
-  }
-	
-  @Override
-  public String getString(ByteBuffer byteBuffer) {
-    return UUIDType.instance.getString(byteBuffer);
-  }
+    @Override
+    public ComparatorType getComparatorType() {
+        return ComparatorType.UUIDTYPE;
+    }
 
-  @Override	
-  public ByteBuffer getNext(ByteBuffer byteBuffer) {
-	throw new RuntimeException("UUIDSerializer.getNext() Not implemented.");
-  }
+    @Override
+    public ByteBuffer fromString(String str) {
+        return UUIDType.instance.fromString(str);
+    }
+
+    @Override
+    public String getString(ByteBuffer byteBuffer) {
+        return UUIDType.instance.getString(byteBuffer);
+    }
+
+    @Override
+    public ByteBuffer getNext(ByteBuffer byteBuffer) {
+        throw new RuntimeException("UUIDSerializer.getNext() Not implemented.");
+    }
 }

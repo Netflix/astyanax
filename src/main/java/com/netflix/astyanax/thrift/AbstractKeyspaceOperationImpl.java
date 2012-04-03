@@ -18,21 +18,24 @@ package com.netflix.astyanax.thrift;
 import com.netflix.astyanax.CassandraOperationTracer;
 import com.netflix.astyanax.connectionpool.Host;
 
-public abstract class AbstractKeyspaceOperationImpl<R> extends AbstractOperationImpl<R> {
-	private String keyspaceName;
-	
-	public AbstractKeyspaceOperationImpl(CassandraOperationTracer tracer, Host pinnedHost, String keyspaceName) {
-		super(tracer, pinnedHost);
-		this.keyspaceName = keyspaceName;
-	}
+public abstract class AbstractKeyspaceOperationImpl<R> extends
+        AbstractOperationImpl<R> {
+    private String keyspaceName;
 
-	public AbstractKeyspaceOperationImpl(CassandraOperationTracer tracer, String keyspaceName) {
-		super(tracer);
-		this.keyspaceName = keyspaceName;
-	}
-	
-	@Override
-	public String getKeyspace() {
-		return this.keyspaceName;
-	}
+    public AbstractKeyspaceOperationImpl(CassandraOperationTracer tracer,
+            Host pinnedHost, String keyspaceName) {
+        super(tracer, pinnedHost);
+        this.keyspaceName = keyspaceName;
+    }
+
+    public AbstractKeyspaceOperationImpl(CassandraOperationTracer tracer,
+            String keyspaceName) {
+        super(tracer);
+        this.keyspaceName = keyspaceName;
+    }
+
+    @Override
+    public String getKeyspace() {
+        return this.keyspaceName;
+    }
 }

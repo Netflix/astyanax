@@ -14,40 +14,40 @@ import org.apache.cassandra.db.marshal.UTF8Type;
  */
 public final class StringSerializer extends AbstractSerializer<String> {
 
-  private static final String UTF_8 = "UTF-8";
-  private static final StringSerializer instance = new StringSerializer();
-  private static final Charset charset = Charset.forName(UTF_8);
+    private static final String UTF_8 = "UTF-8";
+    private static final StringSerializer instance = new StringSerializer();
+    private static final Charset charset = Charset.forName(UTF_8);
 
-  public static StringSerializer get() {
-    return instance;
-  }
-
-  @Override
-  public ByteBuffer toByteBuffer(String obj) {
-    if (obj == null) {
-      return null;
+    public static StringSerializer get() {
+        return instance;
     }
-    return ByteBuffer.wrap(obj.getBytes(charset));
-  }
 
-  @Override
-  public String fromByteBuffer(ByteBuffer byteBuffer) {
-    if (byteBuffer == null) {
-      return null;
+    @Override
+    public ByteBuffer toByteBuffer(String obj) {
+        if (obj == null) {
+            return null;
+        }
+        return ByteBuffer.wrap(obj.getBytes(charset));
     }
-    return charset.decode(byteBuffer).toString();
-  }
 
-  @Override
-  public ComparatorType getComparatorType() {
-    return ComparatorType.UTF8TYPE;
-  }
+    @Override
+    public String fromByteBuffer(ByteBuffer byteBuffer) {
+        if (byteBuffer == null) {
+            return null;
+        }
+        return charset.decode(byteBuffer).toString();
+    }
 
-	@Override
-	public ByteBuffer fromString(String str) {
-		return UTF8Type.instance.fromString(str);
-	}
-	
+    @Override
+    public ComparatorType getComparatorType() {
+        return ComparatorType.UTF8TYPE;
+    }
+
+    @Override
+    public ByteBuffer fromString(String str) {
+        return UTF8Type.instance.fromString(str);
+    }
+
     @Override
     public String getString(ByteBuffer byteBuffer) {
         return UTF8Type.instance.getString(byteBuffer);

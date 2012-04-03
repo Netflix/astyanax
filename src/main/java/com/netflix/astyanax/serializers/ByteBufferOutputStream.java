@@ -31,131 +31,131 @@ import java.util.List;
  * Hector and added getByteBuffer to return single ByteBuffer from contents.
  */
 public class ByteBufferOutputStream extends OutputStream {
-  public static final int BUFFER_SIZE = 8192;
+    public static final int BUFFER_SIZE = 8192;
 
-  private List<ByteBuffer> buffers;
+    private List<ByteBuffer> buffers;
 
-  public ByteBufferOutputStream() {
-    reset();
-  }
-
-  /** Returns all data written and resets the stream to be empty. */
-  public List<ByteBuffer> getBufferList() {
-    List<ByteBuffer> result = buffers;
-    reset();
-    for (ByteBuffer buffer : result) {
-      buffer.flip();
+    public ByteBufferOutputStream() {
+        reset();
     }
-    return result;
-  }
 
-  public ByteBuffer getByteBuffer() {
-    List<ByteBuffer> list = getBufferList();
-    // if there's just one bytebuffer in list, return it
-    if (list.size() == 1) {
-      return list.get(0);
+    /** Returns all data written and resets the stream to be empty. */
+    public List<ByteBuffer> getBufferList() {
+        List<ByteBuffer> result = buffers;
+        reset();
+        for (ByteBuffer buffer : result) {
+            buffer.flip();
+        }
+        return result;
     }
-    int size = 0;
-    for (ByteBuffer buffer : list) {
-      size += buffer.remaining();
+
+    public ByteBuffer getByteBuffer() {
+        List<ByteBuffer> list = getBufferList();
+        // if there's just one bytebuffer in list, return it
+        if (list.size() == 1) {
+            return list.get(0);
+        }
+        int size = 0;
+        for (ByteBuffer buffer : list) {
+            size += buffer.remaining();
+        }
+        ByteBuffer result = ByteBuffer.allocate(size);
+        for (ByteBuffer buffer : list) {
+            result.put(buffer);
+        }
+        return (ByteBuffer) result.rewind();
     }
-    ByteBuffer result = ByteBuffer.allocate(size);
-    for (ByteBuffer buffer : list) {
-      result.put(buffer);
+
+    /** Prepend a list of ByteBuffers to this stream. */
+    public void prepend(List<ByteBuffer> lists) {
+        for (ByteBuffer buffer : lists) {
+            buffer.position(buffer.limit());
+        }
+        buffers.addAll(0, lists);
     }
-    return (ByteBuffer) result.rewind();
-  }
 
-  /** Prepend a list of ByteBuffers to this stream. */
-  public void prepend(List<ByteBuffer> lists) {
-    for (ByteBuffer buffer : lists) {
-      buffer.position(buffer.limit());
+    /** Append a list of ByteBuffers to this stream. */
+    public void append(List<ByteBuffer> lists) {
+        for (ByteBuffer buffer : lists) {
+            buffer.position(buffer.limit());
+        }
+        buffers.addAll(lists);
     }
-    buffers.addAll(0, lists);
-  }
 
-  /** Append a list of ByteBuffers to this stream. */
-  public void append(List<ByteBuffer> lists) {
-    for (ByteBuffer buffer : lists) {
-      buffer.position(buffer.limit());
+    public void reset() {
+        buffers = new LinkedList<ByteBuffer>();
+        buffers.add(ByteBuffer.allocate(BUFFER_SIZE));
     }
-    buffers.addAll(lists);
-  }
 
-  public void reset() {
-    buffers = new LinkedList<ByteBuffer>();
-    buffers.add(ByteBuffer.allocate(BUFFER_SIZE));
-  }
-
-  private ByteBuffer getBufferWithCapacity(int capacity) {
-    ByteBuffer buffer = buffers.get(buffers.size() - 1);
-    if (buffer.remaining() < capacity) {
-      buffer = ByteBuffer.allocate(BUFFER_SIZE);
-      buffers.add(buffer);
+    private ByteBuffer getBufferWithCapacity(int capacity) {
+        ByteBuffer buffer = buffers.get(buffers.size() - 1);
+        if (buffer.remaining() < capacity) {
+            buffer = ByteBuffer.allocate(BUFFER_SIZE);
+            buffers.add(buffer);
+        }
+        return buffer;
     }
-    return buffer;
-  }
 
-  @Override
-  public void write(int b) {
-    ByteBuffer buffer = getBufferWithCapacity(1);
-    buffer.put((byte) b);
-  }
-
-  public void writeShort(short value) {
-    ByteBuffer buffer = getBufferWithCapacity(2);
-    buffer.putShort(value);
-  }
-
-  public void writeChar(char value) {
-    ByteBuffer buffer = getBufferWithCapacity(2);
-    buffer.putChar(value);
-  }
-
-  public void writeInt(int value) {
-    ByteBuffer buffer = getBufferWithCapacity(4);
-    buffer.putInt(value);
-  }
-
-  public void writeFloat(float value) {
-    ByteBuffer buffer = getBufferWithCapacity(4);
-    buffer.putFloat(value);
-  }
-
-  public void writeLong(long value) {
-    ByteBuffer buffer = getBufferWithCapacity(8);
-    buffer.putLong(value);
-  }
-
-  public void writeDouble(double value) {
-    ByteBuffer buffer = getBufferWithCapacity(8);
-    buffer.putDouble(value);
-  }
-
-  @Override
-  public void write(byte[] b, int off, int len) {
-    ByteBuffer buffer = buffers.get(buffers.size() - 1);
-    int remaining = buffer.remaining();
-    while (len > remaining) {
-      buffer.put(b, off, remaining);
-      len -= remaining;
-      off += remaining;
-      buffer = ByteBuffer.allocate(BUFFER_SIZE);
-      buffers.add(buffer);
-      remaining = buffer.remaining();
+    @Override
+    public void write(int b) {
+        ByteBuffer buffer = getBufferWithCapacity(1);
+        buffer.put((byte) b);
     }
-    buffer.put(b, off, len);
-  }
 
-  /** Add a buffer to the output without copying, if possible. */
-  public void write(ByteBuffer buffer) {
-    if (buffer.remaining() < BUFFER_SIZE) {
-      write(buffer.array(), buffer.arrayOffset() + buffer.position(),
-          buffer.remaining());
-    } else { // append w/o copying bytes
-      ByteBuffer dup = buffer.duplicate();
-      dup.position(buffer.limit()); // ready for flip
-      buffers.add(dup);
+    public void writeShort(short value) {
+        ByteBuffer buffer = getBufferWithCapacity(2);
+        buffer.putShort(value);
     }
-  }
+
+    public void writeChar(char value) {
+        ByteBuffer buffer = getBufferWithCapacity(2);
+        buffer.putChar(value);
+    }
+
+    public void writeInt(int value) {
+        ByteBuffer buffer = getBufferWithCapacity(4);
+        buffer.putInt(value);
+    }
+
+    public void writeFloat(float value) {
+        ByteBuffer buffer = getBufferWithCapacity(4);
+        buffer.putFloat(value);
+    }
+
+    public void writeLong(long value) {
+        ByteBuffer buffer = getBufferWithCapacity(8);
+        buffer.putLong(value);
+    }
+
+    public void writeDouble(double value) {
+        ByteBuffer buffer = getBufferWithCapacity(8);
+        buffer.putDouble(value);
+    }
+
+    @Override
+    public void write(byte[] b, int off, int len) {
+        ByteBuffer buffer = buffers.get(buffers.size() - 1);
+        int remaining = buffer.remaining();
+        while (len > remaining) {
+            buffer.put(b, off, remaining);
+            len -= remaining;
+            off += remaining;
+            buffer = ByteBuffer.allocate(BUFFER_SIZE);
+            buffers.add(buffer);
+            remaining = buffer.remaining();
+        }
+        buffer.put(b, off, len);
+    }
+
+    /** Add a buffer to the output without copying, if possible. */
+    public void write(ByteBuffer buffer) {
+        if (buffer.remaining() < BUFFER_SIZE) {
+            write(buffer.array(), buffer.arrayOffset() + buffer.position(),
+                    buffer.remaining());
+        } else { // append w/o copying bytes
+            ByteBuffer dup = buffer.duplicate();
+            dup.position(buffer.limit()); // ready for flip
+            buffers.add(dup);
+        }
+    }
 }

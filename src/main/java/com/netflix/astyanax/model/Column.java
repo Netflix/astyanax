@@ -22,117 +22,131 @@ import java.util.UUID;
 import com.netflix.astyanax.Serializer;
 
 /**
- * Common interface for extracting column values after a query.  
+ * Common interface for extracting column values after a query.
  * 
  * @author elandau
- *	
- * TODO  Add getIntValue, getDoubleValue, ...
  * 
- * @param <C>  Column name type
+ *         TODO Add getIntValue, getDoubleValue, ...
+ * 
+ * @param <C>
+ *            Column name type
  */
 public interface Column<C> {
 
-	/**
-	 * Column or super column name
-	 * @return
-	 */
-	C getName();
-	
-	/**
-	 * Return the raw byet buffer for the column name
-	 * @return
-	 */
-	ByteBuffer getRawName();
+    /**
+     * Column or super column name
+     * 
+     * @return
+     */
+    C getName();
 
-	/**
-	 * Returns the column timestamp.  Not to be confused with column values
-	 * that happen to be time values.
-	 * @return
-	 */
-	long getTimestamp();
-	
-	/**
-	 * Return the value 
-	 * 
-	 * @param <V> value type
-	 * @return
-	 * @throws NetflixCassandraException 
-	 */
-	<V> V getValue(Serializer<V> valSer) ;
-	
-	/**
-	 * Return value as a string
-	 * 
-	 * @return
-	 */
-	String getStringValue() ;
-	
-	/**
-	 * Return value as an integer
-	 * @return
-	 */
-	int getIntegerValue();
-	
-	/**
-	 * Return value as a double
-	 * @return
-	 */
-	double getDoubleValue();
-	
-	/**
-	 * Return value as a long.  Use this to get the value of a counter column
-	 * @return
-	 */
-	long getLongValue();
-	
-	/**
-	 * Get the raw byte[] value
-	 * @return
-	 */
-	byte[] getByteArrayValue();
+    /**
+     * Return the raw byet buffer for the column name
+     * 
+     * @return
+     */
+    ByteBuffer getRawName();
 
-	/**
-	 * Get value as a boolean
-	 * @return
-	 */
-	boolean getBooleanValue();
+    /**
+     * Returns the column timestamp. Not to be confused with column values that
+     * happen to be time values.
+     * 
+     * @return
+     */
+    long getTimestamp();
 
-	/**
-	 * Get the raw ByteBuffer value
-	 * @return
-	 */
-	ByteBuffer getByteBufferValue();
-	
-	/**
-	 * Get the value as a date object
-	 * @return
-	 */
-	Date getDateValue();
-	
-	/**
-	 * Get the value as a UUID
-	 * @return
-	 */
-	UUID getUUIDValue();
-	
-	/**
-	 * Get columns in the case of a super column.  
-	 * Will throw an exception if this is a regular column 
-	 * Valid only if isCompositeColumn returns true
-	 * 
-	 * @param <C2> Type of column names for sub columns
-	 * @deprecated	Super columns should be replaced with composite columns
-	 * @return
-	 */
-	@Deprecated
-	<C2> ColumnList<C2> getSubColumns(Serializer<C2> ser);
-	
+    /**
+     * Return the value
+     * 
+     * @param <V>
+     *            value type
+     * @return
+     * @throws NetflixCassandraException
+     */
+    <V> V getValue(Serializer<V> valSer);
+
+    /**
+     * Return value as a string
+     * 
+     * @return
+     */
+    String getStringValue();
+
+    /**
+     * Return value as an integer
+     * 
+     * @return
+     */
+    int getIntegerValue();
+
+    /**
+     * Return value as a double
+     * 
+     * @return
+     */
+    double getDoubleValue();
+
+    /**
+     * Return value as a long. Use this to get the value of a counter column
+     * 
+     * @return
+     */
+    long getLongValue();
+
+    /**
+     * Get the raw byte[] value
+     * 
+     * @return
+     */
+    byte[] getByteArrayValue();
+
+    /**
+     * Get value as a boolean
+     * 
+     * @return
+     */
+    boolean getBooleanValue();
+
+    /**
+     * Get the raw ByteBuffer value
+     * 
+     * @return
+     */
+    ByteBuffer getByteBufferValue();
+
+    /**
+     * Get the value as a date object
+     * 
+     * @return
+     */
+    Date getDateValue();
+
+    /**
+     * Get the value as a UUID
+     * 
+     * @return
+     */
+    UUID getUUIDValue();
+
+    /**
+     * Get columns in the case of a super column. Will throw an exception if
+     * this is a regular column Valid only if isCompositeColumn returns true
+     * 
+     * @param <C2>
+     *            Type of column names for sub columns
+     * @deprecated Super columns should be replaced with composite columns
+     * @return
+     */
+    @Deprecated
+    <C2> ColumnList<C2> getSubColumns(Serializer<C2> ser);
+
     /**
      * Returns true if the column contains a list of child columns, otherwise
      * the column contains a value.
-     * @deprecated	Super columns should be replaced with composite columns
+     * 
+     * @deprecated Super columns should be replaced with composite columns
      * @return
      */
-	@Deprecated
+    @Deprecated
     boolean isParentColumn();
 }

@@ -16,25 +16,25 @@
 package com.netflix.astyanax.connectionpool;
 
 public enum NodeDiscoveryType {
-	/**
-	 * Discover nodes exclusively from doing a ring describe
-	 */
-	RING_DESCRIBE,
-	
-	/**
-	 * Discover nodes exclusively from an external node discovery service
-	 */
-	DISCOVERY_SERVICE,
-	
-	/**
-	 * Intersect ring describe and nodes from an external service.  This solve
-	 * the multi-region ring describe problem where ring describe returns nodes
-	 * from other regions.
-	 */
-	TOKEN_AWARE,
-	
-	/**
-	 * Use only nodes in the list of seeds
-	 */
-	NONE
+    /**
+     * Discover nodes exclusively from doing a ring describe
+     */
+    RING_DESCRIBE,
+
+    /**
+     * Discover nodes exclusively from an external node discovery service
+     */
+    DISCOVERY_SERVICE,
+
+    /**
+     * Intersect ring describe and nodes from an external service. This solve
+     * the multi-region ring describe problem where ring describe returns nodes
+     * from other regions.
+     */
+    TOKEN_AWARE,
+
+    /**
+     * Use only nodes in the list of seeds
+     */
+    NONE
 }

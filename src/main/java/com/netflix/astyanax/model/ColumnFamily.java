@@ -20,87 +20,86 @@ import com.netflix.astyanax.impl.PreparedIndexExpressionImpl;
 import com.netflix.astyanax.query.PreparedIndexExpression;
 
 /**
- * Basic column family definition.  The column family definition encapsulates
- * the column family name as well as the type and serializers for the row keys
- * and first level columns.  Super column subcolumn name type and serializers
- * are specified using a ColumnPath.
+ * Basic column family definition. The column family definition encapsulates the
+ * column family name as well as the type and serializers for the row keys and
+ * first level columns. Super column subcolumn name type and serializers are
+ * specified using a ColumnPath.
  * 
  * @author elandau
- *
+ * 
  * @param <K>
  * @param <C>
  */
-public class ColumnFamily<K,C> {
-	private final String columnFamilyName;
-	private final Serializer<K> keySerializer;
-	private final Serializer<C> columnSerializer;
-	private final ColumnType type;
+public class ColumnFamily<K, C> {
+    private final String columnFamilyName;
+    private final Serializer<K> keySerializer;
+    private final Serializer<C> columnSerializer;
+    private final ColumnType type;
 
-	/**
-	 * @param columnFamilyName
-	 * @param keySerializer
-	 * @param columnSerializer
-	 * @param type
-	 * @deprecated	Super columns should be replaced with composite columns
-	 */
-	public ColumnFamily(String columnFamilyName,
-		Serializer<K> keySerializer,
-		Serializer<C> columnSerializer,
-		ColumnType type) {
-		this.columnFamilyName = columnFamilyName;
-		this.keySerializer = keySerializer;
-		this.columnSerializer = columnSerializer;
-		this.type = type;
-	}
-	
-	public ColumnFamily(String columnFamilyName,
-		Serializer<K> keySerializer,
-		Serializer<C> columnSerializer) {
-		this.columnFamilyName = columnFamilyName;
-		this.keySerializer = keySerializer;
-		this.columnSerializer = columnSerializer;
-		this.type = ColumnType.STANDARD;
-	}
-	
-	
-	public String getName() {
-		return columnFamilyName;
-	}
+    /**
+     * @param columnFamilyName
+     * @param keySerializer
+     * @param columnSerializer
+     * @param type
+     * @deprecated Super columns should be replaced with composite columns
+     */
+    public ColumnFamily(String columnFamilyName, Serializer<K> keySerializer,
+            Serializer<C> columnSerializer, ColumnType type) {
+        this.columnFamilyName = columnFamilyName;
+        this.keySerializer = keySerializer;
+        this.columnSerializer = columnSerializer;
+        this.type = type;
+    }
 
-	/**
-	 * Serializer for first level column names.  This serializer does not apply
-	 * to sub column names.
-	 * 
-	 * @return
-	 */
-	public Serializer<C> getColumnSerializer() {
-		return columnSerializer;
-	}
+    public ColumnFamily(String columnFamilyName, Serializer<K> keySerializer,
+            Serializer<C> columnSerializer) {
+        this.columnFamilyName = columnFamilyName;
+        this.keySerializer = keySerializer;
+        this.columnSerializer = columnSerializer;
+        this.type = ColumnType.STANDARD;
+    }
 
-	/**
-	 * Serializer used to generate row keys. 
-	 * @return
-	 */
-	public Serializer<K> getKeySerializer() {
-		return keySerializer;
-	}
+    public String getName() {
+        return columnFamilyName;
+    }
 
-	/**
-	 * Type of columns in this column family (Standard or Super)
-	 * @deprecated	Super columns should be replaced with composite columns
-	 * @return
-	 */
-	public ColumnType getType() {
-		return type;
-	}
-	
-	public PreparedIndexExpression<K, C> newIndexClause() {
-	    return new PreparedIndexExpressionImpl<K, C>(this.columnSerializer);
-	}
-	
-	public static <K,C> ColumnFamily<K,C> newColumnFamily(String columnFamilyName,
-        Serializer<K> keySerializer,
-        Serializer<C> columnSerializer) {
-	    return new ColumnFamily<K,C>(columnFamilyName, keySerializer, columnSerializer);
-	}
+    /**
+     * Serializer for first level column names. This serializer does not apply
+     * to sub column names.
+     * 
+     * @return
+     */
+    public Serializer<C> getColumnSerializer() {
+        return columnSerializer;
+    }
+
+    /**
+     * Serializer used to generate row keys.
+     * 
+     * @return
+     */
+    public Serializer<K> getKeySerializer() {
+        return keySerializer;
+    }
+
+    /**
+     * Type of columns in this column family (Standard or Super)
+     * 
+     * @deprecated Super columns should be replaced with composite columns
+     * @return
+     */
+    public ColumnType getType() {
+        return type;
+    }
+
+    public PreparedIndexExpression<K, C> newIndexClause() {
+        return new PreparedIndexExpressionImpl<K, C>(this.columnSerializer);
+    }
+
+    public static <K, C> ColumnFamily<K, C> newColumnFamily(
+            String columnFamilyName, Serializer<K> keySerializer,
+            Serializer<C> columnSerializer) {
+        return new ColumnFamily<K, C>(columnFamilyName, keySerializer,
+                columnSerializer);
+    }
 }

@@ -10,7 +10,8 @@ import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.NoAvailableHostsException;
 
-public class RoundRobinExecuteWithFailover<CL,R> extends AbstractExecuteWithFailoverImpl<CL, R> {
+public class RoundRobinExecuteWithFailover<CL, R> extends
+        AbstractExecuteWithFailoverImpl<CL, R> {
     private int index;
     protected HostConnectionPool<CL> pool;
     private int retryCountdown;
@@ -19,42 +20,45 @@ public class RoundRobinExecuteWithFailover<CL,R> extends AbstractExecuteWithFail
     protected int waitDelta;
     protected int waitMultiplier = 1;
 
-    public RoundRobinExecuteWithFailover(ConnectionPoolConfiguration config, ConnectionPoolMonitor monitor, List<HostConnectionPool<CL>> pools, int index) throws ConnectionException {
-    	super(config, monitor);
-    	
-		this.index = index;
-    	this.pools = pools;
-    	
+    public RoundRobinExecuteWithFailover(ConnectionPoolConfiguration config,
+            ConnectionPoolMonitor monitor, List<HostConnectionPool<CL>> pools,
+            int index) throws ConnectionException {
+        super(config, monitor);
+
+        this.index = index;
+        this.pools = pools;
+
         if (pools == null || pools.isEmpty()) {
-        	monitor.incNoHosts();
+            monitor.incNoHosts();
             throw new NoAvailableHostsException("No hosts to borrow from");
         }
-        
+
         size = pools.size();
         retryCountdown = Math.min(config.getMaxFailoverCount(), size);
         if (retryCountdown < 0)
-        	retryCountdown = size;
+            retryCountdown = size;
         else if (retryCountdown == 0)
-        	retryCountdown = 1;
-        
+            retryCountdown = 1;
+
         waitDelta = config.getMaxTimeoutWhenExhausted() / retryCountdown;
     }
 
-	public int getNextHostIndex() {
+    public int getNextHostIndex() {
         return index++ % size;
-	}
-    
-	public boolean canRetry() {
-		return --retryCountdown > 0;
-	}
-	
+    }
+
+    public boolean canRetry() {
+        return --retryCountdown > 0;
+    }
+
     @Override
-	public HostConnectionPool<CL> getCurrentHostConnectionPool() {
-		return pool;
-	}
-    
+    public HostConnectionPool<CL> getCurrentHostConnectionPool() {
+        return pool;
+    }
+
     @Override
-    public Connection<CL> borrowConnection(Operation<CL, R> operation) throws ConnectionException {
+    public Connection<CL> borrowConnection(Operation<CL, R> operation)
+            throws ConnectionException {
         pool = pools.get(getNextHostIndex());
         return pool.borrowConnection(waitDelta * waitMultiplier);
     }

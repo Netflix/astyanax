@@ -16,7 +16,7 @@
 package com.netflix.astyanax.connectionpool.exceptions;
 
 public class TokenRangeOfflineException extends ConnectionException {
-		
+
     /**
      * 
      */

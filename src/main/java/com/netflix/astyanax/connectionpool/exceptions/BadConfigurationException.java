@@ -15,36 +15,48 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.exceptions;
 
-
 public class BadConfigurationException extends OperationException {
-	/**
+    /**
      * 
      */
     private static final long serialVersionUID = -5029835858453307841L;
     private String parameter;
-	private String value;
-	private String expected;
-	
-    public BadConfigurationException(String parameter, String value, String expected) {
-        super("Bad configuration " + parameter + "=" + value + " (expected: " + expected + ")");
+    private String value;
+    private String expected;
+
+    public BadConfigurationException(String parameter, String value,
+            String expected) {
+        super("Bad configuration " + parameter + "=" + value + " (expected: "
+                + expected + ")");
     }
 
     public BadConfigurationException(Throwable cause) {
         super(cause);
     }
 
-    public BadConfigurationException(String parameter, String value, String expected, Throwable cause) {
-        super("Bad configuration " + parameter + "=" + value + " (expected: " + expected + ")", cause);
+    public BadConfigurationException(String parameter, String value,
+            String expected, Throwable cause) {
+        super("Bad configuration " + parameter + "=" + value + " (expected: "
+                + expected + ")", cause);
     }
 
-    public BadConfigurationException(String parameter, String value, Throwable cause) {
+    public BadConfigurationException(String parameter, String value,
+            Throwable cause) {
         super("Bad configuration " + parameter + "=" + value, cause);
     }
 
-	public String getParameter() { return parameter; }
-	public String getValue() { return value; }
-	public String getExpected() { return expected; }
-	
+    public String getParameter() {
+        return parameter;
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public String getExpected() {
+        return expected;
+    }
+
     @Override
     public String getMessage() {
         return this.getOriginalMessage();

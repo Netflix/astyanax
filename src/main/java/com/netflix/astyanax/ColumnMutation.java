@@ -23,35 +23,35 @@ import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
 
 public interface ColumnMutation {
-	ColumnMutation setConsistencyLevel(ConsistencyLevel consistencyLevel);
-	
-	ColumnMutation withRetryPolicy(RetryPolicy retry);
-	
-	Execution<Void> putValue(String value, Integer ttl);
+    ColumnMutation setConsistencyLevel(ConsistencyLevel consistencyLevel);
 
-	Execution<Void> putValue(byte[] value, Integer ttl);
+    ColumnMutation withRetryPolicy(RetryPolicy retry);
 
-	Execution<Void> putValue(int value, Integer ttl);
+    Execution<Void> putValue(String value, Integer ttl);
 
-	Execution<Void> putValue(long value, Integer ttl);
+    Execution<Void> putValue(byte[] value, Integer ttl);
 
-	Execution<Void> putValue(boolean value, Integer ttl);
+    Execution<Void> putValue(int value, Integer ttl);
 
-	Execution<Void> putValue(ByteBuffer value, Integer ttl);
+    Execution<Void> putValue(long value, Integer ttl);
 
-	Execution<Void> putValue(Date value, Integer ttl);
+    Execution<Void> putValue(boolean value, Integer ttl);
 
-	Execution<Void> putValue(double value, Integer ttl);
+    Execution<Void> putValue(ByteBuffer value, Integer ttl);
 
-	Execution<Void> putValue(UUID value, Integer ttl);
-	
-	<T> Execution<Void> putValue(T value, Serializer<T> serializer, Integer ttl);
-	
-	Execution<Void> putEmptyColumn(Integer ttl);
-	
-	Execution<Void> incrementCounterColumn(long amount);
-	
-	Execution<Void> deleteColumn();
-	
-	Execution<Void> deleteCounterColumn();
+    Execution<Void> putValue(Date value, Integer ttl);
+
+    Execution<Void> putValue(double value, Integer ttl);
+
+    Execution<Void> putValue(UUID value, Integer ttl);
+
+    <T> Execution<Void> putValue(T value, Serializer<T> serializer, Integer ttl);
+
+    Execution<Void> putEmptyColumn(Integer ttl);
+
+    Execution<Void> incrementCounterColumn(long amount);
+
+    Execution<Void> deleteColumn();
+
+    Execution<Void> deleteCounterColumn();
 }

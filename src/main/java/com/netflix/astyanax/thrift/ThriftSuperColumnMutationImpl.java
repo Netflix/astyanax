@@ -42,164 +42,170 @@ import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.UUIDSerializer;
 
 /**
- * @deprecated	Use composite columns instead
+ * @deprecated Use composite columns instead
  * @author elandau
- *
+ * 
  * @param <C>
  */
 public class ThriftSuperColumnMutationImpl<C> implements ColumnListMutation<C> {
-	private long timestamp;
-	private final List<Mutation> mutationList;
-	private final ColumnPath<C> path;
-	private SuperColumn superColumn;
-	private SlicePredicate deletionPredicate;
-	private Integer defaultTtl = null; 
-	
-	public ThriftSuperColumnMutationImpl(long timestamp,
-			List<Mutation> mutationList, 
-			ColumnPath<C> path) {
-		this.path = path;
-		this.timestamp = timestamp;
-		this.mutationList = mutationList;
-	}
-	
-	@Override
-	public <V> ColumnListMutation<C> putColumn(C columnName, V value,
-			Serializer<V> valueSerializer, Integer ttl) {
-		Column column = new Column();
-		column.setName(path.getSerializer().toByteBuffer(columnName));
-		column.setValue(valueSerializer.toByteBuffer(value));
-		column.setTimestamp(timestamp);
-		if (ttl != null)
-			column.setTtl(ttl);
-		else if (defaultTtl != null)
-			column.setTtl(defaultTtl);
-		
-		addMutation(column);
-		return this;
-	}
-	
-	private void addMutation(Column column) {
-		// 2.  Create the super column mutation if this is the first call
-		if (superColumn == null) {
-			superColumn = new SuperColumn().setName(path.get(0));
-			
-		    Mutation mutation = new Mutation();
-		    mutation.setColumn_or_supercolumn(
-		    		new ColumnOrSuperColumn().setSuper_column(superColumn));
-		    mutationList.add(mutation);
-		}	    
-		
-		superColumn.addToColumns(column);
-	}
+    private long timestamp;
+    private final List<Mutation> mutationList;
+    private final ColumnPath<C> path;
+    private SuperColumn superColumn;
+    private SlicePredicate deletionPredicate;
+    private Integer defaultTtl = null;
 
-	@Override
-	public ColumnListMutation<C> putColumn(C columnName, String value, Integer ttl) {
-		return putColumn(columnName, value, StringSerializer.get(), ttl);
-	}
-
-	@Override
-	public ColumnListMutation<C> putColumn(C columnName, byte[] value, Integer ttl) {
-		return putColumn(columnName, value, BytesArraySerializer.get(), ttl);
-	}
-
-	@Override
-	public ColumnListMutation<C> putColumn(C columnName, int value, Integer ttl) {
-		return putColumn(columnName, value, IntegerSerializer.get(), ttl);
-	}
-
-	@Override
-	public ColumnListMutation<C> putColumn(C columnName, long value, Integer ttl) {
-		return putColumn(columnName, value, LongSerializer.get(), ttl);
-	}
-
-	@Override
-	public ColumnListMutation<C> putColumn(C columnName, boolean value, Integer ttl) {
-		return putColumn(columnName, value, BooleanSerializer.get(), ttl);
-	}
-
-	@Override
-	public ColumnListMutation<C> putColumn(C columnName, ByteBuffer value, Integer ttl) {
-		return putColumn(columnName, value, ByteBufferSerializer.get(), ttl);
-	}
-
-	@Override
-	public ColumnListMutation<C> putColumn(C columnName, Date value, Integer ttl) {
-		return putColumn(columnName, value, DateSerializer.get(), ttl);
-	}
-
-	@Override
-	public ColumnListMutation<C> putColumn(C columnName, double value, Integer ttl) {
-		return putColumn(columnName, value, DoubleSerializer.get(), ttl);
-	}
-
-	@Override
-	public ColumnListMutation<C> putColumn(C columnName, UUID value, Integer ttl) {
-		return putColumn(columnName, value, UUIDSerializer.get(), ttl);
-	}
-
-	@Override
-	public ColumnListMutation<C> putEmptyColumn(C columnName, Integer ttl) {
-		Column column = new Column();
-		column.setName(path.getSerializer().toByteBuffer(columnName));
-		column.setValue(ThriftUtils.EMPTY_BYTE_BUFFER);
-		column.setTimestamp(timestamp);
-		if (ttl != null)
-			column.setTtl(ttl);
-		else if (defaultTtl != null)
-			column.setTtl(defaultTtl);
-		
-		addMutation(column);
-		return this;
-	}
-	
-	@Override
-	public ColumnListMutation<C> delete() {
-		Deletion d = new Deletion();
-		d.setSuper_column(path.get(0));
-		d.setTimestamp(timestamp);
-	    mutationList.add(new Mutation().setDeletion(d));
-	    
-	    timestamp++;
-	    return this;
-	}
-
-	@Override
-	public <SC> ColumnListMutation<SC> withSuperColumn(
-			ColumnPath<SC> superColumnPath) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public ColumnListMutation<C> incrementCounterColumn(C columnName, long amount) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public ColumnListMutation<C> deleteColumn(C columnName) {
-		if (deletionPredicate == null) {
-			deletionPredicate = new SlicePredicate();
-			Deletion d = new Deletion();
-			d.setTimestamp(timestamp);
-			d.setSuper_column(path.get(0));
-			d.setPredicate(deletionPredicate);
-			
-		    mutationList.add(new Mutation().setDeletion(d));
-		}
-		
-		deletionPredicate.addToColumn_names(path.getSerializer().toByteBuffer(columnName));
-		return this;
-	}
-
-	@Override
-    public ColumnListMutation<C> setTimestamp(long timestamp) {
-	    this.timestamp = timestamp;
-	    return this;
+    public ThriftSuperColumnMutationImpl(long timestamp,
+            List<Mutation> mutationList, ColumnPath<C> path) {
+        this.path = path;
+        this.timestamp = timestamp;
+        this.mutationList = mutationList;
     }
 
-	@Override
+    @Override
+    public <V> ColumnListMutation<C> putColumn(C columnName, V value,
+            Serializer<V> valueSerializer, Integer ttl) {
+        Column column = new Column();
+        column.setName(path.getSerializer().toByteBuffer(columnName));
+        column.setValue(valueSerializer.toByteBuffer(value));
+        column.setTimestamp(timestamp);
+        if (ttl != null)
+            column.setTtl(ttl);
+        else if (defaultTtl != null)
+            column.setTtl(defaultTtl);
+
+        addMutation(column);
+        return this;
+    }
+
+    private void addMutation(Column column) {
+        // 2. Create the super column mutation if this is the first call
+        if (superColumn == null) {
+            superColumn = new SuperColumn().setName(path.get(0));
+
+            Mutation mutation = new Mutation();
+            mutation.setColumn_or_supercolumn(new ColumnOrSuperColumn()
+                    .setSuper_column(superColumn));
+            mutationList.add(mutation);
+        }
+
+        superColumn.addToColumns(column);
+    }
+
+    @Override
+    public ColumnListMutation<C> putColumn(C columnName, String value,
+            Integer ttl) {
+        return putColumn(columnName, value, StringSerializer.get(), ttl);
+    }
+
+    @Override
+    public ColumnListMutation<C> putColumn(C columnName, byte[] value,
+            Integer ttl) {
+        return putColumn(columnName, value, BytesArraySerializer.get(), ttl);
+    }
+
+    @Override
+    public ColumnListMutation<C> putColumn(C columnName, int value, Integer ttl) {
+        return putColumn(columnName, value, IntegerSerializer.get(), ttl);
+    }
+
+    @Override
+    public ColumnListMutation<C> putColumn(C columnName, long value, Integer ttl) {
+        return putColumn(columnName, value, LongSerializer.get(), ttl);
+    }
+
+    @Override
+    public ColumnListMutation<C> putColumn(C columnName, boolean value,
+            Integer ttl) {
+        return putColumn(columnName, value, BooleanSerializer.get(), ttl);
+    }
+
+    @Override
+    public ColumnListMutation<C> putColumn(C columnName, ByteBuffer value,
+            Integer ttl) {
+        return putColumn(columnName, value, ByteBufferSerializer.get(), ttl);
+    }
+
+    @Override
+    public ColumnListMutation<C> putColumn(C columnName, Date value, Integer ttl) {
+        return putColumn(columnName, value, DateSerializer.get(), ttl);
+    }
+
+    @Override
+    public ColumnListMutation<C> putColumn(C columnName, double value,
+            Integer ttl) {
+        return putColumn(columnName, value, DoubleSerializer.get(), ttl);
+    }
+
+    @Override
+    public ColumnListMutation<C> putColumn(C columnName, UUID value, Integer ttl) {
+        return putColumn(columnName, value, UUIDSerializer.get(), ttl);
+    }
+
+    @Override
+    public ColumnListMutation<C> putEmptyColumn(C columnName, Integer ttl) {
+        Column column = new Column();
+        column.setName(path.getSerializer().toByteBuffer(columnName));
+        column.setValue(ThriftUtils.EMPTY_BYTE_BUFFER);
+        column.setTimestamp(timestamp);
+        if (ttl != null)
+            column.setTtl(ttl);
+        else if (defaultTtl != null)
+            column.setTtl(defaultTtl);
+
+        addMutation(column);
+        return this;
+    }
+
+    @Override
+    public ColumnListMutation<C> delete() {
+        Deletion d = new Deletion();
+        d.setSuper_column(path.get(0));
+        d.setTimestamp(timestamp);
+        mutationList.add(new Mutation().setDeletion(d));
+
+        timestamp++;
+        return this;
+    }
+
+    @Override
+    public <SC> ColumnListMutation<SC> withSuperColumn(
+            ColumnPath<SC> superColumnPath) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ColumnListMutation<C> incrementCounterColumn(C columnName,
+            long amount) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ColumnListMutation<C> deleteColumn(C columnName) {
+        if (deletionPredicate == null) {
+            deletionPredicate = new SlicePredicate();
+            Deletion d = new Deletion();
+            d.setTimestamp(timestamp);
+            d.setSuper_column(path.get(0));
+            d.setPredicate(deletionPredicate);
+
+            mutationList.add(new Mutation().setDeletion(d));
+        }
+
+        deletionPredicate.addToColumn_names(path.getSerializer().toByteBuffer(
+                columnName));
+        return this;
+    }
+
+    @Override
+    public ColumnListMutation<C> setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
+        return this;
+    }
+
+    @Override
     public ColumnListMutation<C> setDefaultTtl(Integer ttl) {
-		this.defaultTtl = ttl;
-	    return this;
+        this.defaultTtl = ttl;
+        return this;
     }
 }

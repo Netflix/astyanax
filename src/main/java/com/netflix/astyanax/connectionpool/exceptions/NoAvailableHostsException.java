@@ -16,20 +16,20 @@
 package com.netflix.astyanax.connectionpool.exceptions;
 
 public class NoAvailableHostsException extends ConnectionException {
-	/**
+    /**
      * 
      */
     private static final long serialVersionUID = 6567371094004403691L;
 
     public NoAvailableHostsException(String message) {
-		super(message);
-	}
-	
-	public NoAvailableHostsException(Throwable t) {
-		super(t);
-	}
-	
-	public NoAvailableHostsException(String message, Throwable cause) {
+        super(message);
+    }
+
+    public NoAvailableHostsException(Throwable t) {
+        super(t);
+    }
+
+    public NoAvailableHostsException(String message, Throwable cause) {
         super(message, cause);
     }
 }

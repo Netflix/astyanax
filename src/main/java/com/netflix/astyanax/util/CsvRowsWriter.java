@@ -7,7 +7,7 @@ public class CsvRowsWriter implements RowsWriter {
     @Override
     public void write(Rows<?, ?> rows) {
         // TODO Auto-generated method stub
-        
+
     }
 
 }

@@ -20,89 +20,101 @@ import java.util.Collection;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
+
 /**
- * Top level column family query lets you choose the type of query being performed
- * at the key level.  Single key, key range or a key slice.
+ * Top level column family query lets you choose the type of query being
+ * performed at the key level. Single key, key range or a key slice.
+ * 
  * @author elandau
- *
+ * 
  * @param <K>
  * @param <C>
  */
 public interface ColumnFamilyQuery<K, C> {
-	/**
-	 * Set the consistency level for this operations.  
-	 * @param consistencyLevel
-	 * @return
-	 */
-	ColumnFamilyQuery<K, C> setConsistencyLevel(ConsistencyLevel consistencyLevel);
-	
-	/**
-	 * Set the retry policy to use instead of the default
-	 * @param consistencyLevel
-	 * @return
-	 */
-	ColumnFamilyQuery<K, C> withRetryPolicy(RetryPolicy retry);
-	
-	/**
-	 * Run the query on the specified host
-	 * @param host
-	 * @return
-	 */
-	ColumnFamilyQuery<K, C> pinToHost(Host host);
-	
-	/**
-	 * Query a single key
-	 * @param rowKey
-	 * @return
-	 */
-	RowQuery<K,C> getKey(K rowKey);
+    /**
+     * Set the consistency level for this operations.
+     * 
+     * @param consistencyLevel
+     * @return
+     */
+    ColumnFamilyQuery<K, C> setConsistencyLevel(
+            ConsistencyLevel consistencyLevel);
 
-	/**
-	 * Query a range of keys.  startKey and endKey cannot not be used with the
-	 * RandomPartitioner.
-	 * 
-	 * @param startKey
-	 * @param endKey
-	 * @param startToken
-	 * @param endToken
-	 * @param count			Max number of keys to return
-	 * @return
-	 */
-	RowSliceQuery<K,C> getKeyRange(K startKey, K endKey, String startToken, String endToken, int count);
-	
-	/**
-	 * Query a non-contiguous set of keys.
-	 * 
-	 * @param keys
-	 * @return
-	 */
-	RowSliceQuery<K,C> getKeySlice(K... keys);
-	
-	/**
-	 * Query a non-contiguous set of keys.
-	 * 
-	 * @param keys
-	 * @return
-	 */
-	RowSliceQuery<K,C> getKeySlice(Collection<K> keys);
-	
-	/**
-	 * Query to get an iterator to all rows in the column family
-	 * @return
-	 */
-	AllRowsQuery<K,C> getAllRows();
-	
-	/**
-	 * Prepare a CQL Query
-	 * @param cql
-	 * @return
-	 */
-	CqlQuery<K, C> withCql(String cql);
-	
-	/**
-	 * Search for keys matching the provided index clause
-	 * @param indexClause
-	 * @return
-	 */
-	IndexQuery<K,C> searchWithIndex();
+    /**
+     * Set the retry policy to use instead of the default
+     * 
+     * @param consistencyLevel
+     * @return
+     */
+    ColumnFamilyQuery<K, C> withRetryPolicy(RetryPolicy retry);
+
+    /**
+     * Run the query on the specified host
+     * 
+     * @param host
+     * @return
+     */
+    ColumnFamilyQuery<K, C> pinToHost(Host host);
+
+    /**
+     * Query a single key
+     * 
+     * @param rowKey
+     * @return
+     */
+    RowQuery<K, C> getKey(K rowKey);
+
+    /**
+     * Query a range of keys. startKey and endKey cannot not be used with the
+     * RandomPartitioner.
+     * 
+     * @param startKey
+     * @param endKey
+     * @param startToken
+     * @param endToken
+     * @param count
+     *            Max number of keys to return
+     * @return
+     */
+    RowSliceQuery<K, C> getKeyRange(K startKey, K endKey, String startToken,
+            String endToken, int count);
+
+    /**
+     * Query a non-contiguous set of keys.
+     * 
+     * @param keys
+     * @return
+     */
+    RowSliceQuery<K, C> getKeySlice(K... keys);
+
+    /**
+     * Query a non-contiguous set of keys.
+     * 
+     * @param keys
+     * @return
+     */
+    RowSliceQuery<K, C> getKeySlice(Collection<K> keys);
+
+    /**
+     * Query to get an iterator to all rows in the column family
+     * 
+     * @return
+     */
+    AllRowsQuery<K, C> getAllRows();
+
+    /**
+     * Prepare a CQL Query
+     * 
+     * @param cql
+     * @return
+     */
+    CqlQuery<K, C> withCql(String cql);
+
+    /**
+     * Search for keys matching the provided index clause
+     * 
+     * @param indexClause
+     * @return
+     */
+    IndexQuery<K, C> searchWithIndex();
 }

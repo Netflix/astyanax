@@ -21,80 +21,77 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
 import com.netflix.astyanax.connectionpool.RetryBackoffStrategy;
 
-public class ExponentialRetryBackoffStrategy implements RetryBackoffStrategy{
-	private final ConnectionPoolConfiguration config;
-	
-	public ExponentialRetryBackoffStrategy(ConnectionPoolConfiguration config) {
-		this.config = config;
-	}
-	
-	public String toString() {
-		return new StringBuilder()
-			.append("ExpRetry[")
-			.append("max=").append(config.getRetryMaxDelaySlice())
-			.append(",slot=").append(config.getRetryDelaySlice())
-			.append(",suspend=").append(config.getRetrySuspendWindow())
-			.append("]")
-			.toString();
-	}
-	
-	@Override
-	public Instance createInstance() {
-		return new RetryBackoffStrategy.Instance() {
-			private int c = 1;
-			private AtomicBoolean isSuspended = new AtomicBoolean(false);
-			private int attemptCount = 0;
-			private long lastReconnectTime = 0;
-			
-			@Override
-			public long getNextDelay() {
-				if (isSuspended.get()) {
-					isSuspended.set(false);
-					return config.getRetrySuspendWindow();
-				}
-				
-				attemptCount++;
-				if (attemptCount == 1) {
-					if (System.currentTimeMillis() - lastReconnectTime < config.getRetrySuspendWindow()) {
-						return config.getRetrySuspendWindow();
-					}
-				}
-				
-				c *= 2;
-				if (c > config.getRetryMaxDelaySlice()) 
-					c = config.getRetryMaxDelaySlice();
-				
-				return (new Random().nextInt(c) + 1) * config.getRetryDelaySlice();
-			}
+public class ExponentialRetryBackoffStrategy implements RetryBackoffStrategy {
+    private final ConnectionPoolConfiguration config;
 
-			@Override
-			public int getAttemptCount() {
-				return attemptCount;
-			}
-			
-			public String toString() {
-				return new StringBuilder().append("ExpRetry.Instance[")
-					.append(c).append(",")
-					.append(isSuspended).append(",")
-					.append(attemptCount)
-					.append("]").toString();
-			}
+    public ExponentialRetryBackoffStrategy(ConnectionPoolConfiguration config) {
+        this.config = config;
+    }
 
-			@Override
-			public void begin() {
-				this.attemptCount = 0;
-				this.c = 1;
-			}
+    public String toString() {
+        return new StringBuilder().append("ExpRetry[").append("max=")
+                .append(config.getRetryMaxDelaySlice()).append(",slot=")
+                .append(config.getRetryDelaySlice()).append(",suspend=")
+                .append(config.getRetrySuspendWindow()).append("]").toString();
+    }
 
-			@Override
-			public void success() {
-				this.lastReconnectTime = System.currentTimeMillis();
-			}
+    @Override
+    public Instance createInstance() {
+        return new RetryBackoffStrategy.Instance() {
+            private int c = 1;
+            private AtomicBoolean isSuspended = new AtomicBoolean(false);
+            private int attemptCount = 0;
+            private long lastReconnectTime = 0;
 
-			@Override
-			public void suspend() {
-				this.isSuspended.set(true);
-			}
-		};
-	}
+            @Override
+            public long getNextDelay() {
+                if (isSuspended.get()) {
+                    isSuspended.set(false);
+                    return config.getRetrySuspendWindow();
+                }
+
+                attemptCount++;
+                if (attemptCount == 1) {
+                    if (System.currentTimeMillis() - lastReconnectTime < config
+                            .getRetrySuspendWindow()) {
+                        return config.getRetrySuspendWindow();
+                    }
+                }
+
+                c *= 2;
+                if (c > config.getRetryMaxDelaySlice())
+                    c = config.getRetryMaxDelaySlice();
+
+                return (new Random().nextInt(c) + 1)
+                        * config.getRetryDelaySlice();
+            }
+
+            @Override
+            public int getAttemptCount() {
+                return attemptCount;
+            }
+
+            public String toString() {
+                return new StringBuilder().append("ExpRetry.Instance[")
+                        .append(c).append(",").append(isSuspended).append(",")
+                        .append(attemptCount).append("]").toString();
+            }
+
+            @Override
+            public void begin() {
+                this.attemptCount = 0;
+                this.c = 1;
+            }
+
+            @Override
+            public void success() {
+                this.lastReconnectTime = System.currentTimeMillis();
+            }
+
+            @Override
+            public void suspend() {
+                this.isSuspended.set(true);
+            }
+        };
+    }
 }

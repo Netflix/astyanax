@@ -34,60 +34,61 @@ import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.serializers.SerializerPackageImpl;
 
 public class TestKeyspace implements Keyspace {
-	private String keyspaceName;
-	private List<TokenRange> tokenRange;
-	
-	public TestKeyspace(String name) {
-		this.keyspaceName = name;
-	}
-	
-	public void setTokenRange(List<TokenRange> tokens) {
-		this.tokenRange = tokens;
-	}
-	
-	@Override
-	public String getKeyspaceName() {
-		return this.keyspaceName;
-	}
+    private String keyspaceName;
+    private List<TokenRange> tokenRange;
 
-	@Override
-	public List<TokenRange> describeRing() throws ConnectionException {
-		return this.tokenRange;
-	}
+    public TestKeyspace(String name) {
+        this.keyspaceName = name;
+    }
 
-	@Override
-	public MutationBatch prepareMutationBatch() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public <K, C> ColumnFamilyQuery<K, C> prepareQuery(ColumnFamily<K, C> cf) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public <K, C> ColumnMutation prepareColumnMutation(
-			ColumnFamily<K, C> columnFamily, K rowKey, C column) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public AstyanaxConfiguration getConfig() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public KeyspaceDefinition describeKeyspace() throws ConnectionException {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    public void setTokenRange(List<TokenRange> tokens) {
+        this.tokenRange = tokens;
+    }
 
     @Override
-    public SerializerPackage getSerializerPackage(String columnFamily, boolean ignoreErrors) {
+    public String getKeyspaceName() {
+        return this.keyspaceName;
+    }
+
+    @Override
+    public List<TokenRange> describeRing() throws ConnectionException {
+        return this.tokenRange;
+    }
+
+    @Override
+    public MutationBatch prepareMutationBatch() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public <K, C> ColumnFamilyQuery<K, C> prepareQuery(ColumnFamily<K, C> cf) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public <K, C> ColumnMutation prepareColumnMutation(
+            ColumnFamily<K, C> columnFamily, K rowKey, C column) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public AstyanaxConfiguration getConfig() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public KeyspaceDefinition describeKeyspace() throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public SerializerPackage getSerializerPackage(String columnFamily,
+            boolean ignoreErrors) {
         return SerializerPackageImpl.DEFAULT_SERIALIZER_PACKAGE;
     }
 
@@ -98,18 +99,18 @@ public class TestKeyspace implements Keyspace {
         return null;
     }
 
-	@Override
-	public <K, C> OperationResult<Void> truncateColumnFamily(
-			ColumnFamily<K, C> columnFamily) throws OperationException,
-			ConnectionException {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    @Override
+    public <K, C> OperationResult<Void> truncateColumnFamily(
+            ColumnFamily<K, C> columnFamily) throws OperationException,
+            ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
 
-	@Override
-	public OperationResult<Void> testOperation(Operation<?, ?> operation,
-			RetryPolicy retry) throws ConnectionException {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    @Override
+    public OperationResult<Void> testOperation(Operation<?, ?> operation,
+            RetryPolicy retry) throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
 }

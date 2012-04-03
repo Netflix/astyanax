@@ -12,55 +12,53 @@ import org.apache.cassandra.db.marshal.LongType;
  */
 public final class LongSerializer extends AbstractSerializer<Long> {
 
-  private static final LongSerializer instance = new LongSerializer();
+    private static final LongSerializer instance = new LongSerializer();
 
-  public static LongSerializer get() {
-    return instance;
-  }
-
-  @Override
-  public ByteBuffer toByteBuffer(Long obj) {
-    if (obj == null) {
-      return null;
+    public static LongSerializer get() {
+        return instance;
     }
-    return ByteBuffer.allocate(8).putLong(0, obj);
-  }
 
-  @Override
-  public Long fromByteBuffer(ByteBuffer byteBuffer) {
-    if (byteBuffer == null) {
-      return null;
+    @Override
+    public ByteBuffer toByteBuffer(Long obj) {
+        if (obj == null) {
+            return null;
+        }
+        return ByteBuffer.allocate(8).putLong(0, obj);
     }
-    else if (byteBuffer.remaining() == 8) {
-    	return byteBuffer.getLong();
-    }
-    else if (byteBuffer.remaining() == 4) {
-    	return (long)byteBuffer.getInt();
-    }
-    return null;
-  }
 
-  @Override
-  public ComparatorType getComparatorType() {
-    return ComparatorType.LONGTYPE;
-  }
+    @Override
+    public Long fromByteBuffer(ByteBuffer byteBuffer) {
+        if (byteBuffer == null) {
+            return null;
+        } else if (byteBuffer.remaining() == 8) {
+            return byteBuffer.getLong();
+        } else if (byteBuffer.remaining() == 4) {
+            return (long) byteBuffer.getInt();
+        }
+        return null;
+    }
 
-  @Override
-  public ByteBuffer fromString(String str) {
-	return LongType.instance.fromString(str);
-  }
-	
-  @Override
-  public String getString(ByteBuffer byteBuffer) {
-      return LongType.instance.getString(byteBuffer);
-  }
-  
-  @Override
-  public ByteBuffer getNext(ByteBuffer byteBuffer) {
-	Long val = fromByteBuffer(byteBuffer.duplicate());
-	if (val == Long.MAX_VALUE) {
-		throw new ArithmeticException("Can't paginate past max long");
-	}
-	return toByteBuffer(val+1);
-  }
+    @Override
+    public ComparatorType getComparatorType() {
+        return ComparatorType.LONGTYPE;
+    }
+
+    @Override
+    public ByteBuffer fromString(String str) {
+        return LongType.instance.fromString(str);
+    }
+
+    @Override
+    public String getString(ByteBuffer byteBuffer) {
+        return LongType.instance.getString(byteBuffer);
+    }
+
+    @Override
+    public ByteBuffer getNext(ByteBuffer byteBuffer) {
+        Long val = fromByteBuffer(byteBuffer.duplicate());
+        if (val == Long.MAX_VALUE) {
+            throw new ArithmeticException("Can't paginate past max long");
+        }
+        return toByteBuffer(val + 1);
+    }
 }

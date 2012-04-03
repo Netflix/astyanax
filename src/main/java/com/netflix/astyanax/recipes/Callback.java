@@ -1,5 +1,5 @@
 package com.netflix.astyanax.recipes;
 
 public interface Callback<T> {
-	void handle(T object);
+    void handle(T object);
 }

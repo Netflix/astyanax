@@ -26,94 +26,94 @@ import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnList;
 
 public class ThriftSuperColumnImpl<C> implements Column<C> {
-	private final SuperColumn column;
-	private final C name;
-	
-	public ThriftSuperColumnImpl(C name, SuperColumn column) {
-		this.column = column;
-		this.name = name;
-	}
-	
-	@Override
-	public C getName() {
-		return name;
-	}
+    private final SuperColumn column;
+    private final C name;
 
-	@Override
-	public <V> V getValue(Serializer<V> valSer) {
-		throw new UnsupportedOperationException(
-				"SuperColumn \'" + this.name+ "\' has no value");
-	}
+    public ThriftSuperColumnImpl(C name, SuperColumn column) {
+        this.column = column;
+        this.name = name;
+    }
 
-	@Override
-	public String getStringValue() {
-		throw new UnsupportedOperationException(
-				"SuperColumn \'" + this.name+ "\' has no value");
-	}
+    @Override
+    public C getName() {
+        return name;
+    }
 
-	@Override
-	public <C2> ColumnList<C2> getSubColumns(Serializer<C2> ser) {
-		return new ThriftColumnListImpl<C2>(this.column.getColumns(), ser);
-	}
+    @Override
+    public <V> V getValue(Serializer<V> valSer) {
+        throw new UnsupportedOperationException("SuperColumn \'" + this.name
+                + "\' has no value");
+    }
 
-	@Override
-	public boolean isParentColumn() {
-		return true;
-	}
+    @Override
+    public String getStringValue() {
+        throw new UnsupportedOperationException("SuperColumn \'" + this.name
+                + "\' has no value");
+    }
 
-	@Override
-	public int getIntegerValue() {
-		throw new UnsupportedOperationException(
-				"SuperColumn \'" + this.name+ "\' has no value");
-	}
+    @Override
+    public <C2> ColumnList<C2> getSubColumns(Serializer<C2> ser) {
+        return new ThriftColumnListImpl<C2>(this.column.getColumns(), ser);
+    }
 
-	@Override
-	public long getLongValue()  {
-		throw new UnsupportedOperationException(
-				"SuperColumn \'" + this.name+ "\' has no value");
-	}
-	
-	@Override
-	public byte[] getByteArrayValue() {
-		throw new UnsupportedOperationException(
-				"SuperColumn \'" + this.name+ "\' has no value");
-	}
+    @Override
+    public boolean isParentColumn() {
+        return true;
+    }
 
-	@Override
-	public boolean getBooleanValue() {
-		throw new UnsupportedOperationException(
-				"SuperColumn \'" + this.name+ "\' has no value");
-	}
+    @Override
+    public int getIntegerValue() {
+        throw new UnsupportedOperationException("SuperColumn \'" + this.name
+                + "\' has no value");
+    }
 
-	@Override
-	public ByteBuffer getByteBufferValue() {
-		throw new UnsupportedOperationException(
-				"SuperColumn \'" + this.name+ "\' has no value");
-	}
+    @Override
+    public long getLongValue() {
+        throw new UnsupportedOperationException("SuperColumn \'" + this.name
+                + "\' has no value");
+    }
 
-	@Override
-	public Date getDateValue() {
-		throw new UnsupportedOperationException(
-				"SuperColumn \'" + this.name+ "\' has no value");
-	}
+    @Override
+    public byte[] getByteArrayValue() {
+        throw new UnsupportedOperationException("SuperColumn \'" + this.name
+                + "\' has no value");
+    }
 
-	@Override
-	public UUID getUUIDValue() {
-		throw new UnsupportedOperationException(
-				"SuperColumn \'" + this.name+ "\' has no value");
-	}
+    @Override
+    public boolean getBooleanValue() {
+        throw new UnsupportedOperationException("SuperColumn \'" + this.name
+                + "\' has no value");
+    }
 
-	@Override
-	public long getTimestamp() {
-		throw new UnsupportedOperationException(
-				"SuperColumn \'" + this.name+ "\' has no timestamp");
-	}
+    @Override
+    public ByteBuffer getByteBufferValue() {
+        throw new UnsupportedOperationException("SuperColumn \'" + this.name
+                + "\' has no value");
+    }
 
-	@Override
-	public double getDoubleValue() {
-		throw new UnsupportedOperationException(
-				"SuperColumn \'" + this.name+ "\' has no value");
-	}
+    @Override
+    public Date getDateValue() {
+        throw new UnsupportedOperationException("SuperColumn \'" + this.name
+                + "\' has no value");
+    }
+
+    @Override
+    public UUID getUUIDValue() {
+        throw new UnsupportedOperationException("SuperColumn \'" + this.name
+                + "\' has no value");
+    }
+
+    @Override
+    public long getTimestamp() {
+        throw new UnsupportedOperationException("SuperColumn \'" + this.name
+                + "\' has no timestamp");
+    }
+
+    @Override
+    public double getDoubleValue() {
+        throw new UnsupportedOperationException("SuperColumn \'" + this.name
+                + "\' has no value");
+    }
 
     @Override
     public ByteBuffer getRawName() {

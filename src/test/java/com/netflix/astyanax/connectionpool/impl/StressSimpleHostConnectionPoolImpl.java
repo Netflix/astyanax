@@ -34,82 +34,83 @@ import com.netflix.astyanax.fake.TestHostType;
 public class StressSimpleHostConnectionPoolImpl {
     private static final Logger LOG = Logger.getLogger(Stress.class);
 
-	public static class NoOpListener implements SimpleHostConnectionPool.Listener<TestClient> {
-		@Override
-		public void onHostDown(HostConnectionPool<TestClient> pool) {
-		}
+    public static class NoOpListener implements
+            SimpleHostConnectionPool.Listener<TestClient> {
+        @Override
+        public void onHostDown(HostConnectionPool<TestClient> pool) {
+        }
 
-		@Override
-		public void onHostUp(HostConnectionPool<TestClient> pool) {
-		}
-		
-	}
-	
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		ConnectionPoolConfigurationImpl config = new ConnectionPoolConfigurationImpl("cluster_keyspace");
-		config.setMaxConnsPerHost(3);
-		
-		CountingConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
-		
-		Host host = new Host("127.0.0.1", TestHostType.GOOD_IMMEDIATE.ordinal());
-		final SimpleHostConnectionPool<TestClient> pool = new SimpleHostConnectionPool<TestClient>(
-				host, new TestConnectionFactory(null, monitor), monitor, config, new NoOpListener());
-		
-		int numThreads = 100;
-		final int numOperations = 100;
-		final int timeout = 2000;
-		
-		ExecutorService executor = Executors.newFixedThreadPool(numThreads);
-		for (int i = 0; i < numThreads; i++) {
-			executor.submit(new Runnable() {
-				@Override
-				public void run() {
-					for (int i = 0; i < numOperations; i++) {
-						Connection<TestClient> conn = null;
-						try {
-							conn = pool.borrowConnection(timeout);
-							think(10, 10);
-						} catch (OperationException e) {
-							// e.printStackTrace();
-						} catch (ConnectionException e) {
-							// e.printStackTrace();
-						}
-						finally {
-							conn.getHostConnectionPool().returnConnection(conn);
-						}
-					}
-				}
-			});
-		}
-		
-		try {
-			executor.shutdown();
-			while (!executor.awaitTermination(1000, TimeUnit.MILLISECONDS)) {
-				LOG.info(pool.toString());
-			}
-			Thread.sleep(1000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		
-		LOG.info("**** FINISHED ****");
-		LOG.info(pool.toString());
-	}
-	
+        @Override
+        public void onHostUp(HostConnectionPool<TestClient> pool) {
+        }
+
+    }
+
+    /**
+     * @param args
+     */
+    public static void main(String[] args) {
+        ConnectionPoolConfigurationImpl config = new ConnectionPoolConfigurationImpl(
+                "cluster_keyspace");
+        config.setMaxConnsPerHost(3);
+
+        CountingConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
+
+        Host host = new Host("127.0.0.1", TestHostType.GOOD_IMMEDIATE.ordinal());
+        final SimpleHostConnectionPool<TestClient> pool = new SimpleHostConnectionPool<TestClient>(
+                host, new TestConnectionFactory(null, monitor), monitor,
+                config, new NoOpListener());
+
+        int numThreads = 100;
+        final int numOperations = 100;
+        final int timeout = 2000;
+
+        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+        for (int i = 0; i < numThreads; i++) {
+            executor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    for (int i = 0; i < numOperations; i++) {
+                        Connection<TestClient> conn = null;
+                        try {
+                            conn = pool.borrowConnection(timeout);
+                            think(10, 10);
+                        } catch (OperationException e) {
+                            // e.printStackTrace();
+                        } catch (ConnectionException e) {
+                            // e.printStackTrace();
+                        } finally {
+                            conn.getHostConnectionPool().returnConnection(conn);
+                        }
+                    }
+                }
+            });
+        }
+
+        try {
+            executor.shutdown();
+            while (!executor.awaitTermination(1000, TimeUnit.MILLISECONDS)) {
+                LOG.info(pool.toString());
+            }
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        LOG.info("**** FINISHED ****");
+        LOG.info(pool.toString());
+    }
+
     private static void think(int min, int max) {
-    	try {
-    		if (max > min) {
-    			Thread.sleep(min + new Random().nextInt(max-min));
-    		}
-    		else {
-    			Thread.sleep(min);
-    		}
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+        try {
+            if (max > min) {
+                Thread.sleep(min + new Random().nextInt(max - min));
+            } else {
+                Thread.sleep(min);
+            }
+        } catch (InterruptedException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
 }

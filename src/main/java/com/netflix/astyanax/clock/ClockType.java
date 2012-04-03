@@ -18,18 +18,17 @@ package com.netflix.astyanax.clock;
 import com.netflix.astyanax.Clock;
 
 public enum ClockType {
-	MSEC(new MillisecondsClock()),
-	MICRO(new MicrosecondsSyncClock()),
-	ASYNC_MICRO(new MicrosecondsAsyncClock());
-	
-	Clock clock;
-	
-	public Clock get() {
-		return clock;
-	}
-	
-	ClockType(Clock clock) {
-		this.clock = clock;
-	}
-	
+    MSEC(new MillisecondsClock()), MICRO(new MicrosecondsSyncClock()), ASYNC_MICRO(
+            new MicrosecondsAsyncClock());
+
+    Clock clock;
+
+    public Clock get() {
+        return clock;
+    }
+
+    ClockType(Clock clock) {
+        this.clock = clock;
+    }
+
 }

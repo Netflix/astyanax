@@ -10,37 +10,40 @@ import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.impl.AckingQueue;
 
 public class BlockingAckingQueue implements AckingQueue {
-	
-	private LinkedBlockingQueue<MutationBatch> queue = Queues.newLinkedBlockingQueue();
-	private ConcurrentMap<MutationBatch, Boolean> busy = Maps.newConcurrentMap();
-	
-	@Override
-    public MutationBatch getNextMutation(long timeout, TimeUnit unit) throws InterruptedException {
-		MutationBatch mutation = queue.poll(timeout, unit);
-		if (mutation != null) {
-			busy.put(mutation, true);
-		}
-	    return mutation;
+
+    private LinkedBlockingQueue<MutationBatch> queue = Queues
+            .newLinkedBlockingQueue();
+    private ConcurrentMap<MutationBatch, Boolean> busy = Maps
+            .newConcurrentMap();
+
+    @Override
+    public MutationBatch getNextMutation(long timeout, TimeUnit unit)
+            throws InterruptedException {
+        MutationBatch mutation = queue.poll(timeout, unit);
+        if (mutation != null) {
+            busy.put(mutation, true);
+        }
+        return mutation;
     }
 
-	@Override
+    @Override
     public void pushMutation(MutationBatch m) throws Exception {
-		queue.put(m); 
-	}
-
-	@Override
-    public void ackMutation(MutationBatch m) throws Exception{
-		busy.remove(m);
+        queue.put(m);
     }
 
-	@Override
-    public void repushMutation(MutationBatch m) throws Exception{
-		busy.remove(m);
-		pushMutation(m);
+    @Override
+    public void ackMutation(MutationBatch m) throws Exception {
+        busy.remove(m);
     }
 
-	@Override
+    @Override
+    public void repushMutation(MutationBatch m) throws Exception {
+        busy.remove(m);
+        pushMutation(m);
+    }
+
+    @Override
     public int size() {
-	    return queue.size();
+        return queue.size();
     }
 }

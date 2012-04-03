@@ -24,90 +24,92 @@ import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnList;
 
 public class ThriftCounterColumnListImpl<C> implements ColumnList<C> {
-	private final List<org.apache.cassandra.thrift.CounterColumn> columns;
-	private HashMap<C, org.apache.cassandra.thrift.CounterColumn> lookup;
-	private final Serializer<C> colSer;
+    private final List<org.apache.cassandra.thrift.CounterColumn> columns;
+    private HashMap<C, org.apache.cassandra.thrift.CounterColumn> lookup;
+    private final Serializer<C> colSer;
 
-	public ThriftCounterColumnListImpl(
-			List<org.apache.cassandra.thrift.CounterColumn> columns,
-			Serializer<C> colSer) {
-		this.columns = columns;
-		this.colSer = colSer;
-	}
-			
-	@Override
-	public Iterator<Column<C>> iterator() {
-		class IteratorImpl implements Iterator<Column<C>> {
-			Iterator<org.apache.cassandra.thrift.CounterColumn> base;
-			
-			public IteratorImpl(Iterator<org.apache.cassandra.thrift.CounterColumn> base) {
-				this.base = base;
-			}
-			
-			@Override
-			public boolean hasNext() {
-				return base.hasNext();
-			}
+    public ThriftCounterColumnListImpl(
+            List<org.apache.cassandra.thrift.CounterColumn> columns,
+            Serializer<C> colSer) {
+        this.columns = columns;
+        this.colSer = colSer;
+    }
 
-			@Override
-			public Column<C> next() {
-				org.apache.cassandra.thrift.CounterColumn c = base.next();
-				return new ThriftCounterColumnImpl<C>(colSer.fromBytes(c.getName()), c);
-			}
+    @Override
+    public Iterator<Column<C>> iterator() {
+        class IteratorImpl implements Iterator<Column<C>> {
+            Iterator<org.apache.cassandra.thrift.CounterColumn> base;
 
-			@Override
-			public void remove() {
-				throw new UnsupportedOperationException("Iterator is immutable");
-			}
-		}
-		return new IteratorImpl(columns.iterator());
-	}
+            public IteratorImpl(
+                    Iterator<org.apache.cassandra.thrift.CounterColumn> base) {
+                this.base = base;
+            }
 
-	@Override
-	public Column<C> getColumnByName(C columnName) {
-		if (lookup == null) {
-			lookup = new HashMap<C, org.apache.cassandra.thrift.CounterColumn>();
-			for (org.apache.cassandra.thrift.CounterColumn column : columns) {
-				lookup.put(colSer.fromBytes(column.getName()), column);
-			}
-		}
-		
-		org.apache.cassandra.thrift.CounterColumn c = lookup.get(columnName);
-		if (c == null) {
-			return null;
-		}
-		return new ThriftCounterColumnImpl<C>(colSer.fromBytes(c.getName()), c);
-	}
+            @Override
+            public boolean hasNext() {
+                return base.hasNext();
+            }
 
-	@Override
-	public Column<C> getColumnByIndex(int idx) {
-		org.apache.cassandra.thrift.CounterColumn c = columns.get(idx);
-		return new ThriftCounterColumnImpl<C>(colSer.fromBytes(c.getName()), c);
-	}
+            @Override
+            public Column<C> next() {
+                org.apache.cassandra.thrift.CounterColumn c = base.next();
+                return new ThriftCounterColumnImpl<C>(colSer.fromBytes(c
+                        .getName()), c);
+            }
 
-	@Override
-	public <C2> Column<C2> getSuperColumn(C columnName, Serializer<C2> colSer) {
-		throw new UnsupportedOperationException("Call getCounter");
-	}
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException("Iterator is immutable");
+            }
+        }
+        return new IteratorImpl(columns.iterator());
+    }
 
-	@Override
-	public <C2> Column<C2> getSuperColumn(int idx, Serializer<C2> colSer) {
-		throw new UnsupportedOperationException("Call getCounter");
-	}
+    @Override
+    public Column<C> getColumnByName(C columnName) {
+        if (lookup == null) {
+            lookup = new HashMap<C, org.apache.cassandra.thrift.CounterColumn>();
+            for (org.apache.cassandra.thrift.CounterColumn column : columns) {
+                lookup.put(colSer.fromBytes(column.getName()), column);
+            }
+        }
 
-	@Override
-	public boolean isEmpty() {
-		return columns.isEmpty();
-	}
+        org.apache.cassandra.thrift.CounterColumn c = lookup.get(columnName);
+        if (c == null) {
+            return null;
+        }
+        return new ThriftCounterColumnImpl<C>(colSer.fromBytes(c.getName()), c);
+    }
 
-	@Override
-	public int size() {
-		return columns.size();
-	}
+    @Override
+    public Column<C> getColumnByIndex(int idx) {
+        org.apache.cassandra.thrift.CounterColumn c = columns.get(idx);
+        return new ThriftCounterColumnImpl<C>(colSer.fromBytes(c.getName()), c);
+    }
 
-	@Override
-	public boolean isSuperColumn() {
-		return false;
-	}
+    @Override
+    public <C2> Column<C2> getSuperColumn(C columnName, Serializer<C2> colSer) {
+        throw new UnsupportedOperationException("Call getCounter");
+    }
+
+    @Override
+    public <C2> Column<C2> getSuperColumn(int idx, Serializer<C2> colSer) {
+        throw new UnsupportedOperationException("Call getCounter");
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return columns.isEmpty();
+    }
+
+    @Override
+    public int size() {
+        return columns.size();
+    }
+
+    @Override
+    public boolean isSuperColumn() {
+        return false;
+    }
 
 }

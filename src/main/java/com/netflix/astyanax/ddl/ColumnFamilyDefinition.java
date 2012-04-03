@@ -20,74 +20,95 @@ import java.util.List;
 
 public interface ColumnFamilyDefinition {
 
-	ColumnFamilyDefinition setComment(String comment);
-	String getComment();
-	
-	ColumnFamilyDefinition setKeyspace(String keyspace);
-	String getKeyspace();
-	
-	@Deprecated
-	ColumnFamilyDefinition setMemtableFlushAfterMins(int value);
-	@Deprecated
-	int getMemtableFlushAfterMins();
-	
-	@Deprecated
-	ColumnFamilyDefinition setMemtableOperationsInMillions(double value);
-	@Deprecated
-	double getMemtableOperationsInMillions();
-	
-	@Deprecated
-	ColumnFamilyDefinition setMemtableThroughputInMb(int value);
-	@Deprecated
-	int getMemtableThroughputInMb();
-	
-	ColumnFamilyDefinition setMergeShardsChance(double value);
-	double getMergeShardsChance();
-	
-	ColumnFamilyDefinition setMinCompactionThreshold(int value);
-	int getMinCompactionThreshold();
-	
-	ColumnFamilyDefinition setName(String name);
-	String getName();
-	
-	ColumnFamilyDefinition setReadRepairChance(double value);
-	double getReadRepairChance();
-	
-	ColumnFamilyDefinition setReplicateOnWrite(boolean value);
-	boolean getReplicateOnWrite();
-	
-	ColumnFamilyDefinition setRowCacheProvider(String value);
-	String getRowCacheProvider();
-	
-	ColumnFamilyDefinition setRowCacheSavePeriodInSeconds(int value);
-	int getRowCacheSavePeriodInSeconds();
-	
-	ColumnFamilyDefinition setRowCacheSize(double size);
-	double getRowCacheSize();
-	
-	ColumnFamilyDefinition setComparatorType(String value);
-	String getComparatorType();
-	
-	ColumnFamilyDefinition setDefaultValidationClass(String value);
-	String getDefaultValidationClass();
-	
-	ColumnFamilyDefinition setId(int id);
-	int getId();
-	
-	ColumnFamilyDefinition setKeyAlias(ByteBuffer alias);
-	ByteBuffer getKeyAlias();
-	
-	ColumnFamilyDefinition setKeyCacheSavePeriodInSeconds(int value);
-	int getKeyCacheSavePeriodInSeconds();
-	
-	ColumnFamilyDefinition setKeyCacheSize(double keyCacheSize);
-	double getKeyCacheSize();
-	
-	ColumnFamilyDefinition setKeyValidationClass(String keyValidationClass);
-	String getKeyValidationClass();
-	
-	List<ColumnDefinition> getColumnDefinitionList();
-	ColumnFamilyDefinition addColumnDefinition(ColumnDefinition def);
-	
-	ColumnDefinition makeColumnDefinition();
+    ColumnFamilyDefinition setComment(String comment);
+
+    String getComment();
+
+    ColumnFamilyDefinition setKeyspace(String keyspace);
+
+    String getKeyspace();
+
+    @Deprecated
+    ColumnFamilyDefinition setMemtableFlushAfterMins(int value);
+
+    @Deprecated
+    int getMemtableFlushAfterMins();
+
+    @Deprecated
+    ColumnFamilyDefinition setMemtableOperationsInMillions(double value);
+
+    @Deprecated
+    double getMemtableOperationsInMillions();
+
+    @Deprecated
+    ColumnFamilyDefinition setMemtableThroughputInMb(int value);
+
+    @Deprecated
+    int getMemtableThroughputInMb();
+
+    ColumnFamilyDefinition setMergeShardsChance(double value);
+
+    double getMergeShardsChance();
+
+    ColumnFamilyDefinition setMinCompactionThreshold(int value);
+
+    int getMinCompactionThreshold();
+
+    ColumnFamilyDefinition setName(String name);
+
+    String getName();
+
+    ColumnFamilyDefinition setReadRepairChance(double value);
+
+    double getReadRepairChance();
+
+    ColumnFamilyDefinition setReplicateOnWrite(boolean value);
+
+    boolean getReplicateOnWrite();
+
+    ColumnFamilyDefinition setRowCacheProvider(String value);
+
+    String getRowCacheProvider();
+
+    ColumnFamilyDefinition setRowCacheSavePeriodInSeconds(int value);
+
+    int getRowCacheSavePeriodInSeconds();
+
+    ColumnFamilyDefinition setRowCacheSize(double size);
+
+    double getRowCacheSize();
+
+    ColumnFamilyDefinition setComparatorType(String value);
+
+    String getComparatorType();
+
+    ColumnFamilyDefinition setDefaultValidationClass(String value);
+
+    String getDefaultValidationClass();
+
+    ColumnFamilyDefinition setId(int id);
+
+    int getId();
+
+    ColumnFamilyDefinition setKeyAlias(ByteBuffer alias);
+
+    ByteBuffer getKeyAlias();
+
+    ColumnFamilyDefinition setKeyCacheSavePeriodInSeconds(int value);
+
+    int getKeyCacheSavePeriodInSeconds();
+
+    ColumnFamilyDefinition setKeyCacheSize(double keyCacheSize);
+
+    double getKeyCacheSize();
+
+    ColumnFamilyDefinition setKeyValidationClass(String keyValidationClass);
+
+    String getKeyValidationClass();
+
+    List<ColumnDefinition> getColumnDefinitionList();
+
+    ColumnFamilyDefinition addColumnDefinition(ColumnDefinition def);
+
+    ColumnDefinition makeColumnDefinition();
 }

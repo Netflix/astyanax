@@ -9,39 +9,39 @@ import java.nio.ByteBuffer;
  */
 public class CharSerializer extends AbstractSerializer<Character> {
 
-	private static final CharSerializer instance = new CharSerializer();
+    private static final CharSerializer instance = new CharSerializer();
 
-	public static CharSerializer get() {
-		return instance;
-	}
+    public static CharSerializer get() {
+        return instance;
+    }
 
-	@Override
-	public ByteBuffer toByteBuffer(Character obj) {
-		if (obj == null) 
-			return null;
-		
-		ByteBuffer buffer = ByteBuffer.allocate(Character.SIZE / Byte.SIZE);
+    @Override
+    public ByteBuffer toByteBuffer(Character obj) {
+        if (obj == null)
+            return null;
 
-		buffer.putChar(obj);
-		buffer.rewind();
+        ByteBuffer buffer = ByteBuffer.allocate(Character.SIZE / Byte.SIZE);
 
-		return buffer;
-	}
+        buffer.putChar(obj);
+        buffer.rewind();
 
-	@Override
-	public Character fromByteBuffer(ByteBuffer bytes) {
-		if (bytes == null) {
-			return null;
-		}
-		return bytes.getChar();
-	}
+        return buffer;
+    }
 
-	@Override
-	public ByteBuffer fromString(String str) {
-	    if (str == null || str.length() == 0) 
-	        return null;
-	    return toByteBuffer(str.charAt(0));
-	}
+    @Override
+    public Character fromByteBuffer(ByteBuffer bytes) {
+        if (bytes == null) {
+            return null;
+        }
+        return bytes.getChar();
+    }
+
+    @Override
+    public ByteBuffer fromString(String str) {
+        if (str == null || str.length() == 0)
+            return null;
+        return toByteBuffer(str.charAt(0));
+    }
 
     @Override
     public String getString(ByteBuffer byteBuffer) {
@@ -49,7 +49,7 @@ public class CharSerializer extends AbstractSerializer<Character> {
     }
 
     @Override
-	public ByteBuffer getNext(ByteBuffer byteBuffer) {
-		throw new IllegalStateException("Char columns can't be paginated");
-	}
+    public ByteBuffer getNext(ByteBuffer byteBuffer) {
+        throw new IllegalStateException("Char columns can't be paginated");
+    }
 }

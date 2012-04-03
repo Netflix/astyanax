@@ -26,169 +26,187 @@ import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
 
 /**
- * Batch mutator which operates at the row level assuming the hierarchy: 
+ * Batch mutator which operates at the row level assuming the hierarchy:
  * 
- * 	RowKey -> ColumnFamily -> Mutation.
+ * RowKey -> ColumnFamily -> Mutation.
  * 
- * This hierarchy serves two purposes.  First, it makes it possible to perform
+ * This hierarchy serves two purposes. First, it makes it possible to perform
  * multiple operations on the same row without having to repeat specifying the
- * row key.  Second, it mirrors the underlying Thrift data structure which 
- * averts unnecessary operations to convert from one data structure to another. 
+ * row key. Second, it mirrors the underlying Thrift data structure which averts
+ * unnecessary operations to convert from one data structure to another.
  * 
  * The mutator is not thread safe
  * 
- * If successful, all the mutations are cleared and new mutations may be 
- * created.  Any previously acquired ColumnFamilyMutations are no longer
- * valid and should be discarded.
+ * If successful, all the mutations are cleared and new mutations may be
+ * created. Any previously acquired ColumnFamilyMutations are no longer valid
+ * and should be discarded.
  * 
- * No data is actually returned after a mutation is executed, hence 
- * the Void return value type.
+ * No data is actually returned after a mutation is executed, hence the Void
+ * return value type.
  * 
  * Example:
+ * 
  * <pre>
- * {@code
- * 	
- * 	ColumnFamily<String, String> cf = 
- * 		AFactory.makeColumnFamily(
- * 				"COLUMN_FAMILY_NAME", 	// Name of CF in Cassandra
- * 				StringSerializer.get(), // Row key serializer (implies string type)
- * 				StringSerializer.get(), // Column name serializer (implies string type)
- * 				ColumnType.STANDARD);	// This is a standard row
- *
- * 	// Create a batch mutation
- * 	RowMutationBatch m = keyspace.prepareMutationBatch();
- *
- *  // Start mutate a column family for a specific row key 
- *  ColumnFamilyMutation<String> cfm = m.row(cfSuper, "UserId")
- *	   .putColumn("Address", "976 Elm St.")
- *     .putColumn("Age", 50)
- *     .putColumn("Gender", "Male");
- *  
- *  // To delete a row
- *  m.row(cfSuper, "UserId").delete();
- *  
- *  // Finally, execute the query
- *  m.execute();
- *  
+ * {
+ *     &#064;code
+ *     ColumnFamily&lt;String, String&gt; cf = AFactory.makeColumnFamily(
+ *             &quot;COLUMN_FAMILY_NAME&quot;, // Name of CF in Cassandra
+ *             StringSerializer.get(), // Row key serializer (implies string type)
+ *             StringSerializer.get(), // Column name serializer (implies string
+ *                                     // type)
+ *             ColumnType.STANDARD); // This is a standard row
+ * 
+ *     // Create a batch mutation
+ *     RowMutationBatch m = keyspace.prepareMutationBatch();
+ * 
+ *     // Start mutate a column family for a specific row key
+ *     ColumnFamilyMutation&lt;String&gt; cfm = m.row(cfSuper, &quot;UserId&quot;)
+ *             .putColumn(&quot;Address&quot;, &quot;976 Elm St.&quot;).putColumn(&quot;Age&quot;, 50)
+ *             .putColumn(&quot;Gender&quot;, &quot;Male&quot;);
+ * 
+ *     // To delete a row
+ *     m.row(cfSuper, &quot;UserId&quot;).delete();
+ * 
+ *     // Finally, execute the query
+ *     m.execute();
+ * 
  * }
  * </pre>
+ * 
  * @author elandau
- *
+ * 
  * @param <K>
  */
-public interface MutationBatch extends Execution<Void>{
-	/**
-	 * Mutate a row.  The ColumnFamilyMutation is only valid until execute()
-	 * or discardMutations is called.  
-	 * 
-	 * @param rowKey
-	 * @return
-	 */
-	<K, C> ColumnListMutation<C> withRow(ColumnFamily<K,C> columnFamily, K rowKey);
+public interface MutationBatch extends Execution<Void> {
+    /**
+     * Mutate a row. The ColumnFamilyMutation is only valid until execute() or
+     * discardMutations is called.
+     * 
+     * @param rowKey
+     * @return
+     */
+    <K, C> ColumnListMutation<C> withRow(ColumnFamily<K, C> columnFamily,
+            K rowKey);
 
-	/**
-	 * Delete the row for all the specified column families
-	 * @param columnFamilies
-	 */
-	<K> void deleteRow(Collection<ColumnFamily<K, ?>> columnFamilies, K rowKey);
+    /**
+     * Delete the row for all the specified column families
+     * 
+     * @param columnFamilies
+     */
+    <K> void deleteRow(Collection<ColumnFamily<K, ?>> columnFamilies, K rowKey);
 
-	/**
-	 * Discard any pending mutations.  All previous references returned by
-	 * row are now invalid.
-	 */
-	void discardMutations();
+    /**
+     * Discard any pending mutations. All previous references returned by row
+     * are now invalid.
+     */
+    void discardMutations();
 
-	/**
-	 * Perform a shallow merge of mutations from another batch.
-	 * @throws UnsupportedOperationException if the other mutation is of a different type
-	 */
-	void mergeShallow(MutationBatch other);
-	
-	/**
-	 * Returns true if there are no rows in the mutation.  May return a false
-	 * true if a row() was added by calling the above row() method but no 
-	 * mutations were created.
-	 * @return
-	 */
-	boolean isEmpty();
-	
-	/**
-	 * Returns the number of rows being mutated
-	 * @return
-	 */
-	int getRowCount();
+    /**
+     * Perform a shallow merge of mutations from another batch.
+     * 
+     * @throws UnsupportedOperationException
+     *             if the other mutation is of a different type
+     */
+    void mergeShallow(MutationBatch other);
 
-	/**
-	 * Return a mapping of column families to rows being modified
-	 * @return
-	 */
-	Map<ByteBuffer, Set<String>> getRowKeys();
-	
-	/**
-	 * Pin this operation to a specific host
-	 * @param host
-	 * @return
-	 */
-	MutationBatch pinToHost(Host host);
-	
-	/**
-	 * Set the consistency level for this mutation
-	 * @param consistencyLevel
-	 */
-	MutationBatch setConsistencyLevel(ConsistencyLevel consistencyLevel);
-	
-	/**
-	 * Set the retry policy to use instead of the one specified in the configuration
-	 * @param retry
-	 * @return
-	 */
-	MutationBatch withRetryPolicy(RetryPolicy retry);
-	
-	/**
-	 * Specify a write ahead log implementation to use for this mutation
-	 * @param manager
-	 * @return
-	 */
-	MutationBatch usingWriteAheadLog(WriteAheadLog manager);
-	
-	/**
-	 * Force all future mutations to have the same timestamp.  Make sure to call lockTimestamp
-	 * before doing any other operations otherwise previously created withRow mutations will
-	 * use the previous timestamp.
-	 * @deprecated Mutation timestamps are now locked by default.
-	 * @return
-	 */
-	@Deprecated
-	MutationBatch lockCurrentTimestamp();
-	
-	/**
-	 * This never really did anything :)
-	 * @param 
-	 */
-	@Deprecated
-	MutationBatch setTimeout(long timeout);
-	
-	/**
-	 * Set the timestamp for all subsequent operations on this mutation
-	 * @param timestamp
-	 * @return
-	 */
-	MutationBatch setTimestamp(long timestamp);
+    /**
+     * Returns true if there are no rows in the mutation. May return a false
+     * true if a row() was added by calling the above row() method but no
+     * mutations were created.
+     * 
+     * @return
+     */
+    boolean isEmpty();
 
-	/**
-	 * Serialize the entire mutation batch into a ByteBuffer.
-	 * @return
-	 * @throws Exception 
-	 */
-	ByteBuffer serialize() throws Exception;
-	
-	/**
-	 * Re-recreate a mutation batch from a serialized ByteBuffer created by a call to 
-	 * serialize().  Serialization of MutationBatches from different implementations is not 
-	 * guaranteed to match.
-	 * @param data
-	 * @throws Exception 
-	 */
-	void deserialize(ByteBuffer data) throws Exception;
-	
+    /**
+     * Returns the number of rows being mutated
+     * 
+     * @return
+     */
+    int getRowCount();
+
+    /**
+     * Return a mapping of column families to rows being modified
+     * 
+     * @return
+     */
+    Map<ByteBuffer, Set<String>> getRowKeys();
+
+    /**
+     * Pin this operation to a specific host
+     * 
+     * @param host
+     * @return
+     */
+    MutationBatch pinToHost(Host host);
+
+    /**
+     * Set the consistency level for this mutation
+     * 
+     * @param consistencyLevel
+     */
+    MutationBatch setConsistencyLevel(ConsistencyLevel consistencyLevel);
+
+    /**
+     * Set the retry policy to use instead of the one specified in the
+     * configuration
+     * 
+     * @param retry
+     * @return
+     */
+    MutationBatch withRetryPolicy(RetryPolicy retry);
+
+    /**
+     * Specify a write ahead log implementation to use for this mutation
+     * 
+     * @param manager
+     * @return
+     */
+    MutationBatch usingWriteAheadLog(WriteAheadLog manager);
+
+    /**
+     * Force all future mutations to have the same timestamp. Make sure to call
+     * lockTimestamp before doing any other operations otherwise previously
+     * created withRow mutations will use the previous timestamp.
+     * 
+     * @deprecated Mutation timestamps are now locked by default.
+     * @return
+     */
+    @Deprecated
+    MutationBatch lockCurrentTimestamp();
+
+    /**
+     * This never really did anything :)
+     * 
+     * @param
+     */
+    @Deprecated
+    MutationBatch setTimeout(long timeout);
+
+    /**
+     * Set the timestamp for all subsequent operations on this mutation
+     * 
+     * @param timestamp
+     * @return
+     */
+    MutationBatch setTimestamp(long timestamp);
+
+    /**
+     * Serialize the entire mutation batch into a ByteBuffer.
+     * 
+     * @return
+     * @throws Exception
+     */
+    ByteBuffer serialize() throws Exception;
+
+    /**
+     * Re-recreate a mutation batch from a serialized ByteBuffer created by a
+     * call to serialize(). Serialization of MutationBatches from different
+     * implementations is not guaranteed to match.
+     * 
+     * @param data
+     * @throws Exception
+     */
+    void deserialize(ByteBuffer data) throws Exception;
+
 }

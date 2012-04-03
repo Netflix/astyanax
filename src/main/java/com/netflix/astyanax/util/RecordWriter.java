@@ -9,13 +9,13 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 /**
  * 
  * @author elandau
- *
+ * 
  */
 public interface RecordWriter {
-	void start() throws ConnectionException;
-	
-	void write(List<Pair<String, String>> record);
-	
-	void shutdown();
+    void start() throws ConnectionException;
+
+    void write(List<Pair<String, String>> record);
+
+    void shutdown();
 
 }

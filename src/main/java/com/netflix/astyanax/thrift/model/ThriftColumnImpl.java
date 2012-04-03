@@ -35,91 +35,92 @@ import com.netflix.astyanax.serializers.UUIDSerializer;
 /**
  * 
  * 
- * TODO:  All serializers 
+ * TODO: All serializers
+ * 
  * @author elandau
- *
+ * 
  * @param <C>
  */
 public class ThriftColumnImpl<C> implements Column<C> {
-	private final C name;
-	private final org.apache.cassandra.thrift.Column column;
-	
-	public ThriftColumnImpl(C name, org.apache.cassandra.thrift.Column column) {
-		this.name = name;
-		this.column = column;
-	}
-	
-	@Override
-	public C getName() {
-		return name;
-	}
+    private final C name;
+    private final org.apache.cassandra.thrift.Column column;
 
-	@Override
-	public <V> V getValue(Serializer<V> valSer) {
-		return valSer.fromBytes(column.getValue());
-	}
+    public ThriftColumnImpl(C name, org.apache.cassandra.thrift.Column column) {
+        this.name = name;
+        this.column = column;
+    }
 
-	@Override
-	public String getStringValue() {
-		return StringSerializer.get().fromBytes(column.getValue());
-	}
+    @Override
+    public C getName() {
+        return name;
+    }
 
-	@Override
-	public int getIntegerValue() {
-		return IntegerSerializer.get().fromBytes(column.getValue());
-	}
+    @Override
+    public <V> V getValue(Serializer<V> valSer) {
+        return valSer.fromBytes(column.getValue());
+    }
 
-	@Override
-	public long getLongValue() {
-		return LongSerializer.get().fromBytes(column.getValue());
-	}
-	
-	@Override
-	public <C2> ColumnList<C2> getSubColumns(Serializer<C2> ser) {
-		
-		throw new UnsupportedOperationException(
-				"SimpleColumn \'" + name + "\' has no children");
-	}
+    @Override
+    public String getStringValue() {
+        return StringSerializer.get().fromBytes(column.getValue());
+    }
 
-	@Override
-	public boolean isParentColumn() {
-		return false;
-	}
+    @Override
+    public int getIntegerValue() {
+        return IntegerSerializer.get().fromBytes(column.getValue());
+    }
 
-	@Override
-	public byte[] getByteArrayValue() {
-		return BytesArraySerializer.get().fromBytes(column.getValue());
-	}
+    @Override
+    public long getLongValue() {
+        return LongSerializer.get().fromBytes(column.getValue());
+    }
 
-	@Override
-	public boolean getBooleanValue() {
-		return BooleanSerializer.get().fromBytes(column.getValue());
-	}
+    @Override
+    public <C2> ColumnList<C2> getSubColumns(Serializer<C2> ser) {
 
-	@Override
-	public ByteBuffer getByteBufferValue() {
-		return ByteBufferSerializer.get().fromBytes(column.getValue());
-	}
+        throw new UnsupportedOperationException("SimpleColumn \'" + name
+                + "\' has no children");
+    }
 
-	@Override
-	public Date getDateValue() {
-		return DateSerializer.get().fromBytes(column.getValue());
-	}
+    @Override
+    public boolean isParentColumn() {
+        return false;
+    }
 
-	@Override
-	public UUID getUUIDValue() {
-		return UUIDSerializer.get().fromBytes(column.getValue());
-	}
+    @Override
+    public byte[] getByteArrayValue() {
+        return BytesArraySerializer.get().fromBytes(column.getValue());
+    }
 
-	@Override
-	public double getDoubleValue() {
-		return DoubleSerializer.get().fromBytes(column.getValue());
-	}
-	
-	@Override
-	public long getTimestamp() {
-		return column.getTimestamp();
-	}
+    @Override
+    public boolean getBooleanValue() {
+        return BooleanSerializer.get().fromBytes(column.getValue());
+    }
+
+    @Override
+    public ByteBuffer getByteBufferValue() {
+        return ByteBufferSerializer.get().fromBytes(column.getValue());
+    }
+
+    @Override
+    public Date getDateValue() {
+        return DateSerializer.get().fromBytes(column.getValue());
+    }
+
+    @Override
+    public UUID getUUIDValue() {
+        return UUIDSerializer.get().fromBytes(column.getValue());
+    }
+
+    @Override
+    public double getDoubleValue() {
+        return DoubleSerializer.get().fromBytes(column.getValue());
+    }
+
+    @Override
+    public long getTimestamp() {
+        return column.getTimestamp();
+    }
 
     @Override
     public ByteBuffer getRawName() {

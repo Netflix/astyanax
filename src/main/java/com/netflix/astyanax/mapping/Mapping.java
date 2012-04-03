@@ -17,27 +17,34 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * <p>Utility for doing object/relational mapping between bean-like instances and Cassandra</p>
+ * <p>
+ * Utility for doing object/relational mapping between bean-like instances and
+ * Cassandra
+ * </p>
  * <p/>
- * <p>The mapper stores values in Cassandra and maps in/out to native types. Column
- * names must be strings. Annotate your bean with {@link Id} and {@link Column}. Or, provide
- * an {@link AnnotationSet} that defines IDs and Columns in your bean.
+ * <p>
+ * The mapper stores values in Cassandra and maps in/out to native types. Column
+ * names must be strings. Annotate your bean with {@link Id} and {@link Column}.
+ * Or, provide an {@link AnnotationSet} that defines IDs and Columns in your
+ * bean.
  */
-@SuppressWarnings({"SuspiciousMethodCalls"})
+@SuppressWarnings({ "SuspiciousMethodCalls" })
 public class Mapping<T> {
     private final ImmutableMap<String, Field> fields;
     private final String idFieldName;
     private final Class<T> clazz;
 
     /**
-     * If the ID column does not have a Column annotation, this column name is used
+     * If the ID column does not have a Column annotation, this column name is
+     * used
      */
     public static final String DEFAULT_ID_COLUMN_NAME = "ID";
 
     /**
      * Convenience for allocation a mapping object
-     *
-     * @param clazz clazz type to map
+     * 
+     * @param clazz
+     *            clazz type to map
      * @return mapper
      */
     public static <T> Mapping<T> make(Class<T> clazz) {
@@ -46,25 +53,31 @@ public class Mapping<T> {
 
     /**
      * Convenience for allocation a mapping object
-     *
-     * @param clazz         clazz type to map
-     * @param annotationSet annotations to use when analyzing a bean
+     * 
+     * @param clazz
+     *            clazz type to map
+     * @param annotationSet
+     *            annotations to use when analyzing a bean
      * @return mapper
      */
-    public static <T> Mapping<T> make(Class<T> clazz, AnnotationSet<?, ?> annotationSet) {
+    public static <T> Mapping<T> make(Class<T> clazz,
+            AnnotationSet<?, ?> annotationSet) {
         return new Mapping<T>(clazz, annotationSet);
     }
 
     /**
-     * @param clazz clazz type to map
+     * @param clazz
+     *            clazz type to map
      */
     public Mapping(Class<T> clazz) {
         this(clazz, new DefaultAnnotationSet());
     }
 
     /**
-     * @param clazz         clazz type to map
-     * @param annotationSet annotations to use when analyzing a bean
+     * @param clazz
+     *            clazz type to map
+     * @param annotationSet
+     *            annotations to use when analyzing a bean
      */
     public Mapping(Class<T> clazz, AnnotationSet<?, ?> annotationSet) {
         this.clazz = clazz;
@@ -75,7 +88,8 @@ public class Mapping<T> {
         AtomicBoolean isKey = new AtomicBoolean();
         Set<String> usedNames = Sets.newHashSet();
         for (Field field : clazz.getDeclaredFields()) {
-            String name = mapField(field, annotationSet, builder, usedNames, isKey);
+            String name = mapField(field, annotationSet, builder, usedNames,
+                    isKey);
             if (isKey.get()) {
                 Preconditions.checkArgument(localKeyFieldName == null);
                 localKeyFieldName = name;
@@ -90,9 +104,12 @@ public class Mapping<T> {
 
     /**
      * Return the value for the ID/Key column from the given instance
-     *
-     * @param instance   the instance
-     * @param valueClass type of the value (must match the actual native type in the instance's class)
+     * 
+     * @param instance
+     *            the instance
+     * @param valueClass
+     *            type of the value (must match the actual native type in the
+     *            instance's class)
      * @return value
      */
     public <V> V getIdValue(T instance, Class<V> valueClass) {
@@ -101,30 +118,39 @@ public class Mapping<T> {
 
     /**
      * Return the value for the given column from the given instance
-     *
-     * @param instance   the instance
-     * @param columnName name of the column (must match a corresponding annotated field in the instance's class)
-     * @param valueClass type of the value (must match the actual native type in the instance's class)
+     * 
+     * @param instance
+     *            the instance
+     * @param columnName
+     *            name of the column (must match a corresponding annotated field
+     *            in the instance's class)
+     * @param valueClass
+     *            type of the value (must match the actual native type in the
+     *            instance's class)
      * @return value
      */
-    public <V> V getColumnValue(T instance, String columnName, Class<V> valueClass) {
+    public <V> V getColumnValue(T instance, String columnName,
+            Class<V> valueClass) {
         Field field = fields.get(columnName);
         if (field == null) {
-            throw new IllegalArgumentException("Column not found: " + columnName);
+            throw new IllegalArgumentException("Column not found: "
+                    + columnName);
         }
         try {
             return valueClass.cast(field.get(instance));
-        }
-        catch (IllegalAccessException e) {
-            throw new RuntimeException(e);  // should never get here
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e); // should never get here
         }
     }
 
     /**
      * Set the value for the ID/Key column for the given instance
-     *
-     * @param instance the instance
-     * @param value    The value (must match the actual native type in the instance's class)
+     * 
+     * @param instance
+     *            the instance
+     * @param value
+     *            The value (must match the actual native type in the instance's
+     *            class)
      */
     public <V> void setIdValue(T instance, V value) {
         setColumnValue(instance, idFieldName, value);
@@ -132,60 +158,76 @@ public class Mapping<T> {
 
     /**
      * Set the value for the given column for the given instance
-     *
-     * @param instance   the instance
-     * @param columnName name of the column (must match a corresponding annotated field in the instance's class)
-     * @param value      The value (must match the actual native type in the instance's class)
+     * 
+     * @param instance
+     *            the instance
+     * @param columnName
+     *            name of the column (must match a corresponding annotated field
+     *            in the instance's class)
+     * @param value
+     *            The value (must match the actual native type in the instance's
+     *            class)
      */
     public <V> void setColumnValue(T instance, String columnName, V value) {
         Field field = fields.get(columnName);
         if (field == null) {
-            throw new IllegalArgumentException("Column not found: " + columnName);
+            throw new IllegalArgumentException("Column not found: "
+                    + columnName);
         }
         try {
             field.set(instance, value);
-        }
-        catch (IllegalAccessException e) {
-            throw new RuntimeException(e);  // should never get here
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e); // should never get here
         }
     }
 
     /**
-     * Map a bean to a column mutation. i.e. set the columns in the mutation to the corresponding values
-     * from the instance
-     *
-     * @param instance instance
-     * @param mutation mutation
+     * Map a bean to a column mutation. i.e. set the columns in the mutation to
+     * the corresponding values from the instance
+     * 
+     * @param instance
+     *            instance
+     * @param mutation
+     *            mutation
      */
     public void fillMutation(T instance, ColumnListMutation<String> mutation) {
         for (String fieldName : getNames()) {
-            Coercions.setColumnMutationFromField(instance, fields.get(fieldName), fieldName, mutation);
+            Coercions.setColumnMutationFromField(instance,
+                    fields.get(fieldName), fieldName, mutation);
         }
     }
 
     /**
-     * Allocate a new instance and populate it with the values from the given column list
-     *
-     * @param columns column list
+     * Allocate a new instance and populate it with the values from the given
+     * column list
+     * 
+     * @param columns
+     *            column list
      * @return the allocated instance
-     * @throws IllegalAccessException if a new instance could not be instantiated
-     * @throws InstantiationException if a new instance could not be instantiated
+     * @throws IllegalAccessException
+     *             if a new instance could not be instantiated
+     * @throws InstantiationException
+     *             if a new instance could not be instantiated
      */
-    public T newInstance(ColumnList<String> columns) throws IllegalAccessException, InstantiationException {
+    public T newInstance(ColumnList<String> columns)
+            throws IllegalAccessException, InstantiationException {
         return initInstance(clazz.newInstance(), columns);
     }
 
     /**
      * Populate the given instance with the values from the given column list
-     *
-     * @param instance instance
-     * @param columns  column this
+     * 
+     * @param instance
+     *            instance
+     * @param columns
+     *            column this
      * @return instance (as a convenience for chaining)
      */
     public T initInstance(T instance, ColumnList<String> columns) {
         for (com.netflix.astyanax.model.Column<String> column : columns) {
             Field field = fields.get(column.getName());
-            if ( field != null ) {  // otherwise it may be a column that was removed, etc.
+            if (field != null) { // otherwise it may be a column that was
+                                 // removed, etc.
                 Coercions.setFieldFromColumn(instance, field, column);
             }
         }
@@ -193,17 +235,22 @@ public class Mapping<T> {
     }
 
     /**
-     * Load a set of rows into new instances populated with values from the column lists
-     *
-     * @param rows the rows
+     * Load a set of rows into new instances populated with values from the
+     * column lists
+     * 
+     * @param rows
+     *            the rows
      * @return list of new instances
-     * @throws IllegalAccessException if a new instance could not be instantiated
-     * @throws InstantiationException if a new instance could not be instantiated
+     * @throws IllegalAccessException
+     *             if a new instance could not be instantiated
+     * @throws InstantiationException
+     *             if a new instance could not be instantiated
      */
-    public List<T> getAll(Rows<?, String> rows) throws InstantiationException, IllegalAccessException {
-        List<T>     list = Lists.newArrayList();
+    public List<T> getAll(Rows<?, String> rows) throws InstantiationException,
+            IllegalAccessException {
+        List<T> list = Lists.newArrayList();
         for (Row<?, String> row : rows) {
-            if ( !row.getColumns().isEmpty() ) {
+            if (!row.getColumns().isEmpty()) {
                 list.add(newInstance(row.getColumns()));
             }
         }
@@ -212,33 +259,37 @@ public class Mapping<T> {
 
     /**
      * Return the set of column names discovered from the bean class
-     *
+     * 
      * @return column names
      */
     public Collection<String> getNames() {
         return fields.keySet();
     }
 
-    Class<?> getIdFieldClass()
-    {
+    Class<?> getIdFieldClass() {
         return fields.get(idFieldName).getType();
     }
 
-    private <ID extends Annotation, COLUMN extends Annotation> String mapField(Field field, AnnotationSet<ID, COLUMN> annotationSet, ImmutableMap.Builder<String, Field> builder, Set<String> usedNames, AtomicBoolean isKey) {
+    private <ID extends Annotation, COLUMN extends Annotation> String mapField(
+            Field field, AnnotationSet<ID, COLUMN> annotationSet,
+            ImmutableMap.Builder<String, Field> builder, Set<String> usedNames,
+            AtomicBoolean isKey) {
         String mappingName = null;
 
         ID idAnnotation = field.getAnnotation(annotationSet.getIdAnnotation());
-        COLUMN columnAnnotation = field.getAnnotation(annotationSet.getColumnAnnotation());
+        COLUMN columnAnnotation = field.getAnnotation(annotationSet
+                .getColumnAnnotation());
 
         if ((idAnnotation != null) && (columnAnnotation != null)) {
-            throw new IllegalStateException("A field cannot be marked as both an ID and a Column: " + field.getName());
+            throw new IllegalStateException(
+                    "A field cannot be marked as both an ID and a Column: "
+                            + field.getName());
         }
 
         if (idAnnotation != null) {
             mappingName = annotationSet.getIdName(field, idAnnotation);
             isKey.set(true);
-        }
-        else {
+        } else {
             isKey.set(false);
         }
 
@@ -247,7 +298,9 @@ public class Mapping<T> {
         }
 
         if (mappingName != null) {
-            Preconditions.checkArgument(!usedNames.contains(mappingName.toLowerCase()), mappingName + " has already been used for this column family");
+            Preconditions.checkArgument(
+                    !usedNames.contains(mappingName.toLowerCase()), mappingName
+                            + " has already been used for this column family");
             usedNames.add(mappingName.toLowerCase());
 
             field.setAccessible(true);

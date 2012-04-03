@@ -31,104 +31,115 @@ import com.netflix.astyanax.model.ColumnSlice;
  * keys were seleted using the ColumnFamilyQuery.
  * 
  * @author elandau
- *
+ * 
  * @param <K>
  * @param <C>
  */
 public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
-	/**
-	 * Specify the path to a single column (either Standard or Super).  
-	 * Notice that the sub column type and serializer will be used now.
-	 * @param <C2>
-	 * @param path
-	 * @return
-	 */
-	ColumnQuery<C> getColumn(C column);
+    /**
+     * Specify the path to a single column (either Standard or Super). Notice
+     * that the sub column type and serializer will be used now.
+     * 
+     * @param <C2>
+     * @param path
+     * @return
+     */
+    ColumnQuery<C> getColumn(C column);
 
-	/**
-	 * Specify a non-contiguous set of columns to retrieve.
-	 * 
-	 * @param columns
-	 * @return
-	 */
-	RowQuery<K, C> withColumnSlice(Collection<C> columns);
-	
-	/**
-	 * Specify a non-contiguous set of columns to retrieve.
-	 * 
-	 * @param columns
-	 * @return
-	 */
-	RowQuery<K, C> withColumnSlice(C... columns);
+    /**
+     * Specify a non-contiguous set of columns to retrieve.
+     * 
+     * @param columns
+     * @return
+     */
+    RowQuery<K, C> withColumnSlice(Collection<C> columns);
 
-	/**
-	 * Use this when your application caches the column slice.
-	 * @param slice
-	 * @return
-	 */
-	RowQuery<K, C> withColumnSlice(ColumnSlice<C> columns);
-	
-	/**
-	 * Specify a range of columns to return.  Use this for simple ranges for
-	 * non-composite column names.  For Composite column names use 
-	 * withColumnRange(ByteBufferRange range) and the 
-	 * AnnotatedCompositeSerializer.buildRange()
-	 * 
-	 * @param startColumn	First column in the range
-	 * @param endColumn		Last column in the range
-	 * @param reversed		True if the order should be reversed.  Note that for
-	 * 						reversed, startColumn should be greater than endColumn.
-	 * @param count			Maximum number of columns to return (similar to SQL LIMIT)
-	 * @return
-	 */
-	RowQuery<K, C> withColumnRange(C startColumn, C endColumn, boolean reversed, int count);
-	
-	/**
-	 * Specify a range and provide pre-constructed start and end columns.
-	 * Use this with Composite columns
-	 * 
-	 * @param startColumn
-	 * @param endColumn
-	 * @param reversed
-	 * @param count
-	 * @return
-	 */
-	RowQuery<K, C> withColumnRange(ByteBuffer startColumn, ByteBuffer endColumn, boolean reversed, int count);
-	
-	/**
-	 * Specify a range of composite columns.  Use this in conjunction with the
-	 * AnnotatedCompositeSerializer.buildRange().
-	 * 
-	 * @param range
-	 * @return
-	 */
-	RowQuery<K, C> withColumnRange(ByteBufferRange range);
+    /**
+     * Specify a non-contiguous set of columns to retrieve.
+     * 
+     * @param columns
+     * @return
+     */
+    RowQuery<K, C> withColumnSlice(C... columns);
 
-	@Deprecated
-	/**
-	 * Use autoPaginate instead
-	 */
-	RowQuery<K, C> setIsPaginating();
-	
-	/**
-	 * When used in conjunction with a column range this will call subsequent
-	 * calls to execute() to get the next block of columns. 
-	 * @return
-	 */
-	RowQuery<K, C> autoPaginate(boolean enabled);
-	
-	/**
-	 * Copy the results of the query to another column family
-	 * @param columnFamily
-	 * @param otherRowKey
-	 * @return
-	 */
-	RowCopier<K, C> copyTo(ColumnFamily<K,C> columnFamily, K rowKey);
-	
-	/**
-	 * Returns the number of columns in the response without returning any data
-	 * @return
-	 * @throws ConnectionException 
-	 */
-	ColumnCountQuery getCount();
+    /**
+     * Use this when your application caches the column slice.
+     * 
+     * @param slice
+     * @return
+     */
+    RowQuery<K, C> withColumnSlice(ColumnSlice<C> columns);
+
+    /**
+     * Specify a range of columns to return. Use this for simple ranges for
+     * non-composite column names. For Composite column names use
+     * withColumnRange(ByteBufferRange range) and the
+     * AnnotatedCompositeSerializer.buildRange()
+     * 
+     * @param startColumn
+     *            First column in the range
+     * @param endColumn
+     *            Last column in the range
+     * @param reversed
+     *            True if the order should be reversed. Note that for reversed,
+     *            startColumn should be greater than endColumn.
+     * @param count
+     *            Maximum number of columns to return (similar to SQL LIMIT)
+     * @return
+     */
+    RowQuery<K, C> withColumnRange(C startColumn, C endColumn,
+            boolean reversed, int count);
+
+    /**
+     * Specify a range and provide pre-constructed start and end columns. Use
+     * this with Composite columns
+     * 
+     * @param startColumn
+     * @param endColumn
+     * @param reversed
+     * @param count
+     * @return
+     */
+    RowQuery<K, C> withColumnRange(ByteBuffer startColumn,
+            ByteBuffer endColumn, boolean reversed, int count);
+
+    /**
+     * Specify a range of composite columns. Use this in conjunction with the
+     * AnnotatedCompositeSerializer.buildRange().
+     * 
+     * @param range
+     * @return
+     */
+    RowQuery<K, C> withColumnRange(ByteBufferRange range);
+
+    @Deprecated
+    /**
+     * Use autoPaginate instead
+     */
+    RowQuery<K, C> setIsPaginating();
+
+    /**
+     * When used in conjunction with a column range this will call subsequent
+     * calls to execute() to get the next block of columns.
+     * 
+     * @return
+     */
+    RowQuery<K, C> autoPaginate(boolean enabled);
+
+    /**
+     * Copy the results of the query to another column family
+     * 
+     * @param columnFamily
+     * @param otherRowKey
+     * @return
+     */
+    RowCopier<K, C> copyTo(ColumnFamily<K, C> columnFamily, K rowKey);
+
+    /**
+     * Returns the number of columns in the response without returning any data
+     * 
+     * @return
+     * @throws ConnectionException
+     */
+    ColumnCountQuery getCount();
 }

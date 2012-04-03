@@ -17,47 +17,47 @@ package com.netflix.astyanax.connectionpool.impl;
 
 import com.netflix.astyanax.connectionpool.RetryBackoffStrategy;
 
-public class FixedRetryBackoffStrategy implements RetryBackoffStrategy{
-	private final int timeout;
-	private final int suspendTime;
-	
-	public FixedRetryBackoffStrategy(int timeout, int suspendTime) {
-		this.timeout = timeout;
-		this.suspendTime = suspendTime;
-	}
-	
-	@Override
-	public Instance createInstance() {
-		return new RetryBackoffStrategy.Instance() {
-			private boolean isSuspended = false;
-			private int attemptCount = 0;
-			
-			@Override
-			public long getNextDelay() {
-				if (isSuspended) {
-					isSuspended = false;
-					return suspendTime;
-				}
-				return timeout;
-			}
+public class FixedRetryBackoffStrategy implements RetryBackoffStrategy {
+    private final int timeout;
+    private final int suspendTime;
 
-			@Override
-			public int getAttemptCount() {
-				return attemptCount;
-			}
+    public FixedRetryBackoffStrategy(int timeout, int suspendTime) {
+        this.timeout = timeout;
+        this.suspendTime = suspendTime;
+    }
 
-			@Override
-			public void begin() {
-				attemptCount = 0;
-			}
+    @Override
+    public Instance createInstance() {
+        return new RetryBackoffStrategy.Instance() {
+            private boolean isSuspended = false;
+            private int attemptCount = 0;
 
-			@Override
-			public void success() {
-			}
+            @Override
+            public long getNextDelay() {
+                if (isSuspended) {
+                    isSuspended = false;
+                    return suspendTime;
+                }
+                return timeout;
+            }
 
-			@Override
-			public void suspend() {
-			}
-		};
-	}
+            @Override
+            public int getAttemptCount() {
+                return attemptCount;
+            }
+
+            @Override
+            public void begin() {
+                attemptCount = 0;
+            }
+
+            @Override
+            public void success() {
+            }
+
+            @Override
+            public void suspend() {
+            }
+        };
+    }
 }

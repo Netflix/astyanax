@@ -16,21 +16,24 @@
 package com.netflix.astyanax.connectionpool;
 
 /**
- * Interface for algorithm to detect when a host is considered down.
- * Once a host is considered to be down it will be added to the retry service
+ * Interface for algorithm to detect when a host is considered down. Once a host
+ * is considered to be down it will be added to the retry service
+ * 
  * @author elandau
- *
+ * 
  */
 public interface BadHostDetector {
-	public interface Instance {
-		/**
-		 * Add a timeout sample and return false if the host should be quarantined
-		 * @return true to quarantine or false to continue using this host
-		 */
-		boolean addTimeoutSample();
-	}
-	
-	Instance createInstance();
-	
-	void removeInstance(Instance instance);
+    public interface Instance {
+        /**
+         * Add a timeout sample and return false if the host should be
+         * quarantined
+         * 
+         * @return true to quarantine or false to continue using this host
+         */
+        boolean addTimeoutSample();
+    }
+
+    Instance createInstance();
+
+    void removeInstance(Instance instance);
 }

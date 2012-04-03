@@ -26,93 +26,94 @@ import com.netflix.astyanax.serializers.LongSerializer;
 
 public class ThriftCounterColumnImpl<C> implements Column<C> {
 
-	private final C name;
-	private final org.apache.cassandra.thrift.CounterColumn column;
-	
-	public ThriftCounterColumnImpl(C name, org.apache.cassandra.thrift.CounterColumn column) {
-		this.name = name;
-		this.column = column;
-	}
-	
-	@Override
-	public C getName() {
-		return this.name;
-	}
+    private final C name;
+    private final org.apache.cassandra.thrift.CounterColumn column;
 
-	@Override
-	public <V> V getValue(Serializer<V> valSer)  {
-		throw new UnsupportedOperationException(
-				"CounterColumn \'" + this.name+ "\' has no generic value. Call getLongValue().");
-	}
+    public ThriftCounterColumnImpl(C name,
+            org.apache.cassandra.thrift.CounterColumn column) {
+        this.name = name;
+        this.column = column;
+    }
 
-	@Override
-	public String getStringValue()  {
-		throw new UnsupportedOperationException(
-				"CounterColumn \'" + this.name+ "\' has no String value. Call getLongValue().");
-	}
+    @Override
+    public C getName() {
+        return this.name;
+    }
 
-	@Override
-	public int getIntegerValue()  {
-		throw new UnsupportedOperationException(
-				"CounterColumn \'" + this.name+ "\' has no Integer value. Call getLongValue().");
-	}
+    @Override
+    public <V> V getValue(Serializer<V> valSer) {
+        throw new UnsupportedOperationException("CounterColumn \'" + this.name
+                + "\' has no generic value. Call getLongValue().");
+    }
 
-	@Override
-	public long getLongValue()  {
-		return this.column.getValue();
-	}
+    @Override
+    public String getStringValue() {
+        throw new UnsupportedOperationException("CounterColumn \'" + this.name
+                + "\' has no String value. Call getLongValue().");
+    }
 
-	@Override
-	public <C2> ColumnList<C2> getSubColumns(Serializer<C2> ser) {
-		throw new UnsupportedOperationException(
-				"CounterColumn \'" + this.name+ "\' has no sub columns. Call getLongValue().");
-	}
+    @Override
+    public int getIntegerValue() {
+        throw new UnsupportedOperationException("CounterColumn \'" + this.name
+                + "\' has no Integer value. Call getLongValue().");
+    }
 
-	@Override
-	public boolean isParentColumn() {
-		return false;
-	}
+    @Override
+    public long getLongValue() {
+        return this.column.getValue();
+    }
 
-	@Override
-	public byte[] getByteArrayValue() {
-		throw new UnsupportedOperationException(
-				"CounterColumn \'" + this.name+ "\' has no byte[] value. Call getLongValue().");
-	}
+    @Override
+    public <C2> ColumnList<C2> getSubColumns(Serializer<C2> ser) {
+        throw new UnsupportedOperationException("CounterColumn \'" + this.name
+                + "\' has no sub columns. Call getLongValue().");
+    }
 
-	@Override
-	public boolean getBooleanValue() {
-		throw new UnsupportedOperationException(
-				"CounterColumn \'" + this.name+ "\' has no Boolean value. Call getLongValue().");
-	}
+    @Override
+    public boolean isParentColumn() {
+        return false;
+    }
 
-	@Override
-	public ByteBuffer getByteBufferValue() {
-	    return LongSerializer.get().toByteBuffer(column.getValue());
-	}
+    @Override
+    public byte[] getByteArrayValue() {
+        throw new UnsupportedOperationException("CounterColumn \'" + this.name
+                + "\' has no byte[] value. Call getLongValue().");
+    }
 
-	@Override
-	public Date getDateValue() {
-		throw new UnsupportedOperationException(
-				"CounterColumn \'" + this.name+ "\' has no Date value. Call getLongValue().");
-	}
+    @Override
+    public boolean getBooleanValue() {
+        throw new UnsupportedOperationException("CounterColumn \'" + this.name
+                + "\' has no Boolean value. Call getLongValue().");
+    }
 
-	@Override
-	public UUID getUUIDValue() {
-		throw new UnsupportedOperationException(
-				"CounterColumn \'" + this.name+ "\' has no UUID value. Call getLongValue().");
-	}
-	
-	@Override
-	public double getDoubleValue() {
-		throw new UnsupportedOperationException(
-				"CounterColumn \'" + this.name+ "\' has no String value. Call getLongValue().");
-	}
+    @Override
+    public ByteBuffer getByteBufferValue() {
+        return LongSerializer.get().toByteBuffer(column.getValue());
+    }
 
-	@Override
-	public long getTimestamp() {
-		throw new UnsupportedOperationException(
-				"CounterColumn \'" + this.name+ "\' has no timestamp");
-	}
+    @Override
+    public Date getDateValue() {
+        throw new UnsupportedOperationException("CounterColumn \'" + this.name
+                + "\' has no Date value. Call getLongValue().");
+    }
+
+    @Override
+    public UUID getUUIDValue() {
+        throw new UnsupportedOperationException("CounterColumn \'" + this.name
+                + "\' has no UUID value. Call getLongValue().");
+    }
+
+    @Override
+    public double getDoubleValue() {
+        throw new UnsupportedOperationException("CounterColumn \'" + this.name
+                + "\' has no String value. Call getLongValue().");
+    }
+
+    @Override
+    public long getTimestamp() {
+        throw new UnsupportedOperationException("CounterColumn \'" + this.name
+                + "\' has no timestamp");
+    }
 
     @Override
     public ByteBuffer getRawName() {

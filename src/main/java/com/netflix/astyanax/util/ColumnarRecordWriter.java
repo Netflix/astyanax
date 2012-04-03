@@ -18,87 +18,91 @@ import com.netflix.astyanax.serializers.UnknownComparatorException;
 
 /**
  * Writer rows where the first pair is the key and subsequent pairs are columns.
+ * 
  * @author elandau
- *
+ * 
  */
 public class ColumnarRecordWriter implements RecordWriter {
-    
-	private Keyspace keyspace;
-	private SerializerPackage serializers;
-	private ColumnFamily<ByteBuffer, ByteBuffer> cf;
-	private int batchSize = 1;
-	private MutationBatch mutation;
-	
-	public ColumnarRecordWriter(Keyspace keyspace, String cfName) {
-		this.keyspace = keyspace;
-		this.cf = new ColumnFamily<ByteBuffer, ByteBuffer>(cfName, ByteBufferSerializer.get(), ByteBufferSerializer.get());
-		try {
+
+    private Keyspace keyspace;
+    private SerializerPackage serializers;
+    private ColumnFamily<ByteBuffer, ByteBuffer> cf;
+    private int batchSize = 1;
+    private MutationBatch mutation;
+
+    public ColumnarRecordWriter(Keyspace keyspace, String cfName) {
+        this.keyspace = keyspace;
+        this.cf = new ColumnFamily<ByteBuffer, ByteBuffer>(cfName,
+                ByteBufferSerializer.get(), ByteBufferSerializer.get());
+        try {
             this.serializers = keyspace.getSerializerPackage(cfName, true);
         } catch (ConnectionException e) {
             this.serializers = SerializerPackageImpl.DEFAULT_SERIALIZER_PACKAGE;
         } catch (UnknownComparatorException e) {
-        	// We should never get this
-		}
-	}
-	
-	public ColumnarRecordWriter(Keyspace keyspace, String cfName, SerializerPackage serializers) {
-		this.keyspace = keyspace;
-		this.serializers = serializers;
-		this.cf = new ColumnFamily<ByteBuffer, ByteBuffer>(cfName, ByteBufferSerializer.get(), ByteBufferSerializer.get());
-	}
-	
-	public ColumnarRecordWriter setBatchSize(int size) {
-		this.batchSize = size;
-		return this;
-	}
-	
-	@Override
-	public void start() throws ConnectionException {
-		this.mutation = keyspace.prepareMutationBatch();
-	}
+            // We should never get this
+        }
+    }
 
-	@Override
-	public void write(List<Pair<String, String>> record) {
-		if (record.size() <= 1) 
-			return;
-		
-		// Key is first field
-		Iterator<Pair<String, String>> iter = record.iterator();
-		ByteBuffer rowKey = this.serializers.keyAsByteBuffer(iter.next().right);
-		
-		// Build row mutation for all columns
-		ColumnListMutation<ByteBuffer> rowMutation = mutation.withRow(cf, rowKey);
-		while (iter.hasNext()) {
-		    try {
-    			Pair<String, String> pair = iter.next();
-    			rowMutation.putColumn(this.serializers.columnAsByteBuffer(pair.left),
-    								  this.serializers.valueAsByteBuffer(pair.left, pair.right), 
-    								  null);
-		    }
-		    catch (Exception e) {
-				throw new RuntimeException(e);
-		    }
-		}
-		
-		// Execute a mutation
-		if (batchSize == mutation.getRowCount()) {
-			try {
-				mutation.execute();
-			} catch (ConnectionException e) {
-				mutation.discardMutations();
-				throw new RuntimeException(e);
-			}
-		}
-	}
+    public ColumnarRecordWriter(Keyspace keyspace, String cfName,
+            SerializerPackage serializers) {
+        this.keyspace = keyspace;
+        this.serializers = serializers;
+        this.cf = new ColumnFamily<ByteBuffer, ByteBuffer>(cfName,
+                ByteBufferSerializer.get(), ByteBufferSerializer.get());
+    }
 
-	@Override
-	public void shutdown() {
-		if (mutation.getRowCount() > 0) {
-			try {
-				mutation.execute();
-			} catch (ConnectionException e) {
-				mutation.discardMutations();
-			}
-		}
-	}
+    public ColumnarRecordWriter setBatchSize(int size) {
+        this.batchSize = size;
+        return this;
+    }
+
+    @Override
+    public void start() throws ConnectionException {
+        this.mutation = keyspace.prepareMutationBatch();
+    }
+
+    @Override
+    public void write(List<Pair<String, String>> record) {
+        if (record.size() <= 1)
+            return;
+
+        // Key is first field
+        Iterator<Pair<String, String>> iter = record.iterator();
+        ByteBuffer rowKey = this.serializers.keyAsByteBuffer(iter.next().right);
+
+        // Build row mutation for all columns
+        ColumnListMutation<ByteBuffer> rowMutation = mutation.withRow(cf,
+                rowKey);
+        while (iter.hasNext()) {
+            try {
+                Pair<String, String> pair = iter.next();
+                rowMutation.putColumn(this.serializers
+                        .columnAsByteBuffer(pair.left), this.serializers
+                        .valueAsByteBuffer(pair.left, pair.right), null);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        // Execute a mutation
+        if (batchSize == mutation.getRowCount()) {
+            try {
+                mutation.execute();
+            } catch (ConnectionException e) {
+                mutation.discardMutations();
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    @Override
+    public void shutdown() {
+        if (mutation.getRowCount() > 0) {
+            try {
+                mutation.execute();
+            } catch (ConnectionException e) {
+                mutation.discardMutations();
+            }
+        }
+    }
 }

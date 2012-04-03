@@ -18,42 +18,45 @@ package com.netflix.astyanax.connectionpool;
 /**
  * Strategy used to calculate how much to back off for each subsequent attempt
  * to reconnect to a downed host
+ * 
  * @author elandau
- *
+ * 
  */
 public interface RetryBackoffStrategy {
-	public interface Callback {
-		boolean tryConnect(int attemptCount);
-	}
-	
-	public interface Instance {
-		/**
-		 * Start the reconnect process
-		 */
-		void begin();
-		
-		/**
-		 * Called when a connection was established successfully
-		 */
-		void success();
-		
-		/**
-		 * Return the next backoff delay in the strategy
-		 * @return
-		 */
-		long getNextDelay();
+    public interface Callback {
+        boolean tryConnect(int attemptCount);
+    }
 
-		/**
-		 * Suspend the host for being bad (i.e. timing out too much)
-		 */
-		void suspend();
-		
-		int getAttemptCount();
-	};
-	
-	/**
-	 * Create an instance of the strategy for a single host
-	 * @return
-	 */
-	Instance createInstance();
+    public interface Instance {
+        /**
+         * Start the reconnect process
+         */
+        void begin();
+
+        /**
+         * Called when a connection was established successfully
+         */
+        void success();
+
+        /**
+         * Return the next backoff delay in the strategy
+         * 
+         * @return
+         */
+        long getNextDelay();
+
+        /**
+         * Suspend the host for being bad (i.e. timing out too much)
+         */
+        void suspend();
+
+        int getAttemptCount();
+    };
+
+    /**
+     * Create an instance of the strategy for a single host
+     * 
+     * @return
+     */
+    Instance createInstance();
 }

@@ -32,45 +32,51 @@ import com.netflix.astyanax.connectionpool.exceptions.NoAvailableHostsException;
 
 /**
  * Connection pool that partitions connections by the hosts which own the token
- * being operated on.  When a token is not available or an operation is known
- * to span multiple tokens (such as a batch mutate or an index query) host pools
+ * being operated on. When a token is not available or an operation is known to
+ * span multiple tokens (such as a batch mutate or an index query) host pools
  * are picked using round robin.
  * 
- * This implementation takes an optimistic approach which is optimized for 
- * a well functioning ring with all nodes up and keeps downed hosts in the 
+ * This implementation takes an optimistic approach which is optimized for a
+ * well functioning ring with all nodes up and keeps downed hosts in the
  * internal data structures.
  * 
  * @author elandau
- *
+ * 
  * @param <CL>
  */
-public class TokenAwareConnectionPoolImpl<CL> extends AbstractHostPartitionConnectionPool<CL> {
+public class TokenAwareConnectionPoolImpl<CL> extends
+        AbstractHostPartitionConnectionPool<CL> {
 
-	private AtomicInteger roundRobinCounter = new AtomicInteger(new Random().nextInt(997));
-	
-	public TokenAwareConnectionPoolImpl(ConnectionPoolConfiguration configuration, ConnectionFactory<CL> factory, ConnectionPoolMonitor monitor) {
-		super(configuration, factory, monitor);
-	}
+    private AtomicInteger roundRobinCounter = new AtomicInteger(
+            new Random().nextInt(997));
+
+    public TokenAwareConnectionPoolImpl(
+            ConnectionPoolConfiguration configuration,
+            ConnectionFactory<CL> factory, ConnectionPoolMonitor monitor) {
+        super(configuration, factory, monitor);
+    }
 
     @SuppressWarnings("unchecked")
-	public <R> ExecuteWithFailover<CL, R> newExecuteWithFailover(Operation<CL, R> op) throws ConnectionException {
-		List<HostConnectionPool<CL>> pools;
-		boolean isSorted = false;
-		
-    	if (op.getPinnedHost() != null) {
-    		HostConnectionPool<CL> pool = hosts.get(op.getPinnedHost());
-    		if (pool == null) {
-    			throw new NoAvailableHostsException("Host " + op.getPinnedHost() + " not active");
-    		}
-    		pools = Arrays.<HostConnectionPool<CL>>asList(pool);
-    	}
-    	else {
-    		HostConnectionPoolPartition<CL> partition = topology.getPartition(op.getToken());
-			pools = partition.getPools();	
-			isSorted = partition.isSorted();
-    	}
+    public <R> ExecuteWithFailover<CL, R> newExecuteWithFailover(
+            Operation<CL, R> op) throws ConnectionException {
+        List<HostConnectionPool<CL>> pools;
+        boolean isSorted = false;
 
-        return new RoundRobinExecuteWithFailover<CL, R>(config, monitor, pools, 
-        		isSorted ? 0 : roundRobinCounter.incrementAndGet());
+        if (op.getPinnedHost() != null) {
+            HostConnectionPool<CL> pool = hosts.get(op.getPinnedHost());
+            if (pool == null) {
+                throw new NoAvailableHostsException("Host "
+                        + op.getPinnedHost() + " not active");
+            }
+            pools = Arrays.<HostConnectionPool<CL>> asList(pool);
+        } else {
+            HostConnectionPoolPartition<CL> partition = topology
+                    .getPartition(op.getToken());
+            pools = partition.getPools();
+            isSorted = partition.isSorted();
+        }
+
+        return new RoundRobinExecuteWithFailover<CL, R>(config, monitor, pools,
+                isSorted ? 0 : roundRobinCounter.incrementAndGet());
     }
 }

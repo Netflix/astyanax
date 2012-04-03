@@ -20,121 +20,125 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class BagConnectionPoolImplTest extends BaseConnectionPoolTest {
-	private static Logger  LOG = LoggerFactory.getLogger(BagConnectionPoolImplTest.class);
-	
-	private static Operation<TestClient, String> dummyOperation = new TestOperation();
-	
-	protected ConnectionPool<TestClient> createPool() {
-    	ConnectionPoolConfiguration config = 
-    		new ConnectionPoolConfigurationImpl(TestConstants.CLUSTER_NAME + "_" + TestConstants.KEYSPACE_NAME);
-    	
-		CountingConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
-    	ConnectionPool<TestClient> pool = 
-    		new BagOfConnectionsConnectionPoolImpl<TestClient>(config, 
-    			new TestConnectionFactory(config, monitor), monitor);
+    private static Logger LOG = LoggerFactory
+            .getLogger(BagConnectionPoolImplTest.class);
 
-    	return pool;
-	}
+    private static Operation<TestClient, String> dummyOperation = new TestOperation();
 
-	public void testAll() {
-		
-	}
-	
-	@Test
-	public void testUncheckedException() {
-		CountingConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
-		
-		ConnectionPoolConfigurationImpl config = 
-    		new ConnectionPoolConfigurationImpl(TestConstants.CLUSTER_NAME + "_" + TestConstants.KEYSPACE_NAME);
-    	
-    	ConnectionPool<TestClient> pool = 
-    		new BagOfConnectionsConnectionPoolImpl<TestClient>(config, 
-    			new TestConnectionFactory(config, monitor), monitor);
+    protected ConnectionPool<TestClient> createPool() {
+        ConnectionPoolConfiguration config = new ConnectionPoolConfigurationImpl(
+                TestConstants.CLUSTER_NAME + "_" + TestConstants.KEYSPACE_NAME);
 
-    	pool.addHost(new Host("127.0.0.1", TestHostType.GOOD_IMMEDIATE.ordinal()), true);
-    	
-		OperationResult<String> result;
-		
-		try {
-			result = pool.executeWithFailover(new TestOperation() {
+        CountingConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
+        ConnectionPool<TestClient> pool = new BagOfConnectionsConnectionPoolImpl<TestClient>(
+                config, new TestConnectionFactory(config, monitor), monitor);
 
-				@Override
-				public String execute(TestClient client)
-						throws ConnectionException, OperationException {
-					throw new RuntimeException("Unkecked Exception");
-				}
-			}, RunOnce.get());
-			LOG.info(pool.toString());
-			Assert.fail();
-		} catch (ConnectionException e) {
-			LOG.info(e.getMessage());
-		}
-		
-		Assert.assertEquals(monitor.getConnectionClosedCount(), 1);
-	}
-	
-	@Test
-	public void testUncheckedExceptionInOpen() {
-		CountingConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
-		
-		ConnectionPoolConfigurationImpl config = 
-    		new ConnectionPoolConfigurationImpl(TestConstants.CLUSTER_NAME + "_" + TestConstants.KEYSPACE_NAME);
-    	config.setInitConnsPerHost(0);
-    	ConnectionPool<TestClient> pool = 
-    		new BagOfConnectionsConnectionPoolImpl<TestClient>(config, 
-    			new TestConnectionFactory(config, monitor), monitor);
+        return pool;
+    }
 
-    	pool.addHost(new Host("127.0.0.1", TestHostType.CONNECT_WITH_UNCHECKED_EXCEPTION.ordinal()), true);
-    	
-		OperationResult<String> result;
-		
-		try {
-			result = pool.executeWithFailover(dummyOperation, RunOnce.get());
-			LOG.info(pool.toString());
-			Assert.fail();
-		} catch (ConnectionException e) {
-			LOG.info(e.getMessage());
-		}
-		think(1000);
-		try {
-			result = pool.executeWithFailover(dummyOperation, RunOnce.get());
-			LOG.info(pool.toString());
-			Assert.fail();
-		} catch (ConnectionException e) {
-			LOG.info(e.getMessage());
-		}
-		
-		think(1000);
-		Assert.assertEquals(monitor.getConnectionClosedCount(), 0);
-	}
-	
-	@Test
-	public void testOperationTimeout() {
-		CountingConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
-		
-		ConnectionPoolConfigurationImpl config = 
-    		new ConnectionPoolConfigurationImpl(TestConstants.CLUSTER_NAME + "_" + TestConstants.KEYSPACE_NAME);
-    	config.setInitConnsPerHost(0);
-    	ConnectionPool<TestClient> pool = 
-    		new BagOfConnectionsConnectionPoolImpl<TestClient>(config, 
-    			new TestConnectionFactory(config, monitor),
-    				monitor);
+    public void testAll() {
 
-    	pool.addHost(new Host("127.0.0.1", TestHostType.OPERATION_TIMEOUT.ordinal()), true);
-    	pool.addHost(new Host("127.0.0.2", TestHostType.OPERATION_TIMEOUT.ordinal()), true);
-    	
-    	for (int i = 0; i < 5; i++) {
-			OperationResult<String> result;
-			
-			try {
-				result = pool.executeWithFailover(dummyOperation, RunOnce.get());
-				LOG.info(pool.toString());
-				Assert.fail();
-			} catch (ConnectionException e) {
-				LOG.info(e.getMessage());
-			}
-    	}
-    	Assert.assertEquals(15, monitor.getConnectionCreatedCount());
-		Assert.assertEquals(15, monitor.getConnectionClosedCount());
-	}
+    }
+
+    @Test
+    public void testUncheckedException() {
+        CountingConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
+
+        ConnectionPoolConfigurationImpl config = new ConnectionPoolConfigurationImpl(
+                TestConstants.CLUSTER_NAME + "_" + TestConstants.KEYSPACE_NAME);
+
+        ConnectionPool<TestClient> pool = new BagOfConnectionsConnectionPoolImpl<TestClient>(
+                config, new TestConnectionFactory(config, monitor), monitor);
+
+        pool.addHost(
+                new Host("127.0.0.1", TestHostType.GOOD_IMMEDIATE.ordinal()),
+                true);
+
+        OperationResult<String> result;
+
+        try {
+            result = pool.executeWithFailover(new TestOperation() {
+
+                @Override
+                public String execute(TestClient client)
+                        throws ConnectionException, OperationException {
+                    throw new RuntimeException("Unkecked Exception");
+                }
+            }, RunOnce.get());
+            LOG.info(pool.toString());
+            Assert.fail();
+        } catch (ConnectionException e) {
+            LOG.info(e.getMessage());
+        }
+
+        Assert.assertEquals(monitor.getConnectionClosedCount(), 1);
+    }
+
+    @Test
+    public void testUncheckedExceptionInOpen() {
+        CountingConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
+
+        ConnectionPoolConfigurationImpl config = new ConnectionPoolConfigurationImpl(
+                TestConstants.CLUSTER_NAME + "_" + TestConstants.KEYSPACE_NAME);
+        config.setInitConnsPerHost(0);
+        ConnectionPool<TestClient> pool = new BagOfConnectionsConnectionPoolImpl<TestClient>(
+                config, new TestConnectionFactory(config, monitor), monitor);
+
+        pool.addHost(new Host("127.0.0.1",
+                TestHostType.CONNECT_WITH_UNCHECKED_EXCEPTION.ordinal()), true);
+
+        OperationResult<String> result;
+
+        try {
+            result = pool.executeWithFailover(dummyOperation, RunOnce.get());
+            LOG.info(pool.toString());
+            Assert.fail();
+        } catch (ConnectionException e) {
+            LOG.info(e.getMessage());
+        }
+        think(1000);
+        try {
+            result = pool.executeWithFailover(dummyOperation, RunOnce.get());
+            LOG.info(pool.toString());
+            Assert.fail();
+        } catch (ConnectionException e) {
+            LOG.info(e.getMessage());
+        }
+
+        think(1000);
+        Assert.assertEquals(monitor.getConnectionClosedCount(), 0);
+    }
+
+    @Test
+    public void testOperationTimeout() {
+        CountingConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
+
+        ConnectionPoolConfigurationImpl config = new ConnectionPoolConfigurationImpl(
+                TestConstants.CLUSTER_NAME + "_" + TestConstants.KEYSPACE_NAME);
+        config.setInitConnsPerHost(0);
+        ConnectionPool<TestClient> pool = new BagOfConnectionsConnectionPoolImpl<TestClient>(
+                config, new TestConnectionFactory(config, monitor), monitor);
+
+        pool.addHost(
+                new Host("127.0.0.1", TestHostType.OPERATION_TIMEOUT.ordinal()),
+                true);
+        pool.addHost(
+                new Host("127.0.0.2", TestHostType.OPERATION_TIMEOUT.ordinal()),
+                true);
+
+        for (int i = 0; i < 5; i++) {
+            OperationResult<String> result;
+
+            try {
+                result = pool
+                        .executeWithFailover(dummyOperation, RunOnce.get());
+                LOG.info(pool.toString());
+                Assert.fail();
+            } catch (ConnectionException e) {
+                LOG.info(e.getMessage());
+            }
+        }
+        Assert.assertEquals(15, monitor.getConnectionCreatedCount());
+        Assert.assertEquals(15, monitor.getConnectionClosedCount());
+    }
 }

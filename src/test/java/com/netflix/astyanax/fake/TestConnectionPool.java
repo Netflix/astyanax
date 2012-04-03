@@ -30,62 +30,62 @@ import com.netflix.astyanax.retry.RetryPolicy;
 
 public class TestConnectionPool implements ConnectionPool<TestClient> {
 
-	Map<BigInteger, List<Host>> ring;
-	
-	public Map<BigInteger, List<Host>> getHosts() {
-		return this.ring;
-	}
-	
-	@Override
-	public boolean addHost(Host host, boolean refresh) {
-		return true;
-	}
+    Map<BigInteger, List<Host>> ring;
 
-	@Override
-	public boolean removeHost(Host host, boolean refresh) {
-		return true;
-	}
+    public Map<BigInteger, List<Host>> getHosts() {
+        return this.ring;
+    }
 
-	@Override
-	public void setHosts(Map<BigInteger, List<Host>> ring) {
-		this.ring = ring;
-	}
+    @Override
+    public boolean addHost(Host host, boolean refresh) {
+        return true;
+    }
 
-	@Override
-	public <R> OperationResult<R> executeWithFailover(
-			Operation<TestClient, R> op, RetryPolicy retry) throws ConnectionException,
-			OperationException {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    @Override
+    public boolean removeHost(Host host, boolean refresh) {
+        return true;
+    }
 
-	@Override
-	public void shutdown() {
-	}
+    @Override
+    public void setHosts(Map<BigInteger, List<Host>> ring) {
+        this.ring = ring;
+    }
 
-	@Override
-	public void start() {
-	}
+    @Override
+    public <R> OperationResult<R> executeWithFailover(
+            Operation<TestClient, R> op, RetryPolicy retry)
+            throws ConnectionException, OperationException {
+        // TODO Auto-generated method stub
+        return null;
+    }
 
-	@Override
-	public boolean isHostUp(Host host) {
-		return false;
-	}
+    @Override
+    public void shutdown() {
+    }
 
-	@Override
-	public boolean hasHost(Host host) {
-		return false;
-	}
+    @Override
+    public void start() {
+    }
 
-	@Override
-	public HostConnectionPool<TestClient> getHostPool(Host host) {
-		return null;
-	}
+    @Override
+    public boolean isHostUp(Host host) {
+        return false;
+    }
 
-	@Override
-	public List<HostConnectionPool<TestClient>> getActivePools() {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    @Override
+    public boolean hasHost(Host host) {
+        return false;
+    }
+
+    @Override
+    public HostConnectionPool<TestClient> getHostPool(Host host) {
+        return null;
+    }
+
+    @Override
+    public List<HostConnectionPool<TestClient>> getActivePools() {
+        // TODO Auto-generated method stub
+        return null;
+    }
 
 }

@@ -16,7 +16,5 @@
 package com.netflix.astyanax.connectionpool.impl;
 
 public enum ConnectionPoolType {
-	TOKEN_AWARE,
-	ROUND_ROBIN,
-	BAG
+    TOKEN_AWARE, ROUND_ROBIN, BAG
 }

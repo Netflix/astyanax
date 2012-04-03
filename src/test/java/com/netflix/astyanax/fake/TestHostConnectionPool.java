@@ -9,112 +9,112 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 
 public class TestHostConnectionPool implements HostConnectionPool<TestClient> {
 
-	private final Host host;
-	private AtomicBoolean isShutDown = new AtomicBoolean();
-	
-	public TestHostConnectionPool(Host host) {
-		this.host = host;
-	}
-	
-	@Override
-	public Connection<TestClient> borrowConnection(int timeout)
-			throws ConnectionException {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    private final Host host;
+    private AtomicBoolean isShutDown = new AtomicBoolean();
 
-	@Override
-	public Connection<TestClient> openConnection() throws ConnectionException {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    public TestHostConnectionPool(Host host) {
+        this.host = host;
+    }
 
-	@Override
-	public boolean returnConnection(Connection<TestClient> connection) {
-		// TODO Auto-generated method stub
-		return false;
-	}
+    @Override
+    public Connection<TestClient> borrowConnection(int timeout)
+            throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
 
-	@Override
-	public void markAsDown(ConnectionException reason) {
-		isShutDown.set(true);
-	}
+    @Override
+    public Connection<TestClient> openConnection() throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
 
-	@Override
-	public void shutdown() {
-		isShutDown.set(true);
-	}
+    @Override
+    public boolean returnConnection(Connection<TestClient> connection) {
+        // TODO Auto-generated method stub
+        return false;
+    }
 
-	@Override
-	public int growConnections(int numConnections) throws ConnectionException,
-			InterruptedException {
-		// TODO Auto-generated method stub
-		return 0;
-	}
+    @Override
+    public void markAsDown(ConnectionException reason) {
+        isShutDown.set(true);
+    }
 
-	@Override
-	public Host getHost() {
-		return host;
-	}
+    @Override
+    public void shutdown() {
+        isShutDown.set(true);
+    }
 
-	@Override
-	public int getActiveConnectionCount() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
+    @Override
+    public int growConnections(int numConnections) throws ConnectionException,
+            InterruptedException {
+        // TODO Auto-generated method stub
+        return 0;
+    }
 
-	@Override
-	public int getPendingConnectionCount() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
+    @Override
+    public Host getHost() {
+        return host;
+    }
 
-	@Override
-	public int getBlockedThreadCount() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
+    @Override
+    public int getActiveConnectionCount() {
+        // TODO Auto-generated method stub
+        return 0;
+    }
 
-	@Override
-	public int getIdleConnectionCount() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
+    @Override
+    public int getPendingConnectionCount() {
+        // TODO Auto-generated method stub
+        return 0;
+    }
 
-	@Override
-	public int getBusyConnectionCount() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
+    @Override
+    public int getBlockedThreadCount() {
+        // TODO Auto-generated method stub
+        return 0;
+    }
 
-	@Override
-	public boolean isShutdown() {
-		// TODO Auto-generated method stub
-		return false;
-	}
+    @Override
+    public int getIdleConnectionCount() {
+        // TODO Auto-generated method stub
+        return 0;
+    }
 
-	@Override
-	public double getScore() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
+    @Override
+    public int getBusyConnectionCount() {
+        // TODO Auto-generated method stub
+        return 0;
+    }
 
-	@Override
-	public double getMeanLatency() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
+    @Override
+    public boolean isShutdown() {
+        // TODO Auto-generated method stub
+        return false;
+    }
 
-	@Override
-	public void addLatencySample(long lastLatency, long now) {
-		// TODO Auto-generated method stub
-		
-	}
+    @Override
+    public double getScore() {
+        // TODO Auto-generated method stub
+        return 0;
+    }
 
-	@Override
-	public boolean closeConnection(Connection<TestClient> connection) {
-		// TODO Auto-generated method stub
-		return false;
-	}
+    @Override
+    public double getMeanLatency() {
+        // TODO Auto-generated method stub
+        return 0;
+    }
+
+    @Override
+    public void addLatencySample(long lastLatency, long now) {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public boolean closeConnection(Connection<TestClient> connection) {
+        // TODO Auto-generated method stub
+        return false;
+    }
 
 }

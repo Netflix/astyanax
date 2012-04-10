@@ -6,8 +6,8 @@ import java.util.HashMap;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 import com.google.common.collect.Maps;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
@@ -15,7 +15,7 @@ import com.netflix.astyanax.connectionpool.JmxConnectionPoolMonitor;
 import com.netflix.astyanax.connectionpool.JmxConnectionPoolMonitorMBean;
 
 public class ConnectionPoolMBeanManager {
-    private static Logger LOG = LogManager
+    private static Logger LOG = LoggerFactory
             .getLogger(ConnectionPoolMBeanManager.class);
 
     private MBeanServer mbs;

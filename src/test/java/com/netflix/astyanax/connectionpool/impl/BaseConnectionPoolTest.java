@@ -40,14 +40,15 @@ import com.netflix.astyanax.retry.ConstantBackoff;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.retry.RunOnce;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
 @Ignore
 public abstract class BaseConnectionPoolTest {
-    private static Logger LOG = Logger
+    private static Logger LOG = LoggerFactory
             .getLogger(RoundRobinConnectionPoolImplTest.class);
 
     private static Operation<TestClient, String> dummyOperation = new TestOperation();
@@ -90,12 +91,12 @@ public abstract class BaseConnectionPoolTest {
             try {
                 OperationResult<String> result = pool.executeWithFailover(
                         dummyOperation, RunOnce.get());
-                LOG.info(result.getHost());
+                LOG.info(result.getHost().toString());
             } catch (OperationException e) {
                 LOG.info(e.getMessage());
                 Assert.fail();
             } catch (ConnectionException e) {
-                LOG.info(e.getCause());
+                LOG.info("A ConnectionException was caught", e.getCause());
                 Assert.fail();
             }
         }
@@ -313,7 +314,7 @@ public abstract class BaseConnectionPoolTest {
         } catch (NoAvailableHostsException e) {
 
         } catch (Exception e) {
-            LOG.info(e);
+            LOG.info("A ConnectionException was caught", e);
             Assert.fail();
         }
 
@@ -395,7 +396,7 @@ public abstract class BaseConnectionPoolTest {
             result = pool.executeWithFailover(dummyOperation, RunOnce.get());
             Assert.assertEquals(2, result.getAttemptsCount());
         } catch (ConnectionException e) {
-            LOG.error(e);
+            LOG.error(e.getMessage());
             Assert.fail();
         }
     }
@@ -410,7 +411,7 @@ public abstract class BaseConnectionPoolTest {
             Assert.fail();
         } catch (ConnectionException e) {
             Assert.assertEquals(1, retry.getAttemptCount());
-            LOG.error(e);
+            LOG.error(e.getMessage());
         }
 
         retry = new ConstantBackoff(1, 10);
@@ -419,7 +420,7 @@ public abstract class BaseConnectionPoolTest {
             Assert.fail();
         } catch (ConnectionException e) {
             Assert.assertEquals(10, retry.getAttemptCount());
-            LOG.info(e);
+            LOG.info(e.getMessage());
         }
     }
 

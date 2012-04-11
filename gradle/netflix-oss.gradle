@@ -1,0 +1,1 @@
+apply from: 'http://artifacts.netflix.com/build-local/artifactory.gradle'

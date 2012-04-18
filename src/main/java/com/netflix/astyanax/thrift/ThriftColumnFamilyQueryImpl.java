@@ -113,6 +113,9 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements
     public RowQuery<K, C> getKey(final K rowKey) {
         return new AbstractRowQueryImpl<K, C>(
                 columnFamily.getColumnSerializer()) {
+
+            private byte[] previousLastColumnName = new byte[] {};
+
             @Override
             public ColumnQuery<C> getColumn(final C column) {
                 return new ColumnQuery<C>() {
@@ -255,6 +258,12 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements
                                                 predicate,
                                                 ThriftConverter
                                                         .ToThriftConsistencyLevel(consistencyLevel));
+                                if (predicate.getSlice_range().isReversed()) {
+                                    byte[] firstColumnName = columnList.get(0).getColumn().getName();
+                                    if (Arrays.equals(firstColumnName, previousLastColumnName)) {
+                                        columnList.remove(0);
+                                    }
+                                }
                                 ColumnList<C> result = new ThriftColumnOrSuperColumnListImpl<C>(
                                         columnList, columnFamily
                                                 .getColumnSerializer());
@@ -263,16 +272,18 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements
                                     ColumnOrSuperColumn last = Iterables
                                             .getLast(columnList);
                                     if (last.isSetColumn()) {
-                                        try {
-                                            predicate
-                                                    .getSlice_range()
-                                                    .setStart(
-                                                            serializer
-                                                                    .getNext(last
-                                                                            .getColumn()
-                                                                            .bufferForName()));
-                                        } catch (ArithmeticException e) {
+                                        byte[] currentLastColumnName = last.getColumn().getName();
+                                        if (!predicate.getSlice_range().isReversed() || !Arrays.equals(currentLastColumnName, previousLastColumnName)) {
+                                            previousLastColumnName = currentLastColumnName;
+                                            try {
+                                                ByteBuffer nextStart = serializer.getNext(last.getColumn().bufferForName());
+                                                predicate.getSlice_range().setStart(nextStart);
+                                            } catch (ArithmeticException e) {
+                                                paginateNoMore = true;
+                                            }
+                                        } else {
                                             paginateNoMore = true;
+                                            return new EmptyColumnList<C>();
                                         }
                                     }
                                 }

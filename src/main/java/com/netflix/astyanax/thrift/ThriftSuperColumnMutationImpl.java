@@ -36,6 +36,7 @@ import com.netflix.astyanax.serializers.ByteBufferSerializer;
 import com.netflix.astyanax.serializers.BytesArraySerializer;
 import com.netflix.astyanax.serializers.DateSerializer;
 import com.netflix.astyanax.serializers.DoubleSerializer;
+import com.netflix.astyanax.serializers.FloatSerializer;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
@@ -129,6 +130,12 @@ public class ThriftSuperColumnMutationImpl<C> implements ColumnListMutation<C> {
     @Override
     public ColumnListMutation<C> putColumn(C columnName, Date value, Integer ttl) {
         return putColumn(columnName, value, DateSerializer.get(), ttl);
+    }
+
+    @Override
+    public ColumnListMutation<C> putColumn(C columnName, float value,
+            Integer ttl) {
+        return putColumn(columnName, value, FloatSerializer.get(), ttl);
     }
 
     @Override

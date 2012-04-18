@@ -64,6 +64,8 @@ public interface ColumnListMutation<C> {
 
     ColumnListMutation<C> putColumn(C columnName, Date value, Integer ttl);
 
+    ColumnListMutation<C> putColumn(C columnName, float value, Integer ttl);
+
     ColumnListMutation<C> putColumn(C columnName, double value, Integer ttl);
 
     ColumnListMutation<C> putColumn(C columnName, UUID value, Integer ttl);

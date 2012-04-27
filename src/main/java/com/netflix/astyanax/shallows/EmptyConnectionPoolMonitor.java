@@ -22,13 +22,15 @@ import com.netflix.astyanax.connectionpool.HostStats;
 
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 public class EmptyConnectionPoolMonitor implements ConnectionPoolMonitor {
-    private static final Logger LOGGER = Logger
+    private static final Logger LOGGER = LoggerFactory
             .getLogger(EmptyConnectionPoolMonitor.class);
 
-    private static EmptyConnectionPoolMonitor instance = new EmptyConnectionPoolMonitor();
+    private static final EmptyConnectionPoolMonitor instance = new EmptyConnectionPoolMonitor();
 
     public static EmptyConnectionPoolMonitor getInstance() {
         return instance;
@@ -64,23 +66,22 @@ public class EmptyConnectionPoolMonitor implements ConnectionPoolMonitor {
 
     @Override
     public void onHostAdded(Host host, HostConnectionPool<?> pool) {
-        LOGGER.info(String.format("Added host " + host));
+        LOGGER.info("Added host {}", host);
     }
 
     @Override
     public void onHostRemoved(Host host) {
-        LOGGER.info(String.format("Remove host " + host));
+        LOGGER.info("Remove host {}", host);
     }
 
     @Override
     public void onHostDown(Host host, Exception reason) {
-        LOGGER.warn(String.format("Downed host " + host + " reason=\"" + reason
-                + "\""));
+        LOGGER.warn("Downed host {} reason=\"{}\"", host, reason);
     }
 
     @Override
     public void onHostReactivated(Host host, HostConnectionPool<?> pool) {
-        LOGGER.info(String.format("Reactivating host " + host));
+        LOGGER.info("Reactivating host {}", host);
     }
 
     @Override

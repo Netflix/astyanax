@@ -20,7 +20,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 import com.netflix.astyanax.connectionpool.Connection;
 import com.netflix.astyanax.connectionpool.Host;
@@ -32,7 +34,7 @@ import com.netflix.astyanax.fake.TestConnectionFactory;
 import com.netflix.astyanax.fake.TestHostType;
 
 public class StressSimpleHostConnectionPoolImpl {
-    private static final Logger LOG = Logger.getLogger(Stress.class);
+    private static final Logger LOG = LoggerFactory.getLogger(Stress.class);
 
     public static class NoOpListener implements
             SimpleHostConnectionPool.Listener<TestClient> {

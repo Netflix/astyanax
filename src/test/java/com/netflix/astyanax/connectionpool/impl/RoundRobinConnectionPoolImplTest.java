@@ -31,15 +31,16 @@ import com.netflix.astyanax.fake.TestHostType;
 import com.netflix.astyanax.fake.TestOperation;
 import com.netflix.astyanax.retry.RunOnce;
 
-import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RoundRobinConnectionPoolImplTest extends BaseConnectionPoolTest {
-    private static Logger LOG = Logger
+    private static final Logger LOG = LoggerFactory
             .getLogger(RoundRobinConnectionPoolImplTest.class);
 
-    private static Operation<TestClient, String> dummyOperation = new TestOperation();
+    private static final Operation<TestClient, String> dummyOperation = new TestOperation();
 
     protected ConnectionPool<TestClient> createPool() {
         CountingConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
@@ -156,7 +157,7 @@ public class RoundRobinConnectionPoolImplTest extends BaseConnectionPoolTest {
         } catch (NoAvailableHostsException e) {
 
         } catch (ConnectionException e) {
-            LOG.info(e);
+            LOG.info("", e);
             Assert.fail();
         }
 
@@ -194,7 +195,7 @@ public class RoundRobinConnectionPoolImplTest extends BaseConnectionPoolTest {
             result = cp.executeWithFailover(new TestOperation(), RunOnce.get());
             Assert.fail();
         } catch (ConnectionException e) {
-            LOG.info(e);
+            LOG.info("", e);
         }
 
         think(10000);

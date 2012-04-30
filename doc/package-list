@@ -10,6 +10,9 @@ com.netflix.astyanax.mapping
 com.netflix.astyanax.model
 com.netflix.astyanax.query
 com.netflix.astyanax.recipes
+com.netflix.astyanax.recipes.locks
+com.netflix.astyanax.recipes.storage
+com.netflix.astyanax.recipes.uniqueness
 com.netflix.astyanax.retry
 com.netflix.astyanax.serializers
 com.netflix.astyanax.shallows

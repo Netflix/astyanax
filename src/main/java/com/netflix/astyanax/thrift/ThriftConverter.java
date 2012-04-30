@@ -36,23 +36,24 @@ import org.apache.cassandra.thrift.AuthorizationException;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.NotFoundException;
+import org.apache.cassandra.thrift.SchemaDisagreementException;
 import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
 import org.apache.cassandra.thrift.TimedOutException;
 import org.apache.cassandra.thrift.UnavailableException;
-import org.apache.log4j.Logger;
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TProtocolException;
 import org.apache.thrift.transport.TTransportException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 
 public class ThriftConverter {
-    private static final Logger LOGGER = Logger
-            .getLogger(ThriftConverter.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ThriftConverter.class);
 
     /**
      * Construct a Hector ColumnParent based on the information in the query and
@@ -182,6 +183,9 @@ public class ThriftConverter {
         } else if (e instanceof AuthenticationException
                 || e instanceof AuthorizationException) {
             return new com.netflix.astyanax.connectionpool.exceptions.AuthenticationException(
+                    e);
+        } else if (e instanceof SchemaDisagreementException) {
+            return new com.netflix.astyanax.connectionpool.exceptions.SchemaDisagreementException(
                     e);
         } else if (e instanceof TTransportException) {
             if (e.getCause() != null) {

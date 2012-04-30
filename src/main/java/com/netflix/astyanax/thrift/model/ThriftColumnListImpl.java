@@ -21,8 +21,8 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.model.AbstractColumnList;
 import com.netflix.astyanax.model.Column;
-import com.netflix.astyanax.model.ColumnList;
 
 /**
  * Wrapper for a simple list of columns where each column has a scalar value.
@@ -31,7 +31,7 @@ import com.netflix.astyanax.model.ColumnList;
  * 
  * @param <C>
  */
-public class ThriftColumnListImpl<C> implements ColumnList<C> {
+public class ThriftColumnListImpl<C> extends AbstractColumnList<C> {
     private final List<org.apache.cassandra.thrift.Column> columns;
     private HashMap<C, org.apache.cassandra.thrift.Column> lookup;
     private final Serializer<C> colSer;

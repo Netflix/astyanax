@@ -113,6 +113,8 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements
     public RowQuery<K, C> getKey(final K rowKey) {
         return new AbstractRowQueryImpl<K, C>(
                 columnFamily.getColumnSerializer()) {
+            private boolean firstPage = true;
+
             @Override
             public ColumnQuery<C> getColumn(final C column) {
                 return new ColumnQuery<C>() {
@@ -232,6 +234,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements
                                         CassandraOperationType.GET_ROW,
                                         columnFamily), pinnedHost, keyspace
                                         .getKeyspaceName()) {
+
                             @Override
                             public ColumnList<C> execute(Client client)
                                     throws ConnectionException {
@@ -255,27 +258,46 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements
                                                 predicate,
                                                 ThriftConverter
                                                         .ToThriftConsistencyLevel(consistencyLevel));
-                                ColumnList<C> result = new ThriftColumnOrSuperColumnListImpl<C>(
-                                        columnList, columnFamily
-                                                .getColumnSerializer());
-                                if (isPaginating && !result.isEmpty()
+
+                                // Special handling for pagination
+                                if (isPaginating
                                         && predicate.isSetSlice_range()) {
-                                    ColumnOrSuperColumn last = Iterables
-                                            .getLast(columnList);
-                                    if (last.isSetColumn()) {
-                                        try {
-                                            predicate
-                                                    .getSlice_range()
+                                    // Did we reach the end of the query.
+                                    if (columnList.size() != predicate
+                                            .getSlice_range().getCount()) {
+                                        paginateNoMore = true;
+                                    }
+
+                                    // If this is the first page then adjust the
+                                    // count so we fetch one extra column
+                                    // that will later be dropped
+                                    if (firstPage) {
+                                        firstPage = false;
+                                        predicate.getSlice_range().setCount(
+                                                predicate.getSlice_range()
+                                                        .getCount() + 1);
+                                    } else {
+                                        if (!columnList.isEmpty())
+                                            columnList.remove(0);
+                                    }
+
+                                    // Set the start column for the next page to
+                                    // the last column of this page.
+                                    // We will discard this column later.
+                                    if (!columnList.isEmpty()) {
+                                        ColumnOrSuperColumn last = Iterables
+                                                .getLast(columnList);
+                                        if (last.isSetColumn()) {
+                                            predicate.getSlice_range()
                                                     .setStart(
-                                                            serializer
-                                                                    .getNext(last
-                                                                            .getColumn()
-                                                                            .bufferForName()));
-                                        } catch (ArithmeticException e) {
-                                            paginateNoMore = true;
+                                                            last.getColumn()
+                                                                    .getName());
                                         }
                                     }
                                 }
+                                ColumnList<C> result = new ThriftColumnOrSuperColumnListImpl<C>(
+                                        columnList, columnFamily
+                                                .getColumnSerializer());
                                 return result;
                             }
 
@@ -558,7 +580,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements
 
                             @Override
                             public BigInteger getToken() {
-                                // return
+                                // / return
                                 // partitioner.getToken(columnFamily.getKeySerializer().toByteBuffer(keys.iterator().next())).token;
                                 return null;
                             }

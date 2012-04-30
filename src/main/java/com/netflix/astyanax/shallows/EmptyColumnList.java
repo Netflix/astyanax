@@ -18,10 +18,10 @@ package com.netflix.astyanax.shallows;
 import java.util.Iterator;
 
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.model.AbstractColumnList;
 import com.netflix.astyanax.model.Column;
-import com.netflix.astyanax.model.ColumnList;
 
-public class EmptyColumnList<C> implements ColumnList<C> {
+public class EmptyColumnList<C> extends AbstractColumnList<C> {
 
     @SuppressWarnings("unchecked")
     @Override

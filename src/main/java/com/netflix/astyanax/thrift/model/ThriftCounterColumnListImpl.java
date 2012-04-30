@@ -20,10 +20,10 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.model.AbstractColumnList;
 import com.netflix.astyanax.model.Column;
-import com.netflix.astyanax.model.ColumnList;
 
-public class ThriftCounterColumnListImpl<C> implements ColumnList<C> {
+public class ThriftCounterColumnListImpl<C> extends AbstractColumnList<C> {
     private final List<org.apache.cassandra.thrift.CounterColumn> columns;
     private HashMap<C, org.apache.cassandra.thrift.CounterColumn> lookup;
     private final Serializer<C> colSer;

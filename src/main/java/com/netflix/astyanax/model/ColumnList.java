@@ -15,6 +15,10 @@
  ******************************************************************************/
 package com.netflix.astyanax.model;
 
+import java.nio.ByteBuffer;
+import java.util.Date;
+import java.util.UUID;
+
 import com.netflix.astyanax.Serializer;
 
 /**
@@ -34,6 +38,69 @@ public interface ColumnList<C> extends Iterable<Column<C>> {
      * @throws Exception
      */
     Column<C> getColumnByName(C columnName);
+
+    /**
+     * Return value as a string
+     * 
+     * @return
+     */
+    String getStringValue(C columnName, String defaultValue);
+
+    /**
+     * Return value as an integer
+     * 
+     * @return
+     */
+    Integer getIntegerValue(C columnName, Integer defaultValue);
+
+    /**
+     * Return value as a double
+     * 
+     * @return
+     */
+    Double getDoubleValue(C columnName, Double defaultValue);
+
+    /**
+     * Return value as a long. Use this to get the value of a counter column
+     * 
+     * @return
+     */
+    Long getLongValue(C columnName, Long defaultValue);
+
+    /**
+     * Get the raw byte[] value
+     * 
+     * @return
+     */
+    byte[] getByteArrayValue(C columnName, byte[] defaultValue);
+
+    /**
+     * Get value as a boolean
+     * 
+     * @return
+     */
+    Boolean getBooleanValue(C columnName, Boolean defaultValue);
+
+    /**
+     * Get the raw ByteBuffer value
+     * 
+     * @return
+     */
+    ByteBuffer getByteBufferValue(C columnName, ByteBuffer defaultValue);
+
+    /**
+     * Get the value as a date object
+     * 
+     * @return
+     */
+    Date getDateValue(C columnName, Date defaultValue);
+
+    /**
+     * Get the value as a UUID
+     * 
+     * @return
+     */
+    UUID getUUIDValue(C columnName, UUID defaultValue);
 
     /**
      * Queries column by index

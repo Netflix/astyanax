@@ -26,8 +26,8 @@ import org.apache.cassandra.thrift.SuperColumn;
 
 import com.google.common.base.Preconditions;
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.model.AbstractColumnList;
 import com.netflix.astyanax.model.Column;
-import com.netflix.astyanax.model.ColumnList;
 
 /**
  * List of columns that can be either a list of super columns or standard
@@ -37,7 +37,7 @@ import com.netflix.astyanax.model.ColumnList;
  * 
  * @param <C>
  */
-public class ThriftColumnOrSuperColumnListImpl<C> implements ColumnList<C> {
+public class ThriftColumnOrSuperColumnListImpl<C> extends AbstractColumnList<C> {
     private final List<ColumnOrSuperColumn> columns;
     private HashMap<C, ColumnOrSuperColumn> lookup;
     private final Serializer<C> colSer;

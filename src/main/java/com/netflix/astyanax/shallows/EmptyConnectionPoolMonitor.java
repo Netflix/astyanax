@@ -22,11 +22,11 @@ import com.netflix.astyanax.connectionpool.HostStats;
 
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class EmptyConnectionPoolMonitor implements ConnectionPoolMonitor {
-    private static final Logger LOGGER = Logger
-            .getLogger(EmptyConnectionPoolMonitor.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(EmptyConnectionPoolMonitor.class);
 
     private static EmptyConnectionPoolMonitor instance = new EmptyConnectionPoolMonitor();
 

@@ -24,6 +24,7 @@ import org.apache.cassandra.utils.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1370,6 +1371,7 @@ public class ThrifeKeyspaceImplTest {
     }
 
     @Test
+    @Ignore
     public void testCqlCount() {
         try {
             System.out.println("testCQL");

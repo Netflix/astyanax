@@ -10,8 +10,7 @@ import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.NoAvailableHostsException;
 
-public class RoundRobinExecuteWithFailover<CL, R> extends
-        AbstractExecuteWithFailoverImpl<CL, R> {
+public class RoundRobinExecuteWithFailover<CL, R> extends AbstractExecuteWithFailoverImpl<CL, R> {
     private int index;
     protected HostConnectionPool<CL> pool;
     private int retryCountdown;
@@ -20,9 +19,8 @@ public class RoundRobinExecuteWithFailover<CL, R> extends
     protected int waitDelta;
     protected int waitMultiplier = 1;
 
-    public RoundRobinExecuteWithFailover(ConnectionPoolConfiguration config,
-            ConnectionPoolMonitor monitor, List<HostConnectionPool<CL>> pools,
-            int index) throws ConnectionException {
+    public RoundRobinExecuteWithFailover(ConnectionPoolConfiguration config, ConnectionPoolMonitor monitor,
+            List<HostConnectionPool<CL>> pools, int index) throws ConnectionException {
         super(config, monitor);
 
         this.index = index;
@@ -57,8 +55,7 @@ public class RoundRobinExecuteWithFailover<CL, R> extends
     }
 
     @Override
-    public Connection<CL> borrowConnection(Operation<CL, R> operation)
-            throws ConnectionException {
+    public Connection<CL> borrowConnection(Operation<CL, R> operation) throws ConnectionException {
         pool = pools.get(getNextHostIndex());
         return pool.borrowConnection(waitDelta * waitMultiplier);
     }

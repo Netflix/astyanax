@@ -26,7 +26,6 @@ public interface PreparedIndexValueExpression<K, C> {
 
     PreparedIndexExpression<K, C> value(UUID value);
 
-    <V> PreparedIndexExpression<K, C> value(V value,
-            Serializer<V> valueSerializer);
+    <V> PreparedIndexExpression<K, C> value(V value, Serializer<V> valueSerializer);
 
 }

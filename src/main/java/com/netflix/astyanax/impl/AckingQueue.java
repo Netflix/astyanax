@@ -18,8 +18,7 @@ public interface AckingQueue {
      * @param units
      * @return
      */
-    MutationBatch getNextMutation(long timeout, TimeUnit units)
-            throws InterruptedException;
+    MutationBatch getNextMutation(long timeout, TimeUnit units) throws InterruptedException;
 
     /**
      * Insert an item into the queue

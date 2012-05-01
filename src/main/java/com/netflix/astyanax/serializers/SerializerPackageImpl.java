@@ -29,8 +29,7 @@ import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
  */
 public class SerializerPackageImpl implements SerializerPackage {
 
-    private final static Serializer<?> DEFAULT_SERIALIZER = BytesArraySerializer
-            .get();
+    private final static Serializer<?> DEFAULT_SERIALIZER = BytesArraySerializer.get();
 
     public final static SerializerPackage DEFAULT_SERIALIZER_PACKAGE = new SerializerPackageImpl();
 
@@ -53,25 +52,27 @@ public class SerializerPackageImpl implements SerializerPackage {
      * @param ignoreErrors
      * @throws UnknownComparatorException
      */
-    public SerializerPackageImpl(ColumnFamilyDefinition cfDef,
-            boolean ignoreErrors) throws UnknownComparatorException {
+    public SerializerPackageImpl(ColumnFamilyDefinition cfDef, boolean ignoreErrors) throws UnknownComparatorException {
         try {
             setKeyType(cfDef.getKeyValidationClass());
-        } catch (UnknownComparatorException e) {
+        }
+        catch (UnknownComparatorException e) {
             if (!ignoreErrors)
                 throw e;
         }
 
         try {
             setColumnType(cfDef.getComparatorType());
-        } catch (UnknownComparatorException e) {
+        }
+        catch (UnknownComparatorException e) {
             if (!ignoreErrors)
                 throw e;
         }
 
         try {
             setDefaultValueType(cfDef.getDefaultValidationClass());
-        } catch (UnknownComparatorException e) {
+        }
+        catch (UnknownComparatorException e) {
             if (!ignoreErrors)
                 throw e;
         }
@@ -80,9 +81,9 @@ public class SerializerPackageImpl implements SerializerPackage {
         if (colsDefs != null) {
             for (ColumnDefinition colDef : colsDefs) {
                 try {
-                    this.setValueType(colDef.getRawName(),
-                            colDef.getValidationClass());
-                } catch (UnknownComparatorException e) {
+                    this.setValueType(colDef.getRawName(), colDef.getValidationClass());
+                }
+                catch (UnknownComparatorException e) {
                     if (!ignoreErrors)
                         throw e;
                 }
@@ -90,8 +91,7 @@ public class SerializerPackageImpl implements SerializerPackage {
         }
     }
 
-    public SerializerPackageImpl setKeyType(String keyType)
-            throws UnknownComparatorException {
+    public SerializerPackageImpl setKeyType(String keyType) throws UnknownComparatorException {
         ComparatorType type = ComparatorType.getByClassName(keyType);
         if (type == null)
             throw new UnknownComparatorException(keyType);
@@ -106,13 +106,11 @@ public class SerializerPackageImpl implements SerializerPackage {
     }
 
     @Deprecated
-    public SerializerPackageImpl setColumnType(String columnType)
-            throws UnknownComparatorException {
+    public SerializerPackageImpl setColumnType(String columnType) throws UnknownComparatorException {
         return setColumnNameType(columnType);
     }
 
-    public SerializerPackageImpl setColumnNameType(String columnType)
-            throws UnknownComparatorException {
+    public SerializerPackageImpl setColumnNameType(String columnType) throws UnknownComparatorException {
         // Determine the column serializer
         String comparatorType = StringUtils.substringBefore(columnType, "(");
         ComparatorType type = ComparatorType.getByClassName(comparatorType);
@@ -122,30 +120,30 @@ public class SerializerPackageImpl implements SerializerPackage {
 
         if (type == ComparatorType.COMPOSITETYPE) {
             try {
-                this.columnSerializer = new SpecificCompositeSerializer(
-                        (CompositeType) TypeParser.parse(columnType));
+                this.columnSerializer = new SpecificCompositeSerializer((CompositeType) TypeParser.parse(columnType));
                 return this;
-            } catch (ConfigurationException e) {
+            }
+            catch (ConfigurationException e) {
                 // Ignore and simply use the default serializer
             }
             throw new UnknownComparatorException(columnType);
-        } else if (type == ComparatorType.DYNAMICCOMPOSITETYPE) {
+        }
+        else if (type == ComparatorType.DYNAMICCOMPOSITETYPE) {
             // TODO
             throw new UnknownComparatorException(columnType);
-        } else {
+        }
+        else {
             this.columnSerializer = type.getSerializer();
         }
         return this;
     }
 
-    public SerializerPackageImpl setColumnNameSerializer(
-            Serializer<?> serializer) {
+    public SerializerPackageImpl setColumnNameSerializer(Serializer<?> serializer) {
         this.columnSerializer = serializer;
         return this;
     }
 
-    public SerializerPackageImpl setDefaultValueType(String valueType)
-            throws UnknownComparatorException {
+    public SerializerPackageImpl setDefaultValueType(String valueType) throws UnknownComparatorException {
         // Determine the VALUE serializer. There is always a default serializer
         // and potentially column specific serializers
         ComparatorType type = ComparatorType.getByClassName(valueType);
@@ -156,20 +154,18 @@ public class SerializerPackageImpl implements SerializerPackage {
         return this;
     }
 
-    public SerializerPackageImpl setDefaultValueSerializer(
-            Serializer<?> serializer) {
+    public SerializerPackageImpl setDefaultValueSerializer(Serializer<?> serializer) {
         this.defaultValueSerializer = serializer;
         return this;
     }
 
-    public SerializerPackageImpl setValueType(String columnName, String type)
-            throws UnknownComparatorException {
+    public SerializerPackageImpl setValueType(String columnName, String type) throws UnknownComparatorException {
         setValueType(StringSerializer.get().toByteBuffer(columnName), type);
         return this;
     }
 
-    public SerializerPackageImpl setValueType(ByteBuffer columnName,
-            String valueType) throws UnknownComparatorException {
+    public SerializerPackageImpl setValueType(ByteBuffer columnName, String valueType)
+            throws UnknownComparatorException {
         ComparatorType type = ComparatorType.getByClassName(valueType);
         if (type == null) {
             throw new UnknownComparatorException(valueType);
@@ -178,15 +174,12 @@ public class SerializerPackageImpl implements SerializerPackage {
         return this;
     }
 
-    public SerializerPackageImpl setValueSerializer(String columnName,
-            Serializer<?> serializer) {
-        this.valueSerializers.put(
-                StringSerializer.get().toByteBuffer(columnName), serializer);
+    public SerializerPackageImpl setValueSerializer(String columnName, Serializer<?> serializer) {
+        this.valueSerializers.put(StringSerializer.get().toByteBuffer(columnName), serializer);
         return this;
     }
 
-    public SerializerPackageImpl setValueSerializer(ByteBuffer columnName,
-            Serializer<?> serializer) {
+    public SerializerPackageImpl setValueSerializer(ByteBuffer columnName, Serializer<?> serializer) {
         this.valueSerializers.put(columnName, serializer);
         return this;
     }
@@ -227,8 +220,7 @@ public class SerializerPackageImpl implements SerializerPackage {
 
     @Override
     public Serializer<?> getColumnSerializer(String columnName) {
-        return getValueSerializer(StringSerializer.get().toByteBuffer(
-                columnName));
+        return getValueSerializer(StringSerializer.get().toByteBuffer(columnName));
     }
 
     @Override
@@ -241,8 +233,7 @@ public class SerializerPackageImpl implements SerializerPackage {
     public Set<ByteBuffer> getColumnNames() {
         Set<ByteBuffer> set = new HashSet<ByteBuffer>();
         if (valueSerializers != null) {
-            for (Entry<ByteBuffer, Serializer<?>> entry : valueSerializers
-                    .entrySet()) {
+            for (Entry<ByteBuffer, Serializer<?>> entry : valueSerializers.entrySet()) {
                 set.add(entry.getKey().duplicate());
             }
         }
@@ -275,7 +266,8 @@ public class SerializerPackageImpl implements SerializerPackage {
         Serializer<?> serializer = this.valueSerializers.get(column);
         if (serializer == null) {
             return this.defaultValueSerializer.getString(value);
-        } else {
+        }
+        else {
             return serializer.getString(value);
         }
     }
@@ -295,14 +287,14 @@ public class SerializerPackageImpl implements SerializerPackage {
         Serializer<?> serializer = this.valueSerializers.get(column);
         if (serializer == null) {
             return this.defaultValueSerializer.fromString(value);
-        } else {
+        }
+        else {
             return serializer.fromString(value);
         }
     }
 
     @Override
     public ByteBuffer valueAsByteBuffer(String column, String value) {
-        return valueAsByteBuffer(this.columnSerializer.fromString(column),
-                value);
+        return valueAsByteBuffer(this.columnSerializer.fromString(column), value);
     }
 }

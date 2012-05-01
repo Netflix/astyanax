@@ -65,8 +65,7 @@ public class ThriftConverter {
      * @return
      * @throws BadRequestException
      */
-    public static <K> ColumnParent getColumnParent(
-            ColumnFamily<?, ?> columnFamily, ColumnPath<?> path)
+    public static <K> ColumnParent getColumnParent(ColumnFamily<?, ?> columnFamily, ColumnPath<?> path)
             throws BadRequestException {
         ColumnParent cp = new ColumnParent();
         cp.setColumn_family(columnFamily.getName());
@@ -91,9 +90,8 @@ public class ThriftConverter {
      * @throws InvalidRequestException
      * @throws TException
      */
-    public static <K> org.apache.cassandra.thrift.ColumnPath getColumnPath(
-            ColumnFamily<?, ?> columnFamily, ColumnPath<?> path)
-            throws BadRequestException {
+    public static <K> org.apache.cassandra.thrift.ColumnPath getColumnPath(ColumnFamily<?, ?> columnFamily,
+            ColumnPath<?> path) throws BadRequestException {
         org.apache.cassandra.thrift.ColumnPath cp = new org.apache.cassandra.thrift.ColumnPath();
         cp.setColumn_family(columnFamily.getName());
         if (path != null) {
@@ -106,8 +104,7 @@ public class ThriftConverter {
                 cp.setColumn(columns.next());
             }
             if (columns.hasNext()) {
-                throw new BadRequestException("Path depth of " + path.length()
-                        + " not supported for column family \'"
+                throw new BadRequestException("Path depth of " + path.length() + " not supported for column family \'"
                         + columnFamily.getName() + "\'");
             }
         }
@@ -122,13 +119,11 @@ public class ThriftConverter {
      * @param colSer
      * @return
      */
-    public static <C> SlicePredicate getPredicate(ColumnSlice<C> columns,
-            Serializer<C> colSer) {
+    public static <C> SlicePredicate getPredicate(ColumnSlice<C> columns, Serializer<C> colSer) {
         // Get all the columns
         if (columns == null) {
             SlicePredicate predicate = new SlicePredicate();
-            predicate.setSlice_range(new SliceRange(ByteBuffer
-                    .wrap(new byte[0]), ByteBuffer.wrap(new byte[0]), false,
+            predicate.setSlice_range(new SliceRange(ByteBuffer.wrap(new byte[0]), ByteBuffer.wrap(new byte[0]), false,
                     Integer.MAX_VALUE));
             return predicate;
         }
@@ -138,16 +133,13 @@ public class ThriftConverter {
             predicate.setColumn_namesIsSet(true);
             predicate.column_names = colSer.toBytesList(columns.getColumns());
             return predicate;
-        } else {
+        }
+        else {
             SlicePredicate predicate = new SlicePredicate();
-            predicate.setSlice_range(new SliceRange(
-                    (columns.getStartColumn() == null) ? ByteBuffer
-                            .wrap(new byte[0]) : ByteBuffer.wrap(colSer
-                            .toBytes(columns.getStartColumn())), (columns
-                            .getEndColumn() == null) ? ByteBuffer
-                            .wrap(new byte[0]) : ByteBuffer.wrap(colSer
-                            .toBytes(columns.getEndColumn())), columns
-                            .getReversed(), columns.getLimit()));
+            predicate.setSlice_range(new SliceRange((columns.getStartColumn() == null) ? ByteBuffer.wrap(new byte[0])
+                    : ByteBuffer.wrap(colSer.toBytes(columns.getStartColumn())),
+                    (columns.getEndColumn() == null) ? ByteBuffer.wrap(new byte[0]) : ByteBuffer.wrap(colSer
+                            .toBytes(columns.getEndColumn())), columns.getReversed(), columns.getLimit()));
             return predicate;
         }
     }
@@ -164,52 +156,53 @@ public class ThriftConverter {
         }
         LOGGER.debug(e.getMessage());
         if (e instanceof InvalidRequestException) {
-            return new com.netflix.astyanax.connectionpool.exceptions.BadRequestException(
-                    e);
-        } else if (e instanceof TProtocolException) {
-            return new com.netflix.astyanax.connectionpool.exceptions.BadRequestException(
-                    e);
-        } else if (e instanceof UnavailableException) {
+            return new com.netflix.astyanax.connectionpool.exceptions.BadRequestException(e);
+        }
+        else if (e instanceof TProtocolException) {
+            return new com.netflix.astyanax.connectionpool.exceptions.BadRequestException(e);
+        }
+        else if (e instanceof UnavailableException) {
             return new TokenRangeOfflineException(e);
-        } else if (e instanceof SocketTimeoutException) {
+        }
+        else if (e instanceof SocketTimeoutException) {
             return new TimeoutException(e);
-        } else if (e instanceof TimedOutException) {
+        }
+        else if (e instanceof TimedOutException) {
             return new OperationTimeoutException(e);
-        } else if (e instanceof NotFoundException) {
-            return new com.netflix.astyanax.connectionpool.exceptions.NotFoundException(
-                    e);
-        } else if (e instanceof TApplicationException) {
+        }
+        else if (e instanceof NotFoundException) {
+            return new com.netflix.astyanax.connectionpool.exceptions.NotFoundException(e);
+        }
+        else if (e instanceof TApplicationException) {
             return new ThriftStateException(e);
-        } else if (e instanceof AuthenticationException
-                || e instanceof AuthorizationException) {
-            return new com.netflix.astyanax.connectionpool.exceptions.AuthenticationException(
-                    e);
-        } else if (e instanceof SchemaDisagreementException) {
-            return new com.netflix.astyanax.connectionpool.exceptions.SchemaDisagreementException(
-                    e);
-        } else if (e instanceof TTransportException) {
+        }
+        else if (e instanceof AuthenticationException || e instanceof AuthorizationException) {
+            return new com.netflix.astyanax.connectionpool.exceptions.AuthenticationException(e);
+        }
+        else if (e instanceof SchemaDisagreementException) {
+            return new com.netflix.astyanax.connectionpool.exceptions.SchemaDisagreementException(e);
+        }
+        else if (e instanceof TTransportException) {
             if (e.getCause() != null) {
                 if (e.getCause() instanceof SocketTimeoutException) {
                     return new TimeoutException(e);
                 }
                 if (e.getCause().getMessage() != null) {
-                    if (e.getCause().getMessage().toLowerCase()
-                            .contains("connection abort")
-                            || e.getCause().getMessage().toLowerCase()
-                                    .contains("connection reset")) {
+                    if (e.getCause().getMessage().toLowerCase().contains("connection abort")
+                            || e.getCause().getMessage().toLowerCase().contains("connection reset")) {
                         return new ConnectionAbortedException(e);
                     }
                 }
             }
             return new TransportException(e);
-        } else {
+        }
+        else {
             // e.getCause().printStackTrace();
             return new UnknownException(e);
         }
     }
 
-    public static org.apache.cassandra.thrift.ConsistencyLevel ToThriftConsistencyLevel(
-            ConsistencyLevel cl) {
+    public static org.apache.cassandra.thrift.ConsistencyLevel ToThriftConsistencyLevel(ConsistencyLevel cl) {
         switch (cl) {
         case CL_ONE:
             return org.apache.cassandra.thrift.ConsistencyLevel.ONE;

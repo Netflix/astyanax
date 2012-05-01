@@ -30,9 +30,11 @@ public final class LongSerializer extends AbstractSerializer<Long> {
     public Long fromByteBuffer(ByteBuffer byteBuffer) {
         if (byteBuffer == null) {
             return null;
-        } else if (byteBuffer.remaining() == 8) {
+        }
+        else if (byteBuffer.remaining() == 8) {
             return byteBuffer.getLong();
-        } else if (byteBuffer.remaining() == 4) {
+        }
+        else if (byteBuffer.remaining() == 4) {
             return (long) byteBuffer.getInt();
         }
         return null;

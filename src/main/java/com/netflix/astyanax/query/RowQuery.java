@@ -87,8 +87,7 @@ public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
      *            Maximum number of columns to return (similar to SQL LIMIT)
      * @return
      */
-    RowQuery<K, C> withColumnRange(C startColumn, C endColumn,
-            boolean reversed, int count);
+    RowQuery<K, C> withColumnRange(C startColumn, C endColumn, boolean reversed, int count);
 
     /**
      * Specify a range and provide pre-constructed start and end columns. Use
@@ -100,8 +99,7 @@ public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
      * @param count
      * @return
      */
-    RowQuery<K, C> withColumnRange(ByteBuffer startColumn,
-            ByteBuffer endColumn, boolean reversed, int count);
+    RowQuery<K, C> withColumnRange(ByteBuffer startColumn, ByteBuffer endColumn, boolean reversed, int count);
 
     /**
      * Specify a range of composite columns. Use this in conjunction with the

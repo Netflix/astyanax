@@ -13,20 +13,17 @@ public class UniquenessConstraintWithPrefix<K> {
     private final ColumnFamily<K, String> columnFamily;
     private final Keyspace keyspace;
     private String prefix;
-    private Supplier<String> uniqueColumnSupplier = UUIDStringSupplier
-            .getInstance();
+    private Supplier<String> uniqueColumnSupplier = UUIDStringSupplier.getInstance();
     private Integer ttl;
     private ConsistencyLevel consistencyLevel = ConsistencyLevel.CL_QUORUM;
     private UniquenessConstraintViolationMonitor<K, String> monitor;
 
-    public UniquenessConstraintWithPrefix(Keyspace keyspace,
-            ColumnFamily<K, String> columnFamily) {
+    public UniquenessConstraintWithPrefix(Keyspace keyspace, ColumnFamily<K, String> columnFamily) {
         this.keyspace = keyspace;
         this.columnFamily = columnFamily;
     }
 
-    public UniquenessConstraintWithPrefix<K> setColumnNameSupplier(
-            Supplier<String> uniqueColumnSupplier) {
+    public UniquenessConstraintWithPrefix<K> setColumnNameSupplier(Supplier<String> uniqueColumnSupplier) {
         this.uniqueColumnSupplier = uniqueColumnSupplier;
         return this;
     }
@@ -41,14 +38,12 @@ public class UniquenessConstraintWithPrefix<K> {
         return this;
     }
 
-    public UniquenessConstraintWithPrefix<K> setMonitor(
-            UniquenessConstraintViolationMonitor<K, String> monitor) {
+    public UniquenessConstraintWithPrefix<K> setMonitor(UniquenessConstraintViolationMonitor<K, String> monitor) {
         this.monitor = monitor;
         return this;
     }
 
-    public UniquenessConstraintWithPrefix<K> setConsistencyLevel(
-            ConsistencyLevel consistencyLevel) {
+    public UniquenessConstraintWithPrefix<K> setConsistencyLevel(ConsistencyLevel consistencyLevel) {
         this.consistencyLevel = consistencyLevel;
         return this;
     }
@@ -57,21 +52,16 @@ public class UniquenessConstraintWithPrefix<K> {
         String unique = uniqueColumnSupplier.get();
 
         // Phase 1: Write a unique column
-        MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(
-                consistencyLevel);
+        MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
         m.withRow(columnFamily, key).putEmptyColumn(prefix + unique, ttl);
 
         m.execute();
 
         // Phase 2: Read back all columns. There should be only 1
-        ColumnList<String> result = keyspace
-                .prepareQuery(columnFamily)
-                .setConsistencyLevel(consistencyLevel)
+        ColumnList<String> result = keyspace.prepareQuery(columnFamily).setConsistencyLevel(consistencyLevel)
                 .getKey(key)
-                .withColumnRange(
-                        new RangeBuilder().setStart(prefix + "\u0000")
-                                .setEnd(prefix + "\uFFFF").build()).execute()
-                .getResult();
+                .withColumnRange(new RangeBuilder().setStart(prefix + "\u0000").setEnd(prefix + "\uFFFF").build())
+                .execute().getResult();
 
         if (result.size() == 1) {
             return prefix + unique;
@@ -81,8 +71,7 @@ public class UniquenessConstraintWithPrefix<K> {
             this.monitor.onViolation(key, prefix + unique);
 
         // Rollback
-        m = keyspace.prepareMutationBatch().setConsistencyLevel(
-                consistencyLevel);
+        m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
         m.withRow(columnFamily, key).deleteColumn(prefix + unique);
         m.execute().getResult();
 

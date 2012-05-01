@@ -55,23 +55,19 @@ public class ThriftColumnFamilyMutationImpl<C> implements ColumnListMutation<C> 
     private SlicePredicate deletionPredicate;
     private Integer defaultTtl = null;
 
-    public ThriftColumnFamilyMutationImpl(Long timestamp,
-            List<Mutation> mutationList, Serializer<C> columnSerializer) {
+    public ThriftColumnFamilyMutationImpl(Long timestamp, List<Mutation> mutationList, Serializer<C> columnSerializer) {
         this.mutationList = mutationList;
         this.columnSerializer = columnSerializer;
         this.timestamp = timestamp;
     }
 
     @Override
-    public <SC> ColumnListMutation<SC> withSuperColumn(
-            ColumnPath<SC> superColumnPath) {
-        return new ThriftSuperColumnMutationImpl<SC>(timestamp, mutationList,
-                superColumnPath);
+    public <SC> ColumnListMutation<SC> withSuperColumn(ColumnPath<SC> superColumnPath) {
+        return new ThriftSuperColumnMutationImpl<SC>(timestamp, mutationList, superColumnPath);
     }
 
     @Override
-    public <V> ColumnListMutation<C> putColumn(C columnName, V value,
-            Serializer<V> valueSerializer, Integer ttl) {
+    public <V> ColumnListMutation<C> putColumn(C columnName, V value, Serializer<V> valueSerializer, Integer ttl) {
         // 1. Set up the column with all the data
         Column column = new Column();
         column.setName(columnSerializer.toByteBuffer(columnName));
@@ -84,22 +80,19 @@ public class ThriftColumnFamilyMutationImpl<C> implements ColumnListMutation<C> 
 
         // 2. Create a mutation and append to the mutation list.
         Mutation mutation = new Mutation();
-        mutation.setColumn_or_supercolumn(new ColumnOrSuperColumn()
-                .setColumn(column));
+        mutation.setColumn_or_supercolumn(new ColumnOrSuperColumn().setColumn(column));
         mutationList.add(mutation);
 
         return this;
     }
 
     @Override
-    public ColumnListMutation<C> putColumn(C columnName, String value,
-            Integer ttl) {
+    public ColumnListMutation<C> putColumn(C columnName, String value, Integer ttl) {
         return putColumn(columnName, value, StringSerializer.get(), ttl);
     }
 
     @Override
-    public ColumnListMutation<C> putColumn(C columnName, byte[] value,
-            Integer ttl) {
+    public ColumnListMutation<C> putColumn(C columnName, byte[] value, Integer ttl) {
         return putColumn(columnName, value, BytesArraySerializer.get(), ttl);
     }
 
@@ -114,14 +107,12 @@ public class ThriftColumnFamilyMutationImpl<C> implements ColumnListMutation<C> 
     }
 
     @Override
-    public ColumnListMutation<C> putColumn(C columnName, boolean value,
-            Integer ttl) {
+    public ColumnListMutation<C> putColumn(C columnName, boolean value, Integer ttl) {
         return putColumn(columnName, value, BooleanSerializer.get(), ttl);
     }
 
     @Override
-    public ColumnListMutation<C> putColumn(C columnName, ByteBuffer value,
-            Integer ttl) {
+    public ColumnListMutation<C> putColumn(C columnName, ByteBuffer value, Integer ttl) {
         return putColumn(columnName, value, ByteBufferSerializer.get(), ttl);
     }
 
@@ -131,14 +122,12 @@ public class ThriftColumnFamilyMutationImpl<C> implements ColumnListMutation<C> 
     }
 
     @Override
-    public ColumnListMutation<C> putColumn(C columnName, float value,
-            Integer ttl) {
+    public ColumnListMutation<C> putColumn(C columnName, float value, Integer ttl) {
         return putColumn(columnName, value, FloatSerializer.get(), ttl);
     }
 
     @Override
-    public ColumnListMutation<C> putColumn(C columnName, double value,
-            Integer ttl) {
+    public ColumnListMutation<C> putColumn(C columnName, double value, Integer ttl) {
         return putColumn(columnName, value, DoubleSerializer.get(), ttl);
     }
 
@@ -160,8 +149,7 @@ public class ThriftColumnFamilyMutationImpl<C> implements ColumnListMutation<C> 
 
         // 2. Create a mutation and append to the mutation list.
         Mutation mutation = new Mutation();
-        mutation.setColumn_or_supercolumn(new ColumnOrSuperColumn()
-                .setColumn(column));
+        mutation.setColumn_or_supercolumn(new ColumnOrSuperColumn().setColumn(column));
         mutationList.add(mutation);
         return this;
     }
@@ -179,8 +167,7 @@ public class ThriftColumnFamilyMutationImpl<C> implements ColumnListMutation<C> 
     }
 
     @Override
-    public ColumnListMutation<C> incrementCounterColumn(C columnName,
-            long amount) {
+    public ColumnListMutation<C> incrementCounterColumn(C columnName, long amount) {
         // 1. Set up the column with all the data
         CounterColumn column = new CounterColumn();
         column.setName(columnSerializer.toByteBuffer(columnName));
@@ -188,8 +175,7 @@ public class ThriftColumnFamilyMutationImpl<C> implements ColumnListMutation<C> 
 
         // 2. Create a mutation and append to the mutation list.
         Mutation mutation = new Mutation();
-        mutation.setColumn_or_supercolumn(new ColumnOrSuperColumn()
-                .setCounter_column(column));
+        mutation.setColumn_or_supercolumn(new ColumnOrSuperColumn().setCounter_column(column));
         mutationList.add(mutation);
         return this;
     }
@@ -199,8 +185,7 @@ public class ThriftColumnFamilyMutationImpl<C> implements ColumnListMutation<C> 
         // Create a reusable predicate for deleting columns and insert only once
         if (null == deletionPredicate) {
             deletionPredicate = new SlicePredicate();
-            Deletion d = new Deletion().setPredicate(deletionPredicate)
-                    .setTimestamp(timestamp);
+            Deletion d = new Deletion().setPredicate(deletionPredicate).setTimestamp(timestamp);
             mutationList.add(new Mutation().setDeletion(d));
         }
         ByteBuffer bb = this.columnSerializer.toByteBuffer(columnName);

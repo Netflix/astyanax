@@ -50,8 +50,8 @@ import com.netflix.astyanax.retry.RetryPolicy;
  * 
  * @param <CL>
  */
-public abstract class AbstractHostPartitionConnectionPool<CL> implements
-        ConnectionPool<CL>, SimpleHostConnectionPool.Listener<CL> {
+public abstract class AbstractHostPartitionConnectionPool<CL> implements ConnectionPool<CL>,
+        SimpleHostConnectionPool.Listener<CL> {
     protected final NonBlockingHashMap<Host, HostConnectionPool<CL>> hosts;
     protected final ConnectionPoolConfiguration config;
     protected final ConnectionFactory<CL> factory;
@@ -59,22 +59,19 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements
     private final LatencyScoreStrategy latencyScoreStrategy;
     protected final Topology<CL> topology;
 
-    public AbstractHostPartitionConnectionPool(
-            ConnectionPoolConfiguration config, ConnectionFactory<CL> factory,
+    public AbstractHostPartitionConnectionPool(ConnectionPoolConfiguration config, ConnectionFactory<CL> factory,
             ConnectionPoolMonitor monitor) {
         this.config = config;
         this.factory = factory;
         this.hosts = new NonBlockingHashMap<Host, HostConnectionPool<CL>>();
         this.monitor = monitor;
         this.latencyScoreStrategy = config.getLatencyScoreStrategy();
-        this.topology = new TokenPartitionedTopology<CL>(
-                this.latencyScoreStrategy);
+        this.topology = new TokenPartitionedTopology<CL>(this.latencyScoreStrategy);
     }
 
     @Override
     public void start() {
-        ConnectionPoolMBeanManager.getInstance().registerMonitor(
-                config.getName(), this);
+        ConnectionPoolMBeanManager.getInstance().registerMonitor(config.getName(), this);
 
         String seeds = config.getSeeds();
         if (seeds != null && !seeds.isEmpty()) {
@@ -98,8 +95,7 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements
 
     @Override
     public void shutdown() {
-        ConnectionPoolMBeanManager.getInstance().unregisterMonitor(
-                config.getName(), this);
+        ConnectionPoolMBeanManager.getInstance().unregisterMonitor(config.getName(), this);
 
         for (Entry<Host, HostConnectionPool<CL>> pool : hosts.entrySet()) {
             pool.getValue().shutdown();
@@ -108,10 +104,9 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements
         latencyScoreStrategy.shutdown();
     }
 
-    protected HostConnectionPool<CL> newHostConnectionPool(Host host,
-            ConnectionFactory<CL> factory, ConnectionPoolConfiguration config) {
-        return new SimpleHostConnectionPool<CL>(host, factory, monitor, config,
-                this);
+    protected HostConnectionPool<CL> newHostConnectionPool(Host host, ConnectionFactory<CL> factory,
+            ConnectionPoolConfiguration config) {
+        return new SimpleHostConnectionPool<CL>(host, factory, monitor, config, this);
     }
 
     @Override
@@ -131,8 +126,7 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements
             return false;
         }
 
-        HostConnectionPool<CL> pool = newHostConnectionPool(host, factory,
-                config);
+        HostConnectionPool<CL> pool = newHostConnectionPool(host, factory, config);
         if (null == hosts.putIfAbsent(host, pool)) {
             try {
                 monitor.onHostAdded(host, pool);
@@ -141,11 +135,13 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements
                     rebuildPartitions();
                 }
                 pool.growConnections(config.getInitConnsPerHost());
-            } catch (Exception e) {
+            }
+            catch (Exception e) {
                 // Ignore, pool will have been marked down internally
             }
             return true;
-        } else {
+        }
+        else {
             return false;
         }
     }
@@ -180,7 +176,8 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements
                 rebuildPartitions();
             }
             return true;
-        } else {
+        }
+        else {
             return false;
         }
     }
@@ -210,8 +207,7 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements
         }
 
         // Recreate the toplogy
-        Map<BigInteger, Collection<HostConnectionPool<CL>>> tokens = Maps
-                .newHashMap();
+        Map<BigInteger, Collection<HostConnectionPool<CL>>> tokens = Maps.newHashMap();
         for (Map.Entry<BigInteger, List<Host>> entry : ring.entrySet()) {
             Set<HostConnectionPool<CL>> pools = Sets.newHashSet();
             for (Host host : entry.getValue()) {
@@ -224,20 +220,21 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements
     }
 
     @Override
-    public <R> OperationResult<R> executeWithFailover(Operation<CL, R> op,
-            RetryPolicy retry) throws ConnectionException {
+    public <R> OperationResult<R> executeWithFailover(Operation<CL, R> op, RetryPolicy retry)
+            throws ConnectionException {
         retry.begin();
         ConnectionException lastException = null;
         do {
             try {
-                OperationResult<R> result = newExecuteWithFailover(op)
-                        .tryOperation(op);
+                OperationResult<R> result = newExecuteWithFailover(op).tryOperation(op);
                 retry.success();
                 return result;
-            } catch (OperationException e) {
+            }
+            catch (OperationException e) {
                 retry.failure(e);
                 throw e;
-            } catch (ConnectionException e) {
+            }
+            catch (ConnectionException e) {
                 lastException = e;
             }
         } while (retry.allowRetry());
@@ -253,8 +250,8 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements
      * @return
      * @throws ConnectionException
      */
-    protected abstract <R> ExecuteWithFailover<CL, R> newExecuteWithFailover(
-            Operation<CL, R> op) throws ConnectionException;
+    protected abstract <R> ExecuteWithFailover<CL, R> newExecuteWithFailover(Operation<CL, R> op)
+            throws ConnectionException;
 
     /**
      * Called every time a host is added, removed or is marked as down

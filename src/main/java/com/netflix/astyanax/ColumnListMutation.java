@@ -41,8 +41,7 @@ public interface ColumnListMutation<C> {
      * @param ttl
      * @return
      */
-    <V> ColumnListMutation<C> putColumn(C columnName, V value,
-            Serializer<V> valueSerializer, Integer ttl);
+    <V> ColumnListMutation<C> putColumn(C columnName, V value, Serializer<V> valueSerializer, Integer ttl);
 
     /**
      * @deprecated Super columns are being phased out. Use composite columns
@@ -65,7 +64,7 @@ public interface ColumnListMutation<C> {
     ColumnListMutation<C> putColumn(C columnName, Date value, Integer ttl);
 
     ColumnListMutation<C> putColumn(C columnName, float value, Integer ttl);
-
+        
     ColumnListMutation<C> putColumn(C columnName, double value, Integer ttl);
 
     ColumnListMutation<C> putColumn(C columnName, UUID value, Integer ttl);

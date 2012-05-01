@@ -37,12 +37,10 @@ import com.netflix.astyanax.serializers.UUIDSerializer;
  * @author edanuff
  */
 @SuppressWarnings("rawtypes")
-public abstract class AbstractComposite extends AbstractList<Object> implements
-        Comparable<AbstractComposite> {
+public abstract class AbstractComposite extends AbstractList<Object> implements Comparable<AbstractComposite> {
 
     public enum ComponentEquality {
-        LESS_THAN_EQUAL((byte) -1), EQUAL((byte) 0), GREATER_THAN_EQUAL(
-                (byte) 1);
+        LESS_THAN_EQUAL((byte) -1), EQUAL((byte) 0), GREATER_THAN_EQUAL((byte) 1);
 
         private final byte equality;
 
@@ -65,29 +63,20 @@ public abstract class AbstractComposite extends AbstractList<Object> implements
         }
     }
 
-    static final Logger logger = Logger.getLogger(AbstractComposite.class
-            .getName());
+    static final Logger logger = Logger.getLogger(AbstractComposite.class.getName());
 
     public static final BiMap<Class<? extends Serializer>, String> DEFAULT_SERIALIZER_TO_COMPARATOR_MAPPING = new ImmutableBiMap.Builder<Class<? extends Serializer>, String>()
-            .put(AsciiSerializer.class,
-                    AsciiSerializer.get().getComparatorType().getTypeName())
-            .put(BigIntegerSerializer.class,
-                    BigIntegerSerializer.get().getComparatorType()
-                            .getTypeName())
-            .put(LongSerializer.class,
-                    LongSerializer.get().getComparatorType().getTypeName())
-            .put(StringSerializer.class,
-                    StringSerializer.get().getComparatorType().getTypeName())
-            .put(UUIDSerializer.class,
-                    UUIDSerializer.get().getComparatorType().getTypeName())
-            .build();
+            .put(AsciiSerializer.class, AsciiSerializer.get().getComparatorType().getTypeName())
+            .put(BigIntegerSerializer.class, BigIntegerSerializer.get().getComparatorType().getTypeName())
+            .put(LongSerializer.class, LongSerializer.get().getComparatorType().getTypeName())
+            .put(StringSerializer.class, StringSerializer.get().getComparatorType().getTypeName())
+            .put(UUIDSerializer.class, UUIDSerializer.get().getComparatorType().getTypeName()).build();
 
     static final ImmutableClassToInstanceMap<Serializer> SERIALIZERS = new ImmutableClassToInstanceMap.Builder<Serializer>()
             .put(AsciiSerializer.class, AsciiSerializer.get())
             .put(BigIntegerSerializer.class, BigIntegerSerializer.get())
             .put(ByteBufferSerializer.class, ByteBufferSerializer.get())
-            .put(LongSerializer.class, LongSerializer.get())
-            .put(StringSerializer.class, StringSerializer.get())
+            .put(LongSerializer.class, LongSerializer.get()).put(StringSerializer.class, StringSerializer.get())
             .put(UUIDSerializer.class, UUIDSerializer.get()).build();
 
     public static final BiMap<Byte, String> DEFAULT_ALIAS_TO_COMPARATOR_MAPPING = new ImmutableBiMap.Builder<Byte, String>()
@@ -116,8 +105,8 @@ public abstract class AbstractComposite extends AbstractList<Object> implements
         final String comparator;
         final ComponentEquality equality;
 
-        public Component(T value, ByteBuffer bytes, Serializer<T> serializer,
-                String comparator, ComponentEquality equality) {
+        public Component(T value, ByteBuffer bytes, Serializer<T> serializer, String comparator,
+                ComponentEquality equality) {
             this.serializer = serializer;
             this.value = value;
             this.bytes = bytes;
@@ -222,22 +211,20 @@ public abstract class AbstractComposite extends AbstractList<Object> implements
         return serializerToComparatorMapping;
     }
 
-    public void setSerializerToComparatorMapping(
-            Map<Class<? extends Serializer>, String> serializerToComparatorMapping) {
+    public void setSerializerToComparatorMapping(Map<Class<? extends Serializer>, String> serializerToComparatorMapping) {
         serialized = null;
-        this.serializerToComparatorMapping = new ImmutableBiMap.Builder<Class<? extends Serializer>, String>()
-                .putAll(serializerToComparatorMapping).build();
+        this.serializerToComparatorMapping = new ImmutableBiMap.Builder<Class<? extends Serializer>, String>().putAll(
+                serializerToComparatorMapping).build();
     }
 
     public Map<Byte, String> getAliasesToComparatorMapping() {
         return aliasToComparatorMapping;
     }
 
-    public void setAliasesToComparatorMapping(
-            Map<Byte, String> aliasesToComparatorMapping) {
+    public void setAliasesToComparatorMapping(Map<Byte, String> aliasesToComparatorMapping) {
         serialized = null;
-        aliasToComparatorMapping = new ImmutableBiMap.Builder<Byte, String>()
-                .putAll(aliasesToComparatorMapping).build();
+        aliasToComparatorMapping = new ImmutableBiMap.Builder<Byte, String>().putAll(aliasesToComparatorMapping)
+                .build();
     }
 
     public boolean isDynamic() {
@@ -248,8 +235,7 @@ public abstract class AbstractComposite extends AbstractList<Object> implements
         return serializersByPosition;
     }
 
-    public void setSerializersByPosition(
-            List<Serializer<?>> serializersByPosition) {
+    public void setSerializersByPosition(List<Serializer<?>> serializersByPosition) {
         this.serializersByPosition = serializersByPosition;
     }
 
@@ -312,8 +298,7 @@ public abstract class AbstractComposite extends AbstractList<Object> implements
             return UUIDSerializer.get();
         }
 
-        Serializer<?> s = SERIALIZERS.getInstance(serializerToComparatorMapping
-                .inverse().get(c));
+        Serializer<?> s = SERIALIZERS.getInstance(serializerToComparatorMapping.inverse().get(c));
         if (s != null) {
             return s;
         }
@@ -356,7 +341,8 @@ public abstract class AbstractComposite extends AbstractList<Object> implements
         if (!dynamic) {
             if (bb.hasRemaining()) {
                 return ComparatorType.BYTESTYPE.getTypeName();
-            } else {
+            }
+            else {
                 return null;
             }
         }
@@ -365,7 +351,8 @@ public abstract class AbstractComposite extends AbstractList<Object> implements
                 int header = getShortLength(bb);
                 if ((header & 0x8000) == 0) {
                     name = ByteBufferUtil.string(getBytes(bb, header));
-                } else {
+                }
+                else {
                     byte a = (byte) (header & 0xFF);
                     name = aliasToComparatorMapping.get(a);
                     if (name == null) {
@@ -376,7 +363,8 @@ public abstract class AbstractComposite extends AbstractList<Object> implements
                         }
                     }
                 }
-            } catch (CharacterCodingException e) {
+            }
+            catch (CharacterCodingException e) {
                 throw new RuntimeException(e);
             }
         }
@@ -405,8 +393,7 @@ public abstract class AbstractComposite extends AbstractList<Object> implements
 
     }
 
-    public <T> AbstractComposite addComponent(T value, Serializer<T> s,
-            ComponentEquality equality) {
+    public <T> AbstractComposite addComponent(T value, Serializer<T> s, ComponentEquality equality) {
 
         addComponent(value, s, comparatorForSerializer(s), equality);
 
@@ -414,8 +401,7 @@ public abstract class AbstractComposite extends AbstractList<Object> implements
 
     }
 
-    public <T> AbstractComposite addComponent(T value, Serializer<T> s,
-            String comparator) {
+    public <T> AbstractComposite addComponent(T value, Serializer<T> s, String comparator) {
 
         addComponent(value, s, comparator, ComponentEquality.EQUAL);
 
@@ -423,8 +409,7 @@ public abstract class AbstractComposite extends AbstractList<Object> implements
 
     }
 
-    public <T> AbstractComposite addComponent(T value, Serializer<T> s,
-            String comparator, ComponentEquality equality) {
+    public <T> AbstractComposite addComponent(T value, Serializer<T> s, String comparator, ComponentEquality equality) {
 
         addComponent(-1, value, s, comparator, equality);
 
@@ -433,8 +418,8 @@ public abstract class AbstractComposite extends AbstractList<Object> implements
     }
 
     @SuppressWarnings("unchecked")
-    public <T> AbstractComposite addComponent(int index, T value,
-            Serializer<T> s, String comparator, ComponentEquality equality) {
+    public <T> AbstractComposite addComponent(int index, T value, Serializer<T> s, String comparator,
+            ComponentEquality equality) {
         serialized = null;
 
         if (index < 0) {
@@ -444,16 +429,14 @@ public abstract class AbstractComposite extends AbstractList<Object> implements
         while (components.size() < index) {
             components.add(null);
         }
-        components.add(index, new Component(value, null, s, comparator,
-                equality));
+        components.add(index, new Component(value, null, s, comparator, equality));
 
         return this;
 
     }
 
     private static Object mapIfNumber(Object o) {
-        if ((o instanceof Byte) || (o instanceof Integer)
-                || (o instanceof Short)) {
+        if ((o instanceof Byte) || (o instanceof Integer) || (o instanceof Short)) {
             return BigInteger.valueOf(((Number) o).longValue());
         }
         return o;
@@ -478,7 +461,8 @@ public abstract class AbstractComposite extends AbstractList<Object> implements
         for (Object o : c) {
             if (o instanceof Collection) {
                 newList.addAll(flatten((Collection) o));
-            } else {
+            }
+            else {
                 newList.add(o);
             }
         }
@@ -529,8 +513,7 @@ public abstract class AbstractComposite extends AbstractList<Object> implements
         if (c == null) {
             c = comparatorForSerializer(s);
         }
-        components.add(index, new Component(element, null, s, c,
-                ComponentEquality.EQUAL));
+        components.add(index, new Component(element, null, s, c, ComponentEquality.EQUAL));
     }
 
     @Override
@@ -543,8 +526,7 @@ public abstract class AbstractComposite extends AbstractList<Object> implements
         return null;
     }
 
-    public <T> AbstractComposite setComponent(int index, T value,
-            Serializer<T> s) {
+    public <T> AbstractComposite setComponent(int index, T value, Serializer<T> s) {
 
         setComponent(index, value, s, comparatorForSerializer(s));
 
@@ -552,8 +534,7 @@ public abstract class AbstractComposite extends AbstractList<Object> implements
 
     }
 
-    public <T> AbstractComposite setComponent(int index, T value,
-            Serializer<T> s, String comparator) {
+    public <T> AbstractComposite setComponent(int index, T value, Serializer<T> s, String comparator) {
 
         setComponent(index, value, s, comparator, ComponentEquality.EQUAL);
 
@@ -562,15 +543,14 @@ public abstract class AbstractComposite extends AbstractList<Object> implements
     }
 
     @SuppressWarnings("unchecked")
-    public <T> AbstractComposite setComponent(int index, T value,
-            Serializer<T> s, String comparator, ComponentEquality equality) {
+    public <T> AbstractComposite setComponent(int index, T value, Serializer<T> s, String comparator,
+            ComponentEquality equality) {
         serialized = null;
 
         while (components.size() <= index) {
             components.add(null);
         }
-        components.set(index, new Component(value, null, s, comparator,
-                equality));
+        components.set(index, new Component(value, null, s, comparator, equality));
 
         return this;
 
@@ -598,8 +578,7 @@ public abstract class AbstractComposite extends AbstractList<Object> implements
         if (c == null) {
             c = comparatorForSerializer(s);
         }
-        Component prev = components.set(index, new Component(element, null, s,
-                c, ComponentEquality.EQUAL));
+        Component prev = components.set(index, new Component(element, null, s, c, ComponentEquality.EQUAL));
         if (prev != null) {
             return prev.getValue();
         }
@@ -672,7 +651,8 @@ public abstract class AbstractComposite extends AbstractList<Object> implements
                         a = (byte) Character.toUpperCase((char) a);
                     }
                     out.writeShort((short) (0x8000 | a));
-                } else {
+                }
+                else {
                     out.writeShort((short) comparator.length());
                     out.write(ByteBufferUtil.bytes(comparator));
                 }
@@ -698,13 +678,11 @@ public abstract class AbstractComposite extends AbstractList<Object> implements
             ByteBuffer data = getWithShortLength(b);
             if (data != null) {
                 Serializer<?> s = getSerializer(i, comparator);
-                ComponentEquality equality = ComponentEquality
-                        .fromByte(b.get());
-                components.add(new Component(null, data.slice(), s, comparator,
-                        equality));
-            } else {
-                throw new RuntimeException(
-                        "Missing component data in composite type");
+                ComponentEquality equality = ComponentEquality.fromByte(b.get());
+                components.add(new Component(null, data.slice(), s, comparator, equality));
+            }
+            else {
+                throw new RuntimeException("Missing component data in composite type");
             }
             i++;
         }

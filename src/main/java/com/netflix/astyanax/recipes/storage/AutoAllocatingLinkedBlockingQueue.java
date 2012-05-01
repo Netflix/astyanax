@@ -5,8 +5,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import com.google.common.base.Supplier;
 
 @SuppressWarnings("serial")
-public class AutoAllocatingLinkedBlockingQueue<T> extends
-        LinkedBlockingQueue<T> {
+public class AutoAllocatingLinkedBlockingQueue<T> extends LinkedBlockingQueue<T> {
 
     public AutoAllocatingLinkedBlockingQueue(int concurrencyLevel) {
         super(concurrencyLevel);

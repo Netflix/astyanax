@@ -29,9 +29,8 @@ public class ExponentialRetryBackoffStrategy implements RetryBackoffStrategy {
     }
 
     public String toString() {
-        return new StringBuilder().append("ExpRetry[").append("max=")
-                .append(config.getRetryMaxDelaySlice()).append(",slot=")
-                .append(config.getRetryDelaySlice()).append(",suspend=")
+        return new StringBuilder().append("ExpRetry[").append("max=").append(config.getRetryMaxDelaySlice())
+                .append(",slot=").append(config.getRetryDelaySlice()).append(",suspend=")
                 .append(config.getRetrySuspendWindow()).append("]").toString();
     }
 
@@ -52,8 +51,7 @@ public class ExponentialRetryBackoffStrategy implements RetryBackoffStrategy {
 
                 attemptCount++;
                 if (attemptCount == 1) {
-                    if (System.currentTimeMillis() - lastReconnectTime < config
-                            .getRetrySuspendWindow()) {
+                    if (System.currentTimeMillis() - lastReconnectTime < config.getRetrySuspendWindow()) {
                         return config.getRetrySuspendWindow();
                     }
                 }
@@ -62,8 +60,7 @@ public class ExponentialRetryBackoffStrategy implements RetryBackoffStrategy {
                 if (c > config.getRetryMaxDelaySlice())
                     c = config.getRetryMaxDelaySlice();
 
-                return (new Random().nextInt(c) + 1)
-                        * config.getRetryDelaySlice();
+                return (new Random().nextInt(c) + 1) * config.getRetryDelaySlice();
             }
 
             @Override
@@ -72,9 +69,8 @@ public class ExponentialRetryBackoffStrategy implements RetryBackoffStrategy {
             }
 
             public String toString() {
-                return new StringBuilder().append("ExpRetry.Instance[")
-                        .append(c).append(",").append(isSuspended).append(",")
-                        .append(attemptCount).append("]").toString();
+                return new StringBuilder().append("ExpRetry.Instance[").append(c).append(",").append(isSuspended)
+                        .append(",").append(attemptCount).append("]").toString();
             }
 
             @Override

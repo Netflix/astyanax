@@ -82,8 +82,7 @@ public interface HostConnectionPool<CL> {
      * @throws InterruptedException
      * @returns Actual number of connections created
      */
-    int growConnections(int numConnections) throws ConnectionException,
-            InterruptedException;
+    int growConnections(int numConnections) throws ConnectionException, InterruptedException;
 
     /**
      * Get the host to which this pool is associated

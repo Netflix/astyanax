@@ -29,13 +29,11 @@ public abstract class CompositeRangeBuilder implements ByteBufferRange {
 
     abstract protected void nextComponent();
 
-    abstract protected void append(ByteBufferOutputStream out, Object value,
-            Equality equality);
+    abstract protected void append(ByteBufferOutputStream out, Object value, Equality equality);
 
     public CompositeRangeBuilder withPrefix(Object object) {
         if (lockComponent) {
-            throw new IllegalStateException(
-                    "Prefix cannot be added once equality has been specified");
+            throw new IllegalStateException("Prefix cannot be added once equality has been specified");
         }
         append(start, object, Equality.EQUAL);
         append(end, object, Equality.EQUAL);

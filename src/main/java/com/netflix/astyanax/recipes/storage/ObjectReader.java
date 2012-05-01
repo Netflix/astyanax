@@ -23,8 +23,7 @@ import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.retry.RunOnce;
 
 public class ObjectReader implements Callable<ObjectMetadata> {
-    private static final Logger LOG = LoggerFactory
-            .getLogger(ObjectReader.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ObjectReader.class);
 
     private static final int DEFAULT_CONCURRENCY_LEVEL = 4;
     private static final int MAX_WAIT_TIME_TO_FINISH = 60;
@@ -40,8 +39,7 @@ public class ObjectReader implements Callable<ObjectMetadata> {
     private RetryPolicy retryPolicy;
     private ObjectReadCallback callback = new NoOpObjectReadCallback();
 
-    public ObjectReader(ChunkedStorageProvider provider, String objectName,
-            OutputStream os) {
+    public ObjectReader(ChunkedStorageProvider provider, String objectName, OutputStream os) {
         this.provider = provider;
         this.objectName = objectName;
         this.os = os;
@@ -93,10 +91,9 @@ public class ObjectReader implements Callable<ObjectMetadata> {
                     if (attributes.isValidForRead())
                         break;
                     if (!retry.allowRetry())
-                        throw new NotFoundException(
-                                "File doesn't exists or isn't ready to be read: "
-                                        + objectName);
-                } catch (Exception e) {
+                        throw new NotFoundException("File doesn't exists or isn't ready to be read: " + objectName);
+                }
+                catch (Exception e) {
                     LOG.warn(e.getMessage());
                     if (!retry.allowRetry())
                         throw e;
@@ -114,22 +111,17 @@ public class ObjectReader implements Callable<ObjectMetadata> {
                 idsToRead.add(block);
 
                 // Got a batch, or reached the end
-                if (idsToRead.size() == batchSize
-                        || block == attributes.getChunkCount() - 1) {
+                if (idsToRead.size() == batchSize || block == attributes.getChunkCount() - 1) {
 
                     // Read blocks in random order
                     final int firstBlockId = idsToRead.get(0);
                     Collections.shuffle(idsToRead);
                     final AtomicReferenceArray<ByteBuffer> chunks = new AtomicReferenceArray<ByteBuffer>(
                             idsToRead.size());
-                    ExecutorService executor = Executors
-                            .newFixedThreadPool(
-                                    concurrencyLevel,
-                                    new ThreadFactoryBuilder()
-                                            .setDaemon(true)
-                                            .setNameFormat(
-                                                    "ChunkReader-" + objectName
-                                                            + "-%d").build());
+                    ExecutorService executor = Executors.newFixedThreadPool(
+                            concurrencyLevel,
+                            new ThreadFactoryBuilder().setDaemon(true)
+                                    .setNameFormat("ChunkReader-" + objectName + "-%d").build());
                     try {
                         for (final int chunkId : idsToRead) {
                             executor.submit(new Runnable() {
@@ -139,18 +131,14 @@ public class ObjectReader implements Callable<ObjectMetadata> {
                                     RetryPolicy retry = retryPolicy.duplicate();
                                     while (exception.get() == null) {
                                         try {
-                                            ByteBuffer chunk = provider
-                                                    .readChunk(objectName,
-                                                            chunkId);
-                                            totalBytesRead.addAndGet(chunk
-                                                    .limit());
-                                            chunks.set(chunkId - firstBlockId,
-                                                    chunk);
+                                            ByteBuffer chunk = provider.readChunk(objectName, chunkId);
+                                            totalBytesRead.addAndGet(chunk.limit());
+                                            chunks.set(chunkId - firstBlockId, chunk);
                                             callback.onChunk(chunkId, chunk);
                                             break;
-                                        } catch (Exception e) {
-                                            callback.onChunkException(chunkId,
-                                                    e);
+                                        }
+                                        catch (Exception e) {
+                                            callback.onChunkException(chunkId, e);
                                             if (retry.allowRetry())
                                                 continue;
                                             exception.compareAndSet(null, e);
@@ -159,13 +147,11 @@ public class ObjectReader implements Callable<ObjectMetadata> {
                                 }
                             });
                         }
-                    } finally {
+                    }
+                    finally {
                         executor.shutdown();
-                        if (!executor.awaitTermination(maxWaitTimeInSeconds,
-                                TimeUnit.SECONDS)) {
-                            throw new Exception(
-                                    "Took too long to fetch object: "
-                                            + objectName);
+                        if (!executor.awaitTermination(maxWaitTimeInSeconds, TimeUnit.SECONDS)) {
+                            throw new Exception("Took too long to fetch object: " + objectName);
                         }
                     }
 
@@ -181,14 +167,13 @@ public class ObjectReader implements Callable<ObjectMetadata> {
             }
 
             if (totalBytesRead.get() != attributes.getObjectSize()) {
-                throw new Exception("Bytes read (" + totalBytesRead.get()
-                        + ") does not match object size ("
-                        + attributes.getObjectSize() + ") for object "
-                        + objectName);
+                throw new Exception("Bytes read (" + totalBytesRead.get() + ") does not match object size ("
+                        + attributes.getObjectSize() + ") for object " + objectName);
             }
             callback.onSuccess();
             return attributes;
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             callback.onFailure(e);
             throw e;
         }

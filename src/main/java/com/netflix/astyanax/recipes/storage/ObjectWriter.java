@@ -20,8 +20,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.netflix.astyanax.util.BlockingConcurrentWindowCounter;
 
 public class ObjectWriter implements Callable<ObjectMetadata> {
-    private static final Logger LOG = LoggerFactory
-            .getLogger(ObjectWriter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ObjectWriter.class);
 
     private static final int DEFAULT_CONCURRENCY_LEVEL = 4;
     private static final int MAX_WAIT_TIME_TO_FINISH = 60;
@@ -36,8 +35,7 @@ public class ObjectWriter implements Callable<ObjectMetadata> {
     private int maxWaitTimeInSeconds = MAX_WAIT_TIME_TO_FINISH;
     private ObjectWriteCallback callback = new NoOpObjectWriteCallback();
 
-    public ObjectWriter(ChunkedStorageProvider provider, String objectName,
-            InputStream is) {
+    public ObjectWriter(ChunkedStorageProvider provider, String objectName, InputStream is) {
         this.provider = provider;
         this.objectName = objectName;
         this.chunkSize = provider.getDefaultChunkSize();
@@ -73,8 +71,7 @@ public class ObjectWriter implements Callable<ObjectMetadata> {
     public ObjectMetadata call() throws Exception {
         LOG.debug("Writing: " + objectName);
 
-        Preconditions.checkNotNull(objectName,
-                "Must provide a valid object name");
+        Preconditions.checkNotNull(objectName, "Must provide a valid object name");
         Preconditions.checkNotNull(is, "Must provide a valid input stream");
         Preconditions.checkNotNull(chunkSize, "Must provide a valid chunkSize");
 
@@ -83,13 +80,9 @@ public class ObjectWriter implements Callable<ObjectMetadata> {
         final AtomicReference<Exception> exception = new AtomicReference<Exception>();
 
         try {
-            final ExecutorService executor = Executors.newFixedThreadPool(
-                    concurrencyLevel,
-                    new ThreadFactoryBuilder().setDaemon(true)
-                            .setNameFormat("ChunkWriter-" + objectName + "-%d")
-                            .build());
-            final BlockingConcurrentWindowCounter chunkCounter = new BlockingConcurrentWindowCounter(
-                    concurrencyLevel);
+            final ExecutorService executor = Executors.newFixedThreadPool(concurrencyLevel, new ThreadFactoryBuilder()
+                    .setDaemon(true).setNameFormat("ChunkWriter-" + objectName + "-%d").build());
+            final BlockingConcurrentWindowCounter chunkCounter = new BlockingConcurrentWindowCounter(concurrencyLevel);
             final AutoAllocatingLinkedBlockingQueue<ByteBuffer> blocks = new AutoAllocatingLinkedBlockingQueue<ByteBuffer>(
                     concurrencyLevel);
 
@@ -102,13 +95,12 @@ public class ObjectWriter implements Callable<ObjectMetadata> {
                     final int chunkNumber = chunkCounter.incrementAndGet();
 
                     // Get a block or allocate a new one
-                    final ByteBuffer bb = blocks
-                            .poll(new Supplier<ByteBuffer>() {
-                                @Override
-                                public ByteBuffer get() {
-                                    return ByteBuffer.allocate(chunkSize);
-                                }
-                            });
+                    final ByteBuffer bb = blocks.poll(new Supplier<ByteBuffer>() {
+                        @Override
+                        public ByteBuffer get() {
+                            return ByteBuffer.allocate(chunkSize);
+                        }
+                    });
 
                     // Reset the array and copy some data
                     bb.position(0);
@@ -122,26 +114,26 @@ public class ObjectWriter implements Callable<ObjectMetadata> {
                             public void run() {
                                 try {
                                     if (exception.get() == null) {
-                                        LOG.debug("WRITE " + chunkNumber
-                                                + " size=" + bb.limit());
-                                        provider.writeChunk(objectName,
-                                                chunkNumber, bb, ttl);
-                                        callback.onChunk(chunkNumber,
-                                                bb.limit());
+                                        LOG.debug("WRITE " + chunkNumber + " size=" + bb.limit());
+                                        provider.writeChunk(objectName, chunkNumber, bb, ttl);
+                                        callback.onChunk(chunkNumber, bb.limit());
                                         nBytesWritten.addAndGet(bb.limit());
                                         nChunksWritten.incrementAndGet();
                                     }
-                                } catch (Exception e) {
+                                }
+                                catch (Exception e) {
                                     LOG.error(e.getMessage());
                                     exception.compareAndSet(null, e);
                                     callback.onChunkException(chunkNumber, e);
-                                } finally {
+                                }
+                                finally {
                                     blocks.add(bb);
                                     chunkCounter.release(chunkNumber);
                                 }
                             }
                         });
-                    } else {
+                    }
+                    else {
                         done = true;
                     }
                 }
@@ -149,30 +141,28 @@ public class ObjectWriter implements Callable<ObjectMetadata> {
                 // Rethrow any exception we got in a thread
                 if (exception.get() != null)
                     throw exception.get();
-            } finally {
+            }
+            finally {
                 executor.shutdown();
-                if (!executor.awaitTermination(maxWaitTimeInSeconds,
-                        TimeUnit.SECONDS)) {
-                    throw new Exception("Took too long to write object: "
-                            + objectName);
+                if (!executor.awaitTermination(maxWaitTimeInSeconds, TimeUnit.SECONDS)) {
+                    throw new Exception("Took too long to write object: " + objectName);
                 }
             }
 
-            ObjectMetadata attr = new ObjectMetadata()
-                    .setChunkCount(nChunksWritten.get())
-                    .setObjectSize(nBytesWritten.get()).setChunkSize(chunkSize)
-                    .setTtl(ttl);
+            ObjectMetadata attr = new ObjectMetadata().setChunkCount(nChunksWritten.get())
+                    .setObjectSize(nBytesWritten.get()).setChunkSize(chunkSize).setTtl(ttl);
             provider.writeMetadata(objectName, attr);
             callback.onSuccess();
             return attr;
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             callback.onFailure(e);
             LOG.warn(e.getMessage());
             e.printStackTrace();
             try {
-                provider.deleteObject(objectName, nChunksWritten.get()
-                        + concurrencyLevel);
-            } catch (Exception e2) {
+                provider.deleteObject(objectName, nChunksWritten.get() + concurrencyLevel);
+            }
+            catch (Exception e2) {
                 LOG.warn(e2.getMessage());
             }
             throw e;
@@ -190,14 +180,14 @@ public class ObjectWriter implements Callable<ObjectMetadata> {
      * @return
      * @throws IOException
      */
-    private static int readFully(InputStream in, byte[] b, int off, int len)
-            throws IOException {
+    private static int readFully(InputStream in, byte[] b, int off, int len) throws IOException {
         int total = 0;
         for (;;) {
             int got = in.read(b, off + total, len - total);
             if (got < 0) {
                 return (total == 0) ? -1 : total;
-            } else {
+            }
+            else {
                 total += got;
                 if (total == len)
                     return total;

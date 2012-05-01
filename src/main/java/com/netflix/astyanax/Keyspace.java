@@ -76,8 +76,8 @@ public interface Keyspace {
      * @return
      * @throws ConnectionException
      */
-    SerializerPackage getSerializerPackage(String cfName, boolean ignoreErrors)
-            throws ConnectionException, UnknownComparatorException;
+    SerializerPackage getSerializerPackage(String cfName, boolean ignoreErrors) throws ConnectionException,
+            UnknownComparatorException;
 
     /**
      * Prepare a batch mutation object. It is possible to create multiple batch
@@ -112,8 +112,7 @@ public interface Keyspace {
      * @param columnFamily
      * @return
      */
-    <K, C> ColumnMutation prepareColumnMutation(
-            ColumnFamily<K, C> columnFamily, K rowKey, C column);
+    <K, C> ColumnMutation prepareColumnMutation(ColumnFamily<K, C> columnFamily, K rowKey, C column);
 
     /**
      * Delete all rows in a column family
@@ -125,8 +124,7 @@ public interface Keyspace {
      * @throws ConnectionException
      * @throws OperationException
      */
-    <K, C> OperationResult<Void> truncateColumnFamily(
-            ColumnFamily<K, C> columnFamily) throws OperationException,
+    <K, C> OperationResult<Void> truncateColumnFamily(ColumnFamily<K, C> columnFamily) throws OperationException,
             ConnectionException;
 
     /**
@@ -137,8 +135,7 @@ public interface Keyspace {
      * @return
      * @throws ConnectionException
      */
-    OperationResult<Void> testOperation(Operation<?, ?> operation)
-            throws ConnectionException;
+    OperationResult<Void> testOperation(Operation<?, ?> operation) throws ConnectionException;
 
     /**
      * This method is used for testing purposes only. It is used to inject
@@ -148,7 +145,6 @@ public interface Keyspace {
      * @return
      * @throws ConnectionException
      */
-    OperationResult<Void> testOperation(Operation<?, ?> operation,
-            RetryPolicy retry) throws ConnectionException;
+    OperationResult<Void> testOperation(Operation<?, ?> operation, RetryPolicy retry) throws ConnectionException;
 
 }

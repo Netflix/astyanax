@@ -1,7 +1,7 @@
 package com.netflix.astyanax.connectionpool.exceptions;
 
-public class ConnectionAbortedException extends ConnectionException implements
-        IsRetryableException, IsDeadConnectionException {
+public class ConnectionAbortedException extends ConnectionException implements IsRetryableException,
+        IsDeadConnectionException {
     /**
      * 
      */

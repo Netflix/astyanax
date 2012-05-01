@@ -49,8 +49,11 @@ import com.netflix.astyanax.retry.RetryPolicy;
  * <pre>
  * {
  *     &#064;code
- *     ColumnFamily&lt;String, String&gt; cf = AFactory.makeColumnFamily(
- *             &quot;COLUMN_FAMILY_NAME&quot;, // Name of CF in Cassandra
+ *     ColumnFamily&lt;String, String&gt; cf = AFactory.makeColumnFamily(&quot;COLUMN_FAMILY_NAME&quot;, // Name
+ *                                                                                       // of
+ *                                                                                       // CF
+ *                                                                                       // in
+ *                                                                                       // Cassandra
  *             StringSerializer.get(), // Row key serializer (implies string type)
  *             StringSerializer.get(), // Column name serializer (implies string
  *                                     // type)
@@ -60,9 +63,8 @@ import com.netflix.astyanax.retry.RetryPolicy;
  *     RowMutationBatch m = keyspace.prepareMutationBatch();
  * 
  *     // Start mutate a column family for a specific row key
- *     ColumnFamilyMutation&lt;String&gt; cfm = m.row(cfSuper, &quot;UserId&quot;)
- *             .putColumn(&quot;Address&quot;, &quot;976 Elm St.&quot;).putColumn(&quot;Age&quot;, 50)
- *             .putColumn(&quot;Gender&quot;, &quot;Male&quot;);
+ *     ColumnFamilyMutation&lt;String&gt; cfm = m.row(cfSuper, &quot;UserId&quot;).putColumn(&quot;Address&quot;, &quot;976 Elm St.&quot;)
+ *             .putColumn(&quot;Age&quot;, 50).putColumn(&quot;Gender&quot;, &quot;Male&quot;);
  * 
  *     // To delete a row
  *     m.row(cfSuper, &quot;UserId&quot;).delete();
@@ -85,8 +87,7 @@ public interface MutationBatch extends Execution<Void> {
      * @param rowKey
      * @return
      */
-    <K, C> ColumnListMutation<C> withRow(ColumnFamily<K, C> columnFamily,
-            K rowKey);
+    <K, C> ColumnListMutation<C> withRow(ColumnFamily<K, C> columnFamily, K rowKey);
 
     /**
      * Delete the row for all the specified column families

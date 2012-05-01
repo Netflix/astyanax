@@ -29,14 +29,13 @@ import com.netflix.astyanax.shallows.EmptyBadHostDetectorImpl;
 import com.netflix.astyanax.shallows.EmptyLatencyScoreStrategyImpl;
 import com.netflix.astyanax.util.StringUtils;
 
-public class ConnectionPoolConfigurationImpl implements
-        ConnectionPoolConfiguration {
+public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfiguration {
     /**
      * Default values
      */
     public static final int DEFAULT_MAX_TIME_WHEN_EXHAUSTED = 2000;
     public static final int DEFAULT_SOCKET_TIMEOUT = 11000; // ms
-    public static final int DEFAULT_CONNECT_TIMEOUT = 500; // ms
+    public static final int DEFAULT_CONNECT_TIMEOUT = 2000; // ms
     public static final int DEFAULT_MAX_ACTIVE_PER_PARTITION = 3;
     public static final int DEFAULT_INIT_PER_PARTITION = 0;
     public static final int DEFAULT_PORT = 7102;
@@ -57,8 +56,7 @@ public class ConnectionPoolConfigurationImpl implements
     public static final int DEFAULT_RETRY_DELAY_SLICE = 1000;
     public static final int DEFAULT_RETRY_MAX_DELAY_SLICE = 10;
     public static final int DEFAULT_MAX_OPERATIONS_PER_CONNECTION = 10000;
-    public static final BadHostDetector DEFAULT_BAD_HOST_DETECTOR = EmptyBadHostDetectorImpl
-            .getInstance();
+    public static final BadHostDetector DEFAULT_BAD_HOST_DETECTOR = EmptyBadHostDetectorImpl.getInstance();
 
     private final String name;
 
@@ -96,8 +94,7 @@ public class ConnectionPoolConfigurationImpl implements
     public ConnectionPoolConfigurationImpl(String name) {
         this.name = name;
         this.badHostDetector = new BadHostDetectorImpl(this);
-        this.hostRetryBackoffStrategy = new ExponentialRetryBackoffStrategy(
-                this);
+        this.hostRetryBackoffStrategy = new ExponentialRetryBackoffStrategy(this);
     }
 
     /*
@@ -168,8 +165,7 @@ public class ConnectionPoolConfigurationImpl implements
         return this.maxTimeoutWhenExhausted;
     }
 
-    public ConnectionPoolConfigurationImpl setMaxTimeoutWhenExhausted(
-            int timeout) {
+    public ConnectionPoolConfigurationImpl setMaxTimeoutWhenExhausted(int timeout) {
         this.maxTimeoutWhenExhausted = timeout;
         return this;
     }
@@ -218,8 +214,7 @@ public class ConnectionPoolConfigurationImpl implements
     }
 
     public ConnectionPoolConfigurationImpl setInitConnsPerHost(int initConns) {
-        Preconditions.checkArgument(initConns >= 0,
-                "initConnsPerHost must be >0");
+        Preconditions.checkArgument(initConns >= 0, "initConnsPerHost must be >0");
         this.initConnsPerPartition = initConns;
         return this;
     }
@@ -236,8 +231,7 @@ public class ConnectionPoolConfigurationImpl implements
         return this.hostRetryBackoffStrategy;
     }
 
-    public ConnectionPoolConfigurationImpl setRetryBackoffStrategy(
-            RetryBackoffStrategy hostRetryBackoffStrategy) {
+    public ConnectionPoolConfigurationImpl setRetryBackoffStrategy(RetryBackoffStrategy hostRetryBackoffStrategy) {
         this.hostRetryBackoffStrategy = hostRetryBackoffStrategy;
         return this;
     }
@@ -266,8 +260,7 @@ public class ConnectionPoolConfigurationImpl implements
         return this.maxFailoverCount;
     }
 
-    public ConnectionPoolConfigurationImpl setMaxFailoverCount(
-            int maxFailoverCount) {
+    public ConnectionPoolConfigurationImpl setMaxFailoverCount(int maxFailoverCount) {
         this.maxFailoverCount = maxFailoverCount;
         return this;
     }
@@ -287,8 +280,7 @@ public class ConnectionPoolConfigurationImpl implements
         return this.latencyAwareWindowSize;
     }
 
-    public ConnectionPoolConfigurationImpl setLatencyAwareWindowSize(
-            int latencyAwareWindowSize) {
+    public ConnectionPoolConfigurationImpl setLatencyAwareWindowSize(int latencyAwareWindowSize) {
         this.latencyAwareWindowSize = latencyAwareWindowSize;
         return this;
     }
@@ -298,8 +290,7 @@ public class ConnectionPoolConfigurationImpl implements
         return latencyAwareSentinelCompare;
     }
 
-    public ConnectionPoolConfigurationImpl setLatencyAwareSentinelCompare(
-            float latencyAwareSentinelCompare) {
+    public ConnectionPoolConfigurationImpl setLatencyAwareSentinelCompare(float latencyAwareSentinelCompare) {
         this.latencyAwareSentinelCompare = latencyAwareSentinelCompare;
         return this;
     }
@@ -309,8 +300,7 @@ public class ConnectionPoolConfigurationImpl implements
         return this.latencyAwareBadnessThreshold;
     }
 
-    public ConnectionPoolConfigurationImpl setLatencyAwareBadnessThreshold(
-            float threshold) {
+    public ConnectionPoolConfigurationImpl setLatencyAwareBadnessThreshold(float threshold) {
         this.latencyAwareBadnessThreshold = threshold;
         return this;
     }
@@ -320,8 +310,7 @@ public class ConnectionPoolConfigurationImpl implements
         return this.connectionLimiterWindowSize;
     }
 
-    public ConnectionPoolConfigurationImpl setConnectionLimiterWindowSize(
-            int pendingConnectionWindowSize) {
+    public ConnectionPoolConfigurationImpl setConnectionLimiterWindowSize(int pendingConnectionWindowSize) {
         this.connectionLimiterWindowSize = pendingConnectionWindowSize;
         return this;
     }
@@ -331,8 +320,7 @@ public class ConnectionPoolConfigurationImpl implements
         return this.connectionLimiterMaxPendingCount;
     }
 
-    public ConnectionPoolConfigurationImpl setConnectionLimiterMaxPendingCount(
-            int connectionLimiterMaxPendingCount) {
+    public ConnectionPoolConfigurationImpl setConnectionLimiterMaxPendingCount(int connectionLimiterMaxPendingCount) {
         this.connectionLimiterMaxPendingCount = connectionLimiterMaxPendingCount;
         return this;
     }
@@ -342,8 +330,7 @@ public class ConnectionPoolConfigurationImpl implements
         return this.maxPendingConnectionsPerHost;
     }
 
-    public ConnectionPoolConfigurationImpl setMaxPendingConnectionsPerHost(
-            int maxPendingConnectionsPerHost) {
+    public ConnectionPoolConfigurationImpl setMaxPendingConnectionsPerHost(int maxPendingConnectionsPerHost) {
         this.maxPendingConnectionsPerHost = maxPendingConnectionsPerHost;
         return this;
     }
@@ -353,8 +340,7 @@ public class ConnectionPoolConfigurationImpl implements
         return this.maxBlockedThreadsPerHost;
     }
 
-    public ConnectionPoolConfigurationImpl setMaxBlockedThreadsPerHost(
-            int maxBlockedThreadsPerHost) {
+    public ConnectionPoolConfigurationImpl setMaxBlockedThreadsPerHost(int maxBlockedThreadsPerHost) {
         this.maxBlockedThreadsPerHost = maxBlockedThreadsPerHost;
         return this;
     }
@@ -374,8 +360,7 @@ public class ConnectionPoolConfigurationImpl implements
         return this.maxTimeoutCount;
     }
 
-    public ConnectionPoolConfigurationImpl setMaxTimeoutCount(
-            int maxTimeoutCount) {
+    public ConnectionPoolConfigurationImpl setMaxTimeoutCount(int maxTimeoutCount) {
         this.maxTimeoutCount = maxTimeoutCount;
         return this;
     }
@@ -385,8 +370,7 @@ public class ConnectionPoolConfigurationImpl implements
         return latencyAwareUpdateInterval;
     }
 
-    public ConnectionPoolConfigurationImpl setLatencyAwareUpdateInterval(
-            int latencyAwareUpdateInterval) {
+    public ConnectionPoolConfigurationImpl setLatencyAwareUpdateInterval(int latencyAwareUpdateInterval) {
         this.latencyAwareUpdateInterval = latencyAwareUpdateInterval;
         return this;
     }
@@ -396,8 +380,7 @@ public class ConnectionPoolConfigurationImpl implements
         return latencyAwareResetInterval;
     }
 
-    public ConnectionPoolConfigurationImpl setLatencyAwareResetInterval(
-            int latencyAwareResetInterval) {
+    public ConnectionPoolConfigurationImpl setLatencyAwareResetInterval(int latencyAwareResetInterval) {
         this.latencyAwareResetInterval = latencyAwareResetInterval;
         return this;
     }
@@ -407,8 +390,7 @@ public class ConnectionPoolConfigurationImpl implements
         return this.retrySuspendWindow;
     }
 
-    public ConnectionPoolConfigurationImpl setRetrySuspendWindow(
-            int retrySuspendWindow) {
+    public ConnectionPoolConfigurationImpl setRetrySuspendWindow(int retrySuspendWindow) {
         this.retrySuspendWindow = retrySuspendWindow;
         return this;
     }
@@ -418,8 +400,7 @@ public class ConnectionPoolConfigurationImpl implements
         return maxOperationsPerConnection;
     }
 
-    public ConnectionPoolConfigurationImpl setMaxOperationsPerConnection(
-            int maxOperationsPerConnection) {
+    public ConnectionPoolConfigurationImpl setMaxOperationsPerConnection(int maxOperationsPerConnection) {
         this.maxOperationsPerConnection = maxOperationsPerConnection;
         return this;
     }
@@ -429,8 +410,7 @@ public class ConnectionPoolConfigurationImpl implements
         return this.latencyScoreStrategy;
     }
 
-    public ConnectionPoolConfigurationImpl setLatencyScoreStrategy(
-            LatencyScoreStrategy latencyScoreStrategy) {
+    public ConnectionPoolConfigurationImpl setLatencyScoreStrategy(LatencyScoreStrategy latencyScoreStrategy) {
         this.latencyScoreStrategy = latencyScoreStrategy;
         return this;
     }
@@ -440,8 +420,7 @@ public class ConnectionPoolConfigurationImpl implements
         return badHostDetector;
     }
 
-    public ConnectionPoolConfigurationImpl setBadHostDetector(
-            BadHostDetector badHostDetector) {
+    public ConnectionPoolConfigurationImpl setBadHostDetector(BadHostDetector badHostDetector) {
         this.badHostDetector = badHostDetector;
         return this;
     }
@@ -451,8 +430,7 @@ public class ConnectionPoolConfigurationImpl implements
         return retryMaxDelaySlice;
     }
 
-    public ConnectionPoolConfigurationImpl setRetryMaxDelaySlice(
-            int retryMaxDelaySlice) {
+    public ConnectionPoolConfigurationImpl setRetryMaxDelaySlice(int retryMaxDelaySlice) {
         this.retryMaxDelaySlice = retryMaxDelaySlice;
         return this;
     }
@@ -462,15 +440,13 @@ public class ConnectionPoolConfigurationImpl implements
         return this.retryDelaySlice;
     }
 
-    public ConnectionPoolConfigurationImpl setRetryDelaySlice(
-            int retryDelaySlice) {
+    public ConnectionPoolConfigurationImpl setRetryDelaySlice(int retryDelaySlice) {
         this.retryDelaySlice = retryDelaySlice;
         return this;
     }
 
     public String toString() {
-        return StringUtils.joinClassGettersValues(this, "CpConfig",
-                ConnectionPoolConfigurationImpl.class);
+        return StringUtils.joinClassGettersValues(this, "CpConfig", ConnectionPoolConfigurationImpl.class);
     }
 
     @Override
@@ -478,8 +454,7 @@ public class ConnectionPoolConfigurationImpl implements
         return credentials;
     }
 
-    public ConnectionPoolConfigurationImpl setAuthenticationCredentials(
-            AuthenticationCredentials credentials) {
+    public ConnectionPoolConfigurationImpl setAuthenticationCredentials(AuthenticationCredentials credentials) {
         this.credentials = credentials;
         return this;
     }

@@ -21,27 +21,38 @@ public class SerializerTypeInferer {
         Serializer serializer = null;
         if (value == null) {
             serializer = ByteBufferSerializer.get();
-        } else if (value instanceof UUID) {
+        }
+        else if (value instanceof UUID) {
             serializer = UUIDSerializer.get();
-        } else if (value instanceof String) {
+        }
+        else if (value instanceof String) {
             serializer = StringSerializer.get();
-        } else if (value instanceof Long) {
+        }
+        else if (value instanceof Long) {
             serializer = LongSerializer.get();
-        } else if (value instanceof Integer) {
+        }
+        else if (value instanceof Integer) {
             serializer = IntegerSerializer.get();
-        } else if (value instanceof Short) {
+        }
+        else if (value instanceof Short) {
             serializer = ShortSerializer.get();
-        } else if (value instanceof BigInteger) {
+        }
+        else if (value instanceof BigInteger) {
             serializer = BigIntegerSerializer.get();
-        } else if (value instanceof Boolean) {
+        }
+        else if (value instanceof Boolean) {
             serializer = BooleanSerializer.get();
-        } else if (value instanceof byte[]) {
+        }
+        else if (value instanceof byte[]) {
             serializer = BytesArraySerializer.get();
-        } else if (value instanceof ByteBuffer) {
+        }
+        else if (value instanceof ByteBuffer) {
             serializer = ByteBufferSerializer.get();
-        } else if (value instanceof Date) {
+        }
+        else if (value instanceof Date) {
             serializer = DateSerializer.get();
-        } else {
+        }
+        else {
             serializer = ObjectSerializer.get();
         }
         // Add other serializers here
@@ -54,27 +65,32 @@ public class SerializerTypeInferer {
         Serializer serializer = null;
         if (valueClass.equals(UUID.class)) {
             serializer = UUIDSerializer.get();
-        } else if (valueClass.equals(String.class)) {
+        }
+        else if (valueClass.equals(String.class)) {
             serializer = StringSerializer.get();
-        } else if (valueClass.equals(Long.class)
-                || valueClass.equals(long.class)) {
+        }
+        else if (valueClass.equals(Long.class) || valueClass.equals(long.class)) {
             serializer = LongSerializer.get();
-        } else if (valueClass.equals(Integer.class)
-                || valueClass.equals(int.class)) {
+        }
+        else if (valueClass.equals(Integer.class) || valueClass.equals(int.class)) {
             serializer = IntegerSerializer.get();
-        } else if (valueClass.equals(Short.class)
-                || valueClass.equals(short.class)) {
+        }
+        else if (valueClass.equals(Short.class) || valueClass.equals(short.class)) {
             serializer = ShortSerializer.get();
-        } else if (valueClass.equals(Boolean.class)
-                || valueClass.equals(boolean.class)) {
+        }
+        else if (valueClass.equals(Boolean.class) || valueClass.equals(boolean.class)) {
             serializer = BooleanSerializer.get();
-        } else if (valueClass.equals(byte[].class)) {
+        }
+        else if (valueClass.equals(byte[].class)) {
             serializer = BytesArraySerializer.get();
-        } else if (valueClass.equals(ByteBuffer.class)) {
+        }
+        else if (valueClass.equals(ByteBuffer.class)) {
             serializer = ByteBufferSerializer.get();
-        } else if (valueClass.equals(Date.class)) {
+        }
+        else if (valueClass.equals(Date.class)) {
             serializer = DateSerializer.get();
-        } else {
+        }
+        else {
             serializer = ObjectSerializer.get();
         }
         // Add other serializers here

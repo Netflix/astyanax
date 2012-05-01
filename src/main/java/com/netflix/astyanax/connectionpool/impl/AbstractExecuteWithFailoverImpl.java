@@ -12,90 +12,89 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.IsRetryableException;
 import com.netflix.astyanax.connectionpool.exceptions.UnknownException;
 
-public abstract class AbstractExecuteWithFailoverImpl<CL, R> implements
-        ExecuteWithFailover<CL, R> {
+public abstract class AbstractExecuteWithFailoverImpl<CL, R> implements ExecuteWithFailover<CL, R> {
     protected Connection<CL> connection = null;
     private long startTime;
     private long poolStartTime;
     private int attemptCounter = 0;
     private final ConnectionPoolMonitor monitor;
     protected final ConnectionPoolConfiguration config;
-
-    public AbstractExecuteWithFailoverImpl(ConnectionPoolConfiguration config,
-            ConnectionPoolMonitor monitor) throws ConnectionException {
-        this.monitor = monitor;
-        this.config = config;
+    
+    public AbstractExecuteWithFailoverImpl(ConnectionPoolConfiguration config, ConnectionPoolMonitor monitor)
+            throws ConnectionException {
+    	this.monitor = monitor;
+    	this.config = config;
         startTime = poolStartTime = System.currentTimeMillis();
     }
+    
+	final public Host getCurrentHost() {
+		HostConnectionPool<CL> pool = getCurrentHostConnectionPool();
+		if (pool != null)
+			return pool.getHost();
+		else 
+			return Host.NO_HOST;
+	}
+	
+	abstract public HostConnectionPool<CL> getCurrentHostConnectionPool();
 
-    final public Host getCurrentHost() {
-        HostConnectionPool<CL> pool = getCurrentHostConnectionPool();
-        if (pool != null)
-            return pool.getHost();
-        else
-            return Host.NO_HOST;
-    }
+    abstract public Connection<CL> borrowConnection(Operation<CL, R> operation) throws ConnectionException;
 
-    abstract public HostConnectionPool<CL> getCurrentHostConnectionPool();
-
-    abstract public Connection<CL> borrowConnection(Operation<CL, R> operation)
-            throws ConnectionException;
-
-    abstract public boolean canRetry();
-
-    @Override
-    public OperationResult<R> tryOperation(Operation<CL, R> operation)
-            throws ConnectionException {
+	abstract public boolean canRetry();
+	
+	@Override
+	public OperationResult<R> tryOperation(Operation<CL, R> operation) throws ConnectionException {
         while (true) {
             attemptCounter++;
-
+            
             try {
                 connection = borrowConnection(operation);
                 startTime = System.currentTimeMillis();
                 OperationResult<R> result = connection.execute(operation);
                 result.setAttemptsCount(attemptCounter);
-                monitor.incOperationSuccess(getCurrentHost(),
-                        result.getLatency());
+                monitor.incOperationSuccess(getCurrentHost(), result.getLatency());
                 return result;
-            } catch (Exception e) {
+            }
+            catch (Exception e) {
                 ConnectionException ce = (e instanceof ConnectionException) ? (ConnectionException) e
                         : new UnknownException(e);
-                try {
-                    informException(ce);
-                } catch (ConnectionException ex) {
+            	try {
+            		informException(ce);
+            	}
+            	catch (ConnectionException ex) {
                     monitor.incOperationFailure(getCurrentHost(), ex);
                     throw ex;
-                }
-            } finally {
-                releaseConnection();
+            	}
+            }
+            finally {
+            	releaseConnection();
             }
         }
     }
 
-    protected void releaseConnection() {
+	protected void releaseConnection() {
         if (connection != null) {
-            connection.getHostConnectionPool().returnConnection(connection);
-            connection = null;
-        }
-    }
-
-    public void informException(ConnectionException connectionException)
-            throws ConnectionException {
-        connectionException.setHost(getCurrentHost())
-                .setLatency(System.currentTimeMillis() - startTime)
-                .setAttempt(this.attemptCounter)
-                .setLatencyWithPool(System.currentTimeMillis() - poolStartTime);
+	    	connection.getHostConnectionPool().returnConnection(connection);
+	        connection = null;
+	    }
+	}
+    
+    public void informException(ConnectionException connectionException) throws ConnectionException {
+        connectionException
+            .setHost(getCurrentHost())
+        	.setLatency(System.currentTimeMillis() - startTime)
+        	.setAttempt(this.attemptCounter)
+        	.setLatencyWithPool(System.currentTimeMillis() - poolStartTime);
 
         if (connectionException instanceof IsRetryableException) {
             if (!canRetry()) {
                 throw connectionException;
             }
-
-            monitor.incFailover(connectionException.getHost(),
-                    connectionException);
-        } else {
+            
+        	monitor.incFailover(connectionException.getHost(), connectionException);
+        }
+        else {
             // Most likely an operation error
             throw connectionException;
         }
-    }
+    }		
 }

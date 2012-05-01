@@ -29,8 +29,7 @@ import com.netflix.astyanax.query.RowQuery;
 
 public abstract class AbstractRowQueryImpl<K, C> implements RowQuery<K, C> {
 
-    protected final SlicePredicate predicate = new SlicePredicate()
-            .setSlice_range(ThriftUtils.RANGE_ALL);
+    protected final SlicePredicate predicate = new SlicePredicate().setSlice_range(ThriftUtils.RANGE_ALL);
     protected final Serializer<C> serializer;
     protected boolean isPaginating = false;
     protected boolean paginateNoMore = false;
@@ -42,47 +41,38 @@ public abstract class AbstractRowQueryImpl<K, C> implements RowQuery<K, C> {
     @Override
     public RowQuery<K, C> withColumnSlice(C... columns) {
         if (columns != null)
-            predicate.setColumn_names(
-                    serializer.toBytesList(Arrays.asList(columns)))
-                    .setSlice_rangeIsSet(false);
+            predicate.setColumn_names(serializer.toBytesList(Arrays.asList(columns))).setSlice_rangeIsSet(false);
         return this;
     }
 
     @Override
     public RowQuery<K, C> withColumnSlice(Collection<C> columns) {
         if (columns != null)
-            predicate.setColumn_names(serializer.toBytesList(columns))
-                    .setSlice_rangeIsSet(false);
+            predicate.setColumn_names(serializer.toBytesList(columns)).setSlice_rangeIsSet(false);
         return this;
     }
 
     @Override
     public RowQuery<K, C> withColumnSlice(ColumnSlice<C> slice) {
         if (slice.getColumns() != null) {
-            predicate.setColumn_names(
-                    serializer.toBytesList(slice.getColumns()))
-                    .setSlice_rangeIsSet(false);
-        } else {
-            predicate.setSlice_range(ThriftUtils.createSliceRange(serializer,
-                    slice.getStartColumn(), slice.getEndColumn(),
-                    slice.getReversed(), slice.getLimit()));
+            predicate.setColumn_names(serializer.toBytesList(slice.getColumns())).setSlice_rangeIsSet(false);
+        }
+        else {
+            predicate.setSlice_range(ThriftUtils.createSliceRange(serializer, slice.getStartColumn(),
+                    slice.getEndColumn(), slice.getReversed(), slice.getLimit()));
         }
         return this;
     }
 
     @Override
-    public RowQuery<K, C> withColumnRange(C startColumn, C endColumn,
-            boolean reversed, int count) {
-        predicate.setSlice_range(ThriftUtils.createSliceRange(serializer,
-                startColumn, endColumn, reversed, count));
+    public RowQuery<K, C> withColumnRange(C startColumn, C endColumn, boolean reversed, int count) {
+        predicate.setSlice_range(ThriftUtils.createSliceRange(serializer, startColumn, endColumn, reversed, count));
         return this;
     }
 
     @Override
-    public RowQuery<K, C> withColumnRange(ByteBuffer startColumn,
-            ByteBuffer endColumn, boolean reversed, int count) {
-        predicate.setSlice_range(new SliceRange(startColumn, endColumn,
-                reversed, count));
+    public RowQuery<K, C> withColumnRange(ByteBuffer startColumn, ByteBuffer endColumn, boolean reversed, int count) {
+        predicate.setSlice_range(new SliceRange(startColumn, endColumn, reversed, count));
         return this;
     }
 
@@ -99,9 +89,8 @@ public abstract class AbstractRowQueryImpl<K, C> implements RowQuery<K, C> {
 
     @Override
     public RowQuery<K, C> withColumnRange(ByteBufferRange range) {
-        predicate.setSlice_range(new SliceRange().setStart(range.getStart())
-                .setFinish(range.getEnd()).setCount(range.getLimit())
-                .setReversed(range.isReversed()));
+        predicate.setSlice_range(new SliceRange().setStart(range.getStart()).setFinish(range.getEnd())
+                .setCount(range.getLimit()).setReversed(range.isReversed()));
         return this;
     }
 }

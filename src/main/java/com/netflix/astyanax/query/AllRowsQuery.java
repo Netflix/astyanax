@@ -118,8 +118,7 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
      *            Maximum number of columns to return (similar to SQL LIMIT)
      * @return
      */
-    AllRowsQuery<K, C> withColumnRange(C startColumn, C endColumn,
-            boolean reversed, int count);
+    AllRowsQuery<K, C> withColumnRange(C startColumn, C endColumn, boolean reversed, int count);
 
     /**
      * Specify a range and provide pre-constructed start and end columns. Use
@@ -131,8 +130,7 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
      * @param count
      * @return
      */
-    AllRowsQuery<K, C> withColumnRange(ByteBuffer startColumn,
-            ByteBuffer endColumn, boolean reversed, int count);
+    AllRowsQuery<K, C> withColumnRange(ByteBuffer startColumn, ByteBuffer endColumn, boolean reversed, int count);
 
     /**
      * Specify a range of composite columns. Use this in conjunction with the
@@ -151,6 +149,5 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
      * @return
      * @throws ConnectionException
      */
-    void executeWithCallback(RowCallback<K, C> callback)
-            throws ConnectionException;
+    void executeWithCallback(RowCallback<K, C> callback) throws ConnectionException;
 }

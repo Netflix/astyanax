@@ -24,8 +24,7 @@ public class HostConnectionPoolPartition<CL> {
     private final AtomicReference<List<HostConnectionPool<CL>>> activePools = new AtomicReference<List<HostConnectionPool<CL>>>();
     private final LatencyScoreStrategy strategy;
 
-    public HostConnectionPoolPartition(BigInteger id,
-            LatencyScoreStrategy strategy) {
+    public HostConnectionPoolPartition(BigInteger id, LatencyScoreStrategy strategy) {
         this.id = id;
         this.strategy = strategy;
         this.activePools.set(new ArrayList<HostConnectionPool<CL>>());
@@ -37,8 +36,7 @@ public class HostConnectionPoolPartition<CL> {
      * 
      * @param pools
      */
-    public synchronized boolean setPools(
-            Collection<HostConnectionPool<CL>> pools) {
+    public synchronized boolean setPools(Collection<HostConnectionPool<CL>> pools) {
         Set<HostConnectionPool<CL>> toRemove = Sets.newHashSet(this.pools);
 
         boolean didChange = false;
@@ -96,8 +94,7 @@ public class HostConnectionPoolPartition<CL> {
             if (iter.next().isShutdown())
                 iter.remove();
         }
-        this.activePools
-                .set(strategy.sortAndfilterPartition(pools, prioritize));
+        this.activePools.set(strategy.sortAndfilterPartition(pools, prioritize));
     }
 
     public String toString() {

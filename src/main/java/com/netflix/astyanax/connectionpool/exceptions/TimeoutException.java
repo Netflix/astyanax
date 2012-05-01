@@ -15,8 +15,8 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.exceptions;
 
-public class TimeoutException extends ConnectionException implements
-        IsRetryableException, IsDeadConnectionException, IsTimeoutException {
+public class TimeoutException extends ConnectionException implements IsRetryableException, IsDeadConnectionException,
+        IsTimeoutException {
     /**
      * 
      */

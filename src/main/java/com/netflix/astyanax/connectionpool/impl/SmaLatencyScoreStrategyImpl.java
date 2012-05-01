@@ -26,15 +26,13 @@ public class SmaLatencyScoreStrategyImpl implements LatencyScoreStrategy {
     private final int windowSize;
     private final double badnessThreshold;
 
-    public SmaLatencyScoreStrategyImpl(int updateInterval, int resetInterval,
-            int windowSize, double badnessThreshold) {
+    public SmaLatencyScoreStrategyImpl(int updateInterval, int resetInterval, int windowSize, double badnessThreshold) {
         this.updateInterval = updateInterval;
         this.resetInterval = resetInterval;
         this.badnessThreshold = badnessThreshold;
         this.windowSize = windowSize;
 
-        this.executor = Executors.newScheduledThreadPool(1,
-                new ThreadFactoryBuilder().setDaemon(true).build());
+        this.executor = Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder().setDaemon(true).build());
         this.instances = new NonBlockingHashSet<Instance>();
     }
 
@@ -72,8 +70,7 @@ public class SmaLatencyScoreStrategyImpl implements LatencyScoreStrategy {
                 Thread.currentThread().setName(getName() + "_ScoreUpdate");
                 update();
                 listener.onUpdate();
-                executor.schedule(this, getUpdateInterval(),
-                        TimeUnit.MILLISECONDS);
+                executor.schedule(this, getUpdateInterval(), TimeUnit.MILLISECONDS);
             }
         }, new Random().nextInt(getUpdateInterval()), TimeUnit.MILLISECONDS);
 
@@ -83,8 +80,7 @@ public class SmaLatencyScoreStrategyImpl implements LatencyScoreStrategy {
                 Thread.currentThread().setName(getName() + "_ScoreReset");
                 reset();
                 listener.onReset();
-                executor.schedule(this, getResetInterval(),
-                        TimeUnit.MILLISECONDS);
+                executor.schedule(this, getResetInterval(), TimeUnit.MILLISECONDS);
             }
         }, new Random().nextInt(getResetInterval()), TimeUnit.MILLISECONDS);
     }
@@ -109,7 +105,8 @@ public class SmaLatencyScoreStrategyImpl implements LatencyScoreStrategy {
             double score2 = p2.getScore();
             if (score1 < score2) {
                 return -1;
-            } else if (score1 > score2) {
+            }
+            else if (score1 > score2) {
                 return 1;
             }
             return 0;
@@ -117,8 +114,8 @@ public class SmaLatencyScoreStrategyImpl implements LatencyScoreStrategy {
     };
 
     @Override
-    public <CL> List<HostConnectionPool<CL>> sortAndfilterPartition(
-            List<HostConnectionPool<CL>> srcPools, AtomicBoolean prioritized) {
+    public <CL> List<HostConnectionPool<CL>> sortAndfilterPartition(List<HostConnectionPool<CL>> srcPools,
+            AtomicBoolean prioritized) {
         List<HostConnectionPool<CL>> pools = Lists.newArrayList(srcPools);
         Collections.sort(pools, scoreComparator);
         prioritized.set(true);
@@ -130,10 +127,8 @@ public class SmaLatencyScoreStrategyImpl implements LatencyScoreStrategy {
     }
 
     public String toString() {
-        return new StringBuilder().append(getName() + "[").append("win=")
-                .append(getWindowSize()).append(",rst=")
-                .append(getResetInterval()).append(",upd=")
-                .append(getUpdateInterval()).append(",trh=")
+        return new StringBuilder().append(getName() + "[").append("win=").append(getWindowSize()).append(",rst=")
+                .append(getResetInterval()).append(",upd=").append(getUpdateInterval()).append(",trh=")
                 .append(getBadnessThreshold()).append("]").toString();
     }
 

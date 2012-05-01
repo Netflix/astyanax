@@ -32,14 +32,12 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
      * 
      * @param <P>
      */
-    public static class ComponentSerializer<P> implements
-            Comparable<ComponentSerializer<?>> {
+    public static class ComponentSerializer<P> implements Comparable<ComponentSerializer<?>> {
         private Field field;
         private Serializer<P> serializer;
         private int ordinal;
 
-        public ComponentSerializer(Field field, Serializer<P> serializer,
-                int ordinal) {
+        public ComponentSerializer(Field field, Serializer<P> serializer, int ordinal) {
             this.field = field;
             this.field.setAccessible(true);
             this.serializer = serializer;
@@ -50,15 +48,13 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
             return this.field;
         }
 
-        public ByteBuffer serialize(Object obj)
-                throws IllegalArgumentException, IllegalAccessException {
+        public ByteBuffer serialize(Object obj) throws IllegalArgumentException, IllegalAccessException {
             Object value = field.get(obj);
             ByteBuffer buf = serializer.toByteBuffer((P) value);
             return buf;
         }
 
-        public void deserialize(Object obj, ByteBuffer value)
-                throws IllegalArgumentException, IllegalAccessException {
+        public void deserialize(Object obj, ByteBuffer value) throws IllegalArgumentException, IllegalAccessException {
             field.set(obj, serializer.fromByteBuffer(value));
         }
 
@@ -83,8 +79,7 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
         for (Field field : clazz.getDeclaredFields()) {
             Component annotation = field.getAnnotation(Component.class);
             if (annotation != null) {
-                components.add(makeComponent(field,
-                        SerializerTypeInferer.getSerializer(field.getType()),
+                components.add(makeComponent(field, SerializerTypeInferer.getSerializer(field.getType()),
                         annotation.ordinal()));
             }
         }
@@ -107,7 +102,8 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
                 out.writeShort((short) cb.remaining());
                 out.write(cb.slice());
                 out.write(END_OF_COMPONENT);
-            } catch (Exception e) {
+            }
+            catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
@@ -125,16 +121,16 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
                     serializer.deserialize(obj, data);
                     byte end_of_component = byteBuffer.get();
                     if (end_of_component != END_OF_COMPONENT) {
-                        throw new RuntimeException(
-                                "Invalid composite column.  Expected END_OF_COMPONENT.");
+                        throw new RuntimeException("Invalid composite column.  Expected END_OF_COMPONENT.");
                     }
-                } else {
-                    throw new RuntimeException(
-                            "Missing component data in composite type");
+                }
+                else {
+                    throw new RuntimeException("Missing component data in composite type");
                 }
             }
             return obj;
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
@@ -161,13 +157,11 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
         return copy;
     }
 
-    private static <P> ComponentSerializer<P> makeComponent(Field field,
-            Serializer<P> serializer, int ordinal) {
+    private static <P> ComponentSerializer<P> makeComponent(Field field, Serializer<P> serializer, int ordinal) {
         return new ComponentSerializer<P>(field, serializer, ordinal);
     }
 
-    private T createContents(Class<T> clazz) throws InstantiationException,
-            IllegalAccessException {
+    private T createContents(Class<T> clazz) throws InstantiationException, IllegalAccessException {
         return clazz.newInstance();
     }
 
@@ -179,14 +173,14 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
                 position++;
             }
 
-            public void append(ByteBufferOutputStream out, Object value,
-                    Equality equality) {
+            public void append(ByteBufferOutputStream out, Object value, Equality equality) {
                 ComponentSerializer<?> serializer = components.get(position);
                 // First, serialize the ByteBuffer for this component
                 ByteBuffer cb;
                 try {
                     cb = serializer.serializeValue(value);
-                } catch (Exception e) {
+                }
+                catch (Exception e) {
                     throw new RuntimeException(e);
                 }
 
@@ -215,7 +209,8 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
                 ByteBuffer cb;
                 try {
                     cb = serializer.serializeValue(value);
-                } catch (Exception e) {
+                }
+                catch (Exception e) {
                     throw new RuntimeException(e);
                 }
 

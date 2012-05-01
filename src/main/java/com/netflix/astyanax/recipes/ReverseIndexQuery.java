@@ -54,8 +54,8 @@ import com.netflix.astyanax.util.RangeBuilder;
  */
 public class ReverseIndexQuery<K, C, V> {
 
-    public static <K, C, V> ReverseIndexQuery<K, C, V> newQuery(Keyspace ks,
-            ColumnFamily<K, C> cf, String indexCf, Serializer<V> valSerializer) {
+    public static <K, C, V> ReverseIndexQuery<K, C, V> newQuery(Keyspace ks, ColumnFamily<K, C> cf, String indexCf,
+            Serializer<V> valSerializer) {
         return new ReverseIndexQuery<K, C, V>(ks, cf, indexCf, valSerializer);
     }
 
@@ -82,15 +82,13 @@ public class ReverseIndexQuery<K, C, V> {
     private Collection<C> columnSlice;
     private CountDownLatch latch = new CountDownLatch(1);
 
-    public ReverseIndexQuery(Keyspace ks, ColumnFamily<K, C> cfData,
-            String indexCf, Serializer<V> valSerializer) {
+    public ReverseIndexQuery(Keyspace ks, ColumnFamily<K, C> cfData, String indexCf, Serializer<V> valSerializer) {
         this.ks = ks;
         this.cfData = cfData;
         this.valSerializer = valSerializer;
         this.startValue = null;
         this.endValue = null;
-        this.cfIndex = ColumnFamily.newColumnFamily(indexCf,
-                ByteBufferSerializer.get(), ByteBufferSerializer.get());
+        this.cfIndex = ColumnFamily.newColumnFamily(indexCf, ByteBufferSerializer.get(), ByteBufferSerializer.get());
     }
 
     public ReverseIndexQuery<K, C, V> useExecutor(ExecutorService executor) {
@@ -103,8 +101,7 @@ public class ReverseIndexQuery<K, C, V> {
         return this;
     }
 
-    public ReverseIndexQuery<K, C, V> withIndexShards(
-            Collection<ByteBuffer> shardKeys) {
+    public ReverseIndexQuery<K, C, V> withIndexShards(Collection<ByteBuffer> shardKeys) {
         this.shardKeys = shardKeys;
         return this;
     }
@@ -124,14 +121,12 @@ public class ReverseIndexQuery<K, C, V> {
         return this;
     }
 
-    public ReverseIndexQuery<K, C, V> forEachIndexEntry(
-            IndexEntryCallback<K, V> callback) {
+    public ReverseIndexQuery<K, C, V> forEachIndexEntry(IndexEntryCallback<K, V> callback) {
         this.indexCallback = callback;
         return this;
     }
 
-    public ReverseIndexQuery<K, C, V> withConsistencyLevel(
-            ConsistencyLevel consistencyLevel) {
+    public ReverseIndexQuery<K, C, V> withConsistencyLevel(ConsistencyLevel consistencyLevel) {
         this.consistencyLevel = consistencyLevel;
         return this;
     }
@@ -178,7 +173,8 @@ public class ReverseIndexQuery<K, C, V> {
         public final void run() {
             try {
                 internalRun();
-            } catch (Throwable t) {
+            }
+            catch (Throwable t) {
             }
 
             if (pendingTasks.decrementAndGet() == 0)
@@ -190,8 +186,7 @@ public class ReverseIndexQuery<K, C, V> {
 
     public void execute() {
         if (executor == null)
-            executor = Executors.newFixedThreadPool(5,
-                    new ThreadFactoryBuilder().setDaemon(true).build());
+            executor = Executors.newFixedThreadPool(5, new ThreadFactoryBuilder().setDaemon(true).build());
 
         // Break up the shards into batches
         List<ByteBuffer> batch = Lists.newArrayListWithCapacity(keyLimit);
@@ -209,7 +204,8 @@ public class ReverseIndexQuery<K, C, V> {
         if (pendingTasks.get() > 0) {
             try {
                 latch.await(1000, TimeUnit.MINUTES);
-            } catch (InterruptedException e) {
+            }
+            catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
         }
@@ -224,28 +220,20 @@ public class ReverseIndexQuery<K, C, V> {
                 // Get the first range in the index
                 RangeBuilder range = new RangeBuilder();
                 if (startValue != null) {
-                    range.setStart(Composites.newCompositeBuilder()
-                            .greaterThanEquals().add(startValue, valSerializer)
+                    range.setStart(Composites.newCompositeBuilder().greaterThanEquals().add(startValue, valSerializer)
                             .build());
                 }
                 if (endValue != null) {
-                    range.setEnd(Composites.newCompositeBuilder()
-                            .lessThanEquals().add(endValue, valSerializer)
-                            .build());
+                    range.setEnd(Composites.newCompositeBuilder().lessThanEquals().add(endValue, valSerializer).build());
                 }
 
                 // Read the index shards
                 OperationResult<Rows<ByteBuffer, ByteBuffer>> result = null;
                 try {
-                    result = ks
-                            .prepareQuery(cfIndex)
-                            .setConsistencyLevel(consistencyLevel)
-                            .withRetryPolicy(retry)
-                            .getKeySlice(keys)
-                            .withColumnRange(
-                                    range.setLimit(columnLimit).build())
-                            .execute();
-                } catch (ConnectionException e) {
+                    result = ks.prepareQuery(cfIndex).setConsistencyLevel(consistencyLevel).withRetryPolicy(retry)
+                            .getKeySlice(keys).withColumnRange(range.setLimit(columnLimit).build()).execute();
+                }
+                catch (ConnectionException e) {
                     e.printStackTrace();
                     return;
                 }
@@ -256,14 +244,12 @@ public class ReverseIndexQuery<K, C, V> {
                     if (!row.getColumns().isEmpty()) {
                         V lastValue = null;
                         for (Column<ByteBuffer> column : row.getColumns()) {
-                            CompositeParser parser = Composites
-                                    .newCompositeParser(column.getName());
+                            CompositeParser parser = Composites.newCompositeParser(column.getName());
                             lastValue = parser.read(valSerializer);
                             K key = parser.read(cfData.getKeySerializer());
 
                             if (indexCallback != null) {
-                                if (!indexCallback.handleEntry(key, lastValue,
-                                        column.getByteBufferValue())) {
+                                if (!indexCallback.handleEntry(key, lastValue, column.getByteBufferValue())) {
                                     continue;
                                 }
                             }
@@ -273,8 +259,7 @@ public class ReverseIndexQuery<K, C, V> {
 
                                 if (batch.size() == keyLimit) {
                                     fetchDataBatch(batch);
-                                    batch = Lists
-                                            .newArrayListWithCapacity(keyLimit);
+                                    batch = Lists.newArrayListWithCapacity(keyLimit);
                                 }
                             }
                         }
@@ -305,43 +290,32 @@ public class ReverseIndexQuery<K, C, V> {
 
                 do {
                     // Get the first range in the index
-                    RangeBuilder range = new RangeBuilder().setStart(Composites
-                            .newCompositeBuilder()
-                            .greaterThanEquals()
-                            .addBytes(
-                                    valSerializer.getNext(valSerializer
-                                            .toByteBuffer(nextValue))).build());
+                    RangeBuilder range = new RangeBuilder().setStart(Composites.newCompositeBuilder()
+                            .greaterThanEquals().addBytes(valSerializer.getNext(valSerializer.toByteBuffer(nextValue)))
+                            .build());
                     if (endValue != null) {
-                        range.setEnd(Composites.newCompositeBuilder()
-                                .lessThanEquals().add(endValue, valSerializer)
+                        range.setEnd(Composites.newCompositeBuilder().lessThanEquals().add(endValue, valSerializer)
                                 .build());
                     }
 
                     // Read the index shards
                     try {
-                        result = ks
-                                .prepareQuery(cfIndex)
-                                .setConsistencyLevel(consistencyLevel)
-                                .withRetryPolicy(retry)
-                                .getKey(shard)
-                                .withColumnRange(
-                                        range.setLimit(pageSize).build())
-                                .execute().getResult();
-                    } catch (ConnectionException e) {
+                        result = ks.prepareQuery(cfIndex).setConsistencyLevel(consistencyLevel).withRetryPolicy(retry)
+                                .getKey(shard).withColumnRange(range.setLimit(pageSize).build()).execute().getResult();
+                    }
+                    catch (ConnectionException e) {
                         e.printStackTrace();
                         return;
                     }
 
                     // Read the actual data rows in batches
                     for (Column<ByteBuffer> column : result) {
-                        CompositeParser parser = Composites
-                                .newCompositeParser(column.getName());
+                        CompositeParser parser = Composites.newCompositeParser(column.getName());
                         nextValue = parser.read(valSerializer);
                         K key = parser.read(cfData.getKeySerializer());
 
                         if (indexCallback != null) {
-                            if (!indexCallback.handleEntry(key, nextValue,
-                                    column.getByteBufferValue())) {
+                            if (!indexCallback.handleEntry(key, nextValue, column.getByteBufferValue())) {
                                 continue;
                             }
                         }
@@ -351,8 +325,7 @@ public class ReverseIndexQuery<K, C, V> {
 
                             if (batch.size() == keyLimit) {
                                 fetchDataBatch(batch);
-                                batch = Lists
-                                        .newArrayListWithCapacity(keyLimit);
+                                batch = Lists.newArrayListWithCapacity(keyLimit);
                             }
                         }
                     }
@@ -370,17 +343,15 @@ public class ReverseIndexQuery<K, C, V> {
             @Override
             protected void internalRun() {
                 try {
-                    OperationResult<Rows<K, C>> result = ks
-                            .prepareQuery(cfData).withRetryPolicy(retry)
-                            .setConsistencyLevel(consistencyLevel)
-                            .getKeySlice(keys)
-                            .withColumnSlice(new ColumnSlice<C>(columnSlice))
-                            .execute();
+                    OperationResult<Rows<K, C>> result = ks.prepareQuery(cfData).withRetryPolicy(retry)
+                            .setConsistencyLevel(consistencyLevel).getKeySlice(keys)
+                            .withColumnSlice(new ColumnSlice<C>(columnSlice)).execute();
 
                     for (Row<K, C> row : result.getResult()) {
                         callback.apply(row);
                     }
-                } catch (ConnectionException e) {
+                }
+                catch (ConnectionException e) {
                     e.printStackTrace();
                 }
             }

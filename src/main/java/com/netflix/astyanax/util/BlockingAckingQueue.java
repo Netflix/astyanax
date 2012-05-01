@@ -11,14 +11,11 @@ import com.netflix.astyanax.impl.AckingQueue;
 
 public class BlockingAckingQueue implements AckingQueue {
 
-    private LinkedBlockingQueue<MutationBatch> queue = Queues
-            .newLinkedBlockingQueue();
-    private ConcurrentMap<MutationBatch, Boolean> busy = Maps
-            .newConcurrentMap();
+    private LinkedBlockingQueue<MutationBatch> queue = Queues.newLinkedBlockingQueue();
+    private ConcurrentMap<MutationBatch, Boolean> busy = Maps.newConcurrentMap();
 
     @Override
-    public MutationBatch getNextMutation(long timeout, TimeUnit unit)
-            throws InterruptedException {
+    public MutationBatch getNextMutation(long timeout, TimeUnit unit) throws InterruptedException {
         MutationBatch mutation = queue.poll(timeout, unit);
         if (mutation != null) {
             busy.put(mutation, true);

@@ -61,8 +61,7 @@ public abstract class AbstractSerializer<T> implements Serializer<T> {
      */
 
     public Set<ByteBuffer> toBytesSet(List<T> list) {
-        Set<ByteBuffer> bytesList = new HashSet<ByteBuffer>(
-                computeInitialHashSize(list.size()));
+        Set<ByteBuffer> bytesList = new HashSet<ByteBuffer>(computeInitialHashSize(list.size()));
         for (T s : list) {
             bytesList.add(toByteBuffer(s));
         }
@@ -102,8 +101,7 @@ public abstract class AbstractSerializer<T> implements Serializer<T> {
     }
 
     public <V> Map<ByteBuffer, V> toBytesMap(Map<T, V> map) {
-        Map<ByteBuffer, V> bytesMap = new LinkedHashMap<ByteBuffer, V>(
-                computeInitialHashSize(map.size()));
+        Map<ByteBuffer, V> bytesMap = new LinkedHashMap<ByteBuffer, V>(computeInitialHashSize(map.size()));
         for (Entry<T, V> entry : map.entrySet()) {
             bytesMap.put(toByteBuffer(entry.getKey()), entry.getValue());
         }
@@ -111,8 +109,7 @@ public abstract class AbstractSerializer<T> implements Serializer<T> {
     }
 
     public <V> Map<T, V> fromBytesMap(Map<ByteBuffer, V> map) {
-        Map<T, V> objMap = new LinkedHashMap<T, V>(
-                computeInitialHashSize(map.size()));
+        Map<T, V> objMap = new LinkedHashMap<T, V>(computeInitialHashSize(map.size()));
         for (Entry<ByteBuffer, V> entry : map.entrySet()) {
             objMap.put(fromByteBuffer(entry.getKey()), entry.getValue());
         }

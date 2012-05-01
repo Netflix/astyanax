@@ -19,8 +19,8 @@ public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
     private ConsistencyLevel defaultWriteConsistencyLevel = ConsistencyLevel.CL_ONE;
     private Clock clock = new MicrosecondsSyncClock();
     private RetryPolicy retryPolicy = RunOnce.get();
-    private ExecutorService asyncExecutor = Executors.newFixedThreadPool(5,
-            new ThreadFactoryBuilder().setDaemon(true).build());
+    private ExecutorService asyncExecutor = Executors.newFixedThreadPool(5, new ThreadFactoryBuilder().setDaemon(true)
+            .build());
     private NodeDiscoveryType discoveryType = NodeDiscoveryType.NONE;
     private int discoveryIntervalInSeconds = 30;
     private ConnectionPoolType connectionPoolType = ConnectionPoolType.ROUND_ROBIN;
@@ -28,8 +28,7 @@ public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
     public AstyanaxConfigurationImpl() {
     }
 
-    public AstyanaxConfigurationImpl setConnectionPoolType(
-            ConnectionPoolType connectionPoolType) {
+    public AstyanaxConfigurationImpl setConnectionPoolType(ConnectionPoolType connectionPoolType) {
         this.connectionPoolType = connectionPoolType;
         return this;
     }
@@ -44,8 +43,7 @@ public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
         return this.defaultReadConsistencyLevel;
     }
 
-    public AstyanaxConfigurationImpl setDefaultReadConsistencyLevel(
-            ConsistencyLevel cl) {
+    public AstyanaxConfigurationImpl setDefaultReadConsistencyLevel(ConsistencyLevel cl) {
         this.defaultReadConsistencyLevel = cl;
         return this;
     }
@@ -55,8 +53,7 @@ public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
         return this.defaultWriteConsistencyLevel;
     }
 
-    public AstyanaxConfigurationImpl setDefaultWriteConsistencyLevel(
-            ConsistencyLevel cl) {
+    public AstyanaxConfigurationImpl setDefaultWriteConsistencyLevel(ConsistencyLevel cl) {
         this.defaultWriteConsistencyLevel = cl;
         return this;
     }
@@ -93,8 +90,7 @@ public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
     }
 
     public String toString() {
-        return StringUtils.joinClassGettersValues(this, "A6xConfig",
-                AstyanaxConfigurationImpl.class);
+        return StringUtils.joinClassGettersValues(this, "A6xConfig", AstyanaxConfigurationImpl.class);
     }
 
     @Override
@@ -112,8 +108,7 @@ public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
         return discoveryType;
     }
 
-    public AstyanaxConfigurationImpl setDiscoveryType(
-            NodeDiscoveryType discoveryType) {
+    public AstyanaxConfigurationImpl setDiscoveryType(NodeDiscoveryType discoveryType) {
         this.discoveryType = discoveryType;
         return this;
     }

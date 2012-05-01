@@ -5,8 +5,7 @@ import java.util.Map;
 import com.google.common.collect.Maps;
 import com.netflix.astyanax.AuthenticationCredentials;
 
-public class SimpleAuthenticationCredentials implements
-        AuthenticationCredentials {
+public class SimpleAuthenticationCredentials implements AuthenticationCredentials {
     private String username;
     private String password;
     private final Map<String, Object> attributes = Maps.newHashMap();
@@ -26,8 +25,7 @@ public class SimpleAuthenticationCredentials implements
         return this;
     }
 
-    public SimpleAuthenticationCredentials setAttribute(String name,
-            Object value) {
+    public SimpleAuthenticationCredentials setAttribute(String name, Object value) {
         this.attributes.put(name, value);
         return this;
     }

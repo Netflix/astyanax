@@ -17,8 +17,7 @@ import com.netflix.astyanax.connectionpool.exceptions.SerializationException;
  * @author Bozhidar Bozhanov
  * 
  */
-public class ObjectSerializer extends AbstractSerializer<Object> implements
-        Serializer<Object> {
+public class ObjectSerializer extends AbstractSerializer<Object> implements Serializer<Object> {
 
     private static final ObjectSerializer INSTANCE = new ObjectSerializer();
 
@@ -31,7 +30,8 @@ public class ObjectSerializer extends AbstractSerializer<Object> implements
             oos.close();
 
             return ByteBuffer.wrap(baos.toByteArray());
-        } catch (IOException ex) {
+        }
+        catch (IOException ex) {
             throw new RuntimeException(ex);
         }
     }
@@ -43,14 +43,15 @@ public class ObjectSerializer extends AbstractSerializer<Object> implements
         }
         try {
             int l = bytes.remaining();
-            ByteArrayInputStream bais = new ByteArrayInputStream(bytes.array(),
-                    bytes.arrayOffset() + bytes.position(), l);
+            ByteArrayInputStream bais = new ByteArrayInputStream(bytes.array(), bytes.arrayOffset() + bytes.position(),
+                    l);
             ObjectInputStream ois = new ObjectInputStream(bais);
             Object obj = ois.readObject();
             bytes.position(bytes.position() + (l - ois.available()));
             ois.close();
             return obj;
-        } catch (Exception ex) {
+        }
+        catch (Exception ex) {
             throw new SerializationException(ex);
         }
     }

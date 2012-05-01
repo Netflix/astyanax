@@ -74,8 +74,7 @@ public class EmptyConnectionPoolMonitor implements ConnectionPoolMonitor {
 
     @Override
     public void onHostDown(Host host, Exception reason) {
-        LOGGER.warn(String.format("Downed host " + host + " reason=\"" + reason
-                + "\""));
+        LOGGER.warn(String.format("Downed host " + host + " reason=\"" + reason + "\""));
     }
 
     @Override

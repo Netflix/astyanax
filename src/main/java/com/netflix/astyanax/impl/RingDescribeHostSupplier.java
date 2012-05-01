@@ -13,8 +13,7 @@ import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 
-public class RingDescribeHostSupplier implements
-        Supplier<Map<BigInteger, List<Host>>> {
+public class RingDescribeHostSupplier implements Supplier<Map<BigInteger, List<Host>>> {
     private final Keyspace keyspace;
     private final int defaultPort;
 
@@ -29,17 +28,17 @@ public class RingDescribeHostSupplier implements
             Map<BigInteger, List<Host>> hosts = Maps.newLinkedHashMap();
 
             for (TokenRange range : keyspace.describeRing()) {
-                hosts.put(new BigInteger(range.getStartToken()), Lists
-                        .transform(range.getEndpoints(),
-                                new Function<String, Host>() {
-                                    @Override
-                                    public Host apply(String ip) {
-                                        return new Host(ip, defaultPort);
-                                    }
-                                }));
+                hosts.put(new BigInteger(range.getStartToken()),
+                        Lists.transform(range.getEndpoints(), new Function<String, Host>() {
+                            @Override
+                            public Host apply(String ip) {
+                                return new Host(ip, defaultPort);
+                            }
+                        }));
             }
             return hosts;
-        } catch (ConnectionException e) {
+        }
+        catch (ConnectionException e) {
             throw new RuntimeException(e);
         }
     }

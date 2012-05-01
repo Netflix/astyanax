@@ -52,22 +52,19 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class ThriftSyncConnectionFactoryImpl implements
-        ConnectionFactory<Cassandra.Client> {
+public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassandra.Client> {
     private static final String NAME_FORMAT = "ThriftConnection<%s-%d>";
 
     private final AtomicLong idCounter = new AtomicLong(0);
-    private final ExecutorService executor = Executors
-            .newCachedThreadPool(new ThreadFactoryBuilder().setDaemon(true)
-                    .build());
+    private final ExecutorService executor = Executors.newCachedThreadPool(new ThreadFactoryBuilder().setDaemon(true)
+            .build());
     private final RateLimiter limiter;
     private final ConnectionPoolConfiguration cpConfig;
     private final KeyspaceTracerFactory tracerFactory;
     private final ConnectionPoolMonitor monitor;
 
-    public ThriftSyncConnectionFactoryImpl(
-            ConnectionPoolConfiguration cpConfig,
-            KeyspaceTracerFactory tracerFactory, ConnectionPoolMonitor monitor) {
+    public ThriftSyncConnectionFactoryImpl(ConnectionPoolConfiguration cpConfig, KeyspaceTracerFactory tracerFactory,
+            ConnectionPoolMonitor monitor) {
         this.cpConfig = cpConfig;
         this.limiter = new SimpleRateLimiterImpl(cpConfig);
         this.tracerFactory = tracerFactory;
@@ -75,8 +72,7 @@ public class ThriftSyncConnectionFactoryImpl implements
     }
 
     @Override
-    public Connection<Cassandra.Client> createConnection(
-            final HostConnectionPool<Cassandra.Client> pool)
+    public Connection<Cassandra.Client> createConnection(final HostConnectionPool<Cassandra.Client> pool)
             throws ThrottledException {
         if (limiter.check() == false) {
             throw new ThrottledException("Too many connection attempts");
@@ -95,9 +91,7 @@ public class ThriftSyncConnectionFactoryImpl implements
             private volatile String keyspaceName;
 
             @Override
-            public <R> OperationResult<R> execute(
-                    Operation<Cassandra.Client, R> op)
-                    throws ConnectionException {
+            public <R> OperationResult<R> execute(Operation<Cassandra.Client, R> op) throws ConnectionException {
                 long startTime = System.nanoTime();
                 long latency = 0;
                 setTimeout(cpConfig.getSocketTimeout()); // In case the
@@ -108,11 +102,9 @@ public class ThriftSyncConnectionFactoryImpl implements
 
                 // Set a new keyspace, if it changed
                 lastException = null;
-                if (op.getKeyspace() != null
-                        && (keyspaceName == null || !op.getKeyspace().equals(
-                                keyspaceName))) {
-                    CassandraOperationTracer tracer = tracerFactory.newTracer(
-                            CassandraOperationType.SET_KEYSPACE).start();
+                if (op.getKeyspace() != null && (keyspaceName == null || !op.getKeyspace().equals(keyspaceName))) {
+                    CassandraOperationTracer tracer = tracerFactory.newTracer(CassandraOperationType.SET_KEYSPACE)
+                            .start();
                     try {
                         cassandraClient.set_keyspace(op.getKeyspace());
                         keyspaceName = op.getKeyspace();
@@ -120,12 +112,11 @@ public class ThriftSyncConnectionFactoryImpl implements
                         latency = now - startTime;
                         pool.addLatencySample(latency, now);
                         tracer.success();
-                    } catch (Exception e) {
+                    }
+                    catch (Exception e) {
                         long now = System.nanoTime();
                         latency = now - startTime;
-                        lastException = ThriftConverter
-                                .ToConnectionPoolException(e).setLatency(
-                                        latency);
+                        lastException = ThriftConverter.ToConnectionPoolException(e).setLatency(latency);
                         if (e instanceof IsTimeoutException)
                             pool.addLatencySample(latency, now);
                         tracer.failure(lastException);
@@ -142,13 +133,12 @@ public class ThriftSyncConnectionFactoryImpl implements
                     long now = System.nanoTime();
                     latency = now - startTime;
                     pool.addLatencySample(latency, now);
-                    return new OperationResultImpl<R>(getHost(), result,
-                            latency);
-                } catch (Exception e) {
+                    return new OperationResultImpl<R>(getHost(), result, latency);
+                }
+                catch (Exception e) {
                     long now = System.nanoTime();
                     latency = now - startTime;
-                    lastException = ThriftConverter
-                            .ToConnectionPoolException(e).setLatency(latency);
+                    lastException = ThriftConverter.ToConnectionPoolException(e).setLatency(latency);
                     if (e instanceof IsTimeoutException)
                         pool.addLatencySample(latency, now);
                     throw lastException;
@@ -158,14 +148,12 @@ public class ThriftSyncConnectionFactoryImpl implements
             @Override
             public void open() throws ConnectionException {
                 if (cassandraClient != null) {
-                    throw new IllegalStateException(
-                            "Open called on already open connection");
+                    throw new IllegalStateException("Open called on already open connection");
                 }
 
                 long startTime = System.currentTimeMillis();
                 try {
-                    socket = new TSocket(getHost().getIpAddress(), getHost()
-                            .getPort(), cpConfig.getConnectTimeout());
+                    socket = new TSocket(getHost().getIpAddress(), getHost().getPort(), cpConfig.getConnectTimeout());
                     socket.getSocket().setTcpNoDelay(true);
                     socket.getSocket().setKeepAlive(true);
                     socket.getSocket().setSoLinger(false, 0);
@@ -174,26 +162,20 @@ public class ThriftSyncConnectionFactoryImpl implements
                     transport = new TFramedTransport(socket);
                     transport.open();
 
-                    cassandraClient = new Cassandra.Client(new TBinaryProtocol(
-                            transport));
+                    cassandraClient = new Cassandra.Client(new TBinaryProtocol(transport));
                     monitor.incConnectionCreated(getHost());
 
-                    AuthenticationCredentials credentials = cpConfig
-                            .getAuthenticationCredentials();
+                    AuthenticationCredentials credentials = cpConfig.getAuthenticationCredentials();
                     if (credentials != null) {
-                        Map<String, String> thriftCredentials = Maps
-                                .newHashMapWithExpectedSize(2);
-                        thriftCredentials.put("username",
-                                credentials.getUsername());
-                        thriftCredentials.put("password",
-                                credentials.getPassword());
-                        cassandraClient.login(new AuthenticationRequest(
-                                thriftCredentials));
+                        Map<String, String> thriftCredentials = Maps.newHashMapWithExpectedSize(2);
+                        thriftCredentials.put("username", credentials.getUsername());
+                        thriftCredentials.put("password", credentials.getPassword());
+                        cassandraClient.login(new AuthenticationRequest(thriftCredentials));
                     }
-                } catch (Exception e) {
+                }
+                catch (Exception e) {
                     closeClient();
-                    ConnectionException ce = ThriftConverter
-                            .ToConnectionPoolException(e).setHost(getHost())
+                    ConnectionException ce = ThriftConverter.ToConnectionPoolException(e).setHost(getHost())
                             .setLatency(System.currentTimeMillis() - startTime);
                     monitor.incConnectionCreateFailed(getHost(), ce);
                     throw ce;
@@ -201,8 +183,7 @@ public class ThriftSyncConnectionFactoryImpl implements
             }
 
             @Override
-            public void openAsync(
-                    final AsyncOpenCallback<Cassandra.Client> callback) {
+            public void openAsync(final AsyncOpenCallback<Cassandra.Client> callback) {
                 final Connection<Cassandra.Client> This = this;
                 executor.submit(new Runnable() {
                     @Override
@@ -210,9 +191,9 @@ public class ThriftSyncConnectionFactoryImpl implements
                         try {
                             open();
                             callback.success(This);
-                        } catch (Exception e) {
-                            callback.failure(This, ThriftConverter
-                                    .ToConnectionPoolException(e));
+                        }
+                        catch (Exception e) {
+                            callback.failure(This, ThriftConverter.ToConnectionPoolException(e));
                         }
                     }
                 });
@@ -228,7 +209,8 @@ public class ThriftSyncConnectionFactoryImpl implements
                         public void run() {
                             try {
                                 closeClient();
-                            } catch (Exception e) {
+                            }
+                            catch (Exception e) {
                             }
                         }
                     });
@@ -239,12 +221,16 @@ public class ThriftSyncConnectionFactoryImpl implements
                 if (transport != null) {
                     try {
                         transport.flush();
-                    } catch (TTransportException e) {
-                    } finally {
+                    }
+                    catch (TTransportException e) {
+                    }
+                    finally {
                         try {
                             transport.close();
-                        } catch (Exception e) {
-                        } finally {
+                        }
+                        catch (Exception e) {
+                        }
+                        finally {
                             transport = null;
                         }
                     }
@@ -253,8 +239,10 @@ public class ThriftSyncConnectionFactoryImpl implements
                 if (socket != null) {
                     try {
                         socket.close();
-                    } catch (Exception e) {
-                    } finally {
+                    }
+                    catch (Exception e) {
+                    }
+                    finally {
                         socket = null;
                     }
                 }

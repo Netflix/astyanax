@@ -28,10 +28,10 @@ public class SimpleRateLimiterImpl implements RateLimiter {
         if (queue.size() < maxCount) {
             queue.addFirst(currentTimeMillis);
             return true;
-        } else {
+        }
+        else {
             long last = queue.getLast();
-            if (currentTimeMillis - last < config
-                    .getConnectionLimiterWindowSize()) {
+            if (currentTimeMillis - last < config.getConnectionLimiterWindowSize()) {
                 return false;
             }
             queue.addFirst(currentTimeMillis);

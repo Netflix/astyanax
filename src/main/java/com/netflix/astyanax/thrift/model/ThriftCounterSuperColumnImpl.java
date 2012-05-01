@@ -41,32 +41,27 @@ public class ThriftCounterSuperColumnImpl<C> implements Column<C> {
 
     @Override
     public <V> V getValue(Serializer<V> valSer) {
-        throw new UnsupportedOperationException("CounterSuperColumn \'"
-                + this.name + "\' has no value");
+        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no value");
     }
 
     @Override
     public String getStringValue() {
-        throw new UnsupportedOperationException("CounterSuperColumn \'"
-                + this.name + "\' has no value");
+        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no value");
     }
 
     @Override
     public int getIntegerValue() {
-        throw new UnsupportedOperationException("CounterSuperColumn \'"
-                + this.name + "\' has no value");
+        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no value");
     }
 
     @Override
     public long getLongValue() {
-        throw new UnsupportedOperationException("CounterSuperColumn \'"
-                + this.name + "\' has no value");
+        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no value");
     }
 
     @Override
     public <C2> ColumnList<C2> getSubColumns(Serializer<C2> ser) {
-        return new ThriftCounterColumnListImpl<C2>(this.column.getColumns(),
-                ser);
+        return new ThriftCounterColumnListImpl<C2>(this.column.getColumns(), ser);
     }
 
     @Override
@@ -76,44 +71,37 @@ public class ThriftCounterSuperColumnImpl<C> implements Column<C> {
 
     @Override
     public byte[] getByteArrayValue() {
-        throw new UnsupportedOperationException("CounterSuperColumn \'"
-                + this.name + "\' has no value");
+        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no value");
     }
 
     @Override
     public boolean getBooleanValue() {
-        throw new UnsupportedOperationException("CounterSuperColumn \'"
-                + this.name + "\' has no value");
+        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no value");
     }
 
     @Override
     public ByteBuffer getByteBufferValue() {
-        throw new UnsupportedOperationException("CounterSuperColumn \'"
-                + this.name + "\' has no value");
+        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no value");
     }
 
     @Override
     public Date getDateValue() {
-        throw new UnsupportedOperationException("CounterSuperColumn \'"
-                + this.name + "\' has no value");
+        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no value");
     }
 
     @Override
     public UUID getUUIDValue() {
-        throw new UnsupportedOperationException("CounterSuperColumn \'"
-                + this.name + "\' has no value");
+        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no value");
     }
 
     @Override
     public long getTimestamp() {
-        throw new UnsupportedOperationException("CounterSuperColumn \'"
-                + this.name + "\' has no timestamp");
+        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no timestamp");
     }
 
     @Override
     public double getDoubleValue() {
-        throw new UnsupportedOperationException("CounterSuperColumn \'"
-                + this.name + "\' has no value");
+        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no value");
     }
 
     @Override

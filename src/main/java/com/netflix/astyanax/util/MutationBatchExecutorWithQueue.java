@@ -24,14 +24,12 @@ public class MutationBatchExecutorWithQueue {
     private AtomicLong failureCount = new AtomicLong(0);
 
     public MutationBatchExecutorWithQueue(AckingQueue queue, int nThreads) {
-        this.executor = Executors.newFixedThreadPool(nThreads,
-                new ThreadFactoryBuilder().setDaemon(true).build());
+        this.executor = Executors.newFixedThreadPool(nThreads, new ThreadFactoryBuilder().setDaemon(true).build());
         this.queue = queue;
         this.nThreads = nThreads;
     }
 
-    public MutationBatchExecutorWithQueue usingRetryablePredicate(
-            Predicate<Exception> predicate) {
+    public MutationBatchExecutorWithQueue usingRetryablePredicate(Predicate<Exception> predicate) {
         this.retryablePredicate = predicate;
         return this;
     }
@@ -44,38 +42,44 @@ public class MutationBatchExecutorWithQueue {
                     while (true) {
                         do {
                             try {
-                                m = queue.getNextMutation(timeout,
-                                        TimeUnit.MILLISECONDS);
+                                m = queue.getNextMutation(timeout, TimeUnit.MILLISECONDS);
                                 if (m != null) {
                                     m.execute();
                                     successCount.incrementAndGet();
                                     queue.ackMutation(m);
                                     m = null;
                                 }
-                            } catch (InterruptedException e) {
+                            }
+                            catch (InterruptedException e) {
                                 Thread.currentThread().interrupt();
                                 return;
-                            } catch (Exception e) {
+                            }
+                            catch (Exception e) {
                                 failureCount.incrementAndGet();
                                 if (e instanceof NoAvailableHostsException) {
                                     try {
                                         Thread.sleep(waitOnNoHosts);
-                                    } catch (InterruptedException e1) {
+                                    }
+                                    catch (InterruptedException e1) {
                                         Thread.currentThread().interrupt();
                                         return;
                                     }
                                     continue;
-                                } else {
+                                }
+                                else {
                                     if (!retryablePredicate.apply(e)) {
                                         try {
                                             queue.ackMutation(m);
-                                        } catch (Exception e1) {
+                                        }
+                                        catch (Exception e1) {
                                             // TOOD:
                                         }
-                                    } else {
+                                    }
+                                    else {
                                         try {
                                             queue.repushMutation(m);
-                                        } catch (Exception e1) {
+                                        }
+                                        catch (Exception e1) {
                                             // TODO:
                                         }
                                     }

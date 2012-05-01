@@ -23,8 +23,7 @@ public class MultiRowUniquenessConstraint implements UniquenessConstraint {
 
     private final Keyspace keyspace;
 
-    private final List<ColumnPrefixDistributedRowLock<String>> locks = Lists
-            .newArrayList();
+    private final List<ColumnPrefixDistributedRowLock<String>> locks = Lists.newArrayList();
     private Integer ttl = null;
     private ConsistencyLevel consistencyLevel = ConsistencyLevel.CL_QUORUM;
     private String lockColumn;
@@ -79,8 +78,7 @@ public class MultiRowUniquenessConstraint implements UniquenessConstraint {
      * @param consistencyLevel
      * @return
      */
-    public MultiRowUniquenessConstraint withConsistencyLevel(
-            ConsistencyLevel consistencyLevel) {
+    public MultiRowUniquenessConstraint withConsistencyLevel(ConsistencyLevel consistencyLevel) {
         this.consistencyLevel = consistencyLevel;
         return this;
     }
@@ -92,10 +90,8 @@ public class MultiRowUniquenessConstraint implements UniquenessConstraint {
      * @param rowKey
      * @return
      */
-    public MultiRowUniquenessConstraint withRow(
-            ColumnFamily<String, String> columnFamily, String rowKey) {
-        locks.add(new ColumnPrefixDistributedRowLock<String>(keyspace,
-                columnFamily, rowKey));
+    public MultiRowUniquenessConstraint withRow(ColumnFamily<String, String> columnFamily, String rowKey) {
+        locks.add(new ColumnPrefixDistributedRowLock<String>(keyspace, columnFamily, rowKey));
         return this;
     }
 
@@ -110,17 +106,13 @@ public class MultiRowUniquenessConstraint implements UniquenessConstraint {
 
     @Override
     public void acquire() throws NotUniqueException, Exception {
-        long now = TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(),
-                TimeUnit.MILLISECONDS);
+        long now = TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS);
 
         // Insert lock check column for all rows in a single batch mutation
         try {
-            MutationBatch m = keyspace.prepareMutationBatch()
-                    .setConsistencyLevel(consistencyLevel);
+            MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
             for (ColumnPrefixDistributedRowLock<String> lock : locks) {
-                lock.withConsistencyLevel(consistencyLevel)
-                        .withLockColumn(lockColumn)
-                        .fillLockMutation(m, now, ttl);
+                lock.withConsistencyLevel(consistencyLevel).withLockColumn(lockColumn).fillLockMutation(m, now, ttl);
             }
             m.execute();
 
@@ -135,13 +127,16 @@ public class MultiRowUniquenessConstraint implements UniquenessConstraint {
                 lock.fillLockMutation(m, null, null);
             }
             m.execute();
-        } catch (BusyLockException e) {
+        }
+        catch (BusyLockException e) {
             release();
             throw new NotUniqueException(e);
-        } catch (StaleLockException e) {
+        }
+        catch (StaleLockException e) {
             release();
             throw new NotUniqueException(e);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             release();
             throw e;
         }

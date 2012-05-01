@@ -33,15 +33,13 @@ import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.UUIDSerializer;
 
-public abstract class AbstractThriftColumnMutationImpl implements
-        ColumnMutation {
+public abstract class AbstractThriftColumnMutationImpl implements ColumnMutation {
 
     protected final ByteBuffer key;
     protected final ByteBuffer column;
     protected final Clock clock;
 
-    public AbstractThriftColumnMutationImpl(ByteBuffer key, ByteBuffer column,
-            Clock clock) {
+    public AbstractThriftColumnMutationImpl(ByteBuffer key, ByteBuffer column, Clock clock) {
         this.key = key;
         this.column = column;
         this.clock = clock;
@@ -93,8 +91,7 @@ public abstract class AbstractThriftColumnMutationImpl implements
     }
 
     @Override
-    public <T> Execution<Void> putValue(T value, Serializer<T> serializer,
-            Integer ttl) {
+    public <T> Execution<Void> putValue(T value, Serializer<T> serializer, Integer ttl) {
         return insertValue(serializer.toByteBuffer(value), ttl);
     }
 

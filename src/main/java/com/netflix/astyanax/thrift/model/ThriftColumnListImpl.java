@@ -36,13 +36,9 @@ public class ThriftColumnListImpl<C> extends AbstractColumnList<C> {
     private HashMap<C, org.apache.cassandra.thrift.Column> lookup;
     private final Serializer<C> colSer;
 
-    public ThriftColumnListImpl(
-            List<org.apache.cassandra.thrift.Column> columns,
-            Serializer<C> colSer) {
-        Preconditions
-                .checkArgument(columns != null, "Columns must not be null");
-        Preconditions.checkArgument(colSer != null,
-                "Serializer must not be null");
+    public ThriftColumnListImpl(List<org.apache.cassandra.thrift.Column> columns, Serializer<C> colSer) {
+        Preconditions.checkArgument(columns != null, "Columns must not be null");
+        Preconditions.checkArgument(colSer != null, "Serializer must not be null");
 
         this.colSer = colSer;
         this.columns = columns;
@@ -53,8 +49,7 @@ public class ThriftColumnListImpl<C> extends AbstractColumnList<C> {
         class IteratorImpl implements Iterator<Column<C>> {
             Iterator<org.apache.cassandra.thrift.Column> base;
 
-            public IteratorImpl(
-                    Iterator<org.apache.cassandra.thrift.Column> base) {
+            public IteratorImpl(Iterator<org.apache.cassandra.thrift.Column> base) {
                 this.base = base;
             }
 

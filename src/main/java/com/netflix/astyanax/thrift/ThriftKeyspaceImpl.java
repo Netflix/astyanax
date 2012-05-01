@@ -69,17 +69,14 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     private final KeyspaceTracerFactory tracerFactory;
     private final Cache<String, Object> cache;
 
-    public ThriftKeyspaceImpl(String ksName,
-            ConnectionPool<Cassandra.Client> pool,
-            AstyanaxConfiguration config,
+    public ThriftKeyspaceImpl(String ksName, ConnectionPool<Cassandra.Client> pool, AstyanaxConfiguration config,
             final KeyspaceTracerFactory tracerFactory) {
         this.connectionPool = pool;
         this.config = config;
         this.ksName = ksName;
         this.executor = config.getAsyncExecutor();
         this.tracerFactory = tracerFactory;
-        this.cache = CacheBuilder.newBuilder()
-                .expireAfterWrite(10, TimeUnit.MINUTES).build();
+        this.cache = CacheBuilder.newBuilder().expireAfterWrite(10, TimeUnit.MINUTES).build();
     }
 
     @Override
@@ -90,8 +87,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     @Override
     public MutationBatch prepareMutationBatch() {
         return new AbstractThriftMutationBatchImpl(config.getClock()) {
-            private ConsistencyLevel consistencyLevel = config
-                    .getDefaultWriteConsistencyLevel();
+            private ConsistencyLevel consistencyLevel = config.getDefaultWriteConsistencyLevel();
             private RetryPolicy retry = config.getRetryPolicy().duplicate();
             private Host pinnedHost;
             private WriteAheadLog wal;
@@ -103,8 +99,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
             }
 
             @Override
-            public MutationBatch setConsistencyLevel(
-                    ConsistencyLevel consistencyLevel) {
+            public MutationBatch setConsistencyLevel(ConsistencyLevel consistencyLevel) {
                 this.consistencyLevel = consistencyLevel;
                 return this;
             }
@@ -119,16 +114,12 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                 try {
                     OperationResult<Void> result = executeOperation(
                             new AbstractKeyspaceOperationImpl<Void>(
-                                    tracerFactory
-                                            .newTracer(CassandraOperationType.BATCH_MUTATE),
-                                    pinnedHost, getKeyspaceName()) {
+                                    tracerFactory.newTracer(CassandraOperationType.BATCH_MUTATE), pinnedHost,
+                                    getKeyspaceName()) {
                                 @Override
-                                public Void internalExecute(Client client)
-                                        throws Exception {
-                                    client.batch_mutate(
-                                            getMutationMap(),
-                                            ThriftConverter
-                                                    .ToThriftConsistencyLevel(consistencyLevel));
+                                public Void internalExecute(Client client) throws Exception {
+                                    client.batch_mutate(getMutationMap(),
+                                            ThriftConverter.ToThriftConsistencyLevel(consistencyLevel));
                                     discardMutations();
                                     return null;
                                 }
@@ -136,10 +127,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                 @Override
                                 public BigInteger getToken() {
                                     if (getMutationMap().size() == 1)
-                                        return partitioner
-                                                .getToken(getMutationMap()
-                                                        .keySet().iterator()
-                                                        .next()).token;
+                                        return partitioner.getToken(getMutationMap().keySet().iterator().next()).token;
                                     else
                                         return null;
                                 }
@@ -149,14 +137,14 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                         wal.removeEntry(walEntry);
                     }
                     return result;
-                } catch (ConnectionException exception) {
+                }
+                catch (ConnectionException exception) {
                     throw exception;
                 }
             }
 
             @Override
-            public Future<OperationResult<Void>> executeAsync()
-                    throws ConnectionException {
+            public Future<OperationResult<Void>> executeAsync() throws ConnectionException {
                 return executor.submit(new Callable<OperationResult<Void>>() {
                     @Override
                     public OperationResult<Void> call() throws Exception {
@@ -183,41 +171,32 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     @Override
     public List<TokenRange> describeRing() throws ConnectionException {
         try {
-            return (List<TokenRange>) this.cache.get(
-                    CassandraOperationType.DESCRIBE_RING.name(),
+            return (List<TokenRange>) this.cache.get(CassandraOperationType.DESCRIBE_RING.name(),
                     new Callable<Object>() {
                         @Override
                         public Object call() throws Exception {
                             return executeOperation(
-                                    new AbstractKeyspaceOperationImpl<List<TokenRange>>(
-                                            tracerFactory
-                                                    .newTracer(CassandraOperationType.DESCRIBE_RING),
-                                            getKeyspaceName()) {
+                                    new AbstractKeyspaceOperationImpl<List<TokenRange>>(tracerFactory
+                                            .newTracer(CassandraOperationType.DESCRIBE_RING), getKeyspaceName()) {
                                         @Override
-                                        public List<TokenRange> internalExecute(
-                                                Cassandra.Client client)
+                                        public List<TokenRange> internalExecute(Cassandra.Client client)
                                                 throws Exception {
-                                            return Lists
-                                                    .transform(
-                                                            client.describe_ring(getKeyspaceName()),
-                                                            new Function<org.apache.cassandra.thrift.TokenRange, TokenRange>() {
-                                                                @Override
-                                                                public TokenRange apply(
-                                                                        org.apache.cassandra.thrift.TokenRange tr) {
-                                                                    return new TokenRangeImpl(
-                                                                            tr.getStart_token(),
-                                                                            tr.getEnd_token(),
-                                                                            tr.getEndpoints());
-                                                                }
-                                                            });
+                                            return Lists.transform(client.describe_ring(getKeyspaceName()),
+                                                    new Function<org.apache.cassandra.thrift.TokenRange, TokenRange>() {
+                                                        @Override
+                                                        public TokenRange apply(
+                                                                org.apache.cassandra.thrift.TokenRange tr) {
+                                                            return new TokenRangeImpl(tr.getStart_token(), tr
+                                                                    .getEnd_token(), tr.getEndpoints());
+                                                        }
+                                                    });
                                         }
-                                    }, getConfig().getRetryPolicy().duplicate())
-                                    .getResult();
+                                    }, getConfig().getRetryPolicy().duplicate()).getResult();
                         }
                     });
-        } catch (ExecutionException e) {
-            return (List<TokenRange>) this.cache.asMap().get(
-                    CassandraOperationType.DESCRIBE_RING.name());
+        }
+        catch (ExecutionException e) {
+            return (List<TokenRange>) this.cache.asMap().get(CassandraOperationType.DESCRIBE_RING.name());
         }
     }
 
@@ -225,39 +204,29 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     public KeyspaceDefinition describeKeyspace() throws ConnectionException {
         return executeOperation(
                 new AbstractKeyspaceOperationImpl<KeyspaceDefinition>(
-                        tracerFactory
-                                .newTracer(CassandraOperationType.DESCRIBE_KEYSPACE),
-                        getKeyspaceName()) {
+                        tracerFactory.newTracer(CassandraOperationType.DESCRIBE_KEYSPACE), getKeyspaceName()) {
                     @Override
-                    public KeyspaceDefinition internalExecute(
-                            Cassandra.Client client) throws Exception {
-                        return new ThriftKeyspaceDefinitionImpl(
-                                client.describe_keyspace(getKeyspaceName()));
+                    public KeyspaceDefinition internalExecute(Cassandra.Client client) throws Exception {
+                        return new ThriftKeyspaceDefinitionImpl(client.describe_keyspace(getKeyspaceName()));
                     }
                 }, getConfig().getRetryPolicy().duplicate()).getResult();
     }
 
     public <K, C> ColumnFamilyQuery<K, C> prepareQuery(ColumnFamily<K, C> cf) {
-        return new ThriftColumnFamilyQueryImpl<K, C>(executor, tracerFactory,
-                this, connectionPool, cf,
-                config.getDefaultReadConsistencyLevel(),
-                config.getRetryPolicy());
+        return new ThriftColumnFamilyQueryImpl<K, C>(executor, tracerFactory, this, connectionPool, cf,
+                config.getDefaultReadConsistencyLevel(), config.getRetryPolicy());
     }
 
     @Override
-    public <K, C> ColumnMutation prepareColumnMutation(
-            final ColumnFamily<K, C> columnFamily, final K rowKey, C column) {
-        return new AbstractThriftColumnMutationImpl(columnFamily
-                .getKeySerializer().toByteBuffer(rowKey), columnFamily
+    public <K, C> ColumnMutation prepareColumnMutation(final ColumnFamily<K, C> columnFamily, final K rowKey, C column) {
+        return new AbstractThriftColumnMutationImpl(columnFamily.getKeySerializer().toByteBuffer(rowKey), columnFamily
                 .getColumnSerializer().toByteBuffer(column), config.getClock()) {
 
             private RetryPolicy retry = config.getRetryPolicy().duplicate();
-            private ConsistencyLevel writeConsistencyLevel = config
-                    .getDefaultWriteConsistencyLevel();
+            private ConsistencyLevel writeConsistencyLevel = config.getDefaultWriteConsistencyLevel();
 
             @Override
-            public ColumnMutation setConsistencyLevel(
-                    ConsistencyLevel consistencyLevel) {
+            public ColumnMutation setConsistencyLevel(ConsistencyLevel consistencyLevel) {
                 writeConsistencyLevel = consistencyLevel;
                 return this;
             }
@@ -266,50 +235,35 @@ public final class ThriftKeyspaceImpl implements Keyspace {
             public Execution<Void> incrementCounterColumn(final long amount) {
                 return new Execution<Void>() {
                     @Override
-                    public OperationResult<Void> execute()
-                            throws ConnectionException {
+                    public OperationResult<Void> execute() throws ConnectionException {
                         return executeOperation(
                                 new AbstractKeyspaceOperationImpl<Void>(
-                                        tracerFactory
-                                                .newTracer(CassandraOperationType.COUNTER_MUTATE),
+                                        tracerFactory.newTracer(CassandraOperationType.COUNTER_MUTATE),
                                         getKeyspaceName()) {
                                     @Override
-                                    public Void internalExecute(Client client)
-                                            throws Exception {
-                                        client.add(
-                                                key,
-                                                ThriftConverter
-                                                        .getColumnParent(
-                                                                columnFamily,
-                                                                null),
-                                                new CounterColumn().setValue(
-                                                        amount).setName(column),
-                                                ThriftConverter
-                                                        .ToThriftConsistencyLevel(writeConsistencyLevel));
+                                    public Void internalExecute(Client client) throws Exception {
+                                        client.add(key, ThriftConverter.getColumnParent(columnFamily, null),
+                                                new CounterColumn().setValue(amount).setName(column),
+                                                ThriftConverter.ToThriftConsistencyLevel(writeConsistencyLevel));
                                         return null;
                                     }
 
                                     @Override
                                     public BigInteger getToken() {
-                                        return partitioner
-                                                .getToken(columnFamily
-                                                        .getKeySerializer()
-                                                        .toByteBuffer(rowKey)).token;
+                                        return partitioner.getToken(columnFamily.getKeySerializer()
+                                                .toByteBuffer(rowKey)).token;
                                     }
                                 }, retry);
                     }
 
                     @Override
-                    public Future<OperationResult<Void>> executeAsync()
-                            throws ConnectionException {
-                        return executor
-                                .submit(new Callable<OperationResult<Void>>() {
-                                    @Override
-                                    public OperationResult<Void> call()
-                                            throws Exception {
-                                        return execute();
-                                    }
-                                });
+                    public Future<OperationResult<Void>> executeAsync() throws ConnectionException {
+                        return executor.submit(new Callable<OperationResult<Void>>() {
+                            @Override
+                            public OperationResult<Void> call() throws Exception {
+                                return execute();
+                            }
+                        });
                     }
                 };
             }
@@ -318,112 +272,78 @@ public final class ThriftKeyspaceImpl implements Keyspace {
             public Execution<Void> deleteColumn() {
                 return new Execution<Void>() {
                     @Override
-                    public OperationResult<Void> execute()
-                            throws ConnectionException {
+                    public OperationResult<Void> execute() throws ConnectionException {
                         return executeOperation(
                                 new AbstractKeyspaceOperationImpl<Void>(
-                                        tracerFactory
-                                                .newTracer(CassandraOperationType.COLUMN_DELETE),
+                                        tracerFactory.newTracer(CassandraOperationType.COLUMN_DELETE),
                                         getKeyspaceName()) {
                                     @Override
-                                    public Void internalExecute(Client client)
-                                            throws Exception {
-                                        client.remove(
-                                                key,
-                                                new org.apache.cassandra.thrift.ColumnPath()
-                                                        .setColumn_family(
-                                                                columnFamily
-                                                                        .getName())
-                                                        .setColumn(column),
-                                                config.getClock()
-                                                        .getCurrentTime(),
-                                                ThriftConverter
-                                                        .ToThriftConsistencyLevel(writeConsistencyLevel));
+                                    public Void internalExecute(Client client) throws Exception {
+                                        client.remove(key, new org.apache.cassandra.thrift.ColumnPath()
+                                                .setColumn_family(columnFamily.getName()).setColumn(column), config
+                                                .getClock().getCurrentTime(), ThriftConverter
+                                                .ToThriftConsistencyLevel(writeConsistencyLevel));
                                         return null;
                                     }
 
                                     @Override
                                     public BigInteger getToken() {
-                                        return partitioner
-                                                .getToken(columnFamily
-                                                        .getKeySerializer()
-                                                        .toByteBuffer(rowKey)).token;
+                                        return partitioner.getToken(columnFamily.getKeySerializer()
+                                                .toByteBuffer(rowKey)).token;
                                     }
                                 }, retry);
                     }
 
                     @Override
-                    public Future<OperationResult<Void>> executeAsync()
-                            throws ConnectionException {
-                        return executor
-                                .submit(new Callable<OperationResult<Void>>() {
-                                    @Override
-                                    public OperationResult<Void> call()
-                                            throws Exception {
-                                        return execute();
-                                    }
-                                });
+                    public Future<OperationResult<Void>> executeAsync() throws ConnectionException {
+                        return executor.submit(new Callable<OperationResult<Void>>() {
+                            @Override
+                            public OperationResult<Void> call() throws Exception {
+                                return execute();
+                            }
+                        });
                     }
                 };
             }
 
             @Override
-            public Execution<Void> insertValue(final ByteBuffer value,
-                    final Integer ttl) {
+            public Execution<Void> insertValue(final ByteBuffer value, final Integer ttl) {
                 return new Execution<Void>() {
                     @Override
-                    public OperationResult<Void> execute()
-                            throws ConnectionException {
+                    public OperationResult<Void> execute() throws ConnectionException {
                         return executeOperation(
                                 new AbstractKeyspaceOperationImpl<Void>(
-                                        tracerFactory
-                                                .newTracer(CassandraOperationType.COLUMN_INSERT),
+                                        tracerFactory.newTracer(CassandraOperationType.COLUMN_INSERT),
                                         getKeyspaceName()) {
                                     @Override
-                                    public Void internalExecute(Client client)
-                                            throws Exception {
+                                    public Void internalExecute(Client client) throws Exception {
                                         org.apache.cassandra.thrift.Column c = new org.apache.cassandra.thrift.Column();
-                                        c.setName(column)
-                                                .setValue(value)
-                                                .setTimestamp(
-                                                        clock.getCurrentTime());
+                                        c.setName(column).setValue(value).setTimestamp(clock.getCurrentTime());
                                         if (ttl != null) {
                                             c.setTtl(ttl);
                                         }
 
-                                        client.insert(
-                                                key,
-                                                ThriftConverter
-                                                        .getColumnParent(
-                                                                columnFamily,
-                                                                null),
-                                                c,
-                                                ThriftConverter
-                                                        .ToThriftConsistencyLevel(writeConsistencyLevel));
+                                        client.insert(key, ThriftConverter.getColumnParent(columnFamily, null), c,
+                                                ThriftConverter.ToThriftConsistencyLevel(writeConsistencyLevel));
                                         return null;
                                     }
 
                                     @Override
                                     public BigInteger getToken() {
-                                        return partitioner
-                                                .getToken(columnFamily
-                                                        .getKeySerializer()
-                                                        .toByteBuffer(rowKey)).token;
+                                        return partitioner.getToken(columnFamily.getKeySerializer()
+                                                .toByteBuffer(rowKey)).token;
                                     }
                                 }, retry);
                     }
 
                     @Override
-                    public Future<OperationResult<Void>> executeAsync()
-                            throws ConnectionException {
-                        return executor
-                                .submit(new Callable<OperationResult<Void>>() {
-                                    @Override
-                                    public OperationResult<Void> call()
-                                            throws Exception {
-                                        return execute();
-                                    }
-                                });
+                    public Future<OperationResult<Void>> executeAsync() throws ConnectionException {
+                        return executor.submit(new Callable<OperationResult<Void>>() {
+                            @Override
+                            public OperationResult<Void> call() throws Exception {
+                                return execute();
+                            }
+                        });
                     }
                 };
             }
@@ -432,49 +352,35 @@ public final class ThriftKeyspaceImpl implements Keyspace {
             public Execution<Void> deleteCounterColumn() {
                 return new Execution<Void>() {
                     @Override
-                    public OperationResult<Void> execute()
-                            throws ConnectionException {
+                    public OperationResult<Void> execute() throws ConnectionException {
                         return executeOperation(
                                 new AbstractKeyspaceOperationImpl<Void>(
-                                        tracerFactory
-                                                .newTracer(CassandraOperationType.COLUMN_DELETE),
+                                        tracerFactory.newTracer(CassandraOperationType.COLUMN_DELETE),
                                         getKeyspaceName()) {
                                     @Override
-                                    public Void internalExecute(Client client)
-                                            throws Exception {
-                                        client.remove_counter(
-                                                key,
-                                                new org.apache.cassandra.thrift.ColumnPath()
-                                                        .setColumn_family(
-                                                                columnFamily
-                                                                        .getName())
-                                                        .setColumn(column),
-                                                ThriftConverter
-                                                        .ToThriftConsistencyLevel(writeConsistencyLevel));
+                                    public Void internalExecute(Client client) throws Exception {
+                                        client.remove_counter(key, new org.apache.cassandra.thrift.ColumnPath()
+                                                .setColumn_family(columnFamily.getName()).setColumn(column),
+                                                ThriftConverter.ToThriftConsistencyLevel(writeConsistencyLevel));
                                         return null;
                                     }
 
                                     @Override
                                     public BigInteger getToken() {
-                                        return partitioner
-                                                .getToken(columnFamily
-                                                        .getKeySerializer()
-                                                        .toByteBuffer(rowKey)).token;
+                                        return partitioner.getToken(columnFamily.getKeySerializer()
+                                                .toByteBuffer(rowKey)).token;
                                     }
                                 }, retry);
                     }
 
                     @Override
-                    public Future<OperationResult<Void>> executeAsync()
-                            throws ConnectionException {
-                        return executor
-                                .submit(new Callable<OperationResult<Void>>() {
-                                    @Override
-                                    public OperationResult<Void> call()
-                                            throws Exception {
-                                        return execute();
-                                    }
-                                });
+                    public Future<OperationResult<Void>> executeAsync() throws ConnectionException {
+                        return executor.submit(new Callable<OperationResult<Void>>() {
+                            @Override
+                            public OperationResult<Void> call() throws Exception {
+                                return execute();
+                            }
+                        });
                     }
                 };
             }
@@ -493,25 +399,21 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     }
 
     @Override
-    public SerializerPackage getSerializerPackage(String cfName,
-            boolean ignoreErrors) throws ConnectionException,
+    public SerializerPackage getSerializerPackage(String cfName, boolean ignoreErrors) throws ConnectionException,
             UnknownComparatorException {
-        return new SerializerPackageImpl(describeKeyspace().getColumnFamily(
-                cfName), ignoreErrors);
+        return new SerializerPackageImpl(describeKeyspace().getColumnFamily(cfName), ignoreErrors);
     }
 
     @Override
-    public OperationResult<Void> testOperation(final Operation<?, ?> operation)
-            throws ConnectionException {
+    public OperationResult<Void> testOperation(final Operation<?, ?> operation) throws ConnectionException {
         return testOperation(operation, config.getRetryPolicy().duplicate());
     }
 
     @Override
-    public OperationResult<Void> testOperation(final Operation<?, ?> operation,
-            RetryPolicy retry) throws ConnectionException {
+    public OperationResult<Void> testOperation(final Operation<?, ?> operation, RetryPolicy retry)
+            throws ConnectionException {
         return executeOperation(
-                new AbstractKeyspaceOperationImpl<Void>(
-                        tracerFactory.newTracer(CassandraOperationType.TEST),
+                new AbstractKeyspaceOperationImpl<Void>(tracerFactory.newTracer(CassandraOperationType.TEST),
                         operation.getPinnedHost(), getKeyspaceName()) {
                     @Override
                     public Void internalExecute(Client client) throws Exception {
@@ -526,23 +428,20 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     }
 
     @Override
-    public <K, C> OperationResult<Void> truncateColumnFamily(
-            final ColumnFamily<K, C> columnFamily) throws OperationException,
-            ConnectionException {
-        return executeOperation(new AbstractKeyspaceOperationImpl<Void>(
-                tracerFactory.newTracer(CassandraOperationType.TRUNCATE),
-                getKeyspaceName()) {
-            @Override
-            public Void internalExecute(Cassandra.Client client)
-                    throws Exception {
-                client.truncate(columnFamily.getName());
-                return null;
-            }
-        }, config.getRetryPolicy().duplicate());
+    public <K, C> OperationResult<Void> truncateColumnFamily(final ColumnFamily<K, C> columnFamily)
+            throws OperationException, ConnectionException {
+        return executeOperation(
+                new AbstractKeyspaceOperationImpl<Void>(tracerFactory.newTracer(CassandraOperationType.TRUNCATE),
+                        getKeyspaceName()) {
+                    @Override
+                    public Void internalExecute(Cassandra.Client client) throws Exception {
+                        client.truncate(columnFamily.getName());
+                        return null;
+                    }
+                }, config.getRetryPolicy().duplicate());
     }
 
-    private <R> OperationResult<R> executeOperation(
-            Operation<Cassandra.Client, R> operation, RetryPolicy retry)
+    private <R> OperationResult<R> executeOperation(Operation<Cassandra.Client, R> operation, RetryPolicy retry)
             throws OperationException, ConnectionException {
         return connectionPool.executeWithFailover(operation, retry);
     }

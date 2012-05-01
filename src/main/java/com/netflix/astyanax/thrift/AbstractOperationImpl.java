@@ -24,8 +24,7 @@ import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 
-public abstract class AbstractOperationImpl<R> implements
-        Operation<Cassandra.Client, R> {
+public abstract class AbstractOperationImpl<R> implements Operation<Cassandra.Client, R> {
     private final CassandraOperationTracer tracer;
     private final Host pinnedHost;
 
@@ -56,9 +55,9 @@ public abstract class AbstractOperationImpl<R> implements
             R result = internalExecute(client);
             tracer.success();
             return result;
-        } catch (Exception e) {
-            ConnectionException ce = ThriftConverter
-                    .ToConnectionPoolException(e);
+        }
+        catch (Exception e) {
+            ConnectionException ce = ThriftConverter.ToConnectionPoolException(e);
             tracer.failure(ce);
             throw ce;
         }
@@ -69,6 +68,5 @@ public abstract class AbstractOperationImpl<R> implements
         return pinnedHost;
     }
 
-    protected abstract R internalExecute(Cassandra.Client client)
-            throws Exception;
+    protected abstract R internalExecute(Cassandra.Client client) throws Exception;
 }

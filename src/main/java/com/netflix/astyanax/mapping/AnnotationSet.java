@@ -13,7 +13,7 @@ public interface AnnotationSet<ID extends Annotation, COLUMN extends Annotation>
     public Class<ID> getIdAnnotation();
 
     /**
-     * @return the Annoation class that marks a bean field as being
+     * @return the Annotation class that marks a bean field as being
      *         persist-able.
      */
     public Class<COLUMN> getColumnAnnotation();

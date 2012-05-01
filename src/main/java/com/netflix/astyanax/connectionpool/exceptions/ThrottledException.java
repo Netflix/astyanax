@@ -1,7 +1,6 @@
 package com.netflix.astyanax.connectionpool.exceptions;
 
-public class ThrottledException extends ConnectionException implements
-        IsRetryableException {
+public class ThrottledException extends ConnectionException implements IsRetryableException {
     private static final long serialVersionUID = 1257641642867458438L;
 
     public ThrottledException(String message) {

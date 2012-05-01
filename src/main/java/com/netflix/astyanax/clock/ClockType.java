@@ -18,8 +18,7 @@ package com.netflix.astyanax.clock;
 import com.netflix.astyanax.Clock;
 
 public enum ClockType {
-    MSEC(new MillisecondsClock()), MICRO(new MicrosecondsSyncClock()), ASYNC_MICRO(
-            new MicrosecondsAsyncClock());
+    MSEC(new MillisecondsClock()), MICRO(new MicrosecondsSyncClock()), ASYNC_MICRO(new MicrosecondsAsyncClock());
 
     Clock clock;
 

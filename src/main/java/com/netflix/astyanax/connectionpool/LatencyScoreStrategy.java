@@ -97,7 +97,7 @@ public interface LatencyScoreStrategy {
      *            could be used.
      * @return
      */
-    <CL> List<HostConnectionPool<CL>> sortAndfilterPartition(
-            List<HostConnectionPool<CL>> pools, AtomicBoolean prioritized);
+    <CL> List<HostConnectionPool<CL>> sortAndfilterPartition(List<HostConnectionPool<CL>> pools,
+            AtomicBoolean prioritized);
 
 }

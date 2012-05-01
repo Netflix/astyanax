@@ -54,8 +54,7 @@ public class JsonRowsWriter implements RowsWriter {
     private int maxStringLength = 256;
     private String rowColumnDelimiter = "$";
 
-    public JsonRowsWriter(PrintWriter out, SerializerPackage serializers)
-            throws ConnectionException {
+    public JsonRowsWriter(PrintWriter out, SerializerPackage serializers) throws ConnectionException {
         this.out = out;
         this.serializers = serializers;
 
@@ -111,7 +110,8 @@ public class JsonRowsWriter implements RowsWriter {
     public JsonRowsWriter setDynamicColumnNames(boolean flag) {
         if (flag) {
             dynamicNames = Sets.newLinkedHashSet();
-        } else {
+        }
+        else {
             dynamicNames = null;
         }
         return this;
@@ -128,8 +128,7 @@ public class JsonRowsWriter implements RowsWriter {
         return this;
     }
 
-    public JsonRowsWriter setExceptionCallback(
-            ExceptionCallback exceptionCallback) {
+    public JsonRowsWriter setExceptionCallback(ExceptionCallback exceptionCallback) {
         this.exceptionCallback = exceptionCallback;
         return this;
     }
@@ -174,7 +173,8 @@ public class JsonRowsWriter implements RowsWriter {
 
         if (this.fixedNamesList != null) {
             writeColumnNames(this.fixedNamesList);
-        } else if (this.dynamicNames == null) {
+        }
+        else if (this.dynamicNames == null) {
             metadataNames = this.getColumnNamesFromMetadata();
             List<String> names = Lists.newArrayList(metadataNames);
             Collections.sort(names);
@@ -195,8 +195,7 @@ public class JsonRowsWriter implements RowsWriter {
                     continue;
                 rowCount++;
                 String idString = serializers.keyAsString(row.getRawKey());
-                count += writeColumnsAsRows(idString, row.getColumns(),
-                        firstRow);
+                count += writeColumnsAsRows(idString, row.getColumns(), firstRow);
                 firstRow = false;
             }
 
@@ -204,7 +203,8 @@ public class JsonRowsWriter implements RowsWriter {
                 out.append("]");
             }
             out.println();
-        } else {
+        }
+        else {
             if (rowsAsArray) {
                 out.append("[").println();
 
@@ -215,21 +215,20 @@ public class JsonRowsWriter implements RowsWriter {
                     rowCount++;
                     if (!firstRow) {
                         out.println(",");
-                    } else {
+                    }
+                    else {
                         firstRow = false;
                     }
 
                     out.append("{");
                     try {
-                        String idString = serializers.keyAsString(row
-                                .getRawKey());
-                        out.append(
-                                jsonifyString(this.fieldNames
-                                        .get(Field.ROW_KEY))).append(":")
+                        String idString = serializers.keyAsString(row.getRawKey());
+                        out.append(jsonifyString(this.fieldNames.get(Field.ROW_KEY))).append(":")
                                 .append(jsonifyString(idString));
                         writeColumns(row.getColumns(), false);
                         count++;
-                    } catch (Exception e) {
+                    }
+                    catch (Exception e) {
                         if (!ignoreExceptions) {
                             throw e;
                         }
@@ -239,7 +238,8 @@ public class JsonRowsWriter implements RowsWriter {
 
                 out.println();
                 out.append("]");
-            } else {
+            }
+            else {
                 out.append("{").println();
 
                 boolean firstRow = true;
@@ -249,19 +249,20 @@ public class JsonRowsWriter implements RowsWriter {
                     rowCount++;
                     if (!firstRow) {
                         out.println(",");
-                    } else {
+                    }
+                    else {
                         firstRow = false;
                     }
 
                     try {
-                        String idString = serializers.keyAsString(row
-                                .getRawKey());
+                        String idString = serializers.keyAsString(row.getRawKey());
                         out.append(jsonifyString(idString)).append(":{");
                         // out.append(jsonifyString(this.fieldNames.get(Field.ROW_KEY))).append(":").append(jsonifyString(idString));
                         writeColumns(row.getColumns(), true);
                         out.print("}");
                         count++;
-                    } catch (Exception e) {
+                    }
+                    catch (Exception e) {
                         if (!ignoreExceptions) {
                             throw e;
                         }
@@ -282,20 +283,19 @@ public class JsonRowsWriter implements RowsWriter {
         if (extra != null) {
             out.append(extra).println(",");
         }
-        out.append(jsonifyString(this.fieldNames.get(Field.COUNT))).append(":")
-                .append(Integer.toString(count)).println();
+        out.append(jsonifyString(this.fieldNames.get(Field.COUNT))).append(":").append(Integer.toString(count))
+                .println();
         out.println("}");
     }
 
-    private int writeColumnsAsRows(String rowKey, ColumnList<?> columns,
-            boolean first) throws Exception {
+    private int writeColumnsAsRows(String rowKey, ColumnList<?> columns, boolean first) throws Exception {
         for (Column<?> column : columns) {
             try {
                 String columnString;
                 try {
-                    columnString = serializers.columnAsString(column
-                            .getRawName());
-                } catch (Exception e) {
+                    columnString = serializers.columnAsString(column.getRawName());
+                }
+                catch (Exception e) {
                     e.printStackTrace();
                     if (!ignoreExceptions) {
                         throw e;
@@ -305,9 +305,9 @@ public class JsonRowsWriter implements RowsWriter {
 
                 String valueString = null;
                 try {
-                    valueString = serializers.valueAsString(
-                            column.getRawName(), column.getByteBufferValue());
-                } catch (Exception e) {
+                    valueString = serializers.valueAsString(column.getRawName(), column.getByteBufferValue());
+                }
+                catch (Exception e) {
                     e.printStackTrace();
                     if (!ignoreExceptions) {
                         throw e;
@@ -317,42 +317,38 @@ public class JsonRowsWriter implements RowsWriter {
 
                 if (!first) {
                     out.println(",");
-                } else {
+                }
+                else {
                     first = false;
                 }
                 out.append("{");
                 if (rowsAsArray) {
-                    out.append(
-                            jsonifyString(this.fieldNames.get(Field.ROW_KEY)))
-                            .append(":").append(jsonifyString(rowKey));
-                } else {
-                    out.append(
-                            jsonifyString(rowKey + rowColumnDelimiter
-                                    + columnString)).append(":{");
+                    out.append(jsonifyString(this.fieldNames.get(Field.ROW_KEY))).append(":")
+                            .append(jsonifyString(rowKey));
+                }
+                else {
+                    out.append(jsonifyString(rowKey + rowColumnDelimiter + columnString)).append(":{");
                 }
                 out.print(",");
 
                 String timestampString;
                 try {
-                    timestampString = new SimpleDateFormat(TIME_FORMAT_STRING)
-                            .format(new Date(column.getTimestamp() / 1000));
-                } catch (Exception e) {
+                    timestampString = new SimpleDateFormat(TIME_FORMAT_STRING).format(new Date(
+                            column.getTimestamp() / 1000));
+                }
+                catch (Exception e) {
                     timestampString = "none";
                 }
 
                 columnCount++;
-                out.append(jsonifyString(this.fieldNames.get(Field.COLUMN)))
-                        .append(":")
-                        .append(jsonifyString(columnString))
-                        .append(",")
-                        .append(jsonifyString(this.fieldNames.get(Field.VALUE)))
-                        .append(":")
-                        .append(jsonifyString(valueString))
-                        .append(",")
-                        .append(jsonifyString(this.fieldNames
-                                .get(Field.TIMESTAMP))).append(":")
+                out.append(jsonifyString(this.fieldNames.get(Field.COLUMN))).append(":")
+                        .append(jsonifyString(columnString)).append(",")
+                        .append(jsonifyString(this.fieldNames.get(Field.VALUE))).append(":")
+                        .append(jsonifyString(valueString)).append(",")
+                        .append(jsonifyString(this.fieldNames.get(Field.TIMESTAMP))).append(":")
                         .append(jsonifyString(timestampString)).append("}");
-            } catch (Exception e) {
+            }
+            catch (Exception e) {
                 if (!ignoreExceptions) {
                     throw e;
                 }
@@ -362,15 +358,14 @@ public class JsonRowsWriter implements RowsWriter {
         return columns.size();
     }
 
-    private void writeColumns(ColumnList<?> columns, boolean first)
-            throws Exception {
+    private void writeColumns(ColumnList<?> columns, boolean first) throws Exception {
         for (Column<?> column : columns) {
             try {
                 String columnString;
                 try {
-                    columnString = serializers.columnAsString(column
-                            .getRawName());
-                } catch (Exception e) {
+                    columnString = serializers.columnAsString(column.getRawName());
+                }
+                catch (Exception e) {
                     e.printStackTrace();
                     if (!ignoreExceptions) {
                         throw e;
@@ -382,11 +377,9 @@ public class JsonRowsWriter implements RowsWriter {
                 }
 
                 if (this.ignoreUndefinedColumns) {
-                    if (this.fixedNames != null
-                            && !this.fixedNames.contains(columnString))
+                    if (this.fixedNames != null && !this.fixedNames.contains(columnString))
                         continue;
-                    if (this.metadataNames != null
-                            && !this.metadataNames.contains(columnString))
+                    if (this.metadataNames != null && !this.metadataNames.contains(columnString))
                         continue;
                 }
 
@@ -395,9 +388,9 @@ public class JsonRowsWriter implements RowsWriter {
 
                 String valueString = null;
                 try {
-                    valueString = serializers.valueAsString(
-                            column.getRawName(), column.getByteBufferValue());
-                } catch (Exception e) {
+                    valueString = serializers.valueAsString(column.getRawName(), column.getByteBufferValue());
+                }
+                catch (Exception e) {
                     e.printStackTrace();
                     if (!ignoreExceptions) {
                         throw e;
@@ -409,9 +402,9 @@ public class JsonRowsWriter implements RowsWriter {
                     out.append(",");
                 else
                     first = false;
-                out.append(jsonifyString(columnString)).append(":")
-                        .append(jsonifyString(valueString));
-            } catch (Exception e) {
+                out.append(jsonifyString(columnString)).append(":").append(jsonifyString(valueString));
+            }
+            catch (Exception e) {
                 if (!ignoreExceptions) {
                     throw e;
                 }
@@ -426,13 +419,15 @@ public class JsonRowsWriter implements RowsWriter {
                 try {
                     String columnName = this.serializers.columnAsString(name);
                     set.add(columnName);
-                } catch (Exception e) {
+                }
+                catch (Exception e) {
                     if (!ignoreExceptions) {
                         throw e;
                     }
                 }
             }
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             if (!ignoreExceptions) {
                 throw e;
             }
@@ -442,8 +437,7 @@ public class JsonRowsWriter implements RowsWriter {
 
     private void writeColumnNames(List<String> names) throws Exception {
         try {
-            out.append(jsonifyString(this.fieldNames.get(Field.NAMES))).append(
-                    ":[");
+            out.append(jsonifyString(this.fieldNames.get(Field.NAMES))).append(":[");
 
             boolean first = true;
             if (this.rowsAsArray) {
@@ -461,11 +455,13 @@ public class JsonRowsWriter implements RowsWriter {
                     else
                         first = false;
                     out.append(jsonifyString(name));
-                } catch (Exception e) {
+                }
+                catch (Exception e) {
                 }
             }
             out.println("],");
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             if (!ignoreExceptions) {
                 throw e;
             }
@@ -478,7 +474,8 @@ public class JsonRowsWriter implements RowsWriter {
         }
         if (str.length() > maxStringLength) {
             return JSONObject.quote(str.substring(0, maxStringLength) + "...");
-        } else {
+        }
+        else {
             return JSONObject.quote(str);
         }
     }

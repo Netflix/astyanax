@@ -43,16 +43,15 @@ public class ColumnFamily<K, C> {
      * @param type
      * @deprecated Super columns should be replaced with composite columns
      */
-    public ColumnFamily(String columnFamilyName, Serializer<K> keySerializer,
-            Serializer<C> columnSerializer, ColumnType type) {
+    public ColumnFamily(String columnFamilyName, Serializer<K> keySerializer, Serializer<C> columnSerializer,
+            ColumnType type) {
         this.columnFamilyName = columnFamilyName;
         this.keySerializer = keySerializer;
         this.columnSerializer = columnSerializer;
         this.type = type;
     }
 
-    public ColumnFamily(String columnFamilyName, Serializer<K> keySerializer,
-            Serializer<C> columnSerializer) {
+    public ColumnFamily(String columnFamilyName, Serializer<K> keySerializer, Serializer<C> columnSerializer) {
         this.columnFamilyName = columnFamilyName;
         this.keySerializer = keySerializer;
         this.columnSerializer = columnSerializer;
@@ -96,10 +95,8 @@ public class ColumnFamily<K, C> {
         return new PreparedIndexExpressionImpl<K, C>(this.columnSerializer);
     }
 
-    public static <K, C> ColumnFamily<K, C> newColumnFamily(
-            String columnFamilyName, Serializer<K> keySerializer,
+    public static <K, C> ColumnFamily<K, C> newColumnFamily(String columnFamilyName, Serializer<K> keySerializer,
             Serializer<C> columnSerializer) {
-        return new ColumnFamily<K, C>(columnFamilyName, keySerializer,
-                columnSerializer);
+        return new ColumnFamily<K, C>(columnFamilyName, keySerializer, columnSerializer);
     }
 }

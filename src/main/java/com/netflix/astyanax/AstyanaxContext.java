@@ -51,8 +51,7 @@ public class AstyanaxContext<Entity> {
         protected AstyanaxConfiguration asConfig;
         protected String clusterName;
         protected String keyspaceName;
-        protected KeyspaceTracerFactory tracerFactory = EmptyKeyspaceTracerFactory
-                .getInstance();
+        protected KeyspaceTracerFactory tracerFactory = EmptyKeyspaceTracerFactory.getInstance();
         protected Supplier<Map<BigInteger, List<Host>>> hostSupplier;
         protected ConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
 
@@ -66,8 +65,7 @@ public class AstyanaxContext<Entity> {
             return this;
         }
 
-        public Builder withConnectionPoolConfiguration(
-                ConnectionPoolConfiguration cpConfig) {
+        public Builder withConnectionPoolConfiguration(ConnectionPoolConfiguration cpConfig) {
             this.cpConfig = cpConfig;
             return this;
         }
@@ -77,8 +75,7 @@ public class AstyanaxContext<Entity> {
             return this;
         }
 
-        public Builder withHostSupplier(
-                Supplier<Map<BigInteger, List<Host>>> tokenRangeSupplier) {
+        public Builder withHostSupplier(Supplier<Map<BigInteger, List<Host>>> tokenRangeSupplier) {
             this.hostSupplier = tokenRangeSupplier;
             return this;
         }
@@ -97,34 +94,32 @@ public class AstyanaxContext<Entity> {
             if (cpConfig.getSeeds() != null) {
                 if (asConfig.getConnectionPoolType() == ConnectionPoolType.TOKEN_AWARE)
                     return NodeDiscoveryType.RING_DESCRIBE;
-            } else {
+            }
+            else {
                 if (asConfig.getConnectionPoolType() == ConnectionPoolType.TOKEN_AWARE) {
                     return NodeDiscoveryType.TOKEN_AWARE;
-                } else {
+                }
+                else {
                     return NodeDiscoveryType.DISCOVERY_SERVICE;
                 }
             }
             return asConfig.getDiscoveryType();
         }
 
-        protected <T> ConnectionPool<T> createConnectionPool(
-                ConnectionFactory<T> connectionFactory) {
+        protected <T> ConnectionPool<T> createConnectionPool(ConnectionFactory<T> connectionFactory) {
             ConnectionPool<T> connectionPool = null;
             switch (asConfig.getConnectionPoolType()) {
             case TOKEN_AWARE:
-                connectionPool = new TokenAwareConnectionPoolImpl<T>(cpConfig,
-                        connectionFactory, monitor);
+                connectionPool = new TokenAwareConnectionPoolImpl<T>(cpConfig, connectionFactory, monitor);
                 break;
 
             case BAG:
-                connectionPool = new BagOfConnectionsConnectionPoolImpl<T>(
-                        cpConfig, connectionFactory, monitor);
+                connectionPool = new BagOfConnectionsConnectionPoolImpl<T>(cpConfig, connectionFactory, monitor);
                 break;
 
             case ROUND_ROBIN:
             default:
-                connectionPool = new RoundRobinConnectionPoolImpl<T>(cpConfig,
-                        connectionFactory, monitor);
+                connectionPool = new RoundRobinConnectionPoolImpl<T>(cpConfig, connectionFactory, monitor);
                 break;
             }
 
@@ -135,37 +130,32 @@ public class AstyanaxContext<Entity> {
             return connectionPool;
         }
 
-        public <T> AstyanaxContext<Keyspace> buildKeyspace(
-                AstyanaxTypeFactory<T> factory) {
-            ConnectionPool<T> cp = createConnectionPool(factory
-                    .createConnectionFactory(cpConfig, tracerFactory, monitor));
+        public <T> AstyanaxContext<Keyspace> buildKeyspace(AstyanaxTypeFactory<T> factory) {
+            ConnectionPool<T> cp = createConnectionPool(factory.createConnectionFactory(cpConfig, tracerFactory,
+                    monitor));
             this.cp = cp;
 
-            final Keyspace keyspace = factory.createKeyspace(keyspaceName, cp,
-                    asConfig, tracerFactory);
+            final Keyspace keyspace = factory.createKeyspace(keyspaceName, cp, asConfig, tracerFactory);
 
             Supplier<Map<BigInteger, List<Host>>> supplier = null;
 
             switch (getNodeDiscoveryType()) {
             case DISCOVERY_SERVICE:
-                Preconditions.checkNotNull(hostSupplier,
-                        "Missing host name supplier");
+                Preconditions.checkNotNull(hostSupplier, "Missing host name supplier");
                 supplier = hostSupplier;
                 break;
 
             case RING_DESCRIBE:
-                supplier = new RingDescribeHostSupplier(keyspace,
-                        cpConfig.getPort());
+                supplier = new RingDescribeHostSupplier(keyspace, cpConfig.getPort());
                 break;
 
             case TOKEN_AWARE:
                 if (hostSupplier == null) {
-                    supplier = new RingDescribeHostSupplier(keyspace,
-                            cpConfig.getPort());
-                } else {
-                    supplier = new FilteringHostSupplier(
-                            new RingDescribeHostSupplier(keyspace,
-                                    cpConfig.getPort()), hostSupplier);
+                    supplier = new RingDescribeHostSupplier(keyspace, cpConfig.getPort());
+                }
+                else {
+                    supplier = new FilteringHostSupplier(new RingDescribeHostSupplier(keyspace, cpConfig.getPort()),
+                            hostSupplier);
                 }
                 break;
 
@@ -175,28 +165,23 @@ public class AstyanaxContext<Entity> {
             }
 
             if (supplier != null) {
-                discovery = new NodeDiscoveryImpl(StringUtils.join(
-                        Arrays.asList(clusterName, keyspaceName), "_"),
-                        asConfig.getDiscoveryDelayInSeconds() * 1000, supplier,
-                        cp);
+                discovery = new NodeDiscoveryImpl(StringUtils.join(Arrays.asList(clusterName, keyspaceName), "_"),
+                        asConfig.getDiscoveryDelayInSeconds() * 1000, supplier, cp);
             }
 
             return new AstyanaxContext<Keyspace>(this, keyspace);
         }
 
-        public <T> AstyanaxContext<Cluster> buildCluster(
-                AstyanaxTypeFactory<T> factory) {
-            ConnectionPool<T> cp = createConnectionPool(factory
-                    .createConnectionFactory(cpConfig, tracerFactory, monitor));
+        public <T> AstyanaxContext<Cluster> buildCluster(AstyanaxTypeFactory<T> factory) {
+            ConnectionPool<T> cp = createConnectionPool(factory.createConnectionFactory(cpConfig, tracerFactory,
+                    monitor));
             this.cp = cp;
 
             if (hostSupplier != null) {
-                discovery = new NodeDiscoveryImpl(clusterName,
-                        asConfig.getDiscoveryDelayInSeconds() * 1000,
+                discovery = new NodeDiscoveryImpl(clusterName, asConfig.getDiscoveryDelayInSeconds() * 1000,
                         hostSupplier, cp);
             }
-            return new AstyanaxContext<Cluster>(this, factory.createCluster(cp,
-                    asConfig, tracerFactory));
+            return new AstyanaxContext<Cluster>(this, factory.createCluster(cp, asConfig, tracerFactory));
         }
     }
 

@@ -19,9 +19,8 @@ import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.UUIDSerializer;
 
-public class PreparedIndexExpressionImpl<K, C> implements
-        PreparedIndexExpression<K, C>, PreparedIndexOperationExpression<K, C>,
-        PreparedIndexValueExpression<K, C> {
+public class PreparedIndexExpressionImpl<K, C> implements PreparedIndexExpression<K, C>,
+        PreparedIndexOperationExpression<K, C>, PreparedIndexValueExpression<K, C> {
     private ByteBuffer value;
     private ByteBuffer column;
     private IndexOperator operator;
@@ -137,8 +136,7 @@ public class PreparedIndexExpressionImpl<K, C> implements
     }
 
     @Override
-    public <V> PreparedIndexExpression<K, C> value(V value,
-            Serializer<V> valueSerializer) {
+    public <V> PreparedIndexExpression<K, C> value(V value, Serializer<V> valueSerializer) {
         this.value = valueSerializer.toByteBuffer(value);
         return this;
     }

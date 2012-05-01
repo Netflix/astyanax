@@ -25,8 +25,7 @@ import com.netflix.astyanax.serializers.StringSerializer;
  */
 public class CassandraChunkedStorageProvider implements ChunkedStorageProvider {
 
-    private static final RetryPolicy DEFAULT_RETRY_POLICY = new BoundedExponentialBackoff(
-            1000, 10000, 5);
+    private static final RetryPolicy DEFAULT_RETRY_POLICY = new BoundedExponentialBackoff(1000, 10000, 5);
     private static final ConsistencyLevel DEFAULT_CONSISTENCY_LEVEL = ConsistencyLevel.CL_QUORUM;
     private static final int DEFAULT_CHUNKSIZE = 0x4000;
     private static final String DEFAULT_ROW_KEY_FORMAT = "%s$%d";
@@ -45,18 +44,15 @@ public class CassandraChunkedStorageProvider implements ChunkedStorageProvider {
 
     public CassandraChunkedStorageProvider(Keyspace keyspace, String cfName) {
         this.keyspace = keyspace;
-        this.cf = ColumnFamily.newColumnFamily(cfName, StringSerializer.get(),
-                StringSerializer.get());
+        this.cf = ColumnFamily.newColumnFamily(cfName, StringSerializer.get(), StringSerializer.get());
     }
 
-    public CassandraChunkedStorageProvider(Keyspace keyspace,
-            ColumnFamily<String, String> cf) {
+    public CassandraChunkedStorageProvider(Keyspace keyspace, ColumnFamily<String, String> cf) {
         this.keyspace = keyspace;
         this.cf = cf;
     }
 
-    public CassandraChunkedStorageProvider withColumnName(Columns column,
-            String name) {
+    public CassandraChunkedStorageProvider withColumnName(Columns column, String name) {
         names.put(column, name);
         return this;
     }
@@ -73,18 +69,14 @@ public class CassandraChunkedStorageProvider implements ChunkedStorageProvider {
     }
 
     @Override
-    public int writeChunk(String objectName, int chunkId, ByteBuffer data,
-            Integer ttl) throws Exception {
-        MutationBatch m = keyspace.prepareMutationBatch().withRetryPolicy(
-                retryPolicy);
+    public int writeChunk(String objectName, int chunkId, ByteBuffer data, Integer ttl) throws Exception {
+        MutationBatch m = keyspace.prepareMutationBatch().withRetryPolicy(retryPolicy);
 
-        m.withRow(cf, getRowKey(objectName, chunkId))
-                .putColumn(getColumnName(Columns.DATA), data, ttl)
+        m.withRow(cf, getRowKey(objectName, chunkId)).putColumn(getColumnName(Columns.DATA), data, ttl)
                 .putColumn(getColumnName(Columns.CHUNKSIZE), data.limit(), ttl);
 
         if (chunkId == 0) {
-            m.withRow(cf, objectName).putColumn(
-                    getColumnName(Columns.CHUNKSIZE), data.limit(), ttl);
+            m.withRow(cf, objectName).putColumn(getColumnName(Columns.CHUNKSIZE), data.limit(), ttl);
         }
 
         m.execute();
@@ -93,23 +85,17 @@ public class CassandraChunkedStorageProvider implements ChunkedStorageProvider {
     }
 
     @Override
-    public ByteBuffer readChunk(String objectName, int chunkId)
-            throws Exception {
-        return keyspace.prepareQuery(cf)
-                .setConsistencyLevel(ConsistencyLevel.CL_ONE)
-                .withRetryPolicy(retryPolicy)
-                .getKey(getRowKey(objectName, chunkId))
-                .getColumn(getColumnName(Columns.DATA)).execute().getResult()
+    public ByteBuffer readChunk(String objectName, int chunkId) throws Exception {
+        return keyspace.prepareQuery(cf).setConsistencyLevel(ConsistencyLevel.CL_ONE).withRetryPolicy(retryPolicy)
+                .getKey(getRowKey(objectName, chunkId)).getColumn(getColumnName(Columns.DATA)).execute().getResult()
                 .getByteBufferValue();
     }
 
     private String getRowKey(String objectName, int chunkId) {
-        return new String(rowKeyFormat).replace("%s", objectName).replace("%d",
-                Integer.toString(chunkId));
+        return new String(rowKeyFormat).replace("%s", objectName).replace("%d", Integer.toString(chunkId));
     }
 
-    public CassandraChunkedStorageProvider setConsistencyLevel(
-            ConsistencyLevel consistencyLevel) {
+    public CassandraChunkedStorageProvider setConsistencyLevel(ConsistencyLevel consistencyLevel) {
         this.consistencyLevel = consistencyLevel;
         return this;
     }
@@ -119,49 +105,34 @@ public class CassandraChunkedStorageProvider implements ChunkedStorageProvider {
     }
 
     @Override
-    public void writeMetadata(String objectName, ObjectMetadata attr)
-            throws Exception {
-        MutationBatch m = keyspace.prepareMutationBatch().withRetryPolicy(
-                retryPolicy);
+    public void writeMetadata(String objectName, ObjectMetadata attr) throws Exception {
+        MutationBatch m = keyspace.prepareMutationBatch().withRetryPolicy(retryPolicy);
 
         ColumnListMutation<String> row = m.withRow(cf, objectName);
         if (attr.getChunkSize() != null)
-            row.putColumn(getColumnName(Columns.CHUNKSIZE),
-                    attr.getChunkSize(), attr.getTtl());
+            row.putColumn(getColumnName(Columns.CHUNKSIZE), attr.getChunkSize(), attr.getTtl());
         if (attr.getChunkCount() != null)
-            row.putColumn(getColumnName(Columns.CHUNKCOUNT),
-                    attr.getChunkCount(), attr.getTtl());
+            row.putColumn(getColumnName(Columns.CHUNKCOUNT), attr.getChunkCount(), attr.getTtl());
         if (attr.getObjectSize() != null)
-            row.putColumn(getColumnName(Columns.OBJECTSIZE),
-                    attr.getObjectSize(), attr.getTtl());
+            row.putColumn(getColumnName(Columns.OBJECTSIZE), attr.getObjectSize(), attr.getTtl());
         m.execute();
     }
 
     @Override
-    public ObjectMetadata readMetadata(String objectName) throws Exception,
-            NotFoundException {
-        ColumnList<String> columns = keyspace.prepareQuery(cf)
-                .getKey(objectName).execute().getResult();
+    public ObjectMetadata readMetadata(String objectName) throws Exception, NotFoundException {
+        ColumnList<String> columns = keyspace.prepareQuery(cf).getKey(objectName).execute().getResult();
 
         if (columns.isEmpty()) {
             throw new NotFoundException(objectName);
         }
 
-        return new ObjectMetadata()
-                .setObjectSize(
-                        columns.getLongValue(getColumnName(Columns.OBJECTSIZE),
-                                null))
-                .setChunkSize(
-                        columns.getIntegerValue(
-                                getColumnName(Columns.CHUNKSIZE), null))
-                .setChunkCount(
-                        columns.getIntegerValue(
-                                getColumnName(Columns.CHUNKCOUNT), null));
+        return new ObjectMetadata().setObjectSize(columns.getLongValue(getColumnName(Columns.OBJECTSIZE), null))
+                .setChunkSize(columns.getIntegerValue(getColumnName(Columns.CHUNKSIZE), null))
+                .setChunkCount(columns.getIntegerValue(getColumnName(Columns.CHUNKCOUNT), null));
     }
 
     @Override
-    public void deleteObject(String objectName, Integer chunkCount)
-            throws Exception, NotFoundException {
+    public void deleteObject(String objectName, Integer chunkCount) throws Exception, NotFoundException {
         if (chunkCount == null) {
             ObjectMetadata attr = readMetadata(objectName);
             if (attr.getChunkCount() == null)
@@ -169,8 +140,7 @@ public class CassandraChunkedStorageProvider implements ChunkedStorageProvider {
             chunkCount = attr.getChunkCount();
         }
 
-        MutationBatch m = keyspace.prepareMutationBatch().withRetryPolicy(
-                retryPolicy);
+        MutationBatch m = keyspace.prepareMutationBatch().withRetryPolicy(retryPolicy);
 
         for (int i = 0; i < chunkCount; i++) {
             m.withRow(cf, getRowKey(objectName, i)).delete();

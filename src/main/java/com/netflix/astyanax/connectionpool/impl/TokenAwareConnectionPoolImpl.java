@@ -44,39 +44,34 @@ import com.netflix.astyanax.connectionpool.exceptions.NoAvailableHostsException;
  * 
  * @param <CL>
  */
-public class TokenAwareConnectionPoolImpl<CL> extends
-        AbstractHostPartitionConnectionPool<CL> {
+public class TokenAwareConnectionPoolImpl<CL> extends AbstractHostPartitionConnectionPool<CL> {
 
-    private AtomicInteger roundRobinCounter = new AtomicInteger(
-            new Random().nextInt(997));
+    private AtomicInteger roundRobinCounter = new AtomicInteger(new Random().nextInt(997));
 
-    public TokenAwareConnectionPoolImpl(
-            ConnectionPoolConfiguration configuration,
-            ConnectionFactory<CL> factory, ConnectionPoolMonitor monitor) {
+    public TokenAwareConnectionPoolImpl(ConnectionPoolConfiguration configuration, ConnectionFactory<CL> factory,
+            ConnectionPoolMonitor monitor) {
         super(configuration, factory, monitor);
     }
 
     @SuppressWarnings("unchecked")
-    public <R> ExecuteWithFailover<CL, R> newExecuteWithFailover(
-            Operation<CL, R> op) throws ConnectionException {
+    public <R> ExecuteWithFailover<CL, R> newExecuteWithFailover(Operation<CL, R> op) throws ConnectionException {
         List<HostConnectionPool<CL>> pools;
         boolean isSorted = false;
 
         if (op.getPinnedHost() != null) {
             HostConnectionPool<CL> pool = hosts.get(op.getPinnedHost());
             if (pool == null) {
-                throw new NoAvailableHostsException("Host "
-                        + op.getPinnedHost() + " not active");
+                throw new NoAvailableHostsException("Host " + op.getPinnedHost() + " not active");
             }
             pools = Arrays.<HostConnectionPool<CL>> asList(pool);
-        } else {
-            HostConnectionPoolPartition<CL> partition = topology
-                    .getPartition(op.getToken());
+        }
+        else {
+            HostConnectionPoolPartition<CL> partition = topology.getPartition(op.getToken());
             pools = partition.getPools();
             isSorted = partition.isSorted();
         }
 
-        return new RoundRobinExecuteWithFailover<CL, R>(config, monitor, pools,
-                isSorted ? 0 : roundRobinCounter.incrementAndGet());
+        return new RoundRobinExecuteWithFailover<CL, R>(config, monitor, pools, isSorted ? 0
+                : roundRobinCounter.incrementAndGet());
     }
 }

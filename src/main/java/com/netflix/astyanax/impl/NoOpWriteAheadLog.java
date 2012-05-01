@@ -11,13 +11,11 @@ public class NoOpWriteAheadLog implements WriteAheadLog {
     public WriteAheadEntry createEntry() throws WalException {
         return new WriteAheadEntry() {
             @Override
-            public void readMutation(MutationBatch mutation)
-                    throws WalException {
+            public void readMutation(MutationBatch mutation) throws WalException {
             }
 
             @Override
-            public void writeMutation(MutationBatch mutation)
-                    throws WalException {
+            public void writeMutation(MutationBatch mutation) throws WalException {
             }
         };
     }

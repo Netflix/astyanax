@@ -19,8 +19,7 @@ public class ThriftAllRowsImpl<K, C> implements Rows<K, C> {
     private AbstractThriftAllRowsQueryImpl<K, C> query;
     private final RandomPartitioner partitioner = new RandomPartitioner();
 
-    public ThriftAllRowsImpl(AbstractThriftAllRowsQueryImpl<K, C> query,
-            ColumnFamily<K, C> columnFamily) {
+    public ThriftAllRowsImpl(AbstractThriftAllRowsQueryImpl<K, C> query, ColumnFamily<K, C> columnFamily) {
         this.columnFamily = columnFamily;
         this.query = query;
     }
@@ -38,26 +37,22 @@ public class ThriftAllRowsImpl<K, C> implements Rows<K, C> {
             private Iterator<org.apache.cassandra.thrift.KeySlice> iter = null;
 
             {
-                range = new KeyRange().setCount(query.getBlockSize())
-                        .setStart_token("0").setEnd_token("0");
+                range = new KeyRange().setCount(query.getBlockSize()).setStart_token("0").setEnd_token("0");
             }
 
             @Override
             public boolean hasNext() {
                 // Get the next block
-                if (iter == null
-                        || (!iter.hasNext() && list.size() == query
-                                .getBlockSize())) {
+                if (iter == null || (!iter.hasNext() && list.size() == query.getBlockSize())) {
                     if (lastRow != null) {
                         // Determine the start token for the next page
-                        String token = partitioner.getToken(
-                                ByteBuffer.wrap(lastRow.getKey())).toString();
+                        String token = partitioner.getToken(ByteBuffer.wrap(lastRow.getKey())).toString();
                         if (query.getRepeatLastToken()) {
                             // Start token is non-inclusive
-                            BigInteger intToken = new BigInteger(token)
-                                    .subtract(new BigInteger("1"));
+                            BigInteger intToken = new BigInteger(token).subtract(new BigInteger("1"));
                             range.setStart_token(intToken.toString());
-                        } else {
+                        }
+                        else {
                             range.setStart_token(token);
                         }
                     }
@@ -74,8 +69,7 @@ public class ThriftAllRowsImpl<K, C> implements Rows<K, C> {
 
                     // If repeating last token then skip the first row in the
                     // result
-                    if (lastRow != null && query.getRepeatLastToken()
-                            && iter.hasNext()) {
+                    if (lastRow != null && query.getRepeatLastToken() && iter.hasNext()) {
                         iter.next();
                     }
 
@@ -87,12 +81,9 @@ public class ThriftAllRowsImpl<K, C> implements Rows<K, C> {
             @Override
             public Row<K, C> next() {
                 org.apache.cassandra.thrift.KeySlice row = iter.next();
-                return new ThriftRowImpl<K, C>(columnFamily.getKeySerializer()
-                        .fromBytes(row.getKey()),
-                        ByteBuffer.wrap(row.getKey()),
-                        new ThriftColumnOrSuperColumnListImpl<C>(row
-                                .getColumns(), columnFamily
-                                .getColumnSerializer()));
+                return new ThriftRowImpl<K, C>(columnFamily.getKeySerializer().fromBytes(row.getKey()),
+                        ByteBuffer.wrap(row.getKey()), new ThriftColumnOrSuperColumnListImpl<C>(row.getColumns(),
+                                columnFamily.getColumnSerializer()));
             }
 
             @Override

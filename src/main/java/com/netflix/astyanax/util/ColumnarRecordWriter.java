@@ -32,23 +32,24 @@ public class ColumnarRecordWriter implements RecordWriter {
 
     public ColumnarRecordWriter(Keyspace keyspace, String cfName) {
         this.keyspace = keyspace;
-        this.cf = new ColumnFamily<ByteBuffer, ByteBuffer>(cfName,
-                ByteBufferSerializer.get(), ByteBufferSerializer.get());
+        this.cf = new ColumnFamily<ByteBuffer, ByteBuffer>(cfName, ByteBufferSerializer.get(),
+                ByteBufferSerializer.get());
         try {
             this.serializers = keyspace.getSerializerPackage(cfName, true);
-        } catch (ConnectionException e) {
+        }
+        catch (ConnectionException e) {
             this.serializers = SerializerPackageImpl.DEFAULT_SERIALIZER_PACKAGE;
-        } catch (UnknownComparatorException e) {
+        }
+        catch (UnknownComparatorException e) {
             // We should never get this
         }
     }
 
-    public ColumnarRecordWriter(Keyspace keyspace, String cfName,
-            SerializerPackage serializers) {
+    public ColumnarRecordWriter(Keyspace keyspace, String cfName, SerializerPackage serializers) {
         this.keyspace = keyspace;
         this.serializers = serializers;
-        this.cf = new ColumnFamily<ByteBuffer, ByteBuffer>(cfName,
-                ByteBufferSerializer.get(), ByteBufferSerializer.get());
+        this.cf = new ColumnFamily<ByteBuffer, ByteBuffer>(cfName, ByteBufferSerializer.get(),
+                ByteBufferSerializer.get());
     }
 
     public ColumnarRecordWriter setBatchSize(int size) {
@@ -71,15 +72,14 @@ public class ColumnarRecordWriter implements RecordWriter {
         ByteBuffer rowKey = this.serializers.keyAsByteBuffer(iter.next().right);
 
         // Build row mutation for all columns
-        ColumnListMutation<ByteBuffer> rowMutation = mutation.withRow(cf,
-                rowKey);
+        ColumnListMutation<ByteBuffer> rowMutation = mutation.withRow(cf, rowKey);
         while (iter.hasNext()) {
             try {
                 Pair<String, String> pair = iter.next();
-                rowMutation.putColumn(this.serializers
-                        .columnAsByteBuffer(pair.left), this.serializers
-                        .valueAsByteBuffer(pair.left, pair.right), null);
-            } catch (Exception e) {
+                rowMutation.putColumn(this.serializers.columnAsByteBuffer(pair.left),
+                        this.serializers.valueAsByteBuffer(pair.left, pair.right), null);
+            }
+            catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
@@ -88,7 +88,8 @@ public class ColumnarRecordWriter implements RecordWriter {
         if (batchSize == mutation.getRowCount()) {
             try {
                 mutation.execute();
-            } catch (ConnectionException e) {
+            }
+            catch (ConnectionException e) {
                 mutation.discardMutations();
                 throw new RuntimeException(e);
             }
@@ -100,7 +101,8 @@ public class ColumnarRecordWriter implements RecordWriter {
         if (mutation.getRowCount() > 0) {
             try {
                 mutation.execute();
-            } catch (ConnectionException e) {
+            }
+            catch (ConnectionException e) {
                 mutation.discardMutations();
             }
         }

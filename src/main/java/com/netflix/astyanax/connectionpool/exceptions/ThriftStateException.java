@@ -1,7 +1,7 @@
 package com.netflix.astyanax.connectionpool.exceptions;
 
-public class ThriftStateException extends ConnectionException implements
-        IsDeadConnectionException, IsRetryableException {
+public class ThriftStateException extends ConnectionException implements IsDeadConnectionException,
+        IsRetryableException {
     /**
 	 * 
 	 */

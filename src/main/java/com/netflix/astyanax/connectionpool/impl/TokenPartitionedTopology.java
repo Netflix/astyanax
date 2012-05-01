@@ -21,8 +21,7 @@ import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
 public class TokenPartitionedTopology<CL> implements Topology<CL> {
     private AtomicReference<List<HostConnectionPoolPartition<CL>>> sortedRing = new AtomicReference<List<HostConnectionPoolPartition<CL>>>();
 
-    private Map<BigInteger, HostConnectionPoolPartition<CL>> tokens = Maps
-            .newHashMap();
+    private Map<BigInteger, HostConnectionPoolPartition<CL>> tokens = Maps.newHashMap();
 
     private HostConnectionPoolPartition<CL> allPools;
 
@@ -65,8 +64,7 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
 
     @SuppressWarnings("unchecked")
     @Override
-    public synchronized boolean setPools(
-            Map<BigInteger, Collection<HostConnectionPool<CL>>> ring) {
+    public synchronized boolean setPools(Map<BigInteger, Collection<HostConnectionPool<CL>>> ring) {
         // Temporary list of token that will be removed if not found in the new
         // ring
         Set<BigInteger> tokensToRemove = Sets.newHashSet(tokens.keySet());
@@ -76,8 +74,7 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
 
         boolean didChange = false;
         // Iterate all tokens
-        for (Entry<BigInteger, Collection<HostConnectionPool<CL>>> entry : ring
-                .entrySet()) {
+        for (Entry<BigInteger, Collection<HostConnectionPool<CL>>> entry : ring.entrySet()) {
             BigInteger token = entry.getKey();
             tokensToRemove.remove(token);
 
@@ -134,8 +131,7 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
     @Override
     public HostConnectionPoolPartition<CL> getPartition(BigInteger token) {
         // First, get a copy of the partitions.
-        List<HostConnectionPoolPartition<CL>> partitions = this.sortedRing
-                .get();
+        List<HostConnectionPoolPartition<CL>> partitions = this.sortedRing.get();
         // Must have a token otherwise we default to the base class
         // implementation
         if (token == null || partitions == null || partitions.isEmpty()) {
@@ -151,8 +147,7 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
         // We convert this index (which is negative) to the index of the
         // previous position in the list.
         @SuppressWarnings("unchecked")
-        int j = Collections.binarySearch(partitions, token,
-                tokenSearchComparator);
+        int j = Collections.binarySearch(partitions, token, tokenSearchComparator);
         if (j < 0) {
             j = -j - 2;
         }

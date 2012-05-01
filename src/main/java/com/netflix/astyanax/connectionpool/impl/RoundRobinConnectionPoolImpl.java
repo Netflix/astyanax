@@ -29,32 +29,27 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 
  * @param <CL>
  */
-public class RoundRobinConnectionPoolImpl<CL> extends
-        AbstractHostPartitionConnectionPool<CL> {
+public class RoundRobinConnectionPoolImpl<CL> extends AbstractHostPartitionConnectionPool<CL> {
 
-    private final AtomicInteger roundRobinCounter = new AtomicInteger(
-            new Random().nextInt(997));
+    private final AtomicInteger roundRobinCounter = new AtomicInteger(new Random().nextInt(997));
 
-    public RoundRobinConnectionPoolImpl(ConnectionPoolConfiguration config,
-            ConnectionFactory<CL> factory, ConnectionPoolMonitor monitor) {
+    public RoundRobinConnectionPoolImpl(ConnectionPoolConfiguration config, ConnectionFactory<CL> factory,
+            ConnectionPoolMonitor monitor) {
         super(config, factory, monitor);
     }
 
     @SuppressWarnings("unchecked")
-    public <R> ExecuteWithFailover<CL, R> newExecuteWithFailover(
-            Operation<CL, R> operation) throws ConnectionException {
+    public <R> ExecuteWithFailover<CL, R> newExecuteWithFailover(Operation<CL, R> operation) throws ConnectionException {
         if (operation.getPinnedHost() != null) {
             HostConnectionPool<CL> pool = hosts.get(operation.getPinnedHost());
             if (pool == null) {
                 this.monitor.incNoHosts();
-                throw new NoAvailableHostsException("Host "
-                        + operation.getPinnedHost() + " not active");
+                throw new NoAvailableHostsException("Host " + operation.getPinnedHost() + " not active");
             }
             return new RoundRobinExecuteWithFailover<CL, R>(config, monitor,
                     Arrays.<HostConnectionPool<CL>> asList(pool), 0);
         }
-        return new RoundRobinExecuteWithFailover<CL, R>(config, monitor,
-                topology.getAllPools().getPools(),
+        return new RoundRobinExecuteWithFailover<CL, R>(config, monitor, topology.getAllPools().getPools(),
                 roundRobinCounter.incrementAndGet());
     }
 }

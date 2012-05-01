@@ -54,8 +54,7 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
     protected long timestamp;
     private Clock clock;
 
-    private Map<ByteBuffer, Map<String, List<Mutation>>> mutationMap = Maps
-            .newLinkedHashMap();
+    private Map<ByteBuffer, Map<String, List<Mutation>>> mutationMap = Maps.newLinkedHashMap();
 
     public AbstractThriftMutationBatchImpl(Clock clock) {
         this.clock = clock;
@@ -63,13 +62,11 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
     }
 
     @Override
-    public <K, C> ColumnListMutation<C> withRow(
-            ColumnFamily<K, C> columnFamily, K rowKey) {
+    public <K, C> ColumnListMutation<C> withRow(ColumnFamily<K, C> columnFamily, K rowKey) {
         if (clock != null && mutationMap.isEmpty())
             this.timestamp = clock.getCurrentTime();
 
-        return new ThriftColumnFamilyMutationImpl<C>(timestamp,
-                getColumnFamilyMutationList(columnFamily, rowKey),
+        return new ThriftColumnFamilyMutationImpl<C>(timestamp, getColumnFamilyMutationList(columnFamily, rowKey),
                 columnFamily.getColumnSerializer());
     }
 
@@ -79,8 +76,7 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
     }
 
     @Override
-    public <K> void deleteRow(Collection<ColumnFamily<K, ?>> columnFamilies,
-            K rowKey) {
+    public <K> void deleteRow(Collection<ColumnFamily<K, ?>> columnFamilies, K rowKey) {
         for (ColumnFamily<K, ?> cf : columnFamilies) {
             withRow(cf, rowKey).delete();
         }
@@ -107,8 +103,7 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
         StringBuilder sb = new StringBuilder();
         sb.append("ThriftMutationBatch[");
         boolean first = true;
-        for (Entry<ByteBuffer, Map<String, List<Mutation>>> row : mutationMap
-                .entrySet()) {
+        for (Entry<ByteBuffer, Map<String, List<Mutation>>> row : mutationMap.entrySet()) {
             if (!first)
                 sb.append(",");
             sb.append(Hex.encodeHex(row.getKey().array())).append("(");
@@ -139,7 +134,8 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
 
         try {
             args.write(new TBinaryProtocol(transport));
-        } catch (TException e) {
+        }
+        catch (TException e) {
             throw ThriftConverter.ToConnectionPoolException(e);
         }
 
@@ -157,23 +153,21 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
             bp.setReadLength(data.remaining());
             args.read(bp);
             mutationMap = args.getMutation_map();
-        } catch (TException e) {
+        }
+        catch (TException e) {
             throw ThriftConverter.ToConnectionPoolException(e);
         }
     }
 
     @Override
     public Map<ByteBuffer, Set<String>> getRowKeys() {
-        return Maps
-                .transformEntries(
-                        mutationMap,
-                        new EntryTransformer<ByteBuffer, Map<String, List<Mutation>>, Set<String>>() {
-                            @Override
-                            public Set<String> transformEntry(ByteBuffer key,
-                                    Map<String, List<Mutation>> value) {
-                                return value.keySet();
-                            }
-                        });
+        return Maps.transformEntries(mutationMap,
+                new EntryTransformer<ByteBuffer, Map<String, List<Mutation>>, Set<String>>() {
+                    @Override
+                    public Set<String> transformEntry(ByteBuffer key, Map<String, List<Mutation>> value) {
+                        return value.keySet();
+                    }
+                });
     }
 
     /**
@@ -182,18 +176,14 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
      * @param colFamily
      * @return
      */
-    private <K, C> List<Mutation> getColumnFamilyMutationList(
-            ColumnFamily<K, C> colFamily, K key) {
-        Map<String, List<Mutation>> innerMutationMap = mutationMap
-                .get(colFamily.getKeySerializer().toByteBuffer(key));
+    private <K, C> List<Mutation> getColumnFamilyMutationList(ColumnFamily<K, C> colFamily, K key) {
+        Map<String, List<Mutation>> innerMutationMap = mutationMap.get(colFamily.getKeySerializer().toByteBuffer(key));
         if (innerMutationMap == null) {
             innerMutationMap = Maps.newHashMap();
-            mutationMap.put(colFamily.getKeySerializer().toByteBuffer(key),
-                    innerMutationMap);
+            mutationMap.put(colFamily.getKeySerializer().toByteBuffer(key), innerMutationMap);
         }
 
-        List<Mutation> innerMutationList = innerMutationMap.get(colFamily
-                .getName());
+        List<Mutation> innerMutationList = innerMutationMap.get(colFamily.getName());
         if (innerMutationList == null) {
             innerMutationList = Lists.newArrayList();
             innerMutationMap.put(colFamily.getName(), innerMutationList);
@@ -212,19 +202,19 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
 
         for (Map.Entry<ByteBuffer, Map<String, List<Mutation>>> otherRow : ((AbstractThriftMutationBatchImpl) other).mutationMap
                 .entrySet()) {
-            Map<String, List<Mutation>> thisRow = mutationMap.get(otherRow
-                    .getKey());
+            Map<String, List<Mutation>> thisRow = mutationMap.get(otherRow.getKey());
             // Key not in the map
             if (thisRow == null) {
                 mutationMap.put(otherRow.getKey(), otherRow.getValue());
-            } else {
-                for (Map.Entry<String, List<Mutation>> otherCf : otherRow
-                        .getValue().entrySet()) {
+            }
+            else {
+                for (Map.Entry<String, List<Mutation>> otherCf : otherRow.getValue().entrySet()) {
                     List<Mutation> thisCf = thisRow.get(otherCf.getKey());
                     // Column family not in the map
                     if (thisCf == null) {
                         thisRow.put(otherCf.getKey(), otherCf.getValue());
-                    } else {
+                    }
+                    else {
                         thisCf.addAll(otherCf.getValue());
                     }
                 }

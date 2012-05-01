@@ -16,8 +16,8 @@
 package com.netflix.astyanax.model;
 
 public enum Equality {
-    LESS_THAN((byte) -1), GREATER_THAN_EQUALS((byte) -1), EQUAL((byte) 0), GREATER_THAN(
-            (byte) 1), LESS_THAN_EQUALS((byte) 1);
+    LESS_THAN((byte) -1), GREATER_THAN_EQUALS((byte) -1), EQUAL((byte) 0), GREATER_THAN((byte) 1), LESS_THAN_EQUALS(
+            (byte) 1);
 
     private final byte equality;
 

@@ -48,8 +48,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
     private List<String> locksToDelete = Lists.newArrayList();
     private Integer ttl;
 
-    public ColumnPrefixDistributedRowLock(Keyspace keyspace,
-            ColumnFamily<K, String> columnFamily, K key) {
+    public ColumnPrefixDistributedRowLock(Keyspace keyspace, ColumnFamily<K, String> columnFamily, K key) {
         this.keyspace = keyspace;
         this.columnFamily = columnFamily;
         this.key = key;
@@ -65,8 +64,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
      * @param consistencyLevel
      * @return
      */
-    public ColumnPrefixDistributedRowLock<K> withConsistencyLevel(
-            ConsistencyLevel consistencyLevel) {
+    public ColumnPrefixDistributedRowLock<K> withConsistencyLevel(ConsistencyLevel consistencyLevel) {
         this.consistencyLevel = consistencyLevel;
         return this;
     }
@@ -101,8 +99,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
      * @param failOnStaleLock
      * @return
      */
-    public ColumnPrefixDistributedRowLock<K> failOnStaleLock(
-            boolean failOnStaleLock) {
+    public ColumnPrefixDistributedRowLock<K> failOnStaleLock(boolean failOnStaleLock) {
         this.failOnStaleLock = failOnStaleLock;
         return this;
     }
@@ -116,8 +113,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
      * @param unit
      * @return
      */
-    public ColumnPrefixDistributedRowLock<K> expireLockAfter(long timeout,
-            TimeUnit unit) {
+    public ColumnPrefixDistributedRowLock<K> expireLockAfter(long timeout, TimeUnit unit) {
         this.timeout = timeout;
         this.timeoutUnits = unit;
         return this;
@@ -141,7 +137,8 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
             lockColumn = writeLockColumn(curTimeMicros);
 
             verifyLock(curTimeMicros);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             release();
             throw e;
         }
@@ -153,8 +150,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
      * @param curTimeMicros
      * @throws Exception
      */
-    public void verifyLock(long curTimeMicros) throws Exception,
-            BusyLockException, StaleLockException {
+    public void verifyLock(long curTimeMicros) throws Exception, BusyLockException, StaleLockException {
         // Phase 2: Read back all columns. There should be only 1 if we got the
         // lock
         // TODO: May want to support reading entire row
@@ -165,15 +161,13 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
             // This is a stale lock that was never cleaned up
             if (entry.getValue() != 0 && curTimeMicros > entry.getValue()) {
                 if (this.failOnStaleLock) {
-                    throw new StaleLockException("Stale lock on row " + key
-                            + ".  Manual cleanup requried.");
+                    throw new StaleLockException("Stale lock on row " + key + ".  Manual cleanup requried.");
                 }
                 locksToDelete.add(entry.getKey());
             }
             // Lock already taken, and not by us
             else if (!entry.getKey().equals(lockColumn)) {
-                throw new BusyLockException("Lock already acquired for "
-                        + entry.getKey());
+                throw new BusyLockException("Lock already acquired for " + entry.getKey());
             }
         }
     }
@@ -184,8 +178,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
     @Override
     public void release() throws Exception {
         if (!locksToDelete.isEmpty()) {
-            MutationBatch m = keyspace.prepareMutationBatch()
-                    .setConsistencyLevel(consistencyLevel);
+            MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
             fillReleaseMutation(m);
             m.execute();
         }
@@ -213,14 +206,10 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
      * @throws Exception
      */
     public Map<String, Long> readLockColumns() throws Exception {
-        ColumnList<String> lockResult = keyspace
-                .prepareQuery(columnFamily)
-                .setConsistencyLevel(consistencyLevel)
+        ColumnList<String> lockResult = keyspace.prepareQuery(columnFamily).setConsistencyLevel(consistencyLevel)
                 .getKey(key)
-                .withColumnRange(
-                        new RangeBuilder().setStart(prefix + "\u0000")
-                                .setEnd(prefix + "\uFFFF").build()).execute()
-                .getResult();
+                .withColumnRange(new RangeBuilder().setStart(prefix + "\u0000").setEnd(prefix + "\uFFFF").build())
+                .execute().getResult();
 
         Map<String, Long> result = Maps.newLinkedHashMap();
         for (Column<String> c : lockResult) {
@@ -263,8 +252,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
         Map<String, Long> locksToDelete = readLockColumns();
         release();
 
-        MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(
-                consistencyLevel);
+        MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
         ColumnListMutation<String> row = m.withRow(columnFamily, key);
         long now = getCurrentTimeMicros();
         for (Entry<String, Long> c : locksToDelete.entrySet()) {
@@ -283,8 +271,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
      * @return
      */
     private long getCurrentTimeMicros() {
-        return TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(),
-                TimeUnit.MILLISECONDS);
+        return TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -297,8 +284,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
     protected String writeLockColumn(long time) throws Exception {
         locksToDelete.add(lockColumn);
 
-        MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(
-                consistencyLevel);
+        MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
         fillLockMutation(m, time, this.ttl);
         m.execute();
 
@@ -317,13 +303,10 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
     public void fillLockMutation(MutationBatch m, Long time, Integer ttl) {
         locksToDelete.add(lockColumn);
         if (time != null) {
-            m.withRow(columnFamily, key)
-                    .putColumn(
-                            lockColumn,
-                            time
-                                    + TimeUnit.MICROSECONDS.convert(timeout,
-                                            timeoutUnits), ttl);
-        } else {
+            m.withRow(columnFamily, key).putColumn(lockColumn,
+                    time + TimeUnit.MICROSECONDS.convert(timeout, timeoutUnits), ttl);
+        }
+        else {
             m.withRow(columnFamily, key).putColumn(lockColumn, 0, ttl);
         }
     }

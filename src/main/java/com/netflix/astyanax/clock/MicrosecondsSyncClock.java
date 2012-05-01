@@ -37,7 +37,8 @@ public class MicrosecondsSyncClock implements Clock {
         synchronized (MicrosecondsSyncClock.class) {
             if (us > lastTime) {
                 lastTime = us;
-            } else {
+            }
+            else {
                 // the time i got from the system is equals or less
                 // (hope not - clock going backwards)
                 // One more "microsecond"

@@ -72,14 +72,12 @@ public class ThriftColumnDefinitionImpl implements ColumnDefinition {
 
     @Override
     public String getIndexType() {
-        return this.columnDef.getIndex_type() == null ? null : this.columnDef
-                .getIndex_type().name();
+        return this.columnDef.getIndex_type() == null ? null : this.columnDef.getIndex_type().name();
     }
 
     @Override
     public boolean hasIndex() {
-        return this.columnDef.getIndex_type() != null
-                && this.columnDef.getIndex_type() == IndexType.KEYS;
+        return this.columnDef.getIndex_type() != null && this.columnDef.getIndex_type() == IndexType.KEYS;
     }
 
     @Override

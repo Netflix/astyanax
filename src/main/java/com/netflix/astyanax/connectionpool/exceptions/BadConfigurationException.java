@@ -24,24 +24,19 @@ public class BadConfigurationException extends OperationException {
     private String value;
     private String expected;
 
-    public BadConfigurationException(String parameter, String value,
-            String expected) {
-        super("Bad configuration " + parameter + "=" + value + " (expected: "
-                + expected + ")");
+    public BadConfigurationException(String parameter, String value, String expected) {
+        super("Bad configuration " + parameter + "=" + value + " (expected: " + expected + ")");
     }
 
     public BadConfigurationException(Throwable cause) {
         super(cause);
     }
 
-    public BadConfigurationException(String parameter, String value,
-            String expected, Throwable cause) {
-        super("Bad configuration " + parameter + "=" + value + " (expected: "
-                + expected + ")", cause);
+    public BadConfigurationException(String parameter, String value, String expected, Throwable cause) {
+        super("Bad configuration " + parameter + "=" + value + " (expected: " + expected + ")", cause);
     }
 
-    public BadConfigurationException(String parameter, String value,
-            Throwable cause) {
+    public BadConfigurationException(String parameter, String value, Throwable cause) {
         super("Bad configuration " + parameter + "=" + value, cause);
     }
 

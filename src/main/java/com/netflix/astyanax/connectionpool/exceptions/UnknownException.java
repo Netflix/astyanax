@@ -15,8 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.exceptions;
 
-public class UnknownException extends OperationException implements
-        IsDeadConnectionException {
+public class UnknownException extends OperationException implements IsDeadConnectionException {
     /**
      * 
      */

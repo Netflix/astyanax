@@ -15,16 +15,14 @@ import com.netflix.astyanax.connectionpool.exceptions.SerializationException;
 
 public class PrefixedSerializer<P, S> extends AbstractSerializer<S> {
 
-    private static Logger log = LoggerFactory
-            .getLogger(PrefixedSerializer.class);
+    private static Logger log = LoggerFactory.getLogger(PrefixedSerializer.class);
 
     P prefix;
     Serializer<P> prefixSerializer;
     ByteBuffer prefixBytes;
     Serializer<S> suffixSerializer;
 
-    public PrefixedSerializer(P prefix, Serializer<P> prefixSerializer,
-            Serializer<S> suffixSerializer) {
+    public PrefixedSerializer(P prefix, Serializer<P> prefixSerializer, Serializer<S> suffixSerializer) {
         this.prefix = prefix;
         this.prefixSerializer = prefixSerializer;
         this.suffixSerializer = suffixSerializer;
@@ -42,8 +40,7 @@ public class PrefixedSerializer<P, S> extends AbstractSerializer<S> {
         ByteBuffer sb = suffixSerializer.toByteBuffer(s);
         sb.rewind();
 
-        ByteBuffer bb = ByteBuffer.allocate(prefixBytes.remaining()
-                + sb.remaining());
+        ByteBuffer bb = ByteBuffer.allocate(prefixBytes.remaining() + sb.remaining());
 
         bb.put(prefixBytes.slice());
         bb.put(sb);
@@ -61,10 +58,8 @@ public class PrefixedSerializer<P, S> extends AbstractSerializer<S> {
         bytes = bytes.duplicate();
         bytes.rewind();
 
-        if (compareByteArrays(prefixBytes.array(), prefixBytes.arrayOffset()
-                + prefixBytes.position(), prefixBytes.remaining(),
-                bytes.array(), bytes.arrayOffset() + bytes.position(),
-                prefixBytes.remaining()) != 0) {
+        if (compareByteArrays(prefixBytes.array(), prefixBytes.arrayOffset() + prefixBytes.position(),
+                prefixBytes.remaining(), bytes.array(), bytes.arrayOffset() + bytes.position(), prefixBytes.remaining()) != 0) {
             log.error("Unprefixed value received, throwing exception...");
             throw new SerializationException("Unexpected prefix value");
         }
@@ -81,7 +76,8 @@ public class PrefixedSerializer<P, S> extends AbstractSerializer<S> {
             try {
                 ByteBuffer bb = s.slice();
                 objList.add(fromByteBuffer(bb));
-            } catch (SerializationException e) {
+            }
+            catch (SerializationException e) {
                 // not a prefixed key, discard
                 log.warn("Unprefixed value received, discarding...");
             }
@@ -91,13 +87,13 @@ public class PrefixedSerializer<P, S> extends AbstractSerializer<S> {
 
     @Override
     public <V> Map<S, V> fromBytesMap(Map<ByteBuffer, V> map) {
-        Map<S, V> objMap = new LinkedHashMap<S, V>(
-                computeInitialHashSize(map.size()));
+        Map<S, V> objMap = new LinkedHashMap<S, V>(computeInitialHashSize(map.size()));
         for (Entry<ByteBuffer, V> entry : map.entrySet()) {
             try {
                 ByteBuffer bb = entry.getKey().slice();
                 objMap.put(fromByteBuffer(bb), entry.getValue());
-            } catch (SerializationException e) {
+            }
+            catch (SerializationException e) {
                 // not a prefixed key, discard
                 log.warn("Unprefixed value received, discarding...");
             }
@@ -105,12 +101,12 @@ public class PrefixedSerializer<P, S> extends AbstractSerializer<S> {
         return objMap;
     }
 
-    private static int compareByteArrays(byte[] bytes1, int offset1, int len1,
-            byte[] bytes2, int offset2, int len2) {
+    private static int compareByteArrays(byte[] bytes1, int offset1, int len1, byte[] bytes2, int offset2, int len2) {
         if (null == bytes1) {
             if (null == bytes2) {
                 return 0;
-            } else {
+            }
+            else {
                 return -1;
             }
         }
@@ -137,7 +133,8 @@ public class PrefixedSerializer<P, S> extends AbstractSerializer<S> {
         }
         if (len1 == len2) {
             return 0;
-        } else {
+        }
+        else {
             return (len1 < len2) ? -1 : 1;
         }
     }

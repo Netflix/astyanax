@@ -21,8 +21,7 @@ package com.netflix.astyanax.connectionpool.exceptions;
  * @author elandau
  * 
  */
-public class MaxConnsPerHostReachedException extends ConnectionException
-        implements IsRetryableException {
+public class MaxConnsPerHostReachedException extends ConnectionException implements IsRetryableException {
     /**
      * 
      */

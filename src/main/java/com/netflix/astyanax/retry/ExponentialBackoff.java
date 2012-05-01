@@ -16,8 +16,7 @@ public class ExponentialBackoff extends SleepingRetryPolicy {
 
     @Override
     public long getSleepTimeMs() {
-        return baseSleepTimeMs
-                * Math.max(1, random.nextInt(1 << (this.getAttemptCount() + 1)));
+        return baseSleepTimeMs * Math.max(1, random.nextInt(1 << (this.getAttemptCount() + 1)));
     }
 
     @Override
@@ -26,7 +25,6 @@ public class ExponentialBackoff extends SleepingRetryPolicy {
     }
 
     public String toString() {
-        return StringUtils.joinClassAttributeValues(this, "ExponentialBackoff",
-                ExponentialBackoff.class);
+        return StringUtils.joinClassAttributeValues(this, "ExponentialBackoff", ExponentialBackoff.class);
     }
 }

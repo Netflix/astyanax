@@ -33,8 +33,7 @@ public class ThriftCqlRowsImpl<K, C> implements Rows<K, C> {
     private final Serializer<K> keySer;
     private final Serializer<C> colSer;
 
-    public ThriftCqlRowsImpl(List<CqlRow> rows, Serializer<K> keySer,
-            Serializer<C> colSer) {
+    public ThriftCqlRowsImpl(List<CqlRow> rows, Serializer<K> keySer, Serializer<C> colSer) {
         this.rows = rows;
         this.keySer = keySer;
         this.colSer = colSer;
@@ -57,8 +56,7 @@ public class ThriftCqlRowsImpl<K, C> implements Rows<K, C> {
             @Override
             public Row<K, C> next() {
                 CqlRow row = base.next();
-                return new ThriftRowImpl<K, C>(keySer.fromBytes(row.getKey()),
-                        ByteBuffer.wrap(row.getKey()),
+                return new ThriftRowImpl<K, C>(keySer.fromBytes(row.getKey()), ByteBuffer.wrap(row.getKey()),
                         new ThriftColumnListImpl<C>(row.getColumns(), colSer));
             }
 
@@ -76,11 +74,8 @@ public class ThriftCqlRowsImpl<K, C> implements Rows<K, C> {
         if (lookup == null) {
             lookup = new HashMap<K, ThriftRowImpl<K, C>>(rows.size());
             for (CqlRow row : rows) {
-                lookup.put(
-                        keySer.fromBytes(row.getKey()),
-                        new ThriftRowImpl<K, C>(key, ByteBuffer.wrap(row
-                                .getKey()), new ThriftColumnListImpl<C>(row
-                                .getColumns(), colSer)));
+                lookup.put(keySer.fromBytes(row.getKey()), new ThriftRowImpl<K, C>(key, ByteBuffer.wrap(row.getKey()),
+                        new ThriftColumnListImpl<C>(row.getColumns(), colSer)));
             }
         }
 
@@ -101,9 +96,8 @@ public class ThriftCqlRowsImpl<K, C> implements Rows<K, C> {
     @Override
     public Row<K, C> getRowByIndex(int i) {
         CqlRow row = rows.get(i);
-        return new ThriftRowImpl<K, C>(keySer.fromBytes(row.getKey()),
-                ByteBuffer.wrap(row.getKey()), new ThriftColumnListImpl<C>(
-                        row.getColumns(), colSer));
+        return new ThriftRowImpl<K, C>(keySer.fromBytes(row.getKey()), ByteBuffer.wrap(row.getKey()),
+                new ThriftColumnListImpl<C>(row.getColumns(), colSer));
     }
 
 }

@@ -21,7 +21,8 @@ public abstract class SleepingRetryPolicy implements RetryPolicy {
         if (max == -1 || attempts < max) {
             try {
                 Thread.sleep(getSleepTimeMs());
-            } catch (InterruptedException e) {
+            }
+            catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return false;
             }
@@ -55,7 +56,6 @@ public abstract class SleepingRetryPolicy implements RetryPolicy {
     }
 
     public String toString() {
-        return StringUtils.joinClassAttributeValues(this,
-                "SleepingRetryPolicy", SleepingRetryPolicy.class);
+        return StringUtils.joinClassAttributeValues(this, "SleepingRetryPolicy", SleepingRetryPolicy.class);
     }
 }

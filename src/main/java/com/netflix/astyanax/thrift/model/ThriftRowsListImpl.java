@@ -32,8 +32,8 @@ public class ThriftRowsListImpl<K, C> implements Rows<K, C> {
     private final Serializer<K> keySer;
     private final Serializer<C> colSer;
 
-    public ThriftRowsListImpl(Map<ByteBuffer, List<ColumnOrSuperColumn>> rows,
-            Serializer<K> keySer, Serializer<C> colSer) {
+    public ThriftRowsListImpl(Map<ByteBuffer, List<ColumnOrSuperColumn>> rows, Serializer<K> keySer,
+            Serializer<C> colSer) {
         this.rows = rows;
         this.keySer = keySer;
         this.colSer = colSer;
@@ -44,8 +44,7 @@ public class ThriftRowsListImpl<K, C> implements Rows<K, C> {
         class IteratorImpl implements Iterator<Row<K, C>> {
             Iterator<Map.Entry<ByteBuffer, List<ColumnOrSuperColumn>>> base;
 
-            public IteratorImpl(
-                    Iterator<Map.Entry<ByteBuffer, List<ColumnOrSuperColumn>>> base) {
+            public IteratorImpl(Iterator<Map.Entry<ByteBuffer, List<ColumnOrSuperColumn>>> base) {
                 this.base = base;
             }
 
@@ -56,12 +55,9 @@ public class ThriftRowsListImpl<K, C> implements Rows<K, C> {
 
             @Override
             public Row<K, C> next() {
-                Map.Entry<ByteBuffer, List<ColumnOrSuperColumn>> row = base
-                        .next();
-                return new ThriftRowImpl<K, C>(keySer.fromByteBuffer(row
-                        .getKey().duplicate()), row.getKey(),
-                        new ThriftColumnOrSuperColumnListImpl<C>(
-                                row.getValue(), colSer));
+                Map.Entry<ByteBuffer, List<ColumnOrSuperColumn>> row = base.next();
+                return new ThriftRowImpl<K, C>(keySer.fromByteBuffer(row.getKey().duplicate()), row.getKey(),
+                        new ThriftColumnOrSuperColumnListImpl<C>(row.getValue(), colSer));
             }
 
             @Override
@@ -79,8 +75,8 @@ public class ThriftRowsListImpl<K, C> implements Rows<K, C> {
         if (columns == null) {
             return null;
         }
-        return new ThriftRowImpl<K, C>(key, keySer.toByteBuffer(key),
-                new ThriftColumnOrSuperColumnListImpl<C>(columns, colSer));
+        return new ThriftRowImpl<K, C>(key, keySer.toByteBuffer(key), new ThriftColumnOrSuperColumnListImpl<C>(columns,
+                colSer));
     }
 
     @Override
@@ -95,8 +91,7 @@ public class ThriftRowsListImpl<K, C> implements Rows<K, C> {
 
     @Override
     public Row<K, C> getRowByIndex(int i) {
-        throw new UnsupportedOperationException(
-                "RowSlice response is not sorted");
+        throw new UnsupportedOperationException("RowSlice response is not sorted");
     }
 
 }

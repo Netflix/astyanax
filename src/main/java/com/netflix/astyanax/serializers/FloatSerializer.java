@@ -20,14 +20,12 @@ public class FloatSerializer extends AbstractSerializer<Float> {
 
     @Override
     public ByteBuffer toByteBuffer(Float obj) {
-        return IntegerSerializer.get().toByteBuffer(
-                Float.floatToRawIntBits(obj));
+        return IntegerSerializer.get().toByteBuffer(Float.floatToRawIntBits(obj));
     }
 
     @Override
     public Float fromByteBuffer(ByteBuffer bytes) {
-        return Float.intBitsToFloat(IntegerSerializer.get().fromByteBuffer(
-                bytes));
+        return Float.intBitsToFloat(IntegerSerializer.get().fromByteBuffer(bytes));
     }
 
     @Override

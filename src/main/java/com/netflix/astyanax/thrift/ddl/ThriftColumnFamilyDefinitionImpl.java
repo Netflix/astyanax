@@ -206,8 +206,7 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
     }
 
     @Override
-    public ColumnFamilyDefinition setKeyValidationClass(
-            String keyValidationClass) {
+    public ColumnFamilyDefinition setKeyValidationClass(String keyValidationClass) {
         cfDef.setKey_validation_class(keyValidationClass);
         return this;
     }
@@ -225,8 +224,7 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
             cfDef.setColumn_metadata(columns);
         }
 
-        columns.add(((ThriftColumnDefinitionImpl) columnDef)
-                .getThriftColumnDefinition());
+        columns.add(((ThriftColumnDefinitionImpl) columnDef).getThriftColumnDefinition());
         return this;
     }
 

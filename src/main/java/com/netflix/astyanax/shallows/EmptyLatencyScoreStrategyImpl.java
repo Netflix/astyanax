@@ -63,8 +63,8 @@ public class EmptyLatencyScoreStrategyImpl implements LatencyScoreStrategy {
     }
 
     @Override
-    public <CL> List<HostConnectionPool<CL>> sortAndfilterPartition(
-            List<HostConnectionPool<CL>> pools, AtomicBoolean prioritized) {
+    public <CL> List<HostConnectionPool<CL>> sortAndfilterPartition(List<HostConnectionPool<CL>> pools,
+            AtomicBoolean prioritized) {
         prioritized.set(false);
         return pools;
     }

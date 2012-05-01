@@ -12,8 +12,7 @@ public interface ChunkedStorageProvider {
      * @returns bytes written
      * @throws Exception
      */
-    int writeChunk(String objectName, int chunkId, ByteBuffer data, Integer ttl)
-            throws Exception;
+    int writeChunk(String objectName, int chunkId, ByteBuffer data, Integer ttl) throws Exception;
 
     /**
      * Read the request chunk id from the storage
@@ -22,8 +21,7 @@ public interface ChunkedStorageProvider {
      * @param chunkId
      * @return
      */
-    ByteBuffer readChunk(String objectName, int chunkId) throws Exception,
-            NotFoundException;
+    ByteBuffer readChunk(String objectName, int chunkId) throws Exception, NotFoundException;
 
     /**
      * Delete a chunk
@@ -53,8 +51,7 @@ public interface ChunkedStorageProvider {
      * @return
      * @throws Exception
      */
-    ObjectMetadata readMetadata(String objectName) throws Exception,
-            NotFoundException;
+    ObjectMetadata readMetadata(String objectName) throws Exception, NotFoundException;
 
     /**
      * Return the preferred chunk size for this provider

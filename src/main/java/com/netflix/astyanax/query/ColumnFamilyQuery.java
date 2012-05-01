@@ -37,8 +37,7 @@ public interface ColumnFamilyQuery<K, C> {
      * @param consistencyLevel
      * @return
      */
-    ColumnFamilyQuery<K, C> setConsistencyLevel(
-            ConsistencyLevel consistencyLevel);
+    ColumnFamilyQuery<K, C> setConsistencyLevel(ConsistencyLevel consistencyLevel);
 
     /**
      * Set the retry policy to use instead of the default
@@ -76,8 +75,7 @@ public interface ColumnFamilyQuery<K, C> {
      *            Max number of keys to return
      * @return
      */
-    RowSliceQuery<K, C> getKeyRange(K startKey, K endKey, String startToken,
-            String endToken, int count);
+    RowSliceQuery<K, C> getKeyRange(K startKey, K endKey, String startToken, String endToken, int count);
 
     /**
      * Query a non-contiguous set of keys.

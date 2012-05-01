@@ -90,8 +90,7 @@ public class ThriftKeyspaceDefinitionImpl implements KeyspaceDefinition {
             ks_def.setCf_defs(new ArrayList<CfDef>());
         }
 
-        CfDef thriftCfDef = ((ThriftColumnFamilyDefinitionImpl) cfDef)
-                .getThriftColumnFamilyDefinition();
+        CfDef thriftCfDef = ((ThriftColumnFamilyDefinitionImpl) cfDef).getThriftColumnFamilyDefinition();
         thriftCfDef.setColumn_type("Standard");
         thriftCfDef.setKeyspace(ks_def.getName());
         ks_def.getCf_defs().add(thriftCfDef);

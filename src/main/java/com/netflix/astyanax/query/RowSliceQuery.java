@@ -66,8 +66,7 @@ public interface RowSliceQuery<K, C> extends Execution<Rows<K, C>> {
      *            Maximum number of columns to return (similar to SQL LIMIT)
      * @return
      */
-    RowSliceQuery<K, C> withColumnRange(C startColumn, C endColumn,
-            boolean reversed, int count);
+    RowSliceQuery<K, C> withColumnRange(C startColumn, C endColumn, boolean reversed, int count);
 
     /**
      * Specify a range and provide pre-constructed start and end columns. Use
@@ -79,8 +78,7 @@ public interface RowSliceQuery<K, C> extends Execution<Rows<K, C>> {
      * @param count
      * @return
      */
-    RowSliceQuery<K, C> withColumnRange(ByteBuffer startColumn,
-            ByteBuffer endColumn, boolean reversed, int count);
+    RowSliceQuery<K, C> withColumnRange(ByteBuffer startColumn, ByteBuffer endColumn, boolean reversed, int count);
 
     /**
      * Specify a range of composite columns. Use this in conjunction with the

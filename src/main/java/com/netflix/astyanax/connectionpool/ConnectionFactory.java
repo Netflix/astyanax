@@ -25,6 +25,5 @@ import com.netflix.astyanax.connectionpool.exceptions.ThrottledException;
  * @param <CL>
  */
 public interface ConnectionFactory<CL> {
-    Connection<CL> createConnection(HostConnectionPool<CL> pool)
-            throws ThrottledException;
+    Connection<CL> createConnection(HostConnectionPool<CL> pool) throws ThrottledException;
 }

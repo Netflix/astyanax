@@ -16,8 +16,7 @@ public class UniquenessConstraint<K, C> {
     private ConsistencyLevel consistencyLevel = ConsistencyLevel.CL_QUORUM;
     private UniquenessConstraintViolationMonitor<K, C> monitor;
 
-    public UniquenessConstraint(Keyspace keyspace,
-            ColumnFamily<K, C> columnFamily, Supplier<C> uniqueColumnSupplier) {
+    public UniquenessConstraint(Keyspace keyspace, ColumnFamily<K, C> columnFamily, Supplier<C> uniqueColumnSupplier) {
         this.keyspace = keyspace;
         this.columnFamily = columnFamily;
         this.uniqueColumnSupplier = uniqueColumnSupplier;
@@ -28,8 +27,7 @@ public class UniquenessConstraint<K, C> {
         return this;
     }
 
-    public UniquenessConstraint<K, C> setMonitor(
-            UniquenessConstraintViolationMonitor<K, C> monitor) {
+    public UniquenessConstraint<K, C> setMonitor(UniquenessConstraintViolationMonitor<K, C> monitor) {
         this.monitor = monitor;
         return this;
     }
@@ -38,15 +36,13 @@ public class UniquenessConstraint<K, C> {
         C unique = uniqueColumnSupplier.get();
 
         // Phase 1: Write a unique column
-        MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(
-                consistencyLevel);
+        MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
         m.withRow(columnFamily, key).putEmptyColumn(unique, ttl);
         m.execute();
 
         // Phase 2: Read back all columns. There should be only 1
-        ColumnList<C> result = keyspace.prepareQuery(columnFamily)
-                .setConsistencyLevel(consistencyLevel).getKey(key).execute()
-                .getResult();
+        ColumnList<C> result = keyspace.prepareQuery(columnFamily).setConsistencyLevel(consistencyLevel).getKey(key)
+                .execute().getResult();
 
         if (result.size() == 1) {
             return unique;
@@ -56,8 +52,7 @@ public class UniquenessConstraint<K, C> {
             this.monitor.onViolation(key, unique);
 
         // Rollback
-        m = keyspace.prepareMutationBatch().setConsistencyLevel(
-                consistencyLevel);
+        m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
         m.withRow(columnFamily, key).deleteColumn(unique);
         m.execute();
         return null;

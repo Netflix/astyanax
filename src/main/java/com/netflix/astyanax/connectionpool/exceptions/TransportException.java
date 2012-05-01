@@ -15,8 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.exceptions;
 
-public class TransportException extends ConnectionException implements
-        IsRetryableException, IsDeadConnectionException {
+public class TransportException extends ConnectionException implements IsRetryableException, IsDeadConnectionException {
     /**
      * 
      */

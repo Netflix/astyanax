@@ -30,8 +30,7 @@ public class NodeDiscoveryMonitorManager {
         return monitorInstance;
     }
 
-    public synchronized void registerMonitor(String monitorName,
-            NodeDiscovery discovery) {
+    public synchronized void registerMonitor(String monitorName, NodeDiscovery discovery) {
 
         monitorName = generateMonitorName(monitorName);
 
@@ -43,24 +42,24 @@ public class NodeDiscoveryMonitorManager {
                 monitors.put(monitorName, mbean);
                 mbs.registerMBean(mbean, oName);
 
-            } catch (Exception e) {
+            }
+            catch (Exception e) {
                 monitors.remove(monitorName);
             }
         }
     }
 
-    public synchronized void unregisterMonitor(String monitorName,
-            NodeDiscovery discovery) {
+    public synchronized void unregisterMonitor(String monitorName, NodeDiscovery discovery) {
         monitorName = generateMonitorName(monitorName);
         monitors.remove(monitorName);
         try {
             mbs.unregisterMBean(new ObjectName(monitorName));
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
         }
     }
 
-    public synchronized NodeDiscoveryMonitorMBean getCassandraMonitor(
-            String monitorName) {
+    public synchronized NodeDiscoveryMonitorMBean getCassandraMonitor(String monitorName) {
         monitorName = generateMonitorName(monitorName);
         return monitors.get(monitorName);
     }

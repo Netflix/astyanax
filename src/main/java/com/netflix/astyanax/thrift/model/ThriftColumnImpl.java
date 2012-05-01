@@ -78,8 +78,7 @@ public class ThriftColumnImpl<C> implements Column<C> {
     @Override
     public <C2> ColumnList<C2> getSubColumns(Serializer<C2> ser) {
 
-        throw new UnsupportedOperationException("SimpleColumn \'" + name
-                + "\' has no children");
+        throw new UnsupportedOperationException("SimpleColumn \'" + name + "\' has no children");
     }
 
     @Override

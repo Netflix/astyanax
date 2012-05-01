@@ -37,8 +37,7 @@ public class KeySlice<K> {
         this.keys = keys;
     }
 
-    public KeySlice(K startKey, K endKey, String startToken, String endToken,
-            int size) {
+    public KeySlice(K startKey, K endKey, String startToken, String endToken, int size) {
         this.startKey = startKey;
         this.endKey = endKey;
         this.startToken = startToken;

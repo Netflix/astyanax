@@ -41,36 +41,31 @@ import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.UUIDSerializer;
 
-public class ThriftCounterSuperColumnMutationImpl<C> implements
-        ColumnListMutation<C> {
+public class ThriftCounterSuperColumnMutationImpl<C> implements ColumnListMutation<C> {
     private long timestamp;
     private final List<Mutation> mutationList;
     private final ColumnPath<C> path;
     private CounterSuperColumn superColumn;
     private SlicePredicate deletionPredicate;
 
-    public ThriftCounterSuperColumnMutationImpl(long timestamp,
-            List<Mutation> mutationList, ColumnPath<C> path) {
+    public ThriftCounterSuperColumnMutationImpl(long timestamp, List<Mutation> mutationList, ColumnPath<C> path) {
         this.path = path;
         this.timestamp = timestamp;
         this.mutationList = mutationList;
     }
 
     @Override
-    public <V> ColumnListMutation<C> putColumn(C columnName, V value,
-            Serializer<V> valueSerializer, Integer ttl) {
+    public <V> ColumnListMutation<C> putColumn(C columnName, V value, Serializer<V> valueSerializer, Integer ttl) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public ColumnListMutation<C> putColumn(C columnName, String value,
-            Integer ttl) {
+    public ColumnListMutation<C> putColumn(C columnName, String value, Integer ttl) {
         return putColumn(columnName, value, StringSerializer.get(), ttl);
     }
 
     @Override
-    public ColumnListMutation<C> putColumn(C columnName, byte[] value,
-            Integer ttl) {
+    public ColumnListMutation<C> putColumn(C columnName, byte[] value, Integer ttl) {
         return putColumn(columnName, value, BytesArraySerializer.get(), ttl);
     }
 
@@ -85,14 +80,12 @@ public class ThriftCounterSuperColumnMutationImpl<C> implements
     }
 
     @Override
-    public ColumnListMutation<C> putColumn(C columnName, boolean value,
-            Integer ttl) {
+    public ColumnListMutation<C> putColumn(C columnName, boolean value, Integer ttl) {
         return putColumn(columnName, value, BooleanSerializer.get(), ttl);
     }
 
     @Override
-    public ColumnListMutation<C> putColumn(C columnName, ByteBuffer value,
-            Integer ttl) {
+    public ColumnListMutation<C> putColumn(C columnName, ByteBuffer value, Integer ttl) {
         return putColumn(columnName, value, ByteBufferSerializer.get(), ttl);
     }
 
@@ -102,14 +95,12 @@ public class ThriftCounterSuperColumnMutationImpl<C> implements
     }
 
     @Override
-    public ColumnListMutation<C> putColumn(C columnName, float value,
-            Integer ttl) {
+    public ColumnListMutation<C> putColumn(C columnName, float value, Integer ttl) {
         return putColumn(columnName, value, FloatSerializer.get(), ttl);
     }
 
     @Override
-    public ColumnListMutation<C> putColumn(C columnName, double value,
-            Integer ttl) {
+    public ColumnListMutation<C> putColumn(C columnName, double value, Integer ttl) {
         return putColumn(columnName, value, DoubleSerializer.get(), ttl);
     }
 
@@ -126,22 +117,19 @@ public class ThriftCounterSuperColumnMutationImpl<C> implements
     @Override
     public ColumnListMutation<C> delete() {
         // Delete the entire super column
-        Deletion d = new Deletion().setSuper_column(path.get(0)).setTimestamp(
-                timestamp);
+        Deletion d = new Deletion().setSuper_column(path.get(0)).setTimestamp(timestamp);
         mutationList.add(new Mutation().setDeletion(d));
         timestamp++;
         return this;
     }
 
     @Override
-    public <SC> ColumnListMutation<SC> withSuperColumn(
-            ColumnPath<SC> superColumnPath) {
+    public <SC> ColumnListMutation<SC> withSuperColumn(ColumnPath<SC> superColumnPath) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public ColumnListMutation<C> incrementCounterColumn(C columnName,
-            long amount) {
+    public ColumnListMutation<C> incrementCounterColumn(C columnName, long amount) {
         // 1. Set up the column with all the data
         CounterColumn column = new CounterColumn();
         column.setName(path.getSerializer().toByteBuffer(columnName));
@@ -152,8 +140,7 @@ public class ThriftCounterSuperColumnMutationImpl<C> implements
             superColumn = new CounterSuperColumn().setName(path.get(0));
 
             Mutation mutation = new Mutation();
-            mutation.setColumn_or_supercolumn(new ColumnOrSuperColumn()
-                    .setCounter_super_column(superColumn));
+            mutation.setColumn_or_supercolumn(new ColumnOrSuperColumn().setCounter_super_column(superColumn));
             mutationList.add(mutation);
         }
         superColumn.addToColumns(column);
@@ -165,15 +152,13 @@ public class ThriftCounterSuperColumnMutationImpl<C> implements
     public ColumnListMutation<C> deleteColumn(C columnName) {
         if (deletionPredicate == null) {
             deletionPredicate = new SlicePredicate();
-            Deletion d = new Deletion().setTimestamp(timestamp)
-                    .setSuper_column(path.get(0))
+            Deletion d = new Deletion().setTimestamp(timestamp).setSuper_column(path.get(0))
                     .setPredicate(deletionPredicate);
 
             mutationList.add(new Mutation().setDeletion(d));
         }
 
-        deletionPredicate.addToColumn_names(path.getSerializer().toByteBuffer(
-                columnName));
+        deletionPredicate.addToColumn_names(path.getSerializer().toByteBuffer(columnName));
         return this;
     }
 

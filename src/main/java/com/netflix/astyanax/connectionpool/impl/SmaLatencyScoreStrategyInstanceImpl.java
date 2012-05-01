@@ -5,13 +5,11 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
 
-public class SmaLatencyScoreStrategyInstanceImpl implements
-        LatencyScoreStrategy.Instance {
+public class SmaLatencyScoreStrategyInstanceImpl implements LatencyScoreStrategy.Instance {
     private final LinkedBlockingQueue<Long> latencies;
     private volatile Double cachedScore = 0.0d;
 
-    public SmaLatencyScoreStrategyInstanceImpl(
-            SmaLatencyScoreStrategyImpl strategy) {
+    public SmaLatencyScoreStrategyInstanceImpl(SmaLatencyScoreStrategyImpl strategy) {
         this.latencies = new LinkedBlockingQueue<Long>(strategy.getWindowSize());
     }
 
@@ -20,7 +18,8 @@ public class SmaLatencyScoreStrategyInstanceImpl implements
         if (!latencies.offer(sample)) {
             try {
                 latencies.remove();
-            } catch (NoSuchElementException e) {
+            }
+            catch (NoSuchElementException e) {
             }
             latencies.offer(sample);
         }

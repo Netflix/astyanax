@@ -44,7 +44,6 @@ public class RetryNTimes implements RetryPolicy {
     }
 
     public String toString() {
-        return StringUtils.joinClassAttributeValues(this, "RetryNTimes",
-                RetryNTimes.class);
+        return StringUtils.joinClassAttributeValues(this, "RetryNTimes", RetryNTimes.class);
     }
 }

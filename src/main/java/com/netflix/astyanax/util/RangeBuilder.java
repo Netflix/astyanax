@@ -160,8 +160,7 @@ public class RangeBuilder {
     }
 
     public ByteBufferRange build() {
-        return new ByteBufferRangeImpl(clone(start), clone(end), limit,
-                reversed);
+        return new ByteBufferRangeImpl(clone(start), clone(end), limit, reversed);
     }
 
     public static ByteBuffer clone(ByteBuffer original) {

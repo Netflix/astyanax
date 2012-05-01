@@ -18,6 +18,5 @@ package com.netflix.astyanax.connectionpool;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 
 public interface ExecuteWithFailover<CL, R> {
-    OperationResult<R> tryOperation(Operation<CL, R> operation)
-            throws ConnectionException;
+    OperationResult<R> tryOperation(Operation<CL, R> operation) throws ConnectionException;
 }

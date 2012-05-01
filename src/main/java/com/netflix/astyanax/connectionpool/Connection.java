@@ -39,8 +39,7 @@ public interface Connection<CL> {
      * @return
      * @throws ConnectionException
      */
-    <R> OperationResult<R> execute(Operation<CL, R> op)
-            throws ConnectionException;
+    <R> OperationResult<R> execute(Operation<CL, R> op) throws ConnectionException;
 
     /**
      * Shut down the connection. isOpen() will now return false.

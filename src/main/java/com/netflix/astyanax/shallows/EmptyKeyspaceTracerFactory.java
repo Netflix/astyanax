@@ -22,8 +22,7 @@ public class EmptyKeyspaceTracerFactory implements KeyspaceTracerFactory {
     }
 
     @Override
-    public CassandraOperationTracer newTracer(CassandraOperationType type,
-            ColumnFamily<?, ?> columnFamily) {
+    public CassandraOperationTracer newTracer(CassandraOperationType type, ColumnFamily<?, ?> columnFamily) {
         return EmptyKeyspaceTracer.getInstance();
     }
 

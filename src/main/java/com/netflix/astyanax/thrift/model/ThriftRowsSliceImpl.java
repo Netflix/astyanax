@@ -35,8 +35,7 @@ public class ThriftRowsSliceImpl<K, C> implements Rows<K, C> {
     private Serializer<K> keySer;
     private Serializer<C> colSer;
 
-    public ThriftRowsSliceImpl(List<KeySlice> rows, Serializer<K> keySer,
-            Serializer<C> colSer) {
+    public ThriftRowsSliceImpl(List<KeySlice> rows, Serializer<K> keySer, Serializer<C> colSer) {
         this.keySer = keySer;
         this.colSer = colSer;
         this.rows = rows;
@@ -59,10 +58,8 @@ public class ThriftRowsSliceImpl<K, C> implements Rows<K, C> {
             @Override
             public Row<K, C> next() {
                 KeySlice ks = base.next();
-                return new ThriftRowImpl<K, C>(keySer.fromBytes(ks.getKey()),
-                        ByteBuffer.wrap(ks.getKey()),
-                        new ThriftColumnOrSuperColumnListImpl<C>(
-                                ks.getColumns(), colSer));
+                return new ThriftRowImpl<K, C>(keySer.fromBytes(ks.getKey()), ByteBuffer.wrap(ks.getKey()),
+                        new ThriftColumnOrSuperColumnListImpl<C>(ks.getColumns(), colSer));
             }
 
             @Override
@@ -87,8 +84,8 @@ public class ThriftRowsSliceImpl<K, C> implements Rows<K, C> {
         if (key == null) {
             return null;
         }
-        return new ThriftRowImpl<K, C>(key, keySer.toByteBuffer(key),
-                new ThriftColumnOrSuperColumnListImpl<C>(columns, colSer));
+        return new ThriftRowImpl<K, C>(key, keySer.toByteBuffer(key), new ThriftColumnOrSuperColumnListImpl<C>(columns,
+                colSer));
     }
 
     @Override
@@ -104,9 +101,7 @@ public class ThriftRowsSliceImpl<K, C> implements Rows<K, C> {
     @Override
     public Row<K, C> getRowByIndex(int index) {
         KeySlice ks = rows.get(index);
-        return new ThriftRowImpl<K, C>(keySer.fromBytes(ks.getKey()),
-                ByteBuffer.wrap(ks.getKey()),
-                new ThriftColumnOrSuperColumnListImpl<C>(ks.getColumns(),
-                        colSer));
+        return new ThriftRowImpl<K, C>(keySer.fromBytes(ks.getKey()), ByteBuffer.wrap(ks.getKey()),
+                new ThriftColumnOrSuperColumnListImpl<C>(ks.getColumns(), colSer));
     }
 }

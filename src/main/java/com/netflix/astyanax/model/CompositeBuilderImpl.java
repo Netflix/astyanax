@@ -67,16 +67,14 @@ public class CompositeBuilderImpl implements CompositeBuilder {
 
     @Override
     public CompositeBuilder addTimeUUID(Long value, TimeUnit units) {
-        composite.addComponent(
-                TimeUUIDUtils.getMicrosTimeUUID(TimeUnit.MICROSECONDS.convert(
-                        value, units)), TimeUUIDSerializer.get(), equality);
+        composite.addComponent(TimeUUIDUtils.getMicrosTimeUUID(TimeUnit.MICROSECONDS.convert(value, units)),
+                TimeUUIDSerializer.get(), equality);
         return this;
     }
 
     @Override
     public CompositeBuilder addBytes(byte[] bytes) {
-        composite.addComponent(ByteBuffer.wrap(bytes),
-                ByteBufferSerializer.get(), equality);
+        composite.addComponent(ByteBuffer.wrap(bytes), ByteBufferSerializer.get(), equality);
         return this;
     }
 

@@ -44,8 +44,7 @@ import com.netflix.astyanax.connectionpool.NodeDiscovery;
 public class NodeDiscoveryImpl implements NodeDiscovery {
     private final ConnectionPool<?> connectionPool;
     private final ScheduledExecutorService executor = Executors
-            .newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
-                    .setDaemon(true).build());
+            .newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setDaemon(true).build());
     private final int interval;
     private final String name;
     private final Supplier<Map<BigInteger, List<Host>>> tokenRangeSupplier;
@@ -54,8 +53,7 @@ public class NodeDiscoveryImpl implements NodeDiscovery {
     private final AtomicLong refreshCounter = new AtomicLong();
     private final AtomicLong errorCounter = new AtomicLong();
 
-    public NodeDiscoveryImpl(String name, int interval,
-            Supplier<Map<BigInteger, List<Host>>> tokenRangeSupplier,
+    public NodeDiscoveryImpl(String name, int interval, Supplier<Map<BigInteger, List<Host>>> tokenRangeSupplier,
             ConnectionPool<?> connectionPool) {
         this.connectionPool = connectionPool;
         this.interval = interval;
@@ -92,7 +90,8 @@ public class NodeDiscoveryImpl implements NodeDiscovery {
             connectionPool.setHosts(tokenRangeSupplier.get());
             refreshCounter.incrementAndGet();
             lastUpdateTime.set(new DateTime());
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             errorCounter.incrementAndGet();
             lastException.set(e);
         }
@@ -142,7 +141,8 @@ public class NodeDiscoveryImpl implements NodeDiscovery {
                 sb.append("]");
             }
             return sb.toString();
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             return e.getMessage();
         }
     }

@@ -5,6 +5,8 @@ public class ObjectMetadata {
     private Long objectSize;
     private Integer chunkCount;
     private Integer chunkSize;
+    private String parentPath;
+    private String attributes;
 
     public ObjectMetadata setTtl(Integer ttl) {
         this.ttl = ttl;
@@ -48,5 +50,23 @@ public class ObjectMetadata {
 
     public boolean isValidForRead() {
         return (this.objectSize != null && this.chunkCount != null && this.chunkSize != null);
+    }
+    
+    public ObjectMetadata setParentPath(String parentPath) {
+        this.parentPath = parentPath;
+        return this;
+    }
+    
+    public String getParentPath() {
+        return this.parentPath;
+    }
+    
+    public ObjectMetadata setAttributes(String attributes) {
+        this.attributes = attributes;
+        return this;
+    }
+    
+    public String getAttributes() {
+        return this.attributes;
     }
 }

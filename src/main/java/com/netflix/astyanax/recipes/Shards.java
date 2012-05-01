@@ -27,8 +27,7 @@ public class Shards {
         }
 
         public Collection<ByteBuffer> build() {
-            List<ByteBuffer> shards = Lists
-                    .newArrayListWithExpectedSize(shardCount);
+            List<ByteBuffer> shards = Lists.newArrayListWithExpectedSize(shardCount);
             for (int i = 0; i < shardCount; i++) {
                 shards.add(StringSerializer.get().toByteBuffer(prefix + i));
             }

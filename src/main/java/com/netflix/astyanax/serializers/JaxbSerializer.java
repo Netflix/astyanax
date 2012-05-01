@@ -55,11 +55,10 @@ public class JaxbSerializer extends AbstractSerializer<Object> {
             @Override
             protected Marshaller initialValue() {
                 try {
-                    return JAXBContext.newInstance(serializableClasses)
-                            .createMarshaller();
-                } catch (JAXBException e) {
-                    throw new IllegalArgumentException(
-                            "Classes to serialize are not JAXB compatible.", e);
+                    return JAXBContext.newInstance(serializableClasses).createMarshaller();
+                }
+                catch (JAXBException e) {
+                    throw new IllegalArgumentException("Classes to serialize are not JAXB compatible.", e);
                 }
             }
         };
@@ -68,11 +67,10 @@ public class JaxbSerializer extends AbstractSerializer<Object> {
             @Override
             protected Unmarshaller initialValue() {
                 try {
-                    return JAXBContext.newInstance(serializableClasses)
-                            .createUnmarshaller();
-                } catch (JAXBException e) {
-                    throw new IllegalArgumentException(
-                            "Classes to serialize are not JAXB compatible.", e);
+                    return JAXBContext.newInstance(serializableClasses).createUnmarshaller();
+                }
+                catch (JAXBException e) {
+                    throw new IllegalArgumentException("Classes to serialize are not JAXB compatible.", e);
                 }
             }
         };
@@ -91,16 +89,14 @@ public class JaxbSerializer extends AbstractSerializer<Object> {
             marshaller.get().marshal(obj, writer);
             writer.flush();
             writer.close();
-        } catch (JAXBException e) {
-            throw new SerializationException(
-                    "Object to serialize "
-                            + obj
-                            + " does not seem compatible with the configured JaxbContext;"
-                            + " note this Serializer works only with JAXBable objects.",
-                    e);
-        } catch (XMLStreamException e) {
-            throw new SerializationException(
-                    "Exception occurred writing XML stream.", e);
+        }
+        catch (JAXBException e) {
+            throw new SerializationException("Object to serialize " + obj
+                    + " does not seem compatible with the configured JaxbContext;"
+                    + " note this Serializer works only with JAXBable objects.", e);
+        }
+        catch (XMLStreamException e) {
+            throw new SerializationException("Exception occurred writing XML stream.", e);
         }
         return ByteBuffer.wrap(buffer.toByteArray());
     }
@@ -118,10 +114,11 @@ public class JaxbSerializer extends AbstractSerializer<Object> {
             Object ret = unmarshaller.get().unmarshal(reader);
             reader.close();
             return ret;
-        } catch (JAXBException e) {
-            throw new SerializationException(
-                    "Jaxb exception occurred during deserialization.", e);
-        } catch (XMLStreamException e) {
+        }
+        catch (JAXBException e) {
+            throw new SerializationException("Jaxb exception occurred during deserialization.", e);
+        }
+        catch (XMLStreamException e) {
             throw new SerializationException("Exception reading XML stream.", e);
         }
     }
@@ -139,8 +136,7 @@ public class JaxbSerializer extends AbstractSerializer<Object> {
      */
     // Provides hook for subclasses to override how marshalling results are
     // serialized (ex. encoding).
-    protected XMLStreamWriter createStreamWriter(OutputStream output)
-            throws XMLStreamException {
+    protected XMLStreamWriter createStreamWriter(OutputStream output) throws XMLStreamException {
         if (outputFactory == null) {
             outputFactory = XMLOutputFactory.newInstance();
         }
@@ -157,8 +153,7 @@ public class JaxbSerializer extends AbstractSerializer<Object> {
      *         {@link #createStreamWriter(OutputStream)}.
      * @throws XMLStreamException
      */
-    protected XMLStreamReader createStreamReader(InputStream input)
-            throws XMLStreamException {
+    protected XMLStreamReader createStreamReader(InputStream input) throws XMLStreamException {
         if (inputFactory == null) {
             inputFactory = XMLInputFactory.newInstance();
         }

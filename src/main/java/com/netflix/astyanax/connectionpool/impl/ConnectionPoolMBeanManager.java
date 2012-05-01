@@ -48,26 +48,26 @@ public class ConnectionPoolMBeanManager {
                 monitors.put(monitorName, mbean);
                 mbs.registerMBean(mbean, oName);
 
-            } catch (Exception e) {
+            }
+            catch (Exception e) {
                 LOG.error(e.getMessage());
                 monitors.remove(monitorName);
             }
         }
     }
 
-    public synchronized void unregisterMonitor(String name,
-            ConnectionPool<?> pool) {
+    public synchronized void unregisterMonitor(String name, ConnectionPool<?> pool) {
         String monitorName = generateMonitorName(name);
         monitors.remove(monitorName);
         try {
             mbs.unregisterMBean(new ObjectName(monitorName));
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             LOG.error(e.getMessage());
         }
     }
 
-    public synchronized JmxConnectionPoolMonitorMBean getCassandraMonitor(
-            String name) {
+    public synchronized JmxConnectionPoolMonitorMBean getCassandraMonitor(String name) {
         String monitorName = generateMonitorName(name);
         return monitors.get(monitorName);
     }

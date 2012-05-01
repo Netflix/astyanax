@@ -20,14 +20,12 @@ import com.netflix.astyanax.connectionpool.Host;
  * @author elandau
  * 
  */
-public class FilteringHostSupplier implements
-        Supplier<Map<BigInteger, List<Host>>> {
+public class FilteringHostSupplier implements Supplier<Map<BigInteger, List<Host>>> {
 
     private final Supplier<Map<BigInteger, List<Host>>> sourceSupplier;
     private final Supplier<Map<BigInteger, List<Host>>> filterSupplier;
 
-    public FilteringHostSupplier(
-            Supplier<Map<BigInteger, List<Host>>> sourceSupplier,
+    public FilteringHostSupplier(Supplier<Map<BigInteger, List<Host>>> sourceSupplier,
             Supplier<Map<BigInteger, List<Host>>> filterSupplier) {
         this.sourceSupplier = sourceSupplier;
         this.filterSupplier = filterSupplier;
@@ -40,7 +38,8 @@ public class FilteringHostSupplier implements
         try {
             filterList = filterSupplier.get();
             sourceList = sourceSupplier.get();
-        } catch (RuntimeException e) {
+        }
+        catch (RuntimeException e) {
             if (filterList != null)
                 return filterList;
             throw e;
@@ -58,20 +57,20 @@ public class FilteringHostSupplier implements
 
         Map<BigInteger, List<Host>> response = Maps.newHashMap();
         for (Entry<BigInteger, List<Host>> token : sourceList.entrySet()) {
-            response.put(token.getKey(), Lists.newArrayList(Collections2
-                    .transform(Collections2.filter(token.getValue(),
-                            new Predicate<Host>() {
+            response.put(
+                    token.getKey(),
+                    Lists.newArrayList(Collections2.transform(
+                            Collections2.filter(token.getValue(), new Predicate<Host>() {
                                 @Override
                                 public boolean apply(Host host) {
-                                    return lookup.containsKey(host
-                                            .getIpAddress());
+                                    return lookup.containsKey(host.getIpAddress());
                                 }
                             }), new Function<Host, Host>() {
-                        @Override
-                        public Host apply(Host host) {
-                            return lookup.get(host.getIpAddress());
-                        }
-                    })));
+                                @Override
+                                public Host apply(Host host) {
+                                    return lookup.get(host.getIpAddress());
+                                }
+                            })));
         }
         return response;
     }

@@ -6,8 +6,7 @@ public class BoundedExponentialBackoff extends ExponentialBackoff {
 
     private final int maxSleepTimeMs;
 
-    public BoundedExponentialBackoff(int baseSleepTimeMs, int maxSleepTimeMs,
-            int max) {
+    public BoundedExponentialBackoff(int baseSleepTimeMs, int maxSleepTimeMs, int max) {
         super(baseSleepTimeMs, max);
         this.maxSleepTimeMs = maxSleepTimeMs;
     }
@@ -17,7 +16,6 @@ public class BoundedExponentialBackoff extends ExponentialBackoff {
     }
 
     public String toString() {
-        return StringUtils.joinClassAttributeValues(this,
-                "BoundedExponentialBackoff", BoundedExponentialBackoff.class);
+        return StringUtils.joinClassAttributeValues(this, "BoundedExponentialBackoff", BoundedExponentialBackoff.class);
     }
 }

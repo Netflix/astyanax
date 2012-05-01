@@ -13,8 +13,7 @@ import com.netflix.astyanax.Serializer;
  * @param <T>
  *            type
  */
-public class TypeInferringSerializer<T> extends AbstractSerializer<T> implements
-        Serializer<T> {
+public class TypeInferringSerializer<T> extends AbstractSerializer<T> implements Serializer<T> {
 
     @SuppressWarnings("rawtypes")
     private static final TypeInferringSerializer instance = new TypeInferringSerializer();

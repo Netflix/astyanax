@@ -28,9 +28,7 @@ public class ThriftCounterColumnListImpl<C> extends AbstractColumnList<C> {
     private HashMap<C, org.apache.cassandra.thrift.CounterColumn> lookup;
     private final Serializer<C> colSer;
 
-    public ThriftCounterColumnListImpl(
-            List<org.apache.cassandra.thrift.CounterColumn> columns,
-            Serializer<C> colSer) {
+    public ThriftCounterColumnListImpl(List<org.apache.cassandra.thrift.CounterColumn> columns, Serializer<C> colSer) {
         this.columns = columns;
         this.colSer = colSer;
     }
@@ -40,8 +38,7 @@ public class ThriftCounterColumnListImpl<C> extends AbstractColumnList<C> {
         class IteratorImpl implements Iterator<Column<C>> {
             Iterator<org.apache.cassandra.thrift.CounterColumn> base;
 
-            public IteratorImpl(
-                    Iterator<org.apache.cassandra.thrift.CounterColumn> base) {
+            public IteratorImpl(Iterator<org.apache.cassandra.thrift.CounterColumn> base) {
                 this.base = base;
             }
 
@@ -53,8 +50,7 @@ public class ThriftCounterColumnListImpl<C> extends AbstractColumnList<C> {
             @Override
             public Column<C> next() {
                 org.apache.cassandra.thrift.CounterColumn c = base.next();
-                return new ThriftCounterColumnImpl<C>(colSer.fromBytes(c
-                        .getName()), c);
+                return new ThriftCounterColumnImpl<C>(colSer.fromBytes(c.getName()), c);
             }
 
             @Override

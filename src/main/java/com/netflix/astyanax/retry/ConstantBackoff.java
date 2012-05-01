@@ -22,8 +22,7 @@ public class ConstantBackoff extends SleepingRetryPolicy {
     }
 
     public String toString() {
-        return StringUtils.joinClassAttributeValues(this, "ConstantBackoff",
-                ConstantBackoff.class);
+        return StringUtils.joinClassAttributeValues(this, "ConstantBackoff", ConstantBackoff.class);
     }
 
 }

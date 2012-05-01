@@ -6,15 +6,12 @@ import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.recipes.locks.ColumnPrefixDistributedRowLock;
 
-public class ColumnPrefixUniquenessConstraint<K> implements
-        UniquenessConstraint {
+public class ColumnPrefixUniquenessConstraint<K> implements UniquenessConstraint {
 
     private final ColumnPrefixDistributedRowLock<K> lock;
 
-    public ColumnPrefixUniquenessConstraint(Keyspace keyspace,
-            ColumnFamily<K, String> columnFamily, K key) {
-        lock = new ColumnPrefixDistributedRowLock<K>(keyspace, columnFamily,
-                key);
+    public ColumnPrefixUniquenessConstraint(Keyspace keyspace, ColumnFamily<K, String> columnFamily, K key) {
+        lock = new ColumnPrefixDistributedRowLock<K>(keyspace, columnFamily, key);
     }
 
     public ColumnPrefixUniquenessConstraint<K> withTtl(Integer ttl) {
@@ -22,8 +19,7 @@ public class ColumnPrefixUniquenessConstraint<K> implements
         return this;
     }
 
-    public ColumnPrefixUniquenessConstraint<K> withConsistencyLevel(
-            ConsistencyLevel consistencyLevel) {
+    public ColumnPrefixUniquenessConstraint<K> withConsistencyLevel(ConsistencyLevel consistencyLevel) {
         lock.withConsistencyLevel(consistencyLevel);
         return this;
     }
@@ -33,11 +29,11 @@ public class ColumnPrefixUniquenessConstraint<K> implements
         try {
             lock.acquire();
 
-            MutationBatch m = lock.getKeyspace().prepareMutationBatch()
-                    .setConsistencyLevel(lock.getConsistencyLevel());
+            MutationBatch m = lock.getKeyspace().prepareMutationBatch().setConsistencyLevel(lock.getConsistencyLevel());
             lock.fillLockMutation(m, null, null);
             m.execute();
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             release();
             throw new NotUniqueException(e);
         }

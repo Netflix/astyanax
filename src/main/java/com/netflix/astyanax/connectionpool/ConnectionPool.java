@@ -99,8 +99,8 @@ public interface ConnectionPool<CL> {
      * @throws ConnectionException
      * @throws OperationException
      */
-    <R> OperationResult<R> executeWithFailover(Operation<CL, R> op,
-            RetryPolicy retry) throws ConnectionException, OperationException;
+    <R> OperationResult<R> executeWithFailover(Operation<CL, R> op, RetryPolicy retry) throws ConnectionException,
+            OperationException;
 
     /**
      * Shut down the connection pool and terminate all existing connections

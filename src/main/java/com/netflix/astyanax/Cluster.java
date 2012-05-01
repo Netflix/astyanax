@@ -64,8 +64,7 @@ public interface Cluster {
      */
     String describePartitioner() throws ConnectionException;
 
-    Map<String, List<String>> describeSchemaVersions()
-            throws ConnectionException;
+    Map<String, List<String>> describeSchemaVersions() throws ConnectionException;
 
     /**
      * Prepare a column family definition. Call execute() on the returned object
@@ -90,8 +89,7 @@ public interface Cluster {
      * @throws OperationException
      * @throws ConnectionException
      */
-    String dropColumnFamily(String keyspaceName, String columnFamilyName)
-            throws ConnectionException;
+    String dropColumnFamily(String keyspaceName, String columnFamilyName) throws ConnectionException;
 
     /**
      * Add a column family to an existing keyspace
@@ -101,8 +99,7 @@ public interface Cluster {
      * @return
      * @throws ConnectionException
      */
-    String addColumnFamily(ColumnFamilyDefinition def)
-            throws ConnectionException;
+    String addColumnFamily(ColumnFamilyDefinition def) throws ConnectionException;
 
     /**
      * Update an existing column family
@@ -112,8 +109,7 @@ public interface Cluster {
      * @return
      * @throws ConnectionException
      */
-    String updateColumnFamily(ColumnFamilyDefinition def)
-            throws ConnectionException;
+    String updateColumnFamily(ColumnFamilyDefinition def) throws ConnectionException;
 
     /**
      * Prepare a keyspace definition. Call execute() on the returned object to
@@ -141,8 +137,7 @@ public interface Cluster {
      * @return
      * @throws ConnectionException
      */
-    KeyspaceDefinition describeKeyspace(String ksName)
-            throws ConnectionException;
+    KeyspaceDefinition describeKeyspace(String ksName) throws ConnectionException;
 
     /**
      * Return a keyspace client. Note that this keyspace will use the same

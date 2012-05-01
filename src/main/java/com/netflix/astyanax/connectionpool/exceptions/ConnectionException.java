@@ -82,9 +82,8 @@ public abstract class ConnectionException extends Exception {
 
     @Override
     public String getMessage() {
-        return getClass().getSimpleName() + ": [host=" + host + ", latency="
-                + latency + "(" + latencyWithPool + "), attempts="
-                + attemptCount + "] " + super.getMessage();
+        return getClass().getSimpleName() + ": [host=" + host + ", latency=" + latency + "(" + latencyWithPool
+                + "), attempts=" + attemptCount + "] " + super.getMessage();
     }
 
     public String getOriginalMessage() {

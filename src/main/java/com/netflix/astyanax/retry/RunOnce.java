@@ -37,8 +37,7 @@ public class RunOnce implements RetryPolicy {
     }
 
     public String toString() {
-        return StringUtils.joinClassAttributeValues(this, "RunOnce",
-                RunOnce.class);
+        return StringUtils.joinClassAttributeValues(this, "RunOnce", RunOnce.class);
     }
 
 }

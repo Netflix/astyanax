@@ -14,13 +14,11 @@ import com.netflix.astyanax.connectionpool.ConnectionPoolMonitor;
  * @param <T>
  */
 public interface AstyanaxTypeFactory<T> {
-    Keyspace createKeyspace(String ksName, ConnectionPool<T> cp,
-            AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory);
-
-    Cluster createCluster(ConnectionPool<T> cp, AstyanaxConfiguration asConfig,
+    Keyspace createKeyspace(String ksName, ConnectionPool<T> cp, AstyanaxConfiguration asConfig,
             KeyspaceTracerFactory tracerFactory);
 
-    ConnectionFactory<T> createConnectionFactory(
-            ConnectionPoolConfiguration cfConfig,
+    Cluster createCluster(ConnectionPool<T> cp, AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory);
+
+    ConnectionFactory<T> createConnectionFactory(ConnectionPoolConfiguration cfConfig,
             KeyspaceTracerFactory tracerFactory, ConnectionPoolMonitor monitor);
 }

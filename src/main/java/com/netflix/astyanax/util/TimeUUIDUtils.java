@@ -25,14 +25,11 @@ public final class TimeUUIDUtils {
      * @return the time uuid
      */
     public static java.util.UUID getUniqueTimeUUIDinMillis() {
-        return new java.util.UUID(UUIDGen.newTime(),
-                UUIDGen.getClockSeqAndNode());
+        return new java.util.UUID(UUIDGen.newTime(), UUIDGen.getClockSeqAndNode());
     }
 
     public static java.util.UUID getUniqueTimeUUIDinMicros() {
-        return new java.util.UUID(
-                createTimeFromMicros(microsClock.getCurrentTime()),
-                UUIDGen.getClockSeqAndNode());
+        return new java.util.UUID(createTimeFromMicros(microsClock.getCurrentTime()), UUIDGen.getClockSeqAndNode());
     }
 
     /**
@@ -60,21 +57,18 @@ public final class TimeUUIDUtils {
      * @return the time uuid
      */
     public static java.util.UUID getTimeUUID(long time) {
-        return new java.util.UUID(createTime(time),
-                UUIDGen.getClockSeqAndNode());
+        return new java.util.UUID(createTime(time), UUIDGen.getClockSeqAndNode());
     }
 
     public static java.util.UUID getMicrosTimeUUID(long time) {
-        return new java.util.UUID(createTimeFromMicros(time),
-                UUIDGen.getClockSeqAndNode());
+        return new java.util.UUID(createTimeFromMicros(time), UUIDGen.getClockSeqAndNode());
     }
 
     private static long createTime(long currentTime) {
         long time;
 
         // UTC time
-        long timeToUse = (currentTime * 10000)
-                + NUM_100NS_INTERVALS_SINCE_UUID_EPOCH;
+        long timeToUse = (currentTime * 10000) + NUM_100NS_INTERVALS_SINCE_UUID_EPOCH;
 
         // time low
         time = timeToUse << 32;
@@ -91,8 +85,7 @@ public final class TimeUUIDUtils {
         long time;
 
         // UTC time
-        long timeToUse = (currentTime * 10)
-                + NUM_100NS_INTERVALS_SINCE_UUID_EPOCH;
+        long timeToUse = (currentTime * 10) + NUM_100NS_INTERVALS_SINCE_UUID_EPOCH;
 
         // time low
         time = timeToUse << 32;

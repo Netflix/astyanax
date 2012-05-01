@@ -42,12 +42,11 @@ public class JmxConnectionPoolMonitor implements JmxConnectionPoolMonitorMBean {
 
     @Override
     public String getActiveHosts() {
-        return StringUtils.join(Lists.transform(pool.getActivePools(),
-                new Function<HostConnectionPool<?>, String>() {
-                    @Override
-                    public String apply(HostConnectionPool<?> host) {
-                        return host.getHost().getName();
-                    }
-                }), ",");
+        return StringUtils.join(Lists.transform(pool.getActivePools(), new Function<HostConnectionPool<?>, String>() {
+            @Override
+            public String apply(HostConnectionPool<?> host) {
+                return host.getHost().getName();
+            }
+        }), ",");
     }
 }

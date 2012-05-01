@@ -29,8 +29,7 @@ public class ThriftCounterColumnImpl<C> implements Column<C> {
     private final C name;
     private final org.apache.cassandra.thrift.CounterColumn column;
 
-    public ThriftCounterColumnImpl(C name,
-            org.apache.cassandra.thrift.CounterColumn column) {
+    public ThriftCounterColumnImpl(C name, org.apache.cassandra.thrift.CounterColumn column) {
         this.name = name;
         this.column = column;
     }
@@ -111,8 +110,7 @@ public class ThriftCounterColumnImpl<C> implements Column<C> {
 
     @Override
     public long getTimestamp() {
-        throw new UnsupportedOperationException("CounterColumn \'" + this.name
-                + "\' has no timestamp");
+        throw new UnsupportedOperationException("CounterColumn \'" + this.name + "\' has no timestamp");
     }
 
     @Override

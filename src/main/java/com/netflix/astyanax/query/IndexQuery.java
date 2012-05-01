@@ -64,8 +64,7 @@ public interface IndexQuery<K, C> extends Execution<Rows<K, C>> {
      * @param expressions
      * @return
      */
-    IndexQuery<K, C> addPreparedExpressions(
-            Collection<PreparedIndexExpression<K, C>> expressions);
+    IndexQuery<K, C> addPreparedExpressions(Collection<PreparedIndexExpression<K, C>> expressions);
 
     /**
      * Specify a non-contiguous set of columns to retrieve.
@@ -105,8 +104,7 @@ public interface IndexQuery<K, C> extends Execution<Rows<K, C>> {
      *            Maximum number of columns to return (similar to SQL LIMIT)
      * @return
      */
-    IndexQuery<K, C> withColumnRange(C startColumn, C endColumn,
-            boolean reversed, int count);
+    IndexQuery<K, C> withColumnRange(C startColumn, C endColumn, boolean reversed, int count);
 
     /**
      * Specify a range and provide pre-constructed start and end columns. Use
@@ -118,8 +116,7 @@ public interface IndexQuery<K, C> extends Execution<Rows<K, C>> {
      * @param count
      * @return
      */
-    IndexQuery<K, C> withColumnRange(ByteBuffer startColumn,
-            ByteBuffer endColumn, boolean reversed, int count);
+    IndexQuery<K, C> withColumnRange(ByteBuffer startColumn, ByteBuffer endColumn, boolean reversed, int count);
 
     /**
      * Specify a range of composite columns. Use this in conjunction with the

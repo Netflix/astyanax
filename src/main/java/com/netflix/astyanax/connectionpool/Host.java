@@ -41,8 +41,7 @@ public class Host {
         this.host = "None";
         this.ipAddress = "0.0.0.0";
         this.port = 0;
-        this.name = String.format("%s(%s):%d", this.host, this.ipAddress,
-                this.port);
+        this.name = String.format("%s(%s):%d", this.host, this.ipAddress, this.port);
         this.url = String.format("%s:%d", this.host, this.port);
     }
 
@@ -57,12 +56,14 @@ public class Host {
         if (match.matches()) {
             workHost = tempHost;
             workIpAddress = tempHost;
-        } else {
+        }
+        else {
             try {
                 InetAddress address = InetAddress.getByName(tempHost);
                 workHost = address.getHostName();
                 workIpAddress = address.getHostAddress();
-            } catch (UnknownHostException e) {
+            }
+            catch (UnknownHostException e) {
                 workHost = tempHost;
                 workIpAddress = tempHost;
             }
@@ -70,8 +71,7 @@ public class Host {
         this.host = workHost;
         this.ipAddress = workIpAddress;
 
-        this.name = String.format("%s(%s):%d", tempHost, this.ipAddress,
-                this.port);
+        this.name = String.format("%s(%s):%d", tempHost, this.ipAddress, this.port);
         this.url = String.format("%s:%d", this.host, this.port);
     }
 
@@ -82,8 +82,7 @@ public class Host {
      * @return
      */
     public static String parseHostFromUrl(String urlPort) {
-        return urlPort.lastIndexOf(':') > 0 ? urlPort.substring(0,
-                urlPort.lastIndexOf(':')) : urlPort;
+        return urlPort.lastIndexOf(':') > 0 ? urlPort.substring(0, urlPort.lastIndexOf(':')) : urlPort;
     }
 
     /**
@@ -94,9 +93,8 @@ public class Host {
      * @return
      */
     public static int parsePortFromUrl(String urlPort, int defaultPort) {
-        return urlPort.lastIndexOf(':') > 0 ? Integer.valueOf(urlPort
-                .substring(urlPort.lastIndexOf(':') + 1, urlPort.length()))
-                : defaultPort;
+        return urlPort.lastIndexOf(':') > 0 ? Integer.valueOf(urlPort.substring(urlPort.lastIndexOf(':') + 1,
+                urlPort.length())) : defaultPort;
     }
 
     @Override

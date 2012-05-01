@@ -24,6 +24,5 @@ public interface KeyspaceTracerFactory {
      * @param columnFamily
      * @return
      */
-    CassandraOperationTracer newTracer(CassandraOperationType type,
-            ColumnFamily<?, ?> columnFamily);
+    CassandraOperationTracer newTracer(CassandraOperationType type, ColumnFamily<?, ?> columnFamily);
 }

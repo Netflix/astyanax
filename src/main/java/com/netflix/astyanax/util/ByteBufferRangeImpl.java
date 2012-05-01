@@ -10,8 +10,7 @@ public class ByteBufferRangeImpl implements ByteBufferRange {
     private final int limit;
     private final boolean reversed;
 
-    public ByteBufferRangeImpl(ByteBuffer start, ByteBuffer end, int limit,
-            boolean reversed) {
+    public ByteBufferRangeImpl(ByteBuffer start, ByteBuffer end, int limit, boolean reversed) {
         this.start = start;
         this.end = end;
         this.limit = limit;

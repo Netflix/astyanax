@@ -39,13 +39,15 @@ Thumbs.db
 ################
 .gradle
 
-# Build output directies
+# Build output directories #
+############################
 /target
 */target
 /build
 */build
-#
-# # IntelliJ specific files/directories
+
+# IntelliJ specific files/directories #
+#######################################
 out
 .idea
 *.ipr
@@ -53,11 +55,13 @@ out
 *.iml
 atlassian-ide-plugin.xml
 
-# Eclipse specific files/directories
+# Eclipse specific files/directories #
+######################################
 .classpath
 .project
 .settings
 .metadata
 
-# NetBeans specific files/directories
+# NetBeans specific files/directories #
+#######################################
 .nbattrs

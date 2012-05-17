@@ -126,14 +126,12 @@ public class ThriftSuperColumnMutationImpl<C> implements ColumnListMutation<C> {
     }
 
     @Override
-    public ColumnListMutation<C> putColumn(C columnName, float value,
-            Integer ttl) {
+    public ColumnListMutation<C> putColumn(C columnName, float value, Integer ttl) {
         return putColumn(columnName, value, FloatSerializer.get(), ttl);
     }
 
     @Override
-    public ColumnListMutation<C> putColumn(C columnName, double value,
-            Integer ttl) {
+    public ColumnListMutation<C> putColumn(C columnName, double value, Integer ttl) {
         return putColumn(columnName, value, DoubleSerializer.get(), ttl);
     }
 

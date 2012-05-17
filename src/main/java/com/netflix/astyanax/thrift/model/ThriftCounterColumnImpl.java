@@ -118,4 +118,9 @@ public class ThriftCounterColumnImpl<C> implements Column<C> {
         return ByteBuffer.wrap(column.getName());
     }
 
+    @Override
+    public int getTtl() {
+        throw new UnsupportedOperationException("CounterColumn \'" + this.name + "\' has no ttl");
+    }
+
 }

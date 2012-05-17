@@ -149,4 +149,10 @@ public interface Column<C> {
      */
     @Deprecated
     boolean isParentColumn();
+
+    /**
+     * Get the TTL for this column.  
+     * @return TTL in seconds or 0 if no ttl was set
+     */
+    int getTtl();
 }

@@ -125,5 +125,10 @@ public class ThriftColumnImpl<C> implements Column<C> {
     public ByteBuffer getRawName() {
         return ByteBuffer.wrap(column.getName());
     }
+    
+    @Override
+    public int getTtl() {
+        return column.isSetTtl() ? column.getTtl() : 0;
+    }
 
 }

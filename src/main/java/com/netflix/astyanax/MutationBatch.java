@@ -170,10 +170,8 @@ public interface MutationBatch extends Execution<Void> {
      * lockTimestamp before doing any other operations otherwise previously
      * created withRow mutations will use the previous timestamp.
      * 
-     * @deprecated Mutation timestamps are now locked by default.
      * @return
      */
-    @Deprecated
     MutationBatch lockCurrentTimestamp();
 
     /**

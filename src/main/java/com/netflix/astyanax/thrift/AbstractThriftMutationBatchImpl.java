@@ -239,9 +239,8 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
         return this;
     }
 
-    @Override
-    @Deprecated
     public MutationBatch lockCurrentTimestamp() {
+        this.timestamp = this.clock.getCurrentTime();
         return this;
     }
 }

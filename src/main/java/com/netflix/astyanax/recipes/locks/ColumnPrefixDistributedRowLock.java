@@ -1,28 +1,85 @@
 package com.netflix.astyanax.recipes.locks;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
+import com.netflix.astyanax.model.ColumnMap;
 import com.netflix.astyanax.model.ConsistencyLevel;
+import com.netflix.astyanax.model.OrderedColumnMap;
+import com.netflix.astyanax.retry.RetryPolicy;
+import com.netflix.astyanax.retry.RunOnce;
 import com.netflix.astyanax.util.RangeBuilder;
 import com.netflix.astyanax.util.TimeUUIDUtils;
 
 /**
- * Takes a distributed row lock for a single row.
+ * Takes a distributed row lock for a single row.  The row lock is accomplished using
+ * a sequence of read/write events to Cassandra without the need for something like
+ * zookeeper.  
  * 
- * Algorithm 1. Write a column with name <prefix>_<uuid>. Value is a TTL. 2.
- * Read back all columns with <prefix> a) count==1 Got the lock b) otherwise
- * Look for stale locks a) count==1 Got the lock b) otherwise No lock
+ * Algorithm 
+ * 1. Write a column with name <prefix>_<uuid>. Value is an expiration time. 
+ * 2. Read back all columns with <prefix> 
+ *      case 1) count==1 Got the lock 
+ *      case 2) count> 1 No lock
+ * 3. Do something in your code assuming the row is locked
+ * 4. Release the lock by deleting the lock columns
+ * 
+ * Usage considerations
+ * 1. Set an expiration time (expireLockAfter) that is long enough for your processing to complete
+ * 2. Use this when the probability for contension is very low
+ * 3. Optimize by reading all columns (withIncludeAllColumn(true)) and merge the mutation
+ *      into the release.  This will save 2 calls to cassandra.
+ * 4. If the client fails after Step 1.  A subsequent attempt to lock will automatically 
+ *      release these stale locks.  You can turn this auto cleanup off by calling
+ *      failOnStaleLock(false), handling a StaleLockException and doing manual cleanup by
+ *      calling releaseExpiredLocks()
+ * 5. An optional TTL can be set on the lock columns which will ensure abandoned/stale locks
+ *      will be cleaned up by compactions at some point.
+ * 6. You can customize the 'prefix' used for the lock columns.  This will help with storing
+ *      the lock columns with data in the same row.  
+ * 7. You can customize the unique part of the lock column to include meaningful data such
+ *      as the UUID row key from another column family.  This can have the same effect as 
+ *      assigning a foreign key to the lock column and is useful for uniqueness constraint.
+ * 8. This recipe is not a transaction.  
+ * 
+ * Take a lock,
+ * <code>
+ *      ColumnPrefixDistributedRowLock<String> lock = new ColumnPrefixDistributedRowLock<String>(keyspace, columnFamily, "KeyBeingLocked");
+ *      try {
+ *          lock.acquire();
+ *      }
+ *      finally {
+ *          lock.release();
+ *      }
+ * </code>
+ * 
+ * Read, Modify, Write.  The read, modify, write piggybacks on top of the lock calls.
+ * 
+ * <code>
+ *      ColumnPrefixDistributedRowLock<String> lock = new ColumnPrefixDistributedRowLock<String>(keyspace, columnFamily, "KeyBeingLocked");
+ *      MutationBatch m = keyspace.prepareMutationBatch();
+ *      try {
+ *          ColumnMap<String> columns = lock.acquireLockAndReadRow();
+ *          
+ *          m.withRow("KeyBeingLocked")
+ *              .putColumn("SomeColumnBeingUpdated", );
+ *              
+ *          lock.releaseWithMutation(m);
+ *      }
+ *      catch (Exception e) {
+ *          lock.release();
+ *      }
+ * </code>
  * 
  * @author elandau
  * 
@@ -33,26 +90,30 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
     public static final TimeUnit DEFAULT_OPERATION_TIMEOUT_UNITS = TimeUnit.MINUTES;
     public static final String DEFAULT_LOCK_PREFIX = "_LOCK_";
 
-    private final ColumnFamily<K, String> columnFamily; // The column family for
-                                                        // data and lock
-    private final Keyspace keyspace; // The keyspace
-    private final K key; // Key being locked
+    private final ColumnFamily<K, String> columnFamily; // The column family for data and lock
+    private final Keyspace keyspace;                    // The keyspace
+    private final K key;                                // Key being locked
 
-    private long timeout = LOCK_TIMEOUT;
+    private long timeout = LOCK_TIMEOUT;                // Timeout after which the lock expires
     private TimeUnit timeoutUnits = DEFAULT_OPERATION_TIMEOUT_UNITS;
-    private String prefix = DEFAULT_LOCK_PREFIX; // Prefix to identify the lock
-                                                 // columns
-    private ConsistencyLevel consistencyLevel = ConsistencyLevel.CL_QUORUM;
-    private boolean failOnStaleLock = false;
+    private String prefix = DEFAULT_LOCK_PREFIX;        // Prefix to identify the lock columns
+    private ConsistencyLevel consistencyLevel = ConsistencyLevel.CL_LOCAL_QUORUM;
+    private boolean failOnStaleLock = false;           
     private String lockColumn = null;
-    private List<String> locksToDelete = Lists.newArrayList();
-    private Integer ttl;
+    private String lockId = null;
+    private Set<String> locksToDelete = Sets.newHashSet();
+    private ColumnMap<String> columns = null;
+    private Integer ttl = null;
+    private boolean readDataColumns = false;
+    private RetryPolicy backoffPolicy = RunOnce.get();
+    private long acquireTime = 0;
+    private int retryCount = 0;
 
     public ColumnPrefixDistributedRowLock(Keyspace keyspace, ColumnFamily<K, String> columnFamily, K key) {
         this.keyspace = keyspace;
         this.columnFamily = columnFamily;
         this.key = key;
-        this.lockColumn = prefix + TimeUUIDUtils.getUniqueTimeUUIDinMicros();
+        this.lockId = TimeUUIDUtils.getUniqueTimeUUIDinMicros().toString();
     }
 
     /**
@@ -78,18 +139,28 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
      */
     public ColumnPrefixDistributedRowLock<K> withColumnPrefix(String prefix) {
         this.prefix = prefix;
-        this.lockColumn = prefix + TimeUUIDUtils.getUniqueTimeUUIDinMicros();
         return this;
     }
 
     /**
-     * Override the autogenerated lock column.
-     * 
-     * @param column
+     * If true the first read will also fetch all the columns in the row as 
+     * opposed to just the lock columns.
+     * @param flag
      * @return
      */
-    public ColumnPrefixDistributedRowLock<K> withLockColumn(String column) {
-        this.lockColumn = column;
+    public ColumnPrefixDistributedRowLock<K> withDataColumns(boolean flag) {
+        this.readDataColumns = flag;
+        return this;
+    }
+    
+    /**
+     * Override the autogenerated lock column.
+     * 
+     * @param lockId
+     * @return
+     */
+    public ColumnPrefixDistributedRowLock<K> withLockId(String lockId) {
+        this.lockId = lockId;
         return this;
     }
 
@@ -119,55 +190,97 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
         return this;
     }
 
+    /**
+     * This is the TTL on the lock column being written, as opposed to expireLockAfter which 
+     * is written as the lock column value.  Whereas the expireLockAfter can be used to 
+     * identify a stale or abandoned lock the TTL will result in the stale or abandoned lock
+     * being eventually deleted by cassandra.  Set the TTL to a number that is much greater
+     * tan the expireLockAfter time.
+     * @param ttl
+     * @return
+     */
     public ColumnPrefixDistributedRowLock<K> withTtl(Integer ttl) {
         this.ttl = ttl;
         return this;
     }
+    
+    public ColumnPrefixDistributedRowLock<K> withBackoff(RetryPolicy policy) {
+        this.backoffPolicy  = policy;
+        return this;
+    }
 
     /**
-     * Write a lock column using the current time
+     * Try to take the lock.  The caller must call .release() to properly clean up
+     * the lock columns from cassandra
      * 
      * @return
      * @throws Exception
      */
     @Override
     public void acquire() throws Exception {
-        try {
-            long curTimeMicros = getCurrentTimeMicros();
-            lockColumn = writeLockColumn(curTimeMicros);
-
-            verifyLock(curTimeMicros);
-        }
-        catch (Exception e) {
-            release();
-            throw e;
+        RetryPolicy retry = backoffPolicy.duplicate();
+        retryCount = 0;
+        while (true) {
+            try {
+                long curTimeMicros = getCurrentTimeMicros();
+                
+                MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+                fillLockMutation(m, curTimeMicros, ttl);
+                m.execute();
+                
+                verifyLock(curTimeMicros);
+                acquireTime = System.currentTimeMillis();
+                return;
+            }
+            catch (BusyLockException e) {
+                release();
+                if(!retry.allowRetry())
+                    throw e;
+                retryCount++;
+            }
         }
     }
 
     /**
-     * Verify that the lock was acquired
+     * Take the lock and return the row data columns.  Use this, instead of acquire, when you 
+     * want to implement a read-modify-write scenario and want to reduce the number of calls
+     * to Cassandra.
      * 
-     * @param curTimeMicros
+     * @return
      * @throws Exception
      */
-    public void verifyLock(long curTimeMicros) throws Exception, BusyLockException, StaleLockException {
-        // Phase 2: Read back all columns. There should be only 1 if we got the
-        // lock
-        // TODO: May want to support reading entire row
-        Map<String, Long> lockResult = readLockColumns();
+    public ColumnMap<String> acquireLockAndReadRow() throws Exception {
+        withDataColumns(true);
+        acquire();
+        return getDataColumns();
+    }
+    
+    /**
+     * Verify that the lock was acquired.  This shouldn't be called unless it's part of a recipe
+     * built on top of ColumnPrefixDistributedRowLock.  
+     * 
+     * @param curTimeInMicros
+     * @throws BusyLockException
+     */
+    public void verifyLock(long curTimeInMicros) throws Exception, BusyLockException, StaleLockException {
+        if (lockColumn == null) 
+            throw new IllegalStateException("verifyLock() called without attempting to take the lock");
+        
+        // Read back all columns. There should be only 1 if we got the lock
+        Map<String, Long> lockResult = readLockColumns(readDataColumns);
 
         // Cleanup and check that we really got the lock
         for (Entry<String, Long> entry : lockResult.entrySet()) {
             // This is a stale lock that was never cleaned up
-            if (entry.getValue() != 0 && curTimeMicros > entry.getValue()) {
-                if (this.failOnStaleLock) {
-                    throw new StaleLockException("Stale lock on row " + key + ".  Manual cleanup requried.");
+            if (entry.getValue() != 0 && curTimeInMicros > entry.getValue()) {
+                if (failOnStaleLock) {
+                    throw new StaleLockException("Stale lock on row '" + key + "'.  Manual cleanup requried.");
                 }
                 locksToDelete.add(entry.getKey());
             }
             // Lock already taken, and not by us
             else if (!entry.getKey().equals(lockColumn)) {
-                throw new BusyLockException("Lock already acquired for " + entry.getKey());
+                throw new BusyLockException("Lock already acquired for row '" + key + "' with lock column " + entry.getKey());
             }
         }
     }
@@ -177,51 +290,87 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
      */
     @Override
     public void release() throws Exception {
-        if (!locksToDelete.isEmpty()) {
+        if (!locksToDelete.isEmpty() || lockColumn != null) {
             MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
-            fillReleaseMutation(m);
+            fillReleaseMutation(m, false);
             m.execute();
         }
     }
 
     /**
-     * Fill a mutation that will release the locks. This may be used from a
-     * separate recipe to release multiple locks.
-     * 
+     * Release using the provided mutation.  Use this when you want to commit actual data
+     * when releasing the lock
      * @param m
+     * @throws Exception
      */
-    public void fillReleaseMutation(MutationBatch m) {
-        // Add the deletes to the end of the mutation
-        ColumnListMutation<String> row = m.withRow(columnFamily, key);
-        for (String c : locksToDelete) {
-            row.deleteColumn(c);
+    public void releaseWithMutation(MutationBatch m) throws Exception {
+        long elapsed = System.currentTimeMillis() - acquireTime;
+        if (timeout > 0 && elapsed > TimeUnit.MILLISECONDS.convert(timeout, this.timeoutUnits)) {
+            throw new StaleLockException("Lock for '" + getKey() + "' became stale");
         }
-        locksToDelete.clear();
+        
+        m.setConsistencyLevel(consistencyLevel);
+        fillReleaseMutation(m, false);
+        m.execute();
     }
-
+    
     /**
-     * Return a mapping of existing lock columns and their expiration time
+     * Return a mapping of existing lock columns and their expiration times
      * 
      * @return
      * @throws Exception
      */
     public Map<String, Long> readLockColumns() throws Exception {
-        ColumnList<String> lockResult = keyspace.prepareQuery(columnFamily).setConsistencyLevel(consistencyLevel)
-                .getKey(key)
-                .withColumnRange(new RangeBuilder().setStart(prefix + "\u0000").setEnd(prefix + "\uFFFF").build())
-                .execute().getResult();
-
-        Map<String, Long> result = Maps.newLinkedHashMap();
-        for (Column<String> c : lockResult) {
-            result.put(c.getName(), c.getLongValue());
-        }
-
-        return result;
+        return readLockColumns(false);
     }
+    
+    /**
+     * Read all the lock columns.  Will also ready data columns if withDataColumns(true) was called
+     * 
+     * @param readDataColumns
+     * @return
+     * @throws Exception
+     */
+    private Map<String, Long> readLockColumns(boolean readDataColumns) throws Exception {
+        Map<String, Long> result = Maps.newLinkedHashMap();
+        // Read all the columns
+        if (readDataColumns) {
+            columns = new OrderedColumnMap<String>();
+            ColumnList<String> lockResult = keyspace
+                .prepareQuery(columnFamily)
+                    .setConsistencyLevel(consistencyLevel)
+                    .getKey(key)
+                .execute()
+                    .getResult();
+    
+            for (Column<String> c : lockResult) {
+                if (c.getName().startsWith(prefix))
+                    result.put(c.getName(), c.getLongValue());
+                else 
+                    columns.add(c);
+            }
+        }
+        // Read only the lock columns
+        else {
+            ColumnList<String> lockResult = keyspace
+                .prepareQuery(columnFamily)
+                    .setConsistencyLevel(consistencyLevel)
+                    .getKey(key)
+                    .withColumnRange(new RangeBuilder().setStart(prefix + "\u0000").setEnd(prefix + "\uFFFF").build())
+                .execute()
+                    .getResult();
 
+            for (Column<String> c : lockResult) {
+                result.put(c.getName(), c.getLongValue());
+            }
+
+        }
+        return result;    
+    }
+    
     /**
      * Release all locks. Use this carefully as it could release a lock for a
-     * running operation
+     * running operation.
      * 
      * @return
      * @throws Exception
@@ -241,16 +390,18 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
     }
 
     /**
-     * Delete locks columns. Set force=true to remove locks that haven't been
+     * Delete locks columns. Set force=true to remove locks that haven't 
      * expired yet.
      * 
-     * @param force
+     * This operation first issues a read to cassandra and then deletes columns
+     * in the response.
+     * 
+     * @param force - Force delete of non expired locks as well
      * @return
      * @throws Exception
      */
     public Map<String, Long> releaseLocks(boolean force) throws Exception {
         Map<String, Long> locksToDelete = readLockColumns();
-        release();
 
         MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
         ColumnListMutation<String> row = m.withRow(columnFamily, key);
@@ -270,47 +421,64 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
      * 
      * @return
      */
-    private long getCurrentTimeMicros() {
+    private static long getCurrentTimeMicros() {
         return TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS);
-    }
-
-    /**
-     * Write a lock for the specified time.
-     * 
-     * @param time
-     * @return The column name for the lock
-     * @throws Exception
-     */
-    protected String writeLockColumn(long time) throws Exception {
-        locksToDelete.add(lockColumn);
-
-        MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
-        fillLockMutation(m, time, this.ttl);
-        m.execute();
-
-        return lockColumn;
     }
 
     /**
      * Fill a mutation with the lock column. This may be used when the mutation
      * is executed externally but should be used with extreme caution to ensure
-     * the lock is properly release
+     * the lock is properly released
      * 
      * @param m
      * @param time
      * @param ttl
      */
-    public void fillLockMutation(MutationBatch m, Long time, Integer ttl) {
-        locksToDelete.add(lockColumn);
+    public String fillLockMutation(MutationBatch m, Long time, Integer ttl) {
+        if (lockColumn != null) {
+            if (!lockColumn.equals(prefix+lockId))
+                throw new IllegalStateException("Can't change prefix or lockId after acquiring the lock");
+        }
+        else {
+            lockColumn = prefix + lockId;
+        }
         if (time != null) {
             m.withRow(columnFamily, key).putColumn(lockColumn,
                     time + TimeUnit.MICROSECONDS.convert(timeout, timeoutUnits), ttl);
         }
         else {
-            m.withRow(columnFamily, key).putColumn(lockColumn, 0, ttl);
+            m.withRow(columnFamily, key).putColumn(lockColumn, new Long(0), ttl);
         }
+        return lockColumn;
     }
 
+    /**
+     * Fill a mutation that will release the locks. This may be used from a
+     * separate recipe to release multiple locks.
+     * 
+     * @param m
+     */
+    public void fillReleaseMutation(MutationBatch m, boolean excludeCurrentLock) {
+        // Add the deletes to the end of the mutation
+        ColumnListMutation<String> row = m.withRow(columnFamily, key);
+        for (String c : locksToDelete) {
+            row.deleteColumn(c);
+        }
+        if (!excludeCurrentLock && lockColumn != null) 
+            row.deleteColumn(lockColumn);
+        locksToDelete.clear();
+        lockColumn = null;
+    }
+
+
+    public ColumnMap<String> getDataColumns() {
+        return columns;
+    }
+    
+    public K getKey() {
+        return key;
+    }
+    
     public Keyspace getKeyspace() {
         return keyspace;
     }
@@ -320,7 +488,19 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
     }
 
     public String getLockColumn() {
-        return this.lockColumn;
+        return lockColumn;
+    }
+    
+    public String getLockId() {
+        return lockId;
+    }
+    
+    public String getPrefix() {
+        return prefix;
+    }
+    
+    public int getRetryCount() {
+        return retryCount;
     }
 
 }

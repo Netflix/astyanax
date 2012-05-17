@@ -99,4 +99,9 @@ public class EmptyColumn<C> implements Column<C> {
     public ByteBuffer getRawName() {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public int getTtl() {
+        throw new UnsupportedOperationException();
+    }
 }

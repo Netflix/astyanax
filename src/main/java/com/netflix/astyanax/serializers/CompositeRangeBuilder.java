@@ -23,7 +23,7 @@ import com.netflix.astyanax.model.Equality;
 public abstract class CompositeRangeBuilder implements ByteBufferRange {
     private ByteBufferOutputStream start = new ByteBufferOutputStream();
     private ByteBufferOutputStream end = new ByteBufferOutputStream();
-    private int limit = 100;
+    private int limit = Integer.MAX_VALUE;
     private boolean reversed = false;
     private boolean lockComponent = false;
 

@@ -106,7 +106,11 @@ public class ThriftCounterSuperColumnImpl<C> implements Column<C> {
 
     @Override
     public ByteBuffer getRawName() {
-        // TODO Auto-generated method stub
-        return null;
+        return ByteBuffer.wrap(column.getName());
+    }
+
+    @Override
+    public int getTtl() {
+        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no ttl");
     }
 }

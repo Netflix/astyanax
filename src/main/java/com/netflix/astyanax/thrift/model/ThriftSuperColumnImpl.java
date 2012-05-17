@@ -108,4 +108,9 @@ public class ThriftSuperColumnImpl<C> implements Column<C> {
     public ByteBuffer getRawName() {
         return ByteBuffer.wrap(column.getName());
     }
+
+    @Override
+    public int getTtl() {
+        throw new UnsupportedOperationException("SuperColumn \'" + this.name + "\' has no ttl");
+    }
 }

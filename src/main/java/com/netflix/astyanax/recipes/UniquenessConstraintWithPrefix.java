@@ -9,6 +9,7 @@ import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.util.RangeBuilder;
 
+@Deprecated
 public class UniquenessConstraintWithPrefix<K> {
     private final ColumnFamily<K, String> columnFamily;
     private final Keyspace keyspace;

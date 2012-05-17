@@ -3,22 +3,23 @@ package com.netflix.astyanax.retry;
 import com.netflix.astyanax.util.StringUtils;
 
 /**
- * Base sleeping retry policy with optional count limit
+ * Base sleeping retry policy with optional count limit.  The sleep time
+ * is delegated to the subclass.
  * 
  * @author elandau
  * 
  */
 public abstract class SleepingRetryPolicy implements RetryPolicy {
-    private final int max;
+    private final int maxAttempts;
     private int attempts;
 
     public SleepingRetryPolicy(int max) {
-        this.max = max;
+        this.maxAttempts = max;
         this.attempts = 0;
     }
 
     public boolean allowRetry() {
-        if (max == -1 || attempts < max) {
+        if (maxAttempts == -1 || attempts < maxAttempts) {
             try {
                 Thread.sleep(getSleepTimeMs());
             }
@@ -51,8 +52,13 @@ public abstract class SleepingRetryPolicy implements RetryPolicy {
         return attempts;
     }
 
+    @Deprecated
     public int getMax() {
-        return max;
+        return getMaxAttemptCount();
+    }
+    
+    public int getMaxAttemptCount() {
+        return maxAttempts;
     }
 
     public String toString() {

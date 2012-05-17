@@ -6,10 +6,6 @@ public class NotUniqueException extends Exception {
      */
     private static final long serialVersionUID = -3735805268823536495L;
 
-    public NotUniqueException() {
-
-    }
-
     public NotUniqueException(Exception e) {
         super(e);
     }

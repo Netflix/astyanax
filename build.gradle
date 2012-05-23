@@ -11,6 +11,7 @@ allprojects {
     repositories { mavenCentral() }
 }
 
+apply plugin: 'osgi'
 //apply from: file('gradle/release.gradle') // Not fully tested
 apply from: file('gradle/convention.gradle')
 apply from: file('gradle/maven.gradle')

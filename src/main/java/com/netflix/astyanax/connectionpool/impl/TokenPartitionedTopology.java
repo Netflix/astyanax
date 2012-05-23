@@ -70,7 +70,6 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
         Set<BigInteger> tokensToRemove = Sets.newHashSet(tokens.keySet());
 
         Set<HostConnectionPool<CL>> allPools = Sets.newHashSet();
-        ;
 
         boolean didChange = false;
         // Iterate all tokens
@@ -142,17 +141,25 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
         // token. We can get two responses here.
         // 1. The token is in the list in which case the response is the
         // index of the partition
-        // 2. The token is not in the list in which case the response is the
-        // index where the token would have been inserted into the list.
-        // We convert this index (which is negative) to the index of the
-        // previous position in the list.
+        // 2. The token is not in the list in which case the response from
+        // Collections.binarySearch is (-(insertion point) - 1).
+        // Collections.binarySearch defines the insertion point as
+        // the point at which the [token] would be inserted into the
+        // list: the index of the first element greater than the [token],
+        // or list.size() if all elements in the list are less than the
+        // specified [token].  We convert the response back to the
+        // 'insertion point' (-(response+1)).  According to
+        // http://wiki.apache.org/cassandra/Operations#Ring_management
+        // the 'insertion point' will be the index of the partition that
+        // owns the token.
         @SuppressWarnings("unchecked")
-        int j = Collections.binarySearch(partitions, token, tokenSearchComparator);
-        if (j < 0) {
-            j = -j - 2;
+        int partitionIndex = Collections.binarySearch(partitions, token, tokenSearchComparator);
+        if (partitionIndex < 0) {
+            partitionIndex = -(partitionIndex + 1);
         }
+        return partitions.get(partitionIndex % partitions.size());
 
-        return partitions.get(j % partitions.size());
+
     }
 
     @Override

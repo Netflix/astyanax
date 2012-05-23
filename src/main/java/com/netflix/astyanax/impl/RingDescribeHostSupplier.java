@@ -28,7 +28,7 @@ public class RingDescribeHostSupplier implements Supplier<Map<BigInteger, List<H
             Map<BigInteger, List<Host>> hosts = Maps.newLinkedHashMap();
 
             for (TokenRange range : keyspace.describeRing()) {
-                hosts.put(new BigInteger(range.getStartToken()),
+                hosts.put(new BigInteger(range.getEndToken()),
                         Lists.transform(range.getEndpoints(), new Function<String, Host>() {
                             @Override
                             public Host apply(String ip) {

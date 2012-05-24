@@ -4,7 +4,7 @@
 
     <groupId>com.netflix.astyanax</groupId>
     <artifactId>astyanax</artifactId>
-    <version>1.0.3-SNAPSHOT</version>
+    <version>1.0.3-TENDRIL-SNAPSHOT</version>
 
     <parent>
       <groupId>org.sonatype.oss</groupId>
@@ -40,6 +40,21 @@
                     <name>Netflix Artifactory Releases</name>
                     <url>http://artifacts/libs-releases-local</url>
                 </repository>
+            </distributionManagement>
+        </profile>
+        <profile>
+            <id>tendril</id>
+            <distributionManagement>
+                <repository>
+                    <id>platform-services</id>
+                    <name>Platform services</name>
+                    <url>http://build:8081/nexus/content/repositories/platform-services/</url>
+                </repository>
+                <snapshotRepository>
+                    <id>platform-services-snapshot</id>
+                    <name>Platform services snapshot</name>
+                    <url>http://build:8081/nexus/content/repositories/platform-services-snapshot</url>
+                </snapshotRepository>
             </distributionManagement>
         </profile>
     </profiles>

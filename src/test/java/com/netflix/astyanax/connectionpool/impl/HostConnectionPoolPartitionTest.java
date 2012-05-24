@@ -44,6 +44,9 @@ public class HostConnectionPoolPartitionTest {
         Assert.assertEquals(2, partition.getPools().size());
     }
 
+    // Is there a reason that this test is in HostConnectionPoolPartitionTest?
+    // Perhaps this should be moved to the existing TokenAwareConnectionPoolTest or
+    // a new TokenParitionedTopologyTest?
     @Test
     public void testTopology() {
         LatencyScoreStrategy strategy = new SmaLatencyScoreStrategyImpl(10000,
@@ -92,6 +95,15 @@ public class HostConnectionPoolPartitionTest {
                 .getPartition(null);
         Assert.assertEquals(nHosts, partition.getPools().size());
 
+        // Partition Token Map:
+        // HCP 0 - (5000, 0]
+        // HCP 1000 - (0, 1000]
+        // HCP 2000 - (1000, 2000]
+        // HCP 3000 - (2000, 3000]
+        // HCP 4000 - (3000, 4000]
+        // HCP 5000 - (4000, 5000]
+
+        // Test ordinals
         for (int i = 0; i < nHosts; i++) {
             partition = topology.getPartition(new BigInteger(Integer
                     .toString(i * 1000)));
@@ -99,11 +111,17 @@ public class HostConnectionPoolPartitionTest {
                     partition.id());
         }
 
-        for (int i = 0; i < nHosts; i++) {
+        // Test mid-range tokens
+        for (int i = nHosts; i > 0; i--) {
             partition = topology.getPartition(new BigInteger(Integer
-                    .toString(i * 1000 + 500)));
-            Assert.assertEquals(new BigInteger(Integer.toString(i * 1000)),
-                    partition.id());
+                    .toString(i * 1000 - 500)));
+
+            if (i == nHosts) {  // 5500 is contained in (5000,0] which belongs to HCP 0
+                Assert.assertEquals(BigInteger.ZERO, partition.id());
+            } else {
+                Assert.assertEquals(new BigInteger(Integer.toString(i * 1000)),
+                        partition.id());
+            }
         }
 
         Map<BigInteger, Collection<HostConnectionPool<TestClient>>> emptyRing = Maps

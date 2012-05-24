@@ -21,11 +21,14 @@ public class TokenGenerator {
     public static final BigInteger MINIMUM = new BigInteger("" + 0);
     public static final BigInteger MAXIMUM = new BigInteger("" + 2).pow(127);
 
-    public static String intialToken(int size, int position) {
-        BigInteger decValue = MINIMUM;
+    public static String initialToken(int size, int position) {
+        return TokenGenerator.initialToken(size,position,MINIMUM,MAXIMUM);
+    }
+
+    public static String initialToken(int size, int position, BigInteger minInitialToken, BigInteger maxInitialToken ) {
+        BigInteger decValue = minInitialToken;
         if (position != 0)
-            decValue = MAXIMUM.divide(new BigInteger("" + size)).multiply(new BigInteger("" + position))
-                    .subtract(new BigInteger("" + 1));
+            decValue = maxInitialToken.divide(new BigInteger("" + size)).multiply(new BigInteger("" + position));
         return decValue.toString();
     }
 

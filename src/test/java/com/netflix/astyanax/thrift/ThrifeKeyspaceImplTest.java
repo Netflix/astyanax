@@ -5,13 +5,7 @@ import java.io.PrintWriter;
 import java.io.Serializable;
 import java.io.StringReader;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -141,11 +135,14 @@ public class ThrifeKeyspaceImplTest {
             .newColumnFamily("ClickStream", StringSerializer.get(),
                     SE_SERIALIZER);
 
-    public static final String SEEDS = "localhost:7102";
+    private static final Properties props = System.getProperties();
+    private static final String seedsPropKey = "astyanax.test.seeds";
+    public static final String SEEDS = props.containsKey(seedsPropKey) ? props.getProperty(seedsPropKey) : "localhost:7102";
 
     @BeforeClass
     public static void setup() throws Exception {
         System.out.println("TESTING THRIFT KEYSPACE");
+
         if (TEST_INIT_KEYSPACE) {
             AstyanaxContext<Cluster> clusterContext = new AstyanaxContext.Builder()
                     .forCluster(TEST_CLUSTER_NAME)

@@ -50,26 +50,37 @@ public interface ColumnListMutation<C> {
     <SC> ColumnListMutation<SC> withSuperColumn(ColumnPath<SC> superColumnPath);
 
     ColumnListMutation<C> putColumn(C columnName, String value, Integer ttl);
+    ColumnListMutation<C> putColumn(C columnName, String value);
 
     ColumnListMutation<C> putColumn(C columnName, byte[] value, Integer ttl);
+    ColumnListMutation<C> putColumn(C columnName, byte[] value);
 
     ColumnListMutation<C> putColumn(C columnName, int value, Integer ttl);
+    ColumnListMutation<C> putColumn(C columnName, int value);
 
     ColumnListMutation<C> putColumn(C columnName, long value, Integer ttl);
+    ColumnListMutation<C> putColumn(C columnName, long value);
 
     ColumnListMutation<C> putColumn(C columnName, boolean value, Integer ttl);
+    ColumnListMutation<C> putColumn(C columnName, boolean value);
 
     ColumnListMutation<C> putColumn(C columnName, ByteBuffer value, Integer ttl);
+    ColumnListMutation<C> putColumn(C columnName, ByteBuffer value);
 
     ColumnListMutation<C> putColumn(C columnName, Date value, Integer ttl);
+    ColumnListMutation<C> putColumn(C columnName, Date value);
 
     ColumnListMutation<C> putColumn(C columnName, float value, Integer ttl);
-        
+    ColumnListMutation<C> putColumn(C columnName, float value);
+
     ColumnListMutation<C> putColumn(C columnName, double value, Integer ttl);
+    ColumnListMutation<C> putColumn(C columnName, double value);
 
     ColumnListMutation<C> putColumn(C columnName, UUID value, Integer ttl);
+    ColumnListMutation<C> putColumn(C columnName, UUID value);
 
     ColumnListMutation<C> putEmptyColumn(C columnName, Integer ttl);
+    ColumnListMutation<C> putEmptyColumn(C columnName);
 
     ColumnListMutation<C> incrementCounterColumn(C columnName, long amount);
 

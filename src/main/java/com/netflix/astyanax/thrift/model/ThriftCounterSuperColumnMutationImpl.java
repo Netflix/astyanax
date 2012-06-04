@@ -15,11 +15,9 @@
  ******************************************************************************/
 package com.netflix.astyanax.thrift.model;
 
-import java.nio.ByteBuffer;
-import java.util.Date;
 import java.util.List;
-import java.util.UUID;
 
+import com.netflix.astyanax.AbstractColumnListMutation;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.CounterColumn;
 import org.apache.cassandra.thrift.CounterSuperColumn;
@@ -30,19 +28,9 @@ import org.apache.cassandra.thrift.SlicePredicate;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.model.ColumnPath;
-import com.netflix.astyanax.serializers.BooleanSerializer;
-import com.netflix.astyanax.serializers.ByteBufferSerializer;
-import com.netflix.astyanax.serializers.BytesArraySerializer;
-import com.netflix.astyanax.serializers.DateSerializer;
-import com.netflix.astyanax.serializers.DoubleSerializer;
-import com.netflix.astyanax.serializers.FloatSerializer;
-import com.netflix.astyanax.serializers.IntegerSerializer;
-import com.netflix.astyanax.serializers.LongSerializer;
-import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.UUIDSerializer;
 
-public class ThriftCounterSuperColumnMutationImpl<C> implements ColumnListMutation<C> {
-    private long timestamp;
+public class ThriftCounterSuperColumnMutationImpl<C> extends AbstractColumnListMutation<C> {
     private final List<Mutation> mutationList;
     private final ColumnPath<C> path;
     private CounterSuperColumn superColumn;
@@ -60,58 +48,13 @@ public class ThriftCounterSuperColumnMutationImpl<C> implements ColumnListMutati
     }
 
     @Override
-    public ColumnListMutation<C> putColumn(C columnName, String value, Integer ttl) {
-        return putColumn(columnName, value, StringSerializer.get(), ttl);
-    }
-
-    @Override
-    public ColumnListMutation<C> putColumn(C columnName, byte[] value, Integer ttl) {
-        return putColumn(columnName, value, BytesArraySerializer.get(), ttl);
-    }
-
-    @Override
-    public ColumnListMutation<C> putColumn(C columnName, int value, Integer ttl) {
-        return putColumn(columnName, value, IntegerSerializer.get(), ttl);
-    }
-
-    @Override
-    public ColumnListMutation<C> putColumn(C columnName, long value, Integer ttl) {
-        return putColumn(columnName, value, LongSerializer.get(), ttl);
-    }
-
-    @Override
-    public ColumnListMutation<C> putColumn(C columnName, boolean value, Integer ttl) {
-        return putColumn(columnName, value, BooleanSerializer.get(), ttl);
-    }
-
-    @Override
-    public ColumnListMutation<C> putColumn(C columnName, ByteBuffer value, Integer ttl) {
-        return putColumn(columnName, value, ByteBufferSerializer.get(), ttl);
-    }
-
-    @Override
-    public ColumnListMutation<C> putColumn(C columnName, Date value, Integer ttl) {
-        return putColumn(columnName, value, DateSerializer.get(), ttl);
-    }
-
-    @Override
-    public ColumnListMutation<C> putColumn(C columnName, float value, Integer ttl) {
-        return putColumn(columnName, value, FloatSerializer.get(), ttl);
-    }
-
-    @Override
-    public ColumnListMutation<C> putColumn(C columnName, double value, Integer ttl) {
-        return putColumn(columnName, value, DoubleSerializer.get(), ttl);
-    }
-
-    @Override
-    public ColumnListMutation<C> putColumn(C columnName, UUID value, Integer ttl) {
-        return putColumn(columnName, value, UUIDSerializer.get(), ttl);
-    }
-
-    @Override
     public ColumnListMutation<C> putEmptyColumn(C columnName, Integer ttl) {
         return putColumn(columnName, null, UUIDSerializer.get(), ttl);
+    }
+
+    @Override
+    public ColumnListMutation<C> putEmptyColumn(final C columnName) {
+        return putEmptyColumn(columnName, null);
     }
 
     @Override
@@ -159,12 +102,6 @@ public class ThriftCounterSuperColumnMutationImpl<C> implements ColumnListMutati
         }
 
         deletionPredicate.addToColumn_names(path.getSerializer().toByteBuffer(columnName));
-        return this;
-    }
-
-    @Override
-    public ColumnListMutation<C> setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
         return this;
     }
 

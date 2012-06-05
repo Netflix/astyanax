@@ -26,6 +26,9 @@ public class FakeKeyspaceBean implements Comparable<FakeKeyspaceBean> {
     @Column("LAST_UPDATE_TS")
     private Long lastUpdateTS;
 
+    @Column("BYTE_ARRAY")
+    private byte[] byteArray;
+
     /**
      * Public empty constructor needed
      */
@@ -163,6 +166,16 @@ public class FakeKeyspaceBean implements Comparable<FakeKeyspaceBean> {
      */
     public void setLastUpdateTS(Long updateTimestamp) {
         lastUpdateTS = updateTimestamp;
+    }
+
+    public byte[] getByteArray()
+    {
+        return byteArray;
+    }
+
+    public void setByteArray(byte[] byteArray)
+    {
+        this.byteArray = byteArray;
     }
 
     /**

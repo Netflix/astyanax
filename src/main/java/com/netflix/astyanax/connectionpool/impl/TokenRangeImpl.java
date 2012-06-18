@@ -47,4 +47,9 @@ public class TokenRangeImpl implements TokenRange {
         return this.endpoints;
     }
 
+    @Override
+    public String toString() {
+        return "TokenRangeImpl [startToken=" + startToken + ", endToken=" + endToken + ", endpoints=" + endpoints + "]";
+    }
+
 }

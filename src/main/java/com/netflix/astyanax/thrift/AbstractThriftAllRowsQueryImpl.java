@@ -24,7 +24,8 @@ public abstract class AbstractThriftAllRowsQueryImpl<K, C> implements AllRowsQue
     private ColumnFamily<K, C> columnFamily;
     private boolean repeatLastToken = true;
     private ExceptionCallback exceptionCallback;
-
+    private Integer nThreads;
+    
     public AbstractThriftAllRowsQueryImpl(ColumnFamily<K, C> columnFamily) {
         this.columnFamily = columnFamily;
     }
@@ -38,6 +39,12 @@ public abstract class AbstractThriftAllRowsQueryImpl<K, C> implements AllRowsQue
         return this.exceptionCallback;
     }
 
+    @Override
+    public AllRowsQuery<K, C> setThreadCount(int numberOfThreads) {
+        this.nThreads = numberOfThreads;
+        return this;
+    }
+    
     @Override
     public AllRowsQuery<K, C> withColumnSlice(C... columns) {
         if (columns != null)
@@ -112,5 +119,9 @@ public abstract class AbstractThriftAllRowsQueryImpl<K, C> implements AllRowsQue
         return this.repeatLastToken;
     }
 
+    protected Integer getThreadCount() {
+        return this.nThreads;
+    }
+    
     protected abstract List<org.apache.cassandra.thrift.KeySlice> getNextBlock(KeyRange range);
 }

@@ -167,39 +167,48 @@ public final class ThriftKeyspaceImpl implements Keyspace {
         };
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public List<TokenRange> describeRing() throws ConnectionException {
-        try {
-            return (List<TokenRange>) this.cache.get(CassandraOperationType.DESCRIBE_RING.name(),
-                    new Callable<Object>() {
-                        @Override
-                        public Object call() throws Exception {
-                            return executeOperation(
-                                    new AbstractKeyspaceOperationImpl<List<TokenRange>>(tracerFactory
-                                            .newTracer(CassandraOperationType.DESCRIBE_RING), getKeyspaceName()) {
-                                        @Override
-                                        public List<TokenRange> internalExecute(Cassandra.Client client)
-                                                throws Exception {
-                                            return Lists.transform(client.describe_ring(getKeyspaceName()),
-                                                    new Function<org.apache.cassandra.thrift.TokenRange, TokenRange>() {
-                                                        @Override
-                                                        public TokenRange apply(
-                                                                org.apache.cassandra.thrift.TokenRange tr) {
-                                                            return new TokenRangeImpl(tr.getStart_token(), tr
-                                                                    .getEnd_token(), tr.getEndpoints());
-                                                        }
-                                                    });
-                                        }
-                                    }, getConfig().getRetryPolicy().duplicate()).getResult();
-                        }
-                    });
-        }
-        catch (ExecutionException e) {
-            return (List<TokenRange>) this.cache.asMap().get(CassandraOperationType.DESCRIBE_RING.name());
-        }
+        return executeOperation(
+                new AbstractKeyspaceOperationImpl<List<TokenRange>>(tracerFactory
+                        .newTracer(CassandraOperationType.DESCRIBE_RING), getKeyspaceName()) {
+                    @Override
+                    public List<TokenRange> internalExecute(Cassandra.Client client)
+                            throws Exception {
+                        return Lists.transform(client.describe_ring(getKeyspaceName()),
+                                new Function<org.apache.cassandra.thrift.TokenRange, TokenRange>() {
+                                    @Override
+                                    public TokenRange apply(
+                                            org.apache.cassandra.thrift.TokenRange tr) {
+                                        return new TokenRangeImpl(tr.getStart_token(), tr.getEnd_token(), tr.getEndpoints());
+                                    }
+                                });
+                    }
+                }, getConfig().getRetryPolicy().duplicate()).getResult();
     }
 
+    @SuppressWarnings("unchecked")
+    @Override
+    public List<TokenRange> describeRing(boolean cached) throws ConnectionException {
+        if (cached) {
+          try {
+            return (List<TokenRange>) this.cache.get(CassandraOperationType.DESCRIBE_RING.name(),
+                  new Callable<Object>() {
+                      @Override
+                      public Object call() throws Exception {
+                          return describeRing();
+                      }
+                  });
+            }
+            catch (ExecutionException e) {
+                throw ThriftConverter.ToConnectionPoolException(e);
+            }
+        }
+        else {
+            return describeRing();
+        }
+    }
+    
     @Override
     public KeyspaceDefinition describeKeyspace() throws ConnectionException {
         return executeOperation(
@@ -445,4 +454,5 @@ public final class ThriftKeyspaceImpl implements Keyspace {
             throws OperationException, ConnectionException {
         return connectionPool.executeWithFailover(operation, retry);
     }
+
 }

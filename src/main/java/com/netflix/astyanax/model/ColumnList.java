@@ -89,6 +89,16 @@ public interface ColumnList<C> extends Iterable<Column<C>> {
     ByteBuffer getByteBufferValue(C columnName, ByteBuffer defaultValue);
 
     /**
+     * Get a value with optional default using a specified serializer
+     * @param <T>
+     * @param columnName
+     * @param serializer
+     * @param defaultValue
+     * @return
+     */
+    <T> T getValue(C columnName, Serializer<T> serializer, T defaultValue);
+    
+    /**
      * Get the value as a date object
      * 
      * @return

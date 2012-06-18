@@ -18,6 +18,7 @@ package com.netflix.astyanax.model;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.impl.PreparedIndexExpressionImpl;
 import com.netflix.astyanax.query.PreparedIndexExpression;
+import com.netflix.astyanax.serializers.ByteBufferSerializer;
 
 /**
  * Basic column family definition. The column family definition encapsulates the
@@ -34,6 +35,7 @@ public class ColumnFamily<K, C> {
     private final String columnFamilyName;
     private final Serializer<K> keySerializer;
     private final Serializer<C> columnSerializer;
+    private final Serializer<?> defaultValueSerializer;
     private final ColumnType type;
 
     /**
@@ -48,16 +50,22 @@ public class ColumnFamily<K, C> {
         this.columnFamilyName = columnFamilyName;
         this.keySerializer = keySerializer;
         this.columnSerializer = columnSerializer;
+        this.defaultValueSerializer = ByteBufferSerializer.get();
         this.type = type;
     }
 
     public ColumnFamily(String columnFamilyName, Serializer<K> keySerializer, Serializer<C> columnSerializer) {
+        this(columnFamilyName, keySerializer, columnSerializer, ByteBufferSerializer.get());
+    }
+
+    public ColumnFamily(String columnFamilyName, Serializer<K> keySerializer, Serializer<C> columnSerializer, Serializer<?> defaultValueSerializer) {
         this.columnFamilyName = columnFamilyName;
         this.keySerializer = keySerializer;
         this.columnSerializer = columnSerializer;
+        this.defaultValueSerializer = defaultValueSerializer;
         this.type = ColumnType.STANDARD;
     }
-
+    
     public String getName() {
         return columnFamilyName;
     }
@@ -79,6 +87,10 @@ public class ColumnFamily<K, C> {
      */
     public Serializer<K> getKeySerializer() {
         return keySerializer;
+    }
+    
+    public Serializer<?> getDefaultValueSerializer() {
+        return defaultValueSerializer;
     }
 
     /**

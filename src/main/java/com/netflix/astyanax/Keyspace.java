@@ -59,6 +59,14 @@ public interface Keyspace {
     List<TokenRange> describeRing() throws ConnectionException;
 
     /**
+     * Describe the ring but use the last locally cached version if available.
+     * @param cached
+     * @return
+     * @throws ConnectionException
+     */
+    List<TokenRange> describeRing(boolean cached) throws ConnectionException;
+
+    /**
      * Return a complete description of the keyspace and its column families
      * 
      * @return

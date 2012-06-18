@@ -65,8 +65,7 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
     @SuppressWarnings("unchecked")
     @Override
     public synchronized boolean setPools(Map<BigInteger, Collection<HostConnectionPool<CL>>> ring) {
-        // Temporary list of token that will be removed if not found in the new
-        // ring
+        // Temporary list of token that will be removed if not found in the new ring
         Set<BigInteger> tokensToRemove = Sets.newHashSet(tokens.keySet());
 
         Set<HostConnectionPool<CL>> allPools = Sets.newHashSet();
@@ -141,25 +140,16 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
         // token. We can get two responses here.
         // 1. The token is in the list in which case the response is the
         // index of the partition
-        // 2. The token is not in the list in which case the response from
-        // Collections.binarySearch is (-(insertion point) - 1).
-        // Collections.binarySearch defines the insertion point as
-        // the point at which the [token] would be inserted into the
-        // list: the index of the first element greater than the [token],
-        // or list.size() if all elements in the list are less than the
-        // specified [token].  We convert the response back to the
-        // 'insertion point' (-(response+1)).  According to
-        // http://wiki.apache.org/cassandra/Operations#Ring_management
-        // the 'insertion point' will be the index of the partition that
-        // owns the token.
+        // 2. The token is not in the list in which case the response is the
+        // index where the token would have been inserted into the list.
+        // We convert this index (which is negative) to the index of the
+        // previous position in the list.
         @SuppressWarnings("unchecked")
         int partitionIndex = Collections.binarySearch(partitions, token, tokenSearchComparator);
         if (partitionIndex < 0) {
-            partitionIndex = -(partitionIndex + 1);
-        }
+               partitionIndex = -(partitionIndex + 1);
+            }
         return partitions.get(partitionIndex % partitions.size());
-
-
     }
 
     @Override

@@ -113,4 +113,10 @@ public class TestKeyspace implements Keyspace {
         // TODO Auto-generated method stub
         return null;
     }
+
+    @Override
+    public List<TokenRange> describeRing(boolean cached) throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
 }

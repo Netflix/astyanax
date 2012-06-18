@@ -111,4 +111,6 @@ public interface ColumnFamilyDefinition {
     ColumnFamilyDefinition addColumnDefinition(ColumnDefinition def);
 
     ColumnDefinition makeColumnDefinition();
+
+    void clearColumnDefinitionList();
 }

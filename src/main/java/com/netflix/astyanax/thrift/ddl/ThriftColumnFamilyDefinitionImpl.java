@@ -240,6 +240,11 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
         }
         return list;
     }
+    
+    @Override
+    public void clearColumnDefinitionList() {
+        cfDef.setColumn_metadata(new ArrayList<ColumnDef>());
+    }
 
     @Override
     @Deprecated

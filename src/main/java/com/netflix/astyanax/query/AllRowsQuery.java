@@ -142,6 +142,13 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
     AllRowsQuery<K, C> withColumnRange(ByteBufferRange range);
 
     /**
+     * Execute the query using N threads with each thread processing an equal size chunk from the token range
+     * @param numberOfThreads
+     * @return
+     */
+    AllRowsQuery<K, C> setThreadCount(int numberOfThreads);
+    
+    /**
      * Execute the operation in a separate thread for each token range and
      * provide the results in a callback.
      * 

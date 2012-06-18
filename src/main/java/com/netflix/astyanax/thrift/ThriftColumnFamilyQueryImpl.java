@@ -26,9 +26,11 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.cassandra.dht.BigIntegerToken;
 import org.apache.cassandra.dht.RandomPartitioner;
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
@@ -40,8 +42,11 @@ import org.apache.cassandra.thrift.KeyRange;
 import org.apache.cassandra.thrift.KeySlice;
 import org.apache.cassandra.thrift.Mutation;
 import org.apache.cassandra.thrift.SuperColumn;
+import org.apache.cassandra.utils.Pair;
 
+import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.KeyspaceTracerFactory;
@@ -73,6 +78,7 @@ import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.shallows.EmptyColumnList;
 import com.netflix.astyanax.shallows.EmptyRowsImpl;
 import com.netflix.astyanax.thrift.model.*;
+import com.netflix.astyanax.util.TokenGenerator;
 
 /**
  * Implementation of all column family queries using the thrift API.
@@ -622,104 +628,120 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
 
             @Override
             public void executeWithCallback(final RowCallback<K, C> callback) throws ConnectionException {
-                List<TokenRange> tokens = keyspace.describeRing();
                 final RandomPartitioner partitioner = new RandomPartitioner();
 
-                if (tokens != null) {
-                    final CountDownLatch doneSignal = new CountDownLatch(tokens.size());
-                    final AtomicReference<ConnectionException> error = new AtomicReference<ConnectionException>();
+                final AtomicReference<ConnectionException> error = new AtomicReference<ConnectionException>();
 
-                    for (final TokenRange token : tokens) {
-                        executor.submit(new Callable<Void>() {
-                            @Override
-                            public Void call() throws Exception {
-                                // Prepare the range of tokens for this token
-                                // range
-                                final KeyRange range = new KeyRange().setCount(getBlockSize())
-                                        .setStart_token(token.getStartToken()).setEnd_token(token.getEndToken());
+                List<Pair<String, String>> ranges = Lists.newArrayList();
+                if (this.getThreadCount() != null) {
+                    int nThreads = this.getThreadCount();
+                    for (int i = 0; i < nThreads; i++) {
+                        BigIntegerToken start =  new BigIntegerToken(TokenGenerator.initialToken(nThreads, i,   TokenGenerator.MINIMUM, TokenGenerator.MAXIMUM));
+                        BigIntegerToken end   =  new BigIntegerToken(TokenGenerator.initialToken(nThreads, i+1, TokenGenerator.MINIMUM, TokenGenerator.MAXIMUM));
+                        ranges.add(Pair.create(start.toString(), end.toString()));
+                    }
+                }
+                else {
+                    ranges = Lists.transform(keyspace.describeRing(true), new Function<TokenRange, Pair<String, String>> () {
+                        @Override
+                        public Pair<String, String> apply(TokenRange input) {
+                            return Pair.create(input.getStartToken(), input.getEndToken());
+                        }
+                    });
+                }
+                final CountDownLatch doneSignal = new CountDownLatch(ranges.size());
+                
+                final ExecutorService executor = Executors.newFixedThreadPool(ranges.size());
+                for (final Pair<String, String> token : ranges) {
+                    executor.submit(new Callable<Void>() {
+                        @Override
+                        public Void call() throws Exception {
+                            // Prepare the range of tokens for this token range
+                            final KeyRange range = new KeyRange().setCount(getBlockSize())
+                                    .setStart_token(token.left).setEnd_token(token.right);
 
-                                try {
-                                    // Loop until we get all the rows for this
-                                    // token range or we get an exception
-                                    while (error.get() == null) {
-                                        try {
-                                            // Get the next block
-                                            List<KeySlice> ks = connectionPool.executeWithFailover(
-                                                    new AbstractKeyspaceOperationImpl<List<KeySlice>>(tracerFactory
-                                                            .newTracer(CassandraOperationType.GET_ROWS_RANGE,
-                                                                    columnFamily), pinnedHost, keyspace
-                                                            .getKeyspaceName()) {
-                                                        @Override
-                                                        public List<KeySlice> internalExecute(Client client)
-                                                                throws Exception {
-                                                            return client.get_range_slices(new ColumnParent()
-                                                                    .setColumn_family(columnFamily.getName()),
-                                                                    predicate, range, ThriftConverter
-                                                                            .ToThriftConsistencyLevel(consistencyLevel));
-                                                        }
-
-                                                        @Override
-                                                        public BigInteger getToken() {
-                                                            if (range.getStart_key() != null)
-                                                                return partitioner.getToken(ByteBuffer.wrap(range
-                                                                        .getStart_key())).token;
-                                                            return null;
-                                                        }
-                                                    }, retry.duplicate()).getResult();
-
-                                            // Notify the callback
-                                            if (!ks.isEmpty()) {
-                                                Rows<K, C> rows = new ThriftRowsSliceImpl<K, C>(ks, columnFamily
-                                                        .getKeySerializer(), columnFamily.getColumnSerializer());
-                                                callback.success(rows);
-                                                if (rows.size() == getBlockSize()) {
-                                                    Row<K, C> lastRow = rows.getRowByIndex(rows.size() - 1);
-
-                                                    // Determine the start token
-                                                    // for the next page
-                                                    String token = partitioner.getToken(lastRow.getRawKey()).toString();
-                                                    if (getRepeatLastToken()) {
-                                                        // Start token is
-                                                        // non-inclusive
-                                                        BigInteger intToken = new BigInteger(token)
-                                                                .subtract(new BigInteger("1"));
-                                                        range.setStart_token(intToken.toString());
+                            try {
+                                // Loop until we get all the rows for this
+                                // token range or we get an exception
+                                while (error.get() == null) {
+                                    try {
+                                        // Get the next block
+                                        List<KeySlice> ks = connectionPool.executeWithFailover(
+                                                new AbstractKeyspaceOperationImpl<List<KeySlice>>(tracerFactory
+                                                        .newTracer(CassandraOperationType.GET_ROWS_RANGE,
+                                                                columnFamily), pinnedHost, keyspace
+                                                        .getKeyspaceName()) {
+                                                    @Override
+                                                    public List<KeySlice> internalExecute(Client client)
+                                                            throws Exception {
+                                                        return client.get_range_slices(new ColumnParent()
+                                                                .setColumn_family(columnFamily.getName()),
+                                                                predicate, range, ThriftConverter
+                                                                        .ToThriftConsistencyLevel(consistencyLevel));
                                                     }
-                                                    else {
-                                                        range.setStart_token(token);
+
+                                                    @Override
+                                                    public BigInteger getToken() {
+                                                        if (range.getStart_key() != null)
+                                                            return partitioner.getToken(ByteBuffer.wrap(range
+                                                                    .getStart_key())).token;
+                                                        return null;
                                                     }
+                                                }, retry.duplicate()).getResult();
+
+                                        // Notify the callback
+                                        if (!ks.isEmpty()) {
+                                            Rows<K, C> rows = new ThriftRowsSliceImpl<K, C>(ks, columnFamily
+                                                    .getKeySerializer(), columnFamily.getColumnSerializer());
+                                            callback.success(rows);
+                                            if (rows.size() == getBlockSize()) {
+                                                Row<K, C> lastRow = rows.getRowByIndex(rows.size() - 1);
+
+                                                // Determine the start token
+                                                // for the next page
+                                                String token = partitioner.getToken(lastRow.getRawKey()).toString();
+                                                if (getRepeatLastToken()) {
+                                                    // Start token is
+                                                    // non-inclusive
+                                                    BigInteger intToken = new BigInteger(token)
+                                                            .subtract(new BigInteger("1"));
+                                                    range.setStart_token(intToken.toString());
                                                 }
                                                 else {
-                                                    return null;
+                                                    range.setStart_token(token);
                                                 }
                                             }
                                             else {
                                                 return null;
                                             }
                                         }
-                                        catch (Exception e) {
-                                            error.set(ThriftConverter.ToConnectionPoolException(e));
+                                        else {
+                                            return null;
                                         }
                                     }
+                                    catch (Exception e) {
+                                        ConnectionException ce = ThriftConverter.ToConnectionPoolException(e);
+                                        if (!callback.failure(ce))   
+                                            error.set(ce);
+                                    }
                                 }
-                                finally {
-                                    doneSignal.countDown();
-                                }
-                                return null;
                             }
-                        });
-                    }
+                            finally {
+                                doneSignal.countDown();
+                            }
+                            return null;
+                        }
+                    });
+                }
+                // Block until all threads finish
+                try {
+                    doneSignal.await();
+                }
+                catch (InterruptedException e) {
+                }
 
-                    // Block until all threads finish
-                    try {
-                        doneSignal.await();
-                    }
-                    catch (InterruptedException e) {
-                    }
-
-                    if (error.get() != null) {
-                        throw error.get();
-                    }
+                if (error.get() != null) {
+                    throw error.get();
                 }
             }
         };

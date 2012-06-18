@@ -16,10 +16,9 @@
 package com.netflix.astyanax.thrift;
 
 import java.nio.ByteBuffer;
-import java.util.Date;
 import java.util.List;
-import java.util.UUID;
 
+import com.netflix.astyanax.AbstractColumnListMutation;
 import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.CounterColumn;
@@ -30,16 +29,6 @@ import org.apache.cassandra.thrift.SlicePredicate;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.model.ColumnPath;
-import com.netflix.astyanax.serializers.BooleanSerializer;
-import com.netflix.astyanax.serializers.ByteBufferSerializer;
-import com.netflix.astyanax.serializers.BytesArraySerializer;
-import com.netflix.astyanax.serializers.DateSerializer;
-import com.netflix.astyanax.serializers.DoubleSerializer;
-import com.netflix.astyanax.serializers.FloatSerializer;
-import com.netflix.astyanax.serializers.IntegerSerializer;
-import com.netflix.astyanax.serializers.LongSerializer;
-import com.netflix.astyanax.serializers.StringSerializer;
-import com.netflix.astyanax.serializers.UUIDSerializer;
 
 /**
  * Implementation of a row mutation at the root of the column family.
@@ -48,12 +37,10 @@ import com.netflix.astyanax.serializers.UUIDSerializer;
  * 
  * @param <C>
  */
-public class ThriftColumnFamilyMutationImpl<C> implements ColumnListMutation<C> {
+public class ThriftColumnFamilyMutationImpl<C> extends AbstractColumnListMutation<C> {
     private final Serializer<C> columnSerializer;
     private final List<Mutation> mutationList;
-    private long timestamp;
     private SlicePredicate deletionPredicate;
-    private Integer defaultTtl = null;
 
     public ThriftColumnFamilyMutationImpl(Long timestamp, List<Mutation> mutationList, Serializer<C> columnSerializer) {
         this.mutationList = mutationList;
@@ -84,56 +71,6 @@ public class ThriftColumnFamilyMutationImpl<C> implements ColumnListMutation<C> 
         mutationList.add(mutation);
 
         return this;
-    }
-
-    @Override
-    public ColumnListMutation<C> putColumn(C columnName, String value, Integer ttl) {
-        return putColumn(columnName, value, StringSerializer.get(), ttl);
-    }
-
-    @Override
-    public ColumnListMutation<C> putColumn(C columnName, byte[] value, Integer ttl) {
-        return putColumn(columnName, value, BytesArraySerializer.get(), ttl);
-    }
-
-    @Override
-    public ColumnListMutation<C> putColumn(C columnName, int value, Integer ttl) {
-        return putColumn(columnName, value, IntegerSerializer.get(), ttl);
-    }
-
-    @Override
-    public ColumnListMutation<C> putColumn(C columnName, long value, Integer ttl) {
-        return putColumn(columnName, value, LongSerializer.get(), ttl);
-    }
-
-    @Override
-    public ColumnListMutation<C> putColumn(C columnName, boolean value, Integer ttl) {
-        return putColumn(columnName, value, BooleanSerializer.get(), ttl);
-    }
-
-    @Override
-    public ColumnListMutation<C> putColumn(C columnName, ByteBuffer value, Integer ttl) {
-        return putColumn(columnName, value, ByteBufferSerializer.get(), ttl);
-    }
-
-    @Override
-    public ColumnListMutation<C> putColumn(C columnName, Date value, Integer ttl) {
-        return putColumn(columnName, value, DateSerializer.get(), ttl);
-    }
-
-    @Override
-    public ColumnListMutation<C> putColumn(C columnName, float value, Integer ttl) {
-        return putColumn(columnName, value, FloatSerializer.get(), ttl);
-    }
-
-    @Override
-    public ColumnListMutation<C> putColumn(C columnName, double value, Integer ttl) {
-        return putColumn(columnName, value, DoubleSerializer.get(), ttl);
-    }
-
-    @Override
-    public ColumnListMutation<C> putColumn(C columnName, UUID value, Integer ttl) {
-        return putColumn(columnName, value, UUIDSerializer.get(), ttl);
     }
 
     @Override
@@ -193,15 +130,4 @@ public class ThriftColumnFamilyMutationImpl<C> implements ColumnListMutation<C> 
         return this;
     }
 
-    @Override
-    public ColumnListMutation<C> setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
-        return this;
-    }
-
-    @Override
-    public ColumnListMutation<C> setDefaultTtl(Integer ttl) {
-        this.defaultTtl = ttl;
-        return this;
-    }
 }

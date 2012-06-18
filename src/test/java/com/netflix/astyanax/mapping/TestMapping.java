@@ -15,6 +15,7 @@ public class TestMapping {
         override.setLastUpdateTS(24681357L);
         override.setType("thing");
         override.setUpdatedBy("John Galt");
+        override.setByteArray("Some Bytes".getBytes());
 
         Mapping<FakeKeyspaceBean> mapping = Mapping
                 .make(FakeKeyspaceBean.class);
@@ -43,6 +44,9 @@ public class TestMapping {
         Assert.assertEquals(
                 mapping.getColumnValue(override, "UPDATED_BY", String.class),
                 override.getUpdatedBy());
+        Assert.assertEquals(
+                mapping.getColumnValue(override, "BYTE_ARRAY", byte[].class),
+                override.getByteArray());
 
         FakeKeyspaceBean copy = new FakeKeyspaceBean();
         for (String fieldName : mapping.getNames()) {
@@ -59,6 +63,7 @@ public class TestMapping {
         Assert.assertEquals(copy.getLastUpdateTS(), override.getLastUpdateTS());
         Assert.assertEquals(copy.getType(), override.getType());
         Assert.assertEquals(copy.getUpdatedBy(), override.getUpdatedBy());
+        Assert.assertEquals(copy.getByteArray(), override.getByteArray());
     }
 
     @Test

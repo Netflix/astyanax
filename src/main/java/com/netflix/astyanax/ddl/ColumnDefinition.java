@@ -26,12 +26,28 @@ import java.nio.ByteBuffer;
  */
 public interface ColumnDefinition {
     /**
-     * Sets the column name
+     * Sets the column string name
      * 
      * @param name
      * @return
      */
     ColumnDefinition setName(String name);
+
+    /**
+     * Sets the column byte array name
+     * 
+     * @param name
+     * @return
+     */
+    ColumnDefinition setName(byte[] name);
+
+    /**
+     * Sets the column byte buffer name
+     * 
+     * @param name
+     * @return
+     */
+    ColumnDefinition setName(ByteBuffer name);
 
     /**
      * Sets the validation class for the column values. See ComparatorType for

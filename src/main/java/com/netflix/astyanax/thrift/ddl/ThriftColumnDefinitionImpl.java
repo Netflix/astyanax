@@ -43,6 +43,18 @@ public class ThriftColumnDefinitionImpl implements ColumnDefinition {
         columnDef.setName(StringSerializer.get().toBytes(name));
         return this;
     }
+    
+    @Override
+    public ColumnDefinition setName(ByteBuffer name) {
+        columnDef.setName(name.duplicate());
+        return this;
+    }
+    
+    @Override
+    public ColumnDefinition setName(byte[] name) {
+        columnDef.setName(name);
+        return this;
+    }
 
     @Override
     public ColumnDefinition setValidationClass(String value) {

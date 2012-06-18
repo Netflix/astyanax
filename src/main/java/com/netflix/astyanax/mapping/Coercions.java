@@ -34,6 +34,8 @@ class Coercions {
             objValue = column.getDateValue();
         } else if (field.getType() == String.class) {
             objValue = column.getStringValue();
+        } else if (field.getType() == byte[].class) {
+            objValue = column.getByteArrayValue();
         } else {
             throw new UnsupportedOperationException();
         }
@@ -76,6 +78,8 @@ class Coercions {
                     mutation.putColumn(columnName, (Date) objValue, null);
                 } else if (objValue.getClass() == String.class) {
                     mutation.putColumn(columnName, (String) objValue, null);
+                } else if(objValue.getClass() == byte[].class) {
+                    mutation.putColumn(columnName, (byte[]) objValue, null);
                 } else {
                     throw new UnsupportedOperationException();
                 }

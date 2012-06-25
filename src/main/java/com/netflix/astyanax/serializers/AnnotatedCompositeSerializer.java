@@ -118,7 +118,9 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
             for (ComponentSerializer<?> serializer : components) {
                 ByteBuffer data = getWithShortLength(byteBuffer);
                 if (data != null) {
-                    serializer.deserialize(obj, data);
+                    if (data.remaining() > 0) {
+                        serializer.deserialize(obj, data);
+                    }
                     byte end_of_component = byteBuffer.get();
                     if (end_of_component != END_OF_COMPONENT) {
                         throw new RuntimeException("Invalid composite column.  Expected END_OF_COMPONENT.");

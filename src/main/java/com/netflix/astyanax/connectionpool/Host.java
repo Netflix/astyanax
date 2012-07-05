@@ -64,8 +64,7 @@ public class Host {
                 workIpAddress = address.getHostAddress();
             }
             catch (UnknownHostException e) {
-                workHost = tempHost;
-                workIpAddress = tempHost;
+                throw new RuntimeException(e);
             }
         }
         this.host = workHost;

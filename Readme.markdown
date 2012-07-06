@@ -33,5 +33,5 @@ Ancient History
 
 Modern History
 ----------------
-This work was initially inspired by [Hector](https://github.com/rantav/hector).
+This work was initially inspired by [Hector](https://github.com/hector-client/hector).
 

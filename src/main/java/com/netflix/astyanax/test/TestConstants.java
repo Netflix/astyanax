@@ -25,7 +25,6 @@ import com.netflix.astyanax.serializers.ByteBufferSerializer;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.TimeUUIDSerializer;
-import com.netflix.astyanax.thrift.SessionEvent;
 
 public class TestConstants {
 

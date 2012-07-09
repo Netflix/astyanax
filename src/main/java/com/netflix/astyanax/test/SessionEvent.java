@@ -1,4 +1,4 @@
-package com.netflix.astyanax.thrift;
+package com.netflix.astyanax.test;
 
 import java.util.UUID;
 

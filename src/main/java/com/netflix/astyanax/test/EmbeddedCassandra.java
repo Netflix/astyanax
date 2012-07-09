@@ -14,6 +14,7 @@ import org.apache.thrift.transport.TTransportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
 import com.google.common.io.Resources;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -32,7 +33,7 @@ public class EmbeddedCassandra {
         
     private final CassandraDaemon cassandra;
     private final File dataDir;
-    
+
     public EmbeddedCassandra() throws IOException {
         this(createTempDir(), "TestCluster", DEFAULT_PORT, DEFAULT_STORAGE_PORT);
     }
@@ -46,11 +47,11 @@ public class EmbeddedCassandra {
     public EmbeddedCassandra(File dataDir, String clusterName, int port, int storagePort) throws IOException {
         LOG.info("Starting cassandra in dir " + dataDir);
         this.dataDir = dataDir;
-        FileUtils.deleteRecursive(dataDir);
         dataDir.mkdirs();
 
-        URL         baseUrl = ClassLoader.getSystemClassLoader().getResource("cassandra-template.yaml");
-        String      baseFile = Resources.toString(baseUrl, Charset.defaultCharset());
+        URL         templateUrl = ClassLoader.getSystemClassLoader().getResource("cassandra-template.yaml");
+        Preconditions.checkNotNull(templateUrl, "Cassandra config template is null");
+        String      baseFile = Resources.toString(templateUrl, Charset.defaultCharset());
 
         String      newFile = baseFile.replace("$DIR$", dataDir.getPath());
         newFile = newFile.replace("$PORT$", Integer.toString(port));

@@ -62,6 +62,7 @@ import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.TimeUUIDSerializer;
 import com.netflix.astyanax.serializers.UnknownComparatorException;
 import com.netflix.astyanax.test.EmbeddedCassandra;
+import com.netflix.astyanax.test.SessionEvent;
 import com.netflix.astyanax.util.ColumnarRecordWriter;
 import com.netflix.astyanax.util.CsvColumnReader;
 import com.netflix.astyanax.util.CsvRecordReader;
@@ -286,7 +287,8 @@ public class ThrifeKeyspaceImplTest {
         if (keyspaceContext != null)
             keyspaceContext.shutdown();
         
-        cassandra.stop();
+        if (cassandra != null)
+            cassandra.stop();
     }
 
     public static void createKeyspace() throws Exception {

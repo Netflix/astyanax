@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import com.google.common.collect.Iterables;
 import com.netflix.astyanax.Serializer;
 
 /**
@@ -86,6 +87,14 @@ public abstract class AbstractSerializer<T> implements Serializer<T> {
 
     public List<ByteBuffer> toBytesList(Collection<T> list) {
         List<ByteBuffer> bytesList = new ArrayList<ByteBuffer>(list.size());
+        for (T s : list) {
+            bytesList.add(toByteBuffer(s));
+        }
+        return bytesList;
+    }
+
+    public List<ByteBuffer> toBytesList(Iterable<T> list) {
+        List<ByteBuffer> bytesList = new ArrayList<ByteBuffer>(Iterables.size(list));
         for (T s : list) {
             bytesList.add(toByteBuffer(s));
         }

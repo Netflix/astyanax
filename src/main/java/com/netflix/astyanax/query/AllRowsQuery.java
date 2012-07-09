@@ -142,10 +142,17 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
     AllRowsQuery<K, C> withColumnRange(ByteBufferRange range);
 
     /**
-     * Execute the query using N threads with each thread processing an equal size chunk from the token range
+     * Split the query into N threads with each thread processing an equal size chunk from the token range.
+     * 
+     * Note that the actual number of threads is still limited by the available threads in the thread
+     * pool that was set with the AstyanaxConfiguration.
+     * 
      * @param numberOfThreads
      * @return
      */
+    AllRowsQuery<K, C> setConcurrencyLevel(int numberOfThreads);
+    
+    @Deprecated
     AllRowsQuery<K, C> setThreadCount(int numberOfThreads);
     
     /**

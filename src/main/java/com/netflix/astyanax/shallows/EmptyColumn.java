@@ -104,4 +104,9 @@ public class EmptyColumn<C> implements Column<C> {
     public int getTtl() {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public boolean hasValue() {
+        return false;
+    }
 }

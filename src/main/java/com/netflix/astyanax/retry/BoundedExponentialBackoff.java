@@ -28,6 +28,11 @@ public class BoundedExponentialBackoff extends ExponentialBackoff {
         return Math.max(maxSleepTimeMs, super.getSleepTimeMs());
     }
 
+    @Override
+    public RetryPolicy duplicate() {
+        return new BoundedExponentialBackoff(this.getBaseSleepTimeMs(), this.maxSleepTimeMs, getMaxAttemptCount());
+    }
+    
     public String toString() {
         return StringUtils.joinClassAttributeValues(this, "BoundedExponentialBackoff", BoundedExponentialBackoff.class);
     }

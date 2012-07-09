@@ -13,26 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package com.netflix.astyanax.fake;
+package com.netflix.astyanax.test;
 
-import java.math.BigInteger;
-
-import com.netflix.astyanax.connectionpool.Host;
-import com.netflix.astyanax.connectionpool.Operation;
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.exceptions.OperationException;
-
-public class TokenTestOperation extends TestOperation {
-
-    private final BigInteger token;
-
-    public TokenTestOperation(BigInteger token) {
-        this.token = token;
-    }
-
-    @Override
-    public BigInteger getToken() {
-        return token;
-    }
+public class TestClient {
 
 }

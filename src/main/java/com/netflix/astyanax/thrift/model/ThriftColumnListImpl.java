@@ -15,11 +15,13 @@
  ******************************************************************************/
 package com.netflix.astyanax.thrift.model;
 
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.HashMap;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.model.AbstractColumnList;
 import com.netflix.astyanax.model.Column;
@@ -74,18 +76,21 @@ public class ThriftColumnListImpl<C> extends AbstractColumnList<C> {
 
     @Override
     public Column<C> getColumnByName(C columnName) {
-        if (lookup == null) {
-            lookup = new HashMap<C, org.apache.cassandra.thrift.Column>();
-            for (org.apache.cassandra.thrift.Column column : columns) {
-                lookup.put(colSer.fromBytes(column.getName()), column);
-            }
-        }
-
+        constructColumnMap();
         org.apache.cassandra.thrift.Column c = lookup.get(columnName);
         if (c == null) {
             return null;
         }
         return new ThriftColumnImpl<C>(colSer.fromBytes(c.getName()), c);
+    }
+    
+    private void constructColumnMap() {
+        if (lookup == null) {
+            lookup = Maps.newHashMap();;
+            for (org.apache.cassandra.thrift.Column column : columns) {
+                lookup.put(colSer.fromBytes(column.getName()), column);
+            }
+        }
     }
 
     @Override
@@ -122,6 +127,12 @@ public class ThriftColumnListImpl<C> extends AbstractColumnList<C> {
     @Override
     public boolean isSuperColumn() {
         return false;
+    }
+
+    @Override
+    public Collection<C> getColumnNames() {
+        constructColumnMap();
+        return lookup.keySet();
     }
 
 }

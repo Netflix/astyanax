@@ -15,9 +15,10 @@
  ******************************************************************************/
 package com.netflix.astyanax.thrift.model;
 
-import java.util.HashMap;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.CounterColumn;
@@ -25,6 +26,7 @@ import org.apache.cassandra.thrift.CounterSuperColumn;
 import org.apache.cassandra.thrift.SuperColumn;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.model.AbstractColumnList;
 import com.netflix.astyanax.model.Column;
@@ -39,7 +41,7 @@ import com.netflix.astyanax.model.Column;
  */
 public class ThriftColumnOrSuperColumnListImpl<C> extends AbstractColumnList<C> {
     private final List<ColumnOrSuperColumn> columns;
-    private HashMap<C, ColumnOrSuperColumn> lookup;
+    private Map<C, ColumnOrSuperColumn> lookup;
     private final Serializer<C> colSer;
 
     public ThriftColumnOrSuperColumnListImpl(List<ColumnOrSuperColumn> columns, Serializer<C> colSer) {
@@ -184,8 +186,13 @@ public class ThriftColumnOrSuperColumnListImpl<C> extends AbstractColumnList<C> 
     }
 
     private ColumnOrSuperColumn getColumn(C columnName) {
+        constructMap();
+        return lookup.get(columnName);
+    }
+    
+    private void constructMap() {
         if (lookup == null) {
-            lookup = new HashMap<C, ColumnOrSuperColumn>();
+            lookup = Maps.newHashMap();
             for (ColumnOrSuperColumn column : columns) {
                 if (column.isSetSuper_column()) {
                     lookup.put(colSer.fromBytes(column.getSuper_column().getName()), column);
@@ -200,10 +207,15 @@ public class ThriftColumnOrSuperColumnListImpl<C> extends AbstractColumnList<C> 
                     lookup.put(colSer.fromBytes(column.getCounter_super_column().getName()), column);
                 }
                 else {
-                    throw new UnsupportedOperationException("Unknown column type for \'" + columnName + "\'");
+                    throw new UnsupportedOperationException("Unknown column type");
                 }
             }
         }
-        return lookup.get(columnName);
+    }
+
+    @Override
+    public Collection<C> getColumnNames() {
+        constructMap();
+        return lookup.keySet();
     }
 }

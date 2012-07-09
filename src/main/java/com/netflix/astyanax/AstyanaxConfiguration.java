@@ -88,4 +88,11 @@ public interface AstyanaxConfiguration {
      * @return
      */
     ConnectionPoolType getConnectionPoolType();
+
+    /**
+     * Get the CQL version to set when sending CQL queries
+     * @param cqlVersion
+     * @return
+     */
+    String getCqlVersion();
 }

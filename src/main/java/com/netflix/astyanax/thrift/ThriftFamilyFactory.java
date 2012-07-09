@@ -33,9 +33,9 @@ public class ThriftFamilyFactory implements AstyanaxTypeFactory<Cassandra.Client
     }
 
     @Override
-    public ConnectionFactory<Cassandra.Client> createConnectionFactory(ConnectionPoolConfiguration cfConfig,
+    public ConnectionFactory<Cassandra.Client> createConnectionFactory(AstyanaxConfiguration asConfig, ConnectionPoolConfiguration cfConfig,
             KeyspaceTracerFactory tracerFactory, ConnectionPoolMonitor monitor) {
-        return (ConnectionFactory<Cassandra.Client>) new ThriftSyncConnectionFactoryImpl(cfConfig, tracerFactory,
+        return (ConnectionFactory<Cassandra.Client>) new ThriftSyncConnectionFactoryImpl(asConfig, cfConfig, tracerFactory,
                 monitor);
     }
 

@@ -225,13 +225,13 @@ public class SerializersTest {
         public String lastName;
 
         @Component
-        public int age;
+        public Integer age;
 
         public Composite1() {
 
         }
 
-        public Composite1(String firstName, String lastName, int age) {
+        public Composite1(String firstName, String lastName, Integer age) {
             this.firstName = firstName;
             this.lastName = lastName;
             this.age = age;
@@ -249,8 +249,8 @@ public class SerializersTest {
                 return false;
             }
             Composite1 other = (Composite1) arg0;
-            return (firstName.equals(other.firstName)
-                    && lastName.equals(other.lastName) && age == other.age);
+            return (String.valueOf(firstName).equals(String.valueOf(other.firstName))
+                    && String.valueOf(lastName).equals(String.valueOf(other.lastName)) && age == other.age);
         }
     }
 
@@ -271,6 +271,24 @@ public class SerializersTest {
         }
     }
 
+    @Test
+    public void testAnnotatedCompositeSerializerWithNulls() {
+        try {
+            AnnotatedCompositeSerializer<Composite1> ser = new AnnotatedCompositeSerializer<Composite1>(
+                    Composite1.class);
+
+            Composite1 c1 = new Composite1("Arielle", null, null);
+
+            ByteBuffer bytes = ser.toByteBuffer(c1);
+            Composite1 c2 = ser.fromByteBuffer(bytes);
+            Assert.assertEquals(c1, c2);
+        } catch (Exception e) {
+            e.printStackTrace();
+            LOG.error(e.getMessage());
+            Assert.fail();
+        }
+    }
+
     static class Composite2 {
         @Component(ordinal = 0)
         String firstName;
@@ -279,13 +297,13 @@ public class SerializersTest {
         String lastName;
 
         @Component(ordinal = 1)
-        int age;
+        Integer age;
 
         public Composite2() {
 
         }
 
-        public Composite2(String firstName, String lastName, int age) {
+        public Composite2(String firstName, String lastName, Integer age) {
             this.firstName = firstName;
             this.lastName = lastName;
             this.age = age;

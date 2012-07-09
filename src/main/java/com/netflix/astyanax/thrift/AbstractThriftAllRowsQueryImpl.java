@@ -41,6 +41,12 @@ public abstract class AbstractThriftAllRowsQueryImpl<K, C> implements AllRowsQue
 
     @Override
     public AllRowsQuery<K, C> setThreadCount(int numberOfThreads) {
+        setConcurrencyLevel(numberOfThreads);
+        return this;
+    }
+    
+    @Override
+    public AllRowsQuery<K, C> setConcurrencyLevel(int numberOfThreads) {
         this.nThreads = numberOfThreads;
         return this;
     }
@@ -119,7 +125,7 @@ public abstract class AbstractThriftAllRowsQueryImpl<K, C> implements AllRowsQue
         return this.repeatLastToken;
     }
 
-    protected Integer getThreadCount() {
+    protected Integer getConcurrencyLevel() {
         return this.nThreads;
     }
     

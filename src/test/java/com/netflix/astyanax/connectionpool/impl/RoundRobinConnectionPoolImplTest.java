@@ -24,12 +24,12 @@ import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.NoAvailableHostsException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
-import com.netflix.astyanax.fake.TestClient;
-import com.netflix.astyanax.fake.TestConnectionFactory;
-import com.netflix.astyanax.fake.TestConstants;
-import com.netflix.astyanax.fake.TestHostType;
-import com.netflix.astyanax.fake.TestOperation;
 import com.netflix.astyanax.retry.RunOnce;
+import com.netflix.astyanax.test.TestClient;
+import com.netflix.astyanax.test.TestConnectionFactory;
+import com.netflix.astyanax.test.TestConstants;
+import com.netflix.astyanax.test.TestHostType;
+import com.netflix.astyanax.test.TestOperation;
 
 import org.apache.log4j.Logger;
 import org.junit.Assert;

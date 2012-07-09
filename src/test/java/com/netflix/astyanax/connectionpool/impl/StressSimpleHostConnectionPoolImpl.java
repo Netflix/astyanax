@@ -27,9 +27,9 @@ import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
-import com.netflix.astyanax.fake.TestClient;
-import com.netflix.astyanax.fake.TestConnectionFactory;
-import com.netflix.astyanax.fake.TestHostType;
+import com.netflix.astyanax.test.TestClient;
+import com.netflix.astyanax.test.TestConnectionFactory;
+import com.netflix.astyanax.test.TestHostType;
 
 public class StressSimpleHostConnectionPoolImpl {
     private static final Logger LOG = Logger.getLogger(Stress.class);

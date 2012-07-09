@@ -38,7 +38,7 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     public static final int DEFAULT_CONNECT_TIMEOUT = 2000; // ms
     public static final int DEFAULT_MAX_ACTIVE_PER_PARTITION = 3;
     public static final int DEFAULT_INIT_PER_PARTITION = 0;
-    public static final int DEFAULT_PORT = 7102;
+    public static final int DEFAULT_PORT = 9160;
     public static final int DEFAULT_FAILOVER_COUNT = -1;
     public static final int DEFAULT_MAX_CONNS = 1;
     public static final int DEFAULT_LATENCY_AWARE_WINDOW_SIZE = 100;

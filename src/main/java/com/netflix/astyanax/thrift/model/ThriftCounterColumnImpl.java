@@ -123,4 +123,9 @@ public class ThriftCounterColumnImpl<C> implements Column<C> {
         throw new UnsupportedOperationException("CounterColumn \'" + this.name + "\' has no ttl");
     }
 
+    @Override
+    public boolean hasValue() {
+        return true;
+    }
+
 }

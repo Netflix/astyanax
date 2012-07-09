@@ -14,8 +14,8 @@ import org.junit.Test;
 
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.TokenRange;
-import com.netflix.astyanax.fake.TestKeyspace;
-import com.netflix.astyanax.fake.TestTokenRange;
+import com.netflix.astyanax.test.TestKeyspace;
+import com.netflix.astyanax.test.TestTokenRange;
 
 /**
  * User: mkoch

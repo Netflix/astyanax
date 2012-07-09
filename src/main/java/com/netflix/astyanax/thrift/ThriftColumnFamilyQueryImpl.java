@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -43,6 +42,7 @@ import org.apache.cassandra.thrift.KeySlice;
 import org.apache.cassandra.thrift.Mutation;
 import org.apache.cassandra.thrift.SuperColumn;
 import org.apache.cassandra.utils.Pair;
+import org.mortbay.log.Log;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
@@ -398,12 +398,57 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
             }
         };
     }
-
+    
     @Override
-    public RowSliceQuery<K, C> getKeySlice(K keys[]) {
-        return getKeySlice(Arrays.asList(keys));
+    public RowSliceQuery<K, C> getKeySlice(final Iterable<K> keys) {
+        return new AbstractRowSliceQueryImpl<K, C>(columnFamily.getColumnSerializer()) {
+            @Override
+            public OperationResult<Rows<K, C>> execute() throws ConnectionException {
+                return connectionPool.executeWithFailover(
+                        new AbstractKeyspaceOperationImpl<Rows<K, C>>(tracerFactory.newTracer(
+                                CassandraOperationType.GET_ROWS_SLICE, columnFamily), pinnedHost, keyspace
+                                .getKeyspaceName()) {
+                            @Override
+                            public Rows<K, C> internalExecute(Client client) throws Exception {
+                                Map<ByteBuffer, List<ColumnOrSuperColumn>> cfmap = client.multiget_slice(columnFamily
+                                        .getKeySerializer().toBytesList(keys), new ColumnParent()
+                                        .setColumn_family(columnFamily.getName()), predicate, ThriftConverter
+                                        .ToThriftConsistencyLevel(consistencyLevel));
+                                if (cfmap == null || cfmap.isEmpty()) {
+                                    return new EmptyRowsImpl<K, C>();
+                                }
+                                else {
+                                    return new ThriftRowsListImpl<K, C>(cfmap, columnFamily.getKeySerializer(),
+                                            columnFamily.getColumnSerializer());
+                                }
+                            }
+
+                            @Override
+                            public BigInteger getToken() {
+                                // / return
+                                // partitioner.getToken(columnFamily.getKeySerializer().toByteBuffer(keys.iterator().next())).token;
+                                return null;
+                            }
+                        }, retry);
+            }
+
+            @Override
+            public Future<OperationResult<Rows<K, C>>> executeAsync() throws ConnectionException {
+                return executor.submit(new Callable<OperationResult<Rows<K, C>>>() {
+                    @Override
+                    public OperationResult<Rows<K, C>> call() throws Exception {
+                        return execute();
+                    }
+                });
+            }
+        };
     }
 
+    @Override
+    public RowSliceQuery<K, C> getKeySlice(final K keys[]) {
+        return getKeySlice(Arrays.asList(keys));
+    }
+    
     @Override
     public RowSliceQuery<K, C> getKeySlice(final Collection<K> keys) {
         return new AbstractRowSliceQueryImpl<K, C>(columnFamily.getColumnSerializer()) {
@@ -633,8 +678,8 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                 final AtomicReference<ConnectionException> error = new AtomicReference<ConnectionException>();
 
                 List<Pair<String, String>> ranges = Lists.newArrayList();
-                if (this.getThreadCount() != null) {
-                    int nThreads = this.getThreadCount();
+                if (this.getConcurrencyLevel() != null) {
+                    int nThreads = this.getConcurrencyLevel();
                     for (int i = 0; i < nThreads; i++) {
                         BigIntegerToken start =  new BigIntegerToken(TokenGenerator.initialToken(nThreads, i,   TokenGenerator.MINIMUM, TokenGenerator.MAXIMUM));
                         BigIntegerToken end   =  new BigIntegerToken(TokenGenerator.initialToken(nThreads, i+1, TokenGenerator.MINIMUM, TokenGenerator.MAXIMUM));
@@ -651,7 +696,6 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                 }
                 final CountDownLatch doneSignal = new CountDownLatch(ranges.size());
                 
-                final ExecutorService executor = Executors.newFixedThreadPool(ranges.size());
                 for (final Pair<String, String> token : ranges) {
                     executor.submit(new Callable<Void>() {
                         @Override
@@ -738,6 +782,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                     doneSignal.await();
                 }
                 catch (InterruptedException e) {
+                    Log.debug("Execution interrupted on get all rows for keyspace " + keyspace.getKeyspaceName());
                 }
 
                 if (error.get() != null) {

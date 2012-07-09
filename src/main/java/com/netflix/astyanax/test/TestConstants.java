@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package com.netflix.astyanax.fake;
+package com.netflix.astyanax.test;
 
 import java.nio.ByteBuffer;
 import java.util.UUID;
@@ -80,9 +80,5 @@ public class TestConstants {
 
     public static final String CLUSTER_NAME = "TestCluster1";
     public static final String KEYSPACE_NAME = "Keyspace1";
-    public static final int DAEMON_START_WAIT = 3000;
-    public static final int PORT = 7102;
-    public static final int DATA_PORT = 7101;
-    public static final boolean ENABLED = true;
 
 }

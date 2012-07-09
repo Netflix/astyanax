@@ -24,6 +24,7 @@ public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
     private NodeDiscoveryType discoveryType = NodeDiscoveryType.NONE;
     private int discoveryIntervalInSeconds = 30;
     private ConnectionPoolType connectionPoolType = ConnectionPoolType.ROUND_ROBIN;
+    private String cqlVersion = null;
 
     public AstyanaxConfigurationImpl() {
     }
@@ -110,6 +111,16 @@ public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
 
     public AstyanaxConfigurationImpl setDiscoveryType(NodeDiscoveryType discoveryType) {
         this.discoveryType = discoveryType;
+        return this;
+    }
+
+    @Override
+    public String getCqlVersion() {
+        return cqlVersion;
+    }
+
+    public AstyanaxConfigurationImpl setCqlVersion(String cqlVersion) {
+        this.cqlVersion = cqlVersion;
         return this;
     }
 }

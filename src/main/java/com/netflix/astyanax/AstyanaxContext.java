@@ -131,7 +131,7 @@ public class AstyanaxContext<Entity> {
         }
 
         public <T> AstyanaxContext<Keyspace> buildKeyspace(AstyanaxTypeFactory<T> factory) {
-            ConnectionPool<T> cp = createConnectionPool(factory.createConnectionFactory(cpConfig, tracerFactory,
+            ConnectionPool<T> cp = createConnectionPool(factory.createConnectionFactory(asConfig, cpConfig, tracerFactory,
                     monitor));
             this.cp = cp;
 
@@ -173,7 +173,7 @@ public class AstyanaxContext<Entity> {
         }
 
         public <T> AstyanaxContext<Cluster> buildCluster(AstyanaxTypeFactory<T> factory) {
-            ConnectionPool<T> cp = createConnectionPool(factory.createConnectionFactory(cpConfig, tracerFactory,
+            ConnectionPool<T> cp = createConnectionPool(factory.createConnectionFactory(asConfig, cpConfig, tracerFactory,
                     monitor));
             this.cp = cp;
 

@@ -1,4 +1,4 @@
-package com.netflix.astyanax.fake;
+package com.netflix.astyanax.test;
 
 import com.netflix.astyanax.annotations.Component;
 

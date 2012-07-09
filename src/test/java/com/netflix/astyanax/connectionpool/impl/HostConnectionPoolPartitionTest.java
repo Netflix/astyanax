@@ -15,8 +15,8 @@ import com.google.common.collect.Maps;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
 import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
-import com.netflix.astyanax.fake.TestClient;
-import com.netflix.astyanax.fake.TestHostConnectionPool;
+import com.netflix.astyanax.test.TestClient;
+import com.netflix.astyanax.test.TestHostConnectionPool;
 
 public class HostConnectionPoolPartitionTest {
 

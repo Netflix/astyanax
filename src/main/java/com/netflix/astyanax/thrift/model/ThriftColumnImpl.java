@@ -131,4 +131,9 @@ public class ThriftColumnImpl<C> implements Column<C> {
         return column.isSetTtl() ? column.getTtl() : 0;
     }
 
+    @Override
+    public boolean hasValue() {
+        return column.value != null && column.value.limit() != 0;
+    }
+
 }

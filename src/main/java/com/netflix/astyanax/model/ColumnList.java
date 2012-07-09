@@ -16,6 +16,7 @@
 package com.netflix.astyanax.model;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.Date;
 import java.util.UUID;
 
@@ -30,6 +31,11 @@ import com.netflix.astyanax.Serializer;
  *            Data type for column names
  */
 public interface ColumnList<C> extends Iterable<Column<C>> {
+    /**
+     * Return the column names
+     */
+    Collection<C> getColumnNames();
+    
     /**
      * Queries column by name
      * 

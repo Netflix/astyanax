@@ -15,17 +15,19 @@
  ******************************************************************************/
 package com.netflix.astyanax.thrift.model;
 
-import java.util.HashMap;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
+import com.google.common.collect.Maps;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.model.AbstractColumnList;
 import com.netflix.astyanax.model.Column;
 
 public class ThriftCounterColumnListImpl<C> extends AbstractColumnList<C> {
     private final List<org.apache.cassandra.thrift.CounterColumn> columns;
-    private HashMap<C, org.apache.cassandra.thrift.CounterColumn> lookup;
+    private Map<C, org.apache.cassandra.thrift.CounterColumn> lookup;
     private final Serializer<C> colSer;
 
     public ThriftCounterColumnListImpl(List<org.apache.cassandra.thrift.CounterColumn> columns, Serializer<C> colSer) {
@@ -63,12 +65,7 @@ public class ThriftCounterColumnListImpl<C> extends AbstractColumnList<C> {
 
     @Override
     public Column<C> getColumnByName(C columnName) {
-        if (lookup == null) {
-            lookup = new HashMap<C, org.apache.cassandra.thrift.CounterColumn>();
-            for (org.apache.cassandra.thrift.CounterColumn column : columns) {
-                lookup.put(colSer.fromBytes(column.getName()), column);
-            }
-        }
+        constructMap();
 
         org.apache.cassandra.thrift.CounterColumn c = lookup.get(columnName);
         if (c == null) {
@@ -108,4 +105,18 @@ public class ThriftCounterColumnListImpl<C> extends AbstractColumnList<C> {
         return false;
     }
 
+    @Override
+    public Collection<C> getColumnNames() {
+        constructMap();
+        return lookup.keySet();
+    }
+
+    private void constructMap() {
+        if (lookup == null) {
+            lookup = Maps.newHashMap();
+            for (org.apache.cassandra.thrift.CounterColumn column : columns) {
+                lookup.put(colSer.fromBytes(column.getName()), column);
+            }
+        }
+    }
 }

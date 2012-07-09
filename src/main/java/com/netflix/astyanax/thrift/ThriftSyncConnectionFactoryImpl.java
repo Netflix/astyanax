@@ -17,6 +17,7 @@ package com.netflix.astyanax.thrift;
 
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.AuthenticationCredentials;
 import com.netflix.astyanax.CassandraOperationTracer;
 import com.netflix.astyanax.CassandraOperationType;
@@ -36,12 +37,9 @@ import com.netflix.astyanax.connectionpool.exceptions.ThrottledException;
 import com.netflix.astyanax.connectionpool.impl.OperationResultImpl;
 import com.netflix.astyanax.connectionpool.impl.SimpleRateLimiterImpl;
 
-import org.apache.cassandra.thrift.AuthenticationException;
 import org.apache.cassandra.thrift.AuthenticationRequest;
-import org.apache.cassandra.thrift.AuthorizationException;
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.TBinaryProtocol;
-import org.apache.thrift.TException;
 import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransportException;
@@ -62,10 +60,12 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
     private final ConnectionPoolConfiguration cpConfig;
     private final KeyspaceTracerFactory tracerFactory;
     private final ConnectionPoolMonitor monitor;
+    private final AstyanaxConfiguration asConfig;
 
-    public ThriftSyncConnectionFactoryImpl(ConnectionPoolConfiguration cpConfig, KeyspaceTracerFactory tracerFactory,
+    public ThriftSyncConnectionFactoryImpl(AstyanaxConfiguration asConfig, ConnectionPoolConfiguration cpConfig, KeyspaceTracerFactory tracerFactory,
             ConnectionPoolMonitor monitor) {
         this.cpConfig = cpConfig;
+        this.asConfig = asConfig;
         this.limiter = new SimpleRateLimiterImpl(cpConfig);
         this.tracerFactory = tracerFactory;
         this.monitor = monitor;
@@ -94,10 +94,7 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
             public <R> OperationResult<R> execute(Operation<Cassandra.Client, R> op) throws ConnectionException {
                 long startTime = System.nanoTime();
                 long latency = 0;
-                setTimeout(cpConfig.getSocketTimeout()); // In case the
-                                                         // configuration
-                                                         // changed
-
+                setTimeout(cpConfig.getSocketTimeout()); // In case the configurationchanged
                 operationCounter.incrementAndGet();
 
                 // Set a new keyspace, if it changed
@@ -107,6 +104,8 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
                             .start();
                     try {
                         cassandraClient.set_keyspace(op.getKeyspace());
+                        if (asConfig.getCqlVersion() != null)
+                            cassandraClient.set_cql_version(asConfig.getCqlVersion());
                         keyspaceName = op.getKeyspace();
                         long now = System.nanoTime();
                         latency = now - startTime;

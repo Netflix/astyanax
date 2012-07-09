@@ -1,4 +1,4 @@
-package com.netflix.astyanax.fake;
+package com.netflix.astyanax.test;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 

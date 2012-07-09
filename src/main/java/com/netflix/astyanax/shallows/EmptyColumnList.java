@@ -15,6 +15,8 @@
  ******************************************************************************/
 package com.netflix.astyanax.shallows;
 
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 
 import com.netflix.astyanax.Serializer;
@@ -62,5 +64,10 @@ public class EmptyColumnList<C> extends AbstractColumnList<C> {
     @Override
     public boolean isSuperColumn() {
         return false;
+    }
+
+    @Override
+    public Collection<C> getColumnNames() {
+        return new HashSet<C>();
     }
 }

@@ -155,4 +155,6 @@ public interface Column<C> {
      * @return TTL in seconds or 0 if no ttl was set
      */
     int getTtl();
+    
+    boolean hasValue();
 }

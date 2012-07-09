@@ -76,7 +76,6 @@ public interface ColumnFamilyQuery<K, C> {
      * @return
      */
     RowSliceQuery<K, C> getKeyRange(K startKey, K endKey, String startToken, String endToken, int count);
-
     /**
      * Query a non-contiguous set of keys.
      * 
@@ -93,6 +92,14 @@ public interface ColumnFamilyQuery<K, C> {
      */
     RowSliceQuery<K, C> getKeySlice(Collection<K> keys);
 
+    /**
+     * Query a non-contiguous set of keys.
+     * 
+     * @param keys
+     * @return
+     */
+    RowSliceQuery<K, C> getKeySlice(Iterable<K> keys);
+    
     /**
      * Query to get an iterator to all rows in the column family
      * 
@@ -115,4 +122,5 @@ public interface ColumnFamilyQuery<K, C> {
      * @return
      */
     IndexQuery<K, C> searchWithIndex();
+
 }

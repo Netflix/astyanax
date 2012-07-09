@@ -26,6 +26,10 @@ public class ExponentialBackoff extends SleepingRetryPolicy {
         return baseSleepTimeMs * Math.max(1, random.nextInt(1 << (this.getAttemptCount() + 1)));
     }
 
+    public int getBaseSleepTimeMs() {
+        return baseSleepTimeMs;
+    }
+    
     @Override
     public RetryPolicy duplicate() {
         return new ExponentialBackoff(baseSleepTimeMs, getMaxAttemptCount());

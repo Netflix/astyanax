@@ -61,6 +61,7 @@ import com.netflix.astyanax.serializers.SerializerPackageImpl;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.TimeUUIDSerializer;
 import com.netflix.astyanax.serializers.UnknownComparatorException;
+import com.netflix.astyanax.test.EmbeddedCassandra;
 import com.netflix.astyanax.util.ColumnarRecordWriter;
 import com.netflix.astyanax.util.CsvColumnReader;
 import com.netflix.astyanax.util.CsvRecordReader;
@@ -77,6 +78,7 @@ public class ThrifeKeyspaceImplTest {
 
     private static Keyspace keyspace;
     private static AstyanaxContext<Keyspace> keyspaceContext;
+    private static EmbeddedCassandra cassandra;
 
     private static String TEST_CLUSTER_NAME = "cass_sandbox";
     private static String TEST_KEYSPACE_NAME = "AstyanaxUnitTests";
@@ -135,14 +137,17 @@ public class ThrifeKeyspaceImplTest {
             .newColumnFamily("ClickStream", StringSerializer.get(),
                     SE_SERIALIZER);
 
-    private static final Properties props = System.getProperties();
-    private static final String seedsPropKey = "astyanax.test.seeds";
-    public static final String SEEDS = props.containsKey(seedsPropKey) ? props.getProperty(seedsPropKey) : "localhost:7102";
+    private static final String SEEDS = "localhost:9160";
 
     @BeforeClass
     public static void setup() throws Exception {
         System.out.println("TESTING THRIFT KEYSPACE");
 
+        cassandra = new EmbeddedCassandra();
+        cassandra.start();
+        
+        Thread.sleep(5000);
+        
         if (TEST_INIT_KEYSPACE) {
             AstyanaxContext<Cluster> clusterContext = new AstyanaxContext.Builder()
                     .forCluster(TEST_CLUSTER_NAME)
@@ -265,7 +270,7 @@ public class ThrifeKeyspaceImplTest {
                                                         .setKeysIndex("age")));
                 cluster.addKeyspace(ksDef);
 
-                Thread.sleep(2000);
+                Thread.sleep(3000);
             } catch (ConnectionException e) {
                 System.out.println(e.getMessage());
             } finally {
@@ -280,6 +285,8 @@ public class ThrifeKeyspaceImplTest {
     public static void teardown() {
         if (keyspaceContext != null)
             keyspaceContext.shutdown();
+        
+        cassandra.stop();
     }
 
     public static void createKeyspace() throws Exception {
@@ -400,7 +407,7 @@ public class ThrifeKeyspaceImplTest {
                 .withConnectionPoolConfiguration(
                         new ConnectionPoolConfigurationImpl("MyConnectionPool")
                                 .setMaxConnsPerHost(1).setSeeds(
-                                        "127.0.0.1:7102"))
+                                        "127.0.0.1:9160"))
                 .withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
                 .buildKeyspace(ThriftFamilyFactory.getInstance());
 

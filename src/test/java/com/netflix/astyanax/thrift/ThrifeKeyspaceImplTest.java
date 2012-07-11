@@ -46,11 +46,14 @@ import com.netflix.astyanax.model.ColumnSlice;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.model.Equality;
+import com.netflix.astyanax.model.Issue80CompositeType;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.query.IndexQuery;
 import com.netflix.astyanax.query.PreparedIndexExpression;
 import com.netflix.astyanax.query.RowQuery;
+import com.netflix.astyanax.recipes.uniqueness.DedicatedMultiRowUniquenessConstraint;
+import com.netflix.astyanax.recipes.uniqueness.NotUniqueException;
 import com.netflix.astyanax.retry.ExponentialBackoff;
 import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
@@ -131,6 +134,20 @@ public class ThrifeKeyspaceImplTest {
             .newColumnFamily("TimeUUID1", StringSerializer.get(),
                     TimeUUIDSerializer.get());
 
+    public static ColumnFamily<String, UUID> CF_USER_UNIQUE_UUID = ColumnFamily
+            .newColumnFamily("UserUniqueUUID", StringSerializer.get(),
+                    TimeUUIDSerializer.get());
+    
+    public static ColumnFamily<String, UUID> CF_EMAIL_UNIQUE_UUID = ColumnFamily
+            .newColumnFamily("EmailUniqueUUID", StringSerializer.get(),
+                    TimeUUIDSerializer.get());
+    
+    public static AnnotatedCompositeSerializer<Issue80CompositeType> issue80Serializer = 
+        new AnnotatedCompositeSerializer<Issue80CompositeType>(Issue80CompositeType.class);
+    
+    public static ColumnFamily<String, Issue80CompositeType> CF_ISSUE80 = ColumnFamily
+            .newColumnFamily("Issue80", StringSerializer.get(), issue80Serializer);
+    
     public static AnnotatedCompositeSerializer<SessionEvent> SE_SERIALIZER = new AnnotatedCompositeSerializer<SessionEvent>(
             SessionEvent.class);
 
@@ -140,6 +157,8 @@ public class ThrifeKeyspaceImplTest {
 
     private static final String SEEDS = "localhost:9160";
 
+    private static final long CASSANDRA_WAIT_TIME = 3000;
+    
     @BeforeClass
     public static void setup() throws Exception {
         System.out.println("TESTING THRIFT KEYSPACE");
@@ -147,7 +166,7 @@ public class ThrifeKeyspaceImplTest {
         cassandra = new EmbeddedCassandra();
         cassandra.start();
         
-        Thread.sleep(5000);
+        Thread.sleep(CASSANDRA_WAIT_TIME);
         
         if (TEST_INIT_KEYSPACE) {
             AstyanaxContext<Cluster> clusterContext = new AstyanaxContext.Builder()
@@ -165,7 +184,7 @@ public class ThrifeKeyspaceImplTest {
             Cluster cluster = clusterContext.getEntity();
             try {
                 cluster.dropKeyspace(TEST_KEYSPACE_NAME);
-                Thread.sleep(10000);
+                Thread.sleep(2000);
             } catch (ConnectionException e) {
                 System.out.println(e.getMessage());
             }
@@ -236,11 +255,27 @@ public class ThrifeKeyspaceImplTest {
                                         .setKeyValidationClass("UTF8Type"))
                         .addColumnFamily(
                                 cluster.makeColumnFamilyDefinition()
+                                        .setName(CF_ISSUE80.getName())
+                                        .setComparatorType(
+                                                "CompositeType(UTF8Type, UTF8Type, LongType)")
+                                        .setKeyValidationClass("UTF8Type"))
+                        .addColumnFamily(
+                                cluster.makeColumnFamilyDefinition()
                                         .setName(CF_COMPOSITE_KEY.getName())
                                         .setComparatorType("UTF8Type"))
                         .addColumnFamily(
                                 cluster.makeColumnFamilyDefinition()
                                         .setName(CF_TIME_UUID.getName())
+                                        .setComparatorType("TimeUUIDType)")
+                                        .setKeyValidationClass("UTF8Type"))
+                        .addColumnFamily(
+                                cluster.makeColumnFamilyDefinition()
+                                        .setName(CF_USER_UNIQUE_UUID.getName())
+                                        .setComparatorType("TimeUUIDType)")
+                                        .setKeyValidationClass("UTF8Type"))
+                        .addColumnFamily(
+                                cluster.makeColumnFamilyDefinition()
+                                        .setName(CF_EMAIL_UNIQUE_UUID.getName())
                                         .setComparatorType("TimeUUIDType)")
                                         .setKeyValidationClass("UTF8Type"))
                         .addColumnFamily(
@@ -271,7 +306,7 @@ public class ThrifeKeyspaceImplTest {
                                                         .setKeysIndex("age")));
                 cluster.addKeyspace(ksDef);
 
-                Thread.sleep(3000);
+                Thread.sleep(CASSANDRA_WAIT_TIME);
             } catch (ConnectionException e) {
                 System.out.println(e.getMessage());
             } finally {
@@ -373,6 +408,39 @@ public class ThrifeKeyspaceImplTest {
             Assert.fail();
         }
     }
+    
+    @Test
+    public void testIssue80() throws Exception {
+        MutationBatch m = keyspace.prepareMutationBatch();
+        
+        for (char ch = 'A'; ch <= 'Z'; ch++) {
+            ColumnListMutation<Issue80CompositeType> row = m.withRow(CF_ISSUE80, Character.toString(ch));
+            for (long i = 0; i < 10; i++) {
+                Issue80CompositeType column = new Issue80CompositeType(Character.toString(ch), Long.toString(i), i);
+//                LOG.info("" + ch + " : " + column);
+                row.putColumn(column, 1234L);
+            }
+        }
+        
+        m.execute();
+        
+        Rows<String, Issue80CompositeType> rows = keyspace.prepareQuery(CF_ISSUE80)
+            .getAllRows()
+            .withColumnRange(issue80Serializer.buildRange().withPrefix("A").greaterThan("1").lessThanEquals("9").build())
+            .execute().getResult();
+        
+        int count = 0;
+        
+        for (Row<String, Issue80CompositeType> row : rows) {
+            //Assert.assertEquals(8, row.getColumns().size());
+            for (Column<Issue80CompositeType> column : row.getColumns()) {
+                count++;
+                LOG.info(row.getKey() + " " + column.getName() + "=" + column.getLongValue());
+            }
+        }
+        
+        Assert.assertEquals(8, count);
+    }
 
     @Test
     public void paginateColumns() {
@@ -456,6 +524,58 @@ public class ThrifeKeyspaceImplTest {
             System.out.println(e);
         }
 
+    }
+    
+    @Test
+    public void testMultiRowUniqueness() {
+        DedicatedMultiRowUniquenessConstraint<UUID> constraint = new DedicatedMultiRowUniquenessConstraint<UUID>
+                  (keyspace, TimeUUIDUtils.getUniqueTimeUUIDinMicros())
+                  .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                  .withRow(CF_USER_UNIQUE_UUID, "user1")
+                  .withRow(CF_EMAIL_UNIQUE_UUID, "user1@domain.com");
+        
+        DedicatedMultiRowUniquenessConstraint<UUID> constraint2 = new DedicatedMultiRowUniquenessConstraint<UUID>
+                  (keyspace, TimeUUIDUtils.getUniqueTimeUUIDinMicros())
+                  .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                  .withRow(CF_USER_UNIQUE_UUID, "user1")
+                  .withRow(CF_EMAIL_UNIQUE_UUID, "user1@domain.com");
+        
+        try {
+            constraint.acquire();
+            try {
+                constraint2.acquire();
+                Assert.fail("Should already be acquired");
+            }
+            catch (NotUniqueException e) {
+                
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                Assert.fail();
+            }
+            finally {
+                try {
+                    constraint2.release();
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                    Assert.fail();
+                }
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            Assert.fail();
+        }
+        finally {
+            try {
+                constraint.release();
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                Assert.fail();
+            }
+        }
     }
 
     @Test

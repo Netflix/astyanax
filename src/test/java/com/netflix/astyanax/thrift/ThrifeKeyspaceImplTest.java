@@ -18,7 +18,6 @@ import org.apache.cassandra.utils.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.Ignore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,7 +45,6 @@ import com.netflix.astyanax.model.ColumnSlice;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.model.Equality;
-import com.netflix.astyanax.model.Issue80CompositeType;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.query.IndexQuery;
@@ -141,12 +139,6 @@ public class ThrifeKeyspaceImplTest {
     public static ColumnFamily<String, UUID> CF_EMAIL_UNIQUE_UUID = ColumnFamily
             .newColumnFamily("EmailUniqueUUID", StringSerializer.get(),
                     TimeUUIDSerializer.get());
-    
-    public static AnnotatedCompositeSerializer<Issue80CompositeType> issue80Serializer = 
-        new AnnotatedCompositeSerializer<Issue80CompositeType>(Issue80CompositeType.class);
-    
-    public static ColumnFamily<String, Issue80CompositeType> CF_ISSUE80 = ColumnFamily
-            .newColumnFamily("Issue80", StringSerializer.get(), issue80Serializer);
     
     public static AnnotatedCompositeSerializer<SessionEvent> SE_SERIALIZER = new AnnotatedCompositeSerializer<SessionEvent>(
             SessionEvent.class);
@@ -252,12 +244,6 @@ public class ThrifeKeyspaceImplTest {
                                         .setComparatorType(
                                                 "CompositeType(AsciiType, IntegerType(reversed=true), IntegerType, BytesType, UTF8Type)")
                                         .setDefaultValidationClass("AsciiType")
-                                        .setKeyValidationClass("UTF8Type"))
-                        .addColumnFamily(
-                                cluster.makeColumnFamilyDefinition()
-                                        .setName(CF_ISSUE80.getName())
-                                        .setComparatorType(
-                                                "CompositeType(UTF8Type, UTF8Type, LongType)")
                                         .setKeyValidationClass("UTF8Type"))
                         .addColumnFamily(
                                 cluster.makeColumnFamilyDefinition()
@@ -408,39 +394,6 @@ public class ThrifeKeyspaceImplTest {
             Assert.fail();
         }
     }
-    
-    @Test
-    public void testIssue80() throws Exception {
-        MutationBatch m = keyspace.prepareMutationBatch();
-        
-        for (char ch = 'A'; ch <= 'Z'; ch++) {
-            ColumnListMutation<Issue80CompositeType> row = m.withRow(CF_ISSUE80, Character.toString(ch));
-            for (long i = 0; i < 10; i++) {
-                Issue80CompositeType column = new Issue80CompositeType(Character.toString(ch), Long.toString(i), i);
-//                LOG.info("" + ch + " : " + column);
-                row.putColumn(column, 1234L);
-            }
-        }
-        
-        m.execute();
-        
-        Rows<String, Issue80CompositeType> rows = keyspace.prepareQuery(CF_ISSUE80)
-            .getAllRows()
-            .withColumnRange(issue80Serializer.buildRange().withPrefix("A").greaterThan("1").lessThanEquals("9").build())
-            .execute().getResult();
-        
-        int count = 0;
-        
-        for (Row<String, Issue80CompositeType> row : rows) {
-            //Assert.assertEquals(8, row.getColumns().size());
-            for (Column<Issue80CompositeType> column : row.getColumns()) {
-                count++;
-                LOG.info(row.getKey() + " " + column.getName() + "=" + column.getLongValue());
-            }
-        }
-        
-        Assert.assertEquals(8, count);
-    }
 
     @Test
     public void paginateColumns() {
@@ -576,6 +529,27 @@ public class ThrifeKeyspaceImplTest {
                 Assert.fail();
             }
         }
+        
+        try {
+            constraint2.acquire();
+        }
+        catch (NotUniqueException e) {
+            Assert.fail("Should already be unique");
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            Assert.fail();
+        }
+        finally {
+            try {
+                constraint2.release();
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                Assert.fail();
+            }
+        }
+        
     }
 
     @Test
@@ -1497,20 +1471,16 @@ public class ThrifeKeyspaceImplTest {
     }
 
     @Test
-    @Ignore
     public void testCqlCount() {
         try {
-            System.out.println("testCQL");
             LOG.info("CQL Test");
             OperationResult<CqlResult<String, String>> result = keyspace
                     .prepareQuery(CF_STANDARD1)
                     .withCql("SELECT count(*) FROM Standard1 where KEY='A';")
                     .execute();
 
-            Assert.assertFalse(result.getResult().hasRows());
-            Assert.assertTrue(result.getResult().hasNumber());
-            Assert.assertTrue(result.getResult().getNumber() > 0);
-            LOG.info("CQL Count: " + result.getResult().getNumber());
+            long count = result.getResult().getRows().getRowByIndex(0).getColumns().getColumnByName("count").getLongValue();
+            LOG.info("CQL Count: " + count);
         } catch (ConnectionException e) {
             LOG.error(e.getMessage());
             Assert.fail();

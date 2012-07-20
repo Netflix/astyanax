@@ -494,7 +494,19 @@ public class ThrifeKeyspaceImplTest {
                   .withRow(CF_EMAIL_UNIQUE_UUID, "user1@domain.com");
         
         try {
+            Column<UUID> c = constraint.getUniqueColumn();
+            Assert.fail();
+        }
+        catch (Exception e) {
+            LOG.info(e.getMessage());
+        }
+        
+        try {
             constraint.acquire();
+            
+            Column<UUID> c = constraint.getUniqueColumn();
+            LOG.info("Unique column is " + c.getName());
+            
             try {
                 constraint2.acquire();
                 Assert.fail("Should already be acquired");
@@ -532,6 +544,8 @@ public class ThrifeKeyspaceImplTest {
         
         try {
             constraint2.acquire();
+            Column<UUID> c = constraint.getUniqueColumn();
+            LOG.info("Unique column is " + c.getName());
         }
         catch (NotUniqueException e) {
             Assert.fail("Should already be unique");

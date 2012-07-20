@@ -6,6 +6,9 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
+import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ConsistencyLevel;
@@ -53,6 +56,22 @@ public class DedicatedMultiRowUniquenessConstraint<C> implements UniquenessConst
             if (result.size() != 1) {
                 throw new NotUniqueException(row.toString());
             }
+        }
+        
+        Column<C> getUniqueColumn() throws ConnectionException {
+            ColumnList<C> columns = keyspace.prepareQuery(columnFamily).getKey(row).execute().getResult();
+            Column<C> foundColumn = null;
+            for (Column<C> column : columns) {
+                if (column.getTtl() == 0) {
+                    if (foundColumn != null)
+                        throw new RuntimeException("Row has duplicate quite columns");
+                    foundColumn = column;
+                }
+            }
+            if (foundColumn == null) {
+                throw new NotFoundException("Unique column not found");
+            }
+            return foundColumn;
         }
     }
     
@@ -159,5 +178,40 @@ public class DedicatedMultiRowUniquenessConstraint<C> implements UniquenessConst
             lock.fillReleaseMutation(m);
         }
         m.execute();
+    }
+    
+    /**
+     * @return
+     * @throws Exception
+     */
+    public Column<C> getUniqueColumn() throws Exception {
+        if (locks.size() == 0) 
+            throw new IllegalStateException("Missing call to withRow to add rows to the uniqueness constraint");
+        
+        // Get the unique row from all columns
+        List<Column<C>> columns = Lists.newArrayList();
+        for (Row<?> row : locks) {
+            columns.add(row.getUniqueColumn());
+        }
+        
+        // Check that all rows have the same unique column otherwise they are not part of 
+        // the same unique group
+        Column<C> foundColumn = columns.get(0);
+        for (int i = 1; i < columns.size(); i++) {
+            Column<C> nextColumn = columns.get(i);
+            if (!nextColumn.getRawName().equals(foundColumn.getRawName())) {
+                throw new NotUniqueException("The provided rows are not part of the same uniquness constraint");
+            }
+            
+            if (foundColumn.hasValue() != nextColumn.hasValue()) {
+                throw new NotUniqueException("The provided rows are not part of the same uniquness constraint");
+            }
+            
+            if (foundColumn.hasValue() && !nextColumn.getByteBufferValue().equals((foundColumn.getByteBufferValue()))) {
+                throw new NotUniqueException("The provided rows are not part of the same uniquness constraint");
+            }
+        }
+        
+        return foundColumn;
     }
 }

@@ -1,5 +1,5 @@
 // Establish version and status
-ext.releaseVersion = '1.0.4'
+ext.releaseVersion = '1.0.5'
 ext.githubProjectName = name
 group = 'com.netflix.astyanax'
 

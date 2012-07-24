@@ -33,7 +33,7 @@ public class RoundRobinExecuteWithFailover<CL, R> extends AbstractExecuteWithFai
 
         size = pools.size();
         retryCountdown = Math.min(config.getMaxFailoverCount(), size);
-        if (retryCountdown < 0)
+        if (retryCountdown < 0) 
             retryCountdown = size;
         else if (retryCountdown == 0)
             retryCountdown = 1;
@@ -42,7 +42,7 @@ public class RoundRobinExecuteWithFailover<CL, R> extends AbstractExecuteWithFai
     }
 
     public int getNextHostIndex() {
-        return index++ % size;
+        return ++index % size;
     }
 
     public boolean canRetry() {

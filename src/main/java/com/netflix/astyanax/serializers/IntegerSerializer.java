@@ -2,8 +2,6 @@ package com.netflix.astyanax.serializers;
 
 import java.nio.ByteBuffer;
 
-import org.apache.cassandra.db.marshal.IntegerType;
-
 /**
  * Converts bytes to Integer and vice versa
  * 
@@ -41,9 +39,18 @@ public final class IntegerSerializer extends AbstractSerializer<Integer> {
 
     @Override
     public Integer fromBytes(byte[] bytes) {
-        if ((bytes == null) || (bytes.length != 4)) {
+        if (bytes == null || bytes.length > 4) {
             return null;
         }
+        else if (bytes.length < 4) {
+            byte[] newBytes = new byte[4];
+
+            for (int i = bytes.length - 1; i >= 0; i--) {
+                newBytes[i + 4 - bytes.length] = bytes[i];
+            }
+            bytes = newBytes;
+        }
+
         ByteBuffer bb = ByteBuffer.allocate(4).put(bytes, 0, 4);
         bb.rewind();
         return bb.getInt();

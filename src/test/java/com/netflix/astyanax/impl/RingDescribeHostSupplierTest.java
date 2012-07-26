@@ -1,14 +1,13 @@
 package com.netflix.astyanax.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.cassandra.dht.BigIntegerToken;
+import org.apache.cassandra.dht.RandomPartitioner;
+import org.apache.cassandra.dht.Token;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -16,6 +15,9 @@ import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.test.TestKeyspace;
 import com.netflix.astyanax.test.TestTokenRange;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * User: mkoch
@@ -35,25 +37,25 @@ public class RingDescribeHostSupplierTest {
     public void setUp() throws Exception {
         TestKeyspace keyspace = new TestKeyspace("ringDescribeTestKeyspace");
         keyspace.setTokenRange(createTokenRange());
-        hostSupplier = new RingDescribeHostSupplier(keyspace,1234);
+        hostSupplier = new RingDescribeHostSupplier(keyspace, 1234, new RandomPartitioner());
     }
 
 
     @Test
     public void testGet() throws Exception {
-        Map<BigInteger,List<Host>> hostMap = hostSupplier.get();
+        Map<Token,List<Host>> hostMap = hostSupplier.get();
         assertNotNull(hostMap);
         assertEquals(3, hostMap.size());
 
-        List<Host> endpoints = hostMap.get(new BigInteger(RANGE_1_END_TOKEN));
+        List<Host> endpoints = hostMap.get(new BigIntegerToken(RANGE_1_END_TOKEN));
         assertEquals(1,endpoints.size());
         assertEquals(NODE1, endpoints.get(0).getIpAddress());
 
-        endpoints = hostMap.get(new BigInteger(RANGE_2_END_TOKEN));
+        endpoints = hostMap.get(new BigIntegerToken(RANGE_2_END_TOKEN));
         assertEquals(1,endpoints.size());
         assertEquals(NODE2, endpoints.get(0).getIpAddress());
 
-        endpoints = hostMap.get(new BigInteger(RANGE_3_END_TOKEN));
+        endpoints = hostMap.get(new BigIntegerToken(RANGE_3_END_TOKEN));
         assertEquals(1,endpoints.size());
         assertEquals(NODE3,endpoints.get(0).getIpAddress());
     }

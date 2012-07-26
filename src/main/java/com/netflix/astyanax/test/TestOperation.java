@@ -15,7 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax.test;
 
-import java.math.BigInteger;
+import org.apache.cassandra.dht.Token;
 
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.Operation;
@@ -30,7 +30,7 @@ public class TestOperation implements Operation<TestClient, String> {
     }
 
     @Override
-    public BigInteger getToken() {
+    public Token getToken() {
         return null;
     }
 

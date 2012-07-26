@@ -1,8 +1,9 @@
 package com.netflix.astyanax.connectionpool.impl;
 
-import java.math.BigInteger;
 import java.util.Collection;
 import java.util.Map;
+
+import org.apache.cassandra.dht.Token;
 
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
 
@@ -13,7 +14,7 @@ public interface Topology<CL> {
      * @param ring
      * @return
      */
-    boolean setPools(Map<BigInteger, Collection<HostConnectionPool<CL>>> ring);
+    boolean setPools(Map<Token, Collection<HostConnectionPool<CL>>> ring);
 
     /**
      * Add a pool without knowing it's token. This pool will be added to the all
@@ -55,7 +56,7 @@ public interface Topology<CL> {
      * @param token
      * @return
      */
-    HostConnectionPoolPartition<CL> getPartition(BigInteger token);
+    HostConnectionPoolPartition<CL> getPartition(Token token);
 
     /**
      * Return a partition that represents all hosts in the ring

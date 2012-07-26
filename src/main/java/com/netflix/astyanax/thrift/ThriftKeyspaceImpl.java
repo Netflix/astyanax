@@ -15,7 +15,6 @@
  ******************************************************************************/
 package com.netflix.astyanax.thrift;
 
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -24,24 +23,26 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.cassandra.dht.RandomPartitioner;
+import org.apache.cassandra.dht.IPartitioner;
+import org.apache.cassandra.dht.Token;
 import org.apache.cassandra.thrift.Cassandra;
-import org.apache.cassandra.thrift.CounterColumn;
 import org.apache.cassandra.thrift.Cassandra.Client;
+import org.apache.cassandra.thrift.CounterColumn;
 
 import com.google.common.base.Function;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.AstyanaxConfiguration;
+import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.ColumnMutation;
 import com.netflix.astyanax.Execution;
-import com.netflix.astyanax.CassandraOperationType;
+import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.KeyspaceTracerFactory;
 import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.SerializerPackage;
 import com.netflix.astyanax.WriteAheadEntry;
 import com.netflix.astyanax.WriteAheadLog;
-import com.netflix.astyanax.SerializerPackage;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.Operation;
@@ -51,20 +52,20 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.connectionpool.impl.TokenRangeImpl;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
-import com.netflix.astyanax.model.*;
-import com.netflix.astyanax.Keyspace;
+import com.netflix.astyanax.model.ColumnFamily;
+import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.serializers.SerializerPackageImpl;
 import com.netflix.astyanax.serializers.UnknownComparatorException;
-import com.netflix.astyanax.thrift.ddl.*;
+import com.netflix.astyanax.thrift.ddl.ThriftKeyspaceDefinitionImpl;
 
 public final class ThriftKeyspaceImpl implements Keyspace {
 
     private final ConnectionPool<Cassandra.Client> connectionPool;
-    private static final RandomPartitioner partitioner = new RandomPartitioner();
     private final AstyanaxConfiguration config;
     private final String ksName;
+    private final IPartitioner partitioner;
     private final ExecutorService executor;
     private final KeyspaceTracerFactory tracerFactory;
     private final Cache<String, Object> cache;
@@ -74,6 +75,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
         this.connectionPool = pool;
         this.config = config;
         this.ksName = ksName;
+        this.partitioner = config.getPartitioner();
         this.executor = config.getAsyncExecutor();
         this.tracerFactory = tracerFactory;
         this.cache = CacheBuilder.newBuilder().expireAfterWrite(10, TimeUnit.MINUTES).build();
@@ -125,9 +127,10 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                 }
 
                                 @Override
-                                public BigInteger getToken() {
-                                    if (getMutationMap().size() == 1)
-                                        return partitioner.getToken(getMutationMap().keySet().iterator().next()).token;
+                                public Token getToken() {
+                                    if (getMutationMap().size() == 1) {
+                                        return toToken(getMutationMap().keySet().iterator().next());
+                                    }
                                     else
                                         return null;
                                 }
@@ -222,7 +225,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     }
 
     public <K, C> ColumnFamilyQuery<K, C> prepareQuery(ColumnFamily<K, C> cf) {
-        return new ThriftColumnFamilyQueryImpl<K, C>(executor, tracerFactory, this, connectionPool, cf,
+        return new ThriftColumnFamilyQueryImpl<K, C>(executor, tracerFactory, this, connectionPool, partitioner, cf,
                 config.getDefaultReadConsistencyLevel(), config.getRetryPolicy());
     }
 
@@ -258,9 +261,8 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                     }
 
                                     @Override
-                                    public BigInteger getToken() {
-                                        return partitioner.getToken(columnFamily.getKeySerializer()
-                                                .toByteBuffer(rowKey)).token;
+                                    public Token getToken() {
+                                        return toToken(columnFamily.getKeySerializer().toByteBuffer(rowKey));
                                     }
                                 }, retry);
                     }
@@ -296,9 +298,8 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                     }
 
                                     @Override
-                                    public BigInteger getToken() {
-                                        return partitioner.getToken(columnFamily.getKeySerializer()
-                                                .toByteBuffer(rowKey)).token;
+                                    public Token getToken() {
+                                        return toToken(columnFamily.getKeySerializer().toByteBuffer(rowKey));
                                     }
                                 }, retry);
                     }
@@ -338,9 +339,8 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                     }
 
                                     @Override
-                                    public BigInteger getToken() {
-                                        return partitioner.getToken(columnFamily.getKeySerializer()
-                                                .toByteBuffer(rowKey)).token;
+                                    public Token getToken() {
+                                        return toToken(columnFamily.getKeySerializer().toByteBuffer(rowKey));
                                     }
                                 }, retry);
                     }
@@ -375,9 +375,8 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                     }
 
                                     @Override
-                                    public BigInteger getToken() {
-                                        return partitioner.getToken(columnFamily.getKeySerializer()
-                                                .toByteBuffer(rowKey)).token;
+                                    public Token getToken() {
+                                        return toToken(columnFamily.getKeySerializer().toByteBuffer(rowKey));
                                     }
                                 }, retry);
                     }
@@ -448,6 +447,10 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                         return null;
                     }
                 }, config.getRetryPolicy().duplicate());
+    }
+
+    private Token toToken(ByteBuffer key) {
+        return (Token) partitioner.getToken(key).token;
     }
 
     private <R> OperationResult<R> executeOperation(Operation<Cassandra.Client, R> operation, RetryPolicy retry)

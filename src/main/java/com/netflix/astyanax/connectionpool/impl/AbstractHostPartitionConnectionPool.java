@@ -15,13 +15,14 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.impl;
 
-import java.math.BigInteger;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 
+import org.apache.cassandra.dht.IPartitioner;
+import org.apache.cassandra.dht.Token;
 import org.cliffc.high_scale_lib.NonBlockingHashMap;
 
 import com.google.common.collect.ImmutableList;
@@ -55,14 +56,16 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
     protected final NonBlockingHashMap<Host, HostConnectionPool<CL>> hosts;
     protected final ConnectionPoolConfiguration config;
     protected final ConnectionFactory<CL> factory;
+    protected final IPartitioner partitioner;
     protected final ConnectionPoolMonitor monitor;
     private final LatencyScoreStrategy latencyScoreStrategy;
     protected final Topology<CL> topology;
 
     public AbstractHostPartitionConnectionPool(ConnectionPoolConfiguration config, ConnectionFactory<CL> factory,
-            ConnectionPoolMonitor monitor) {
+            IPartitioner partitioner, ConnectionPoolMonitor monitor) {
         this.config = config;
         this.factory = factory;
+        this.partitioner = partitioner;
         this.hosts = new NonBlockingHashMap<Host, HostConnectionPool<CL>>();
         this.monitor = monitor;
         this.latencyScoreStrategy = config.getLatencyScoreStrategy();
@@ -75,8 +78,8 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
 
         String seeds = config.getSeeds();
         if (seeds != null && !seeds.isEmpty()) {
-            Map<BigInteger, List<Host>> ring = Maps.newHashMap();
-            ring.put(new BigInteger("0"), config.getSeedHosts());
+            Map<Token, List<Host>> ring = Maps.newHashMap();
+            ring.put(partitioner.getRandomToken(), config.getSeedHosts());
             setHosts(ring);
         }
 
@@ -188,14 +191,14 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
     }
 
     @Override
-    public synchronized void setHosts(Map<BigInteger, List<Host>> ring) {
+    public synchronized void setHosts(Map<Token, List<Host>> ring) {
         // Temporary list of hosts to remove. Any host not in the new ring will
         // be removed
         Set<Host> hostsToRemove = Sets.newHashSet(hosts.keySet());
 
         // Add new hosts.
-        for (Map.Entry<BigInteger, List<Host>> entry : ring.entrySet()) {
-            for (Host host : entry.getValue()) {
+        for (List<Host> hosts : ring.values()) {
+            for (Host host : hosts) {
                 addHost(host, false);
                 hostsToRemove.remove(host);
             }
@@ -207,8 +210,8 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
         }
 
         // Recreate the toplogy
-        Map<BigInteger, Collection<HostConnectionPool<CL>>> tokens = Maps.newHashMap();
-        for (Map.Entry<BigInteger, List<Host>> entry : ring.entrySet()) {
+        Map<Token, Collection<HostConnectionPool<CL>>> tokens = Maps.newHashMap();
+        for (Map.Entry<Token, List<Host>> entry : ring.entrySet()) {
             Set<HostConnectionPool<CL>> pools = Sets.newHashSet();
             for (Host host : entry.getValue()) {
                 pools.add(getHostPool(host));
@@ -223,7 +226,7 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
     public <R> OperationResult<R> executeWithFailover(Operation<CL, R> op, RetryPolicy retry)
             throws ConnectionException {
         retry.begin();
-        ConnectionException lastException = null;
+        ConnectionException lastException;
         do {
             try {
                 OperationResult<R> result = newExecuteWithFailover(op).tryOperation(op);

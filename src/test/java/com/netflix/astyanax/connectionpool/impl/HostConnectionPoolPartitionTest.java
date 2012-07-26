@@ -6,8 +6,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import junit.framework.Assert;
-
+import org.apache.cassandra.dht.BigIntegerToken;
+import org.apache.cassandra.dht.Token;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
@@ -17,6 +17,7 @@ import com.netflix.astyanax.connectionpool.HostConnectionPool;
 import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
 import com.netflix.astyanax.test.TestClient;
 import com.netflix.astyanax.test.TestHostConnectionPool;
+import junit.framework.Assert;
 
 public class HostConnectionPoolPartitionTest {
 
@@ -26,7 +27,7 @@ public class HostConnectionPoolPartitionTest {
                 60000, 100, 4.0);
 
         HostConnectionPoolPartition partition = new HostConnectionPoolPartition(
-                new BigInteger("1"), strategy);
+                new BigIntegerToken("1"), strategy);
 
         List<TestHostConnectionPool> pools = Arrays.asList(makePool(1),
                 makePool(2), makePool(3), makePool(4));
@@ -65,16 +66,16 @@ public class HostConnectionPoolPartitionTest {
         }
 
         // Make the flat ring (before ring_describe is called)
-        Map<BigInteger, Collection<HostConnectionPool<TestClient>>> flatRing = Maps
+        Map<Token, Collection<HostConnectionPool<TestClient>>> flatRing = Maps
                 .newHashMap();
-        flatRing.put(new BigInteger("0"), pools);
+        flatRing.put(new BigIntegerToken("0"), pools);
         boolean didChange = topology.setPools(flatRing);
         Assert.assertTrue(didChange);
         Assert.assertEquals(1, topology.getPartitionCount());
         System.out.println(topology);
 
         // Make a ring with tokens and RF
-        Map<BigInteger, Collection<HostConnectionPool<TestClient>>> tokenRing = Maps
+        Map<Token, Collection<HostConnectionPool<TestClient>>> tokenRing = Maps
                 .newHashMap();
         for (int i = 0; i < nHosts; i++) {
             List<HostConnectionPool<TestClient>> partition = Lists
@@ -83,7 +84,7 @@ public class HostConnectionPoolPartitionTest {
                 partition.add(pools.get((i + j) % nHosts));
             }
             tokenRing
-                    .put(new BigInteger(Integer.toString(i * 1000)), partition);
+                    .put(new BigIntegerToken(Integer.toString(i * 1000)), partition);
         }
 
         didChange = topology.setPools(tokenRing);
@@ -105,26 +106,22 @@ public class HostConnectionPoolPartitionTest {
 
         // Test ordinals
         for (int i = 0; i < nHosts; i++) {
-            partition = topology.getPartition(new BigInteger(Integer
-                    .toString(i * 1000)));
-            Assert.assertEquals(new BigInteger(Integer.toString(i * 1000)),
-                    partition.id());
+            partition = topology.getPartition(new BigIntegerToken(Integer.toString(i * 1000)));
+            Assert.assertEquals(new BigIntegerToken(Integer.toString(i * 1000)), partition.id());
         }
 
         // Test mid-range tokens
         for (int i = nHosts; i > 0; i--) {
-            partition = topology.getPartition(new BigInteger(Integer
-                    .toString(i * 1000 - 500)));
+            partition = topology.getPartition(new BigIntegerToken(Integer.toString(i * 1000 - 500)));
 
             if (i == nHosts) {  // 5500 is contained in (5000,0] which belongs to HCP 0
-                Assert.assertEquals(BigInteger.ZERO, partition.id());
+                Assert.assertEquals(new BigIntegerToken(BigInteger.ZERO), partition.id());
             } else {
-                Assert.assertEquals(new BigInteger(Integer.toString(i * 1000)),
-                        partition.id());
+                Assert.assertEquals(new BigIntegerToken(Integer.toString(i * 1000)), partition.id());
             }
         }
 
-        Map<BigInteger, Collection<HostConnectionPool<TestClient>>> emptyRing = Maps
+        Map<Token, Collection<HostConnectionPool<TestClient>>> emptyRing = Maps
                 .newHashMap();
         topology.setPools(emptyRing);
         System.out.println(topology);

@@ -15,9 +15,10 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool;
 
-import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.cassandra.dht.Token;
 
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
@@ -77,7 +78,7 @@ public interface ConnectionPool<CL> {
      * 
      * @param ring
      */
-    void setHosts(Map<BigInteger, List<Host>> ring);
+    void setHosts(Map<Token, List<Host>> ring);
 
     /**
      * Return an immutable connection pool for this host
@@ -94,7 +95,6 @@ public interface ConnectionPool<CL> {
      * 
      * @param <R>
      * @param op
-     * @param token
      * @return
      * @throws ConnectionException
      * @throws OperationException

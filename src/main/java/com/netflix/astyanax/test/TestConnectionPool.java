@@ -15,9 +15,10 @@
  ******************************************************************************/
 package com.netflix.astyanax.test;
 
-import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.cassandra.dht.Token;
 
 import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.Host;
@@ -30,9 +31,9 @@ import com.netflix.astyanax.retry.RetryPolicy;
 
 public class TestConnectionPool implements ConnectionPool<TestClient> {
 
-    Map<BigInteger, List<Host>> ring;
+    Map<Token, List<Host>> ring;
 
-    public Map<BigInteger, List<Host>> getHosts() {
+    public Map<Token, List<Host>> getHosts() {
         return this.ring;
     }
 
@@ -47,7 +48,7 @@ public class TestConnectionPool implements ConnectionPool<TestClient> {
     }
 
     @Override
-    public void setHosts(Map<BigInteger, List<Host>> ring) {
+    public void setHosts(Map<Token, List<Host>> ring) {
         this.ring = ring;
     }
 

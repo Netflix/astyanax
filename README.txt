@@ -21,5 +21,5 @@ Some features provided by this client:
 Detailed documentation of Astyanax features and usage can be found on the wiki: 
 https://github.com/Netflix/astyanax/wiki
 
-The work was initially inspired by https://github.com/rantav/hector.
+The work was initially inspired by https://github.com/hector-client/hector.
 

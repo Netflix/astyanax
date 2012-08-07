@@ -21,7 +21,7 @@
     </licenses>
 
     <scm>
-        <connection>scm:git:git@github.com:bazaarvoice/</connection>
+        <connection>scm:git:git@github.com:bazaarvoice/astyanax.git</connection>
     </scm>
 
     <properties>

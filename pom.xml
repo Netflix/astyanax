@@ -7,9 +7,10 @@
     <version>1.0.4-bv1-SNAPSHOT</version>
 
     <parent>
-      <groupId>org.sonatype.oss</groupId>
-      <artifactId>oss-parent</artifactId>
-      <version>7</version>
+        <groupId>com.bazaarvoice.commons</groupId>
+        <artifactId>bv-super-pom</artifactId>
+        <version>1.9</version>
+        <relativePath />
     </parent>
 
     <licenses>
@@ -101,71 +102,12 @@
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>2.3.2</version>
-                <configuration>
-                    <source>1.6</source>
-                    <target>1.6</target>
-                </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-release-plugin</artifactId>
                 <version>2.2</version>
                 <configuration>
                     <releaseVersion>${next.release.version}</releaseVersion>
                     <developmentVersion>${next.development.version}</developmentVersion>
-                    <!--<mavenExecutorId>forked-path</mavenExecutorId>-->
-                    <!--<useReleaseProfile>false</useReleaseProfile>-->
-                    <arguments/>
                 </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>2.8</version>
-                <configuration>
-                    <reportOutputDirectory>${project.basedir}</reportOutputDirectory>
-                    <destDir>doc</destDir>
-                </configuration>
-                <executions>
-                  <execution>
-                    <id>aggregate</id>
-                    <goals>
-                      <goal>aggregate</goal>
-                    </goals>
-                    <phase>site</phase>
-                  </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.10</version>
-            </plugin>
-
-            <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-source-plugin</artifactId>
-              <version>2.1.2</version>
-              <executions>
-                <execution>
-                  <id>attach-sources</id>
-                  <phase>verify</phase>
-                  <goals>
-                    <goal>jar-no-fork</goal>
-                  </goals>
-                </execution>
-                <execution>
-                  <id>deploy-sources</id>
-                  <goals>
-                    <goal>jar</goal>
-                  </goals>
-                </execution>
-              </executions>
             </plugin>
         </plugins>
     </build>

@@ -116,6 +116,9 @@
                 <configuration>
                     <releaseVersion>${next.release.version}</releaseVersion>
                     <developmentVersion>${next.development.version}</developmentVersion>
+                    <!--<mavenExecutorId>forked-path</mavenExecutorId>-->
+                    <!--<useReleaseProfile>false</useReleaseProfile>-->
+                    <arguments/>
                 </configuration>
             </plugin>
 

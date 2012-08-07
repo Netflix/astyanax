@@ -4,7 +4,7 @@
 
     <groupId>com.netflix.astyanax</groupId>
     <artifactId>astyanax</artifactId>
-    <version>1.0.4-SNAPSHOT</version>
+    <version>1.0.4-bv1-SNAPSHOT</version>
 
     <parent>
       <groupId>org.sonatype.oss</groupId>
@@ -21,28 +21,20 @@
     </licenses>
 
     <scm>
-        <connection>scm:git:git@github.com:Netflix/astyanax.git</connection>
-        <url>scm:git:git@github.com:Netflix/astyanax.git</url>
-        <developerConnection>scm:git:git@github.com:Netflix/astyanax.git</developerConnection>
+        <connection>scm:git:git@github.com:bazaarvoice/astyanax.git</connection>
     </scm>
 
-    <profiles>
-        <profile>
-            <id>artifactory</id>
-            <distributionManagement>
-                <snapshotRepository>
-                    <id>netflix-artifactory-snapshots</id>
-                    <name>Netflix Artifactory Snapshots</name>
-                    <url>http://artifacts/libs-snapshots-local</url>
-                </snapshotRepository>
-                <repository>
-                    <id>netflix-artifactory-releases</id>
-                    <name>Netflix Artifactory Releases</name>
-                    <url>http://artifacts/libs-releases-local</url>
-                </repository>
-            </distributionManagement>
-        </profile>
-    </profiles>
+    <properties>
+        <next.release.version>1.0.4-bv1</next.release.version>
+        <next.development.version>1.0.4-bv2-SNAPSHOT</next.development.version>
+    </properties>
+
+    <distributionManagement>
+        <repository>
+            <id>bazaarvoice-deploy</id>
+            <url>https://repo.bazaarvoice.com/nexus/content/repositories/releases/</url>
+        </repository>
+    </distributionManagement>
 
     <dependencies>
         <dependency>
@@ -101,7 +93,13 @@
             <version>1.6.4</version>
             <scope>compile</scope>
         </dependency>
-        
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.8.1</version>
+            <scope>test</scope>
+        </dependency>
 
     </dependencies>
     
@@ -122,7 +120,8 @@
                 <artifactId>maven-release-plugin</artifactId>
                 <version>2.2</version>
                 <configuration>
-                    <goals>deploy</goals>
+                    <releaseVersion>${next.release.version}</releaseVersion>
+                    <developmentVersion>${next.development.version}</developmentVersion>
                 </configuration>
             </plugin>
 

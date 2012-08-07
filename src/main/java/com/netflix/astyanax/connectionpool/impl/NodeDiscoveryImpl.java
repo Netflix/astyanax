@@ -15,7 +15,6 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.impl;
 
-import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -25,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.cassandra.dht.Token;
 import org.joda.time.DateTime;
 
 import com.google.common.base.Supplier;
@@ -38,8 +38,6 @@ import com.netflix.astyanax.connectionpool.NodeDiscovery;
  * the ring tokens.
  * 
  * @author elandau
- * 
- * @param <CL>
  */
 public class NodeDiscoveryImpl implements NodeDiscovery {
     private final ConnectionPool<?> connectionPool;
@@ -47,13 +45,13 @@ public class NodeDiscoveryImpl implements NodeDiscovery {
             .newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setDaemon(true).build());
     private final int interval;
     private final String name;
-    private final Supplier<Map<BigInteger, List<Host>>> tokenRangeSupplier;
+    private final Supplier<Map<Token, List<Host>>> tokenRangeSupplier;
     private final AtomicReference<DateTime> lastUpdateTime = new AtomicReference<DateTime>();
     private final AtomicReference<Exception> lastException = new AtomicReference<Exception>();
     private final AtomicLong refreshCounter = new AtomicLong();
     private final AtomicLong errorCounter = new AtomicLong();
 
-    public NodeDiscoveryImpl(String name, int interval, Supplier<Map<BigInteger, List<Host>>> tokenRangeSupplier,
+    public NodeDiscoveryImpl(String name, int interval, Supplier<Map<Token, List<Host>>> tokenRangeSupplier,
             ConnectionPool<?> connectionPool) {
         this.connectionPool = connectionPool;
         this.interval = interval;
@@ -120,11 +118,11 @@ public class NodeDiscoveryImpl implements NodeDiscovery {
     @Override
     public String getRawHostList() {
         StringBuilder sb = new StringBuilder();
-        Map<BigInteger, List<Host>> hosts;
+        Map<Token, List<Host>> hosts;
         try {
             hosts = tokenRangeSupplier.get();
             boolean first = true;
-            for (Entry<BigInteger, List<Host>> token : hosts.entrySet()) {
+            for (Entry<Token, List<Host>> token : hosts.entrySet()) {
                 if (!first)
                     sb.append(",");
                 else

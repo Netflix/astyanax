@@ -15,10 +15,9 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool;
 
-import java.math.BigInteger;
+import org.apache.cassandra.dht.Token;
 
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 
 /**
  * Callback interface to perform an operation on a client associated with a
@@ -26,7 +25,7 @@ import com.netflix.astyanax.connectionpool.exceptions.OperationException;
  * 
  * @author elandau
  * 
- * @param <C>
+ * @param <CL>
  * @param <R>
  */
 public interface Operation<CL, R> {
@@ -35,8 +34,7 @@ public interface Operation<CL, R> {
      * 
      * @param client
      * @return
-     * @throws OperationException
-     * @throws NetflixCassandraException
+     * @throws ConnectionException
      */
     R execute(CL client) throws ConnectionException;
 
@@ -46,7 +44,7 @@ public interface Operation<CL, R> {
      * 
      * @return
      */
-    BigInteger getToken();
+    Token getToken();
 
     /**
      * Return keyspace for this operation. Return null if using the current
@@ -60,7 +58,6 @@ public interface Operation<CL, R> {
      * Return the host to run on or null to select a host using the load
      * blancer. Failover is disabled for this scenario.
      * 
-     * @param host
      * @return
      */
     Host getPinnedHost();

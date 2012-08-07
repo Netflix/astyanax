@@ -1,6 +1,5 @@
 package com.netflix.astyanax.connectionpool.impl;
 
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -9,6 +8,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.cassandra.dht.RingPosition;
 import org.cliffc.high_scale_lib.NonBlockingHashSet;
 
 import com.google.common.collect.Lists;
@@ -18,13 +18,13 @@ import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
 
 public class HostConnectionPoolPartition<CL> {
 
-    private final BigInteger id;
+    private final RingPosition id;
     private final AtomicBoolean prioritize = new AtomicBoolean(false);
     private final NonBlockingHashSet<HostConnectionPool<CL>> pools = new NonBlockingHashSet<HostConnectionPool<CL>>();
     private final AtomicReference<List<HostConnectionPool<CL>>> activePools = new AtomicReference<List<HostConnectionPool<CL>>>();
     private final LatencyScoreStrategy strategy;
 
-    public HostConnectionPoolPartition(BigInteger id, LatencyScoreStrategy strategy) {
+    public HostConnectionPoolPartition(RingPosition id, LatencyScoreStrategy strategy) {
         this.id = id;
         this.strategy = strategy;
         this.activePools.set(new ArrayList<HostConnectionPool<CL>>());
@@ -75,7 +75,7 @@ public class HostConnectionPoolPartition<CL> {
      * 
      * @return
      */
-    public BigInteger id() {
+    public RingPosition id() {
         return this.id;
     }
 

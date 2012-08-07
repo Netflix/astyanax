@@ -1,5 +1,12 @@
 package com.netflix.astyanax.connectionpool.impl;
 
+import org.apache.cassandra.dht.IPartitioner;
+import org.apache.cassandra.dht.RandomPartitioner;
+import org.junit.Assert;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
 import com.netflix.astyanax.connectionpool.Host;
@@ -14,16 +21,12 @@ import com.netflix.astyanax.test.TestConstants;
 import com.netflix.astyanax.test.TestHostType;
 import com.netflix.astyanax.test.TestOperation;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 public class BagConnectionPoolImplTest extends BaseConnectionPoolTest {
     private static Logger LOG = LoggerFactory
             .getLogger(BagConnectionPoolImplTest.class);
 
     private static Operation<TestClient, String> dummyOperation = new TestOperation();
+    private static IPartitioner partitioner = new RandomPartitioner();
 
     protected ConnectionPool<TestClient> createPool() {
         ConnectionPoolConfiguration config = new ConnectionPoolConfigurationImpl(
@@ -31,7 +34,7 @@ public class BagConnectionPoolImplTest extends BaseConnectionPoolTest {
 
         CountingConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
         ConnectionPool<TestClient> pool = new BagOfConnectionsConnectionPoolImpl<TestClient>(
-                config, new TestConnectionFactory(config, monitor), monitor);
+                config, new TestConnectionFactory(config, monitor), partitioner, monitor);
 
         return pool;
     }
@@ -48,7 +51,7 @@ public class BagConnectionPoolImplTest extends BaseConnectionPoolTest {
                 TestConstants.CLUSTER_NAME + "_" + TestConstants.KEYSPACE_NAME);
 
         ConnectionPool<TestClient> pool = new BagOfConnectionsConnectionPoolImpl<TestClient>(
-                config, new TestConnectionFactory(config, monitor), monitor);
+                config, new TestConnectionFactory(config, monitor), partitioner, monitor);
 
         pool.addHost(
                 new Host("127.0.0.1", TestHostType.GOOD_IMMEDIATE.ordinal()),
@@ -82,7 +85,7 @@ public class BagConnectionPoolImplTest extends BaseConnectionPoolTest {
                 TestConstants.CLUSTER_NAME + "_" + TestConstants.KEYSPACE_NAME);
         config.setInitConnsPerHost(0);
         ConnectionPool<TestClient> pool = new BagOfConnectionsConnectionPoolImpl<TestClient>(
-                config, new TestConnectionFactory(config, monitor), monitor);
+                config, new TestConnectionFactory(config, monitor), partitioner, monitor);
 
         pool.addHost(new Host("127.0.0.1",
                 TestHostType.CONNECT_WITH_UNCHECKED_EXCEPTION.ordinal()), true);
@@ -117,7 +120,7 @@ public class BagConnectionPoolImplTest extends BaseConnectionPoolTest {
                 TestConstants.CLUSTER_NAME + "_" + TestConstants.KEYSPACE_NAME);
         config.setInitConnsPerHost(0);
         ConnectionPool<TestClient> pool = new BagOfConnectionsConnectionPoolImpl<TestClient>(
-                config, new TestConnectionFactory(config, monitor), monitor);
+                config, new TestConnectionFactory(config, monitor), partitioner, monitor);
 
         pool.addHost(
                 new Host("127.0.0.1", TestHostType.OPERATION_TIMEOUT.ordinal()),

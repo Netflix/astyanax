@@ -1,14 +1,14 @@
 package com.netflix.astyanax.connectionpool.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
-import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.cassandra.dht.BigIntegerToken;
+import org.apache.cassandra.dht.IPartitioner;
+import org.apache.cassandra.dht.RandomPartitioner;
+import org.apache.cassandra.dht.Token;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,23 +22,23 @@ import com.netflix.astyanax.connectionpool.HostConnectionPool;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.retry.RunOnce;
 import com.netflix.astyanax.test.TestClient;
 import com.netflix.astyanax.test.TestConnectionFactory;
 import com.netflix.astyanax.test.TestConstants;
 import com.netflix.astyanax.test.TestHostType;
-import com.netflix.astyanax.test.TestOperation;
 import com.netflix.astyanax.test.TokenTestOperation;
 import com.netflix.astyanax.util.TokenGenerator;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 public class TokenAwareConnectionPoolTest extends BaseConnectionPoolTest {
     private static Logger LOG = LoggerFactory
             .getLogger(TokenAwareConnectionPoolTest.class);
 
-    private static Operation<TestClient, String> dummyOperation = new TestOperation();
-
+    private static IPartitioner partitioner = new RandomPartitioner();
 
     protected ConnectionPool<TestClient> createPool() {
         ConnectionPoolConfiguration config = new ConnectionPoolConfigurationImpl(
@@ -47,7 +47,7 @@ public class TokenAwareConnectionPoolTest extends BaseConnectionPoolTest {
         CountingConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
 
         return new TokenAwareConnectionPoolImpl<TestClient>(
-                config, new TestConnectionFactory(config, monitor), monitor);
+                config, new TestConnectionFactory(config, monitor), partitioner, monitor);
 
     }
 
@@ -56,14 +56,15 @@ public class TokenAwareConnectionPoolTest extends BaseConnectionPoolTest {
     public void testTokenMappingForMidRangeTokens() throws ConnectionException {
         ConnectionPool<TestClient> cp = createPool();
 
-        Map<BigInteger, List<Host>> ring1 = makeRing(3, 1, 1);
+        Map<Token, List<Host>> ring1 = makeRing(3, 1, 1);
         cp.setHosts(ring1);
 
         BigInteger threeNodeRingIncrement = TokenGenerator.MAXIMUM.divide(new BigInteger("3"));
 
-        Operation<TestClient, String> firstHostOp = new TokenTestOperation(BigInteger.ZERO);
-        Operation<TestClient, String> secondHostOp = new TokenTestOperation(BigInteger.ONE);
-        Operation<TestClient, String> thirdHostOp = new TokenTestOperation(threeNodeRingIncrement.add(BigInteger.ONE));
+        Operation<TestClient, String> firstHostOp = new TokenTestOperation(new BigIntegerToken(BigInteger.ZERO));
+        Operation<TestClient, String> secondHostOp = new TokenTestOperation(new BigIntegerToken(BigInteger.ONE));
+        Operation<TestClient, String> thirdHostOp = new TokenTestOperation(
+                new BigIntegerToken(threeNodeRingIncrement.add(BigInteger.ONE)));
 
         RetryPolicy retryPolicy = new RunOnce();
 
@@ -89,15 +90,18 @@ public class TokenAwareConnectionPoolTest extends BaseConnectionPoolTest {
         //    node1 - ip = 127.0.1.0, token ownership range = (1200 , 0]
         //    node1 - ip = 127.0.1.1, token ownership range = (0 , 600]
         //    node1 - ip = 127.0.1.1, token ownership range = (600 , 1200]
-        Map<BigInteger, List<Host>> ring1 = makeRing(3, 1, 1, BigInteger.ZERO, new BigInteger("1800"));
+        Map<Token, List<Host>> ring1 = makeRing(3, 1, 1, BigInteger.ZERO, new BigInteger("1800"));
         cp.setHosts(ring1);
 
         BigInteger threeNodeRingIncrement = new BigInteger("600");
 
-        Operation<TestClient, String> firstHostOp = new TokenTestOperation(BigInteger.ZERO);
-        Operation<TestClient, String> secondHostOp = new TokenTestOperation(threeNodeRingIncrement);
-        Operation<TestClient, String> thirdHostOp = new TokenTestOperation(threeNodeRingIncrement.multiply(new BigInteger("2")));
-        Operation<TestClient, String> maxTokenHostOp = new TokenTestOperation(threeNodeRingIncrement.multiply(new BigInteger("3")));
+        Operation<TestClient, String> firstHostOp = new TokenTestOperation(new BigIntegerToken(BigInteger.ZERO));
+        Operation<TestClient, String> secondHostOp = new TokenTestOperation(
+                new BigIntegerToken(threeNodeRingIncrement));
+        Operation<TestClient, String> thirdHostOp = new TokenTestOperation(
+                new BigIntegerToken(threeNodeRingIncrement.multiply(new BigInteger("2"))));
+        Operation<TestClient, String> maxTokenHostOp = new TokenTestOperation(
+                new BigIntegerToken(threeNodeRingIncrement.multiply(new BigInteger("3"))));
 
         RetryPolicy retryPolicy = new RunOnce();
 
@@ -128,10 +132,10 @@ public class TokenAwareConnectionPoolTest extends BaseConnectionPoolTest {
         // the following will generate a ring of two nodes with the following characteristics;
         //    node1 - ip = 127.0.1.0, token ownership range = (510 , 10]
         //    node1 - ip = 127.0.1.1, token ownership range = (10 , 510]
-        Map<BigInteger, List<Host>> ring1 = makeRing(2, 1, 1, BigInteger.TEN, new BigInteger("1010"));
+        Map<Token, List<Host>> ring1 = makeRing(2, 1, 1, BigInteger.TEN, new BigInteger("1010"));
         cp.setHosts(ring1);
 
-        Operation<TestClient, String> op = new TokenTestOperation(BigInteger.ZERO);
+        Operation<TestClient, String> op = new TokenTestOperation(new BigIntegerToken(BigInteger.ZERO));
 
         RetryPolicy retryPolicy = new RunOnce();
 
@@ -150,10 +154,10 @@ public class TokenAwareConnectionPoolTest extends BaseConnectionPoolTest {
         // the following will generate a ring of two nodes with the following characteristics;
         //    node1 - ip = 127.0.1.0, token ownership range = (500 , 0]
         //    node1 - ip = 127.0.1.1, token ownership range = (0 , 500]
-        Map<BigInteger, List<Host>> ring1 = makeRing(2, 1, 1, BigInteger.ZERO, new BigInteger("1000"));
+        Map<Token, List<Host>> ring1 = makeRing(2, 1, 1, BigInteger.ZERO, new BigInteger("1000"));
         cp.setHosts(ring1);
 
-        Operation<TestClient, String> op = new TokenTestOperation(new BigInteger("1250"));
+        Operation<TestClient, String> op = new TokenTestOperation(new BigIntegerToken("1250"));
 
         RetryPolicy retryPolicy = new RunOnce();
 
@@ -170,8 +174,8 @@ public class TokenAwareConnectionPoolTest extends BaseConnectionPoolTest {
     @Test
     public void changeRingTest() {
         ConnectionPool<TestClient> cp = createPool();
-        Map<BigInteger, List<Host>> ring1 = makeRing(6, 3, 1);
-        Map<BigInteger, List<Host>> ring2 = makeRing(6, 3, 2);
+        Map<Token, List<Host>> ring1 = makeRing(6, 3, 1);
+        Map<Token, List<Host>> ring2 = makeRing(6, 3, 2);
 
         cp.setHosts(ring1);
         List<HostConnectionPool<TestClient>> hosts1 = cp.getActivePools();
@@ -183,12 +187,12 @@ public class TokenAwareConnectionPoolTest extends BaseConnectionPoolTest {
         System.out.println(hosts2);
     }
 
-    private Map<BigInteger, List<Host>> makeRing(int nHosts,
+    private Map<Token, List<Host>> makeRing(int nHosts,
             int replication_factor, int id) {
         return makeRing(nHosts,replication_factor,id,TokenGenerator.MINIMUM,TokenGenerator.MAXIMUM);
     }
 
-    private Map<BigInteger, List<Host>> makeRing(int nHosts,
+    private Map<Token, List<Host>> makeRing(int nHosts,
             int replication_factor, int id, BigInteger minInitialToken, BigInteger maxInitialToken) {
         List<Host> hosts = Lists.newArrayList();
         for (int i = 0; i < nHosts; i++) {
@@ -196,7 +200,7 @@ public class TokenAwareConnectionPoolTest extends BaseConnectionPoolTest {
                     + TestHostType.GOOD_FAST.ordinal(), 7160));
         }
 
-        Map<BigInteger, List<Host>> ring = Maps.newHashMap();
+        Map<Token, List<Host>> ring = Maps.newHashMap();
         for (int i = 0; i < nHosts; i++) {
             String token = TokenGenerator.initialToken(nHosts, i, minInitialToken, maxInitialToken);
             System.out.println(token);
@@ -206,7 +210,7 @@ public class TokenAwareConnectionPoolTest extends BaseConnectionPoolTest {
                 System.out.println(" " + host);
                 replicas.add(host);
             }
-            ring.put(new BigInteger(token), replicas);
+            ring.put(new BigIntegerToken(token), replicas);
         }
 
         return ring;

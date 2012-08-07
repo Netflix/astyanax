@@ -5,23 +5,28 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.cassandra.dht.RandomPartitioner;
+import org.apache.cassandra.dht.BigIntegerToken;
+import org.apache.cassandra.dht.IPartitioner;
+import org.apache.cassandra.dht.Token;
 import org.apache.cassandra.thrift.KeyRange;
 
 import com.google.common.collect.Iterables;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
-import com.netflix.astyanax.thrift.model.*;
+import com.netflix.astyanax.thrift.model.ThriftColumnOrSuperColumnListImpl;
+import com.netflix.astyanax.thrift.model.ThriftRowImpl;
 
 public class ThriftAllRowsImpl<K, C> implements Rows<K, C> {
-    private ColumnFamily<K, C> columnFamily;
-    private AbstractThriftAllRowsQueryImpl<K, C> query;
-    private final RandomPartitioner partitioner = new RandomPartitioner();
+    private final ColumnFamily<K, C> columnFamily;
+    private final AbstractThriftAllRowsQueryImpl<K, C> query;
+    private final IPartitioner partitioner;
 
-    public ThriftAllRowsImpl(AbstractThriftAllRowsQueryImpl<K, C> query, ColumnFamily<K, C> columnFamily) {
+    public ThriftAllRowsImpl(AbstractThriftAllRowsQueryImpl<K, C> query, ColumnFamily<K, C> columnFamily,
+                             IPartitioner partitioner) {
         this.columnFamily = columnFamily;
         this.query = query;
+        this.partitioner = partitioner;
     }
 
     /**
@@ -37,7 +42,10 @@ public class ThriftAllRowsImpl<K, C> implements Rows<K, C> {
             private Iterator<org.apache.cassandra.thrift.KeySlice> iter = null;
 
             {
-                range = new KeyRange().setCount(query.getBlockSize()).setStart_token("0").setEnd_token("0");
+                // Query from the minimum token to the minimum token.  With the RandomPartitioner the minimum
+                // token is -1 which is actually invalid (according to TokenFactory.validate) so use 0 instead.
+                String token = partitioner.preservesOrder() ? tokenToString(partitioner.getMinimumToken()) : "0";
+                range = new KeyRange().setCount(query.getBlockSize()).setStart_token(token).setEnd_token(token);
             }
 
             @Override
@@ -46,15 +54,12 @@ public class ThriftAllRowsImpl<K, C> implements Rows<K, C> {
                 if (iter == null || (!iter.hasNext() && list.size() == query.getBlockSize())) {
                     if (lastRow != null) {
                         // Determine the start token for the next page
-                        String token = partitioner.getToken(ByteBuffer.wrap(lastRow.getKey())).toString();
-                        if (query.getRepeatLastToken()) {
+                        Token token = partitioner.getToken(ByteBuffer.wrap(lastRow.getKey()));
+                        if (query.getRepeatLastToken() && !partitioner.preservesOrder()) {
                             // Start token is non-inclusive
-                            BigInteger intToken = new BigInteger(token).subtract(new BigInteger("1"));
-                            range.setStart_token(intToken.toString());
+                            token = new BigIntegerToken(((BigIntegerToken) token).token.subtract(BigInteger.ONE));
                         }
-                        else {
-                            range.setStart_token(token);
-                        }
+                        range.setStart_token(tokenToString(token));
                     }
 
                     // Fetch the data
@@ -111,5 +116,9 @@ public class ThriftAllRowsImpl<K, C> implements Rows<K, C> {
     @Override
     public Row<K, C> getRowByIndex(int i) {
         throw new IllegalStateException();
+    }
+
+    private String tokenToString(Token token) {
+        return partitioner.getTokenFactory().toString(token);
     }
 }

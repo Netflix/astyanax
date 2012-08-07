@@ -15,10 +15,17 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.impl;
 
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.cassandra.dht.IPartitioner;
+import org.apache.cassandra.dht.RandomPartitioner;
+import org.apache.cassandra.dht.Token;
+import org.apache.log4j.Logger;
+import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Test;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -40,17 +47,13 @@ import com.netflix.astyanax.test.TestConstants;
 import com.netflix.astyanax.test.TestHostType;
 import com.netflix.astyanax.test.TestOperation;
 
-import org.apache.log4j.Logger;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
-
 @Ignore
 public abstract class BaseConnectionPoolTest {
     private static Logger LOG = Logger
             .getLogger(RoundRobinConnectionPoolImplTest.class);
 
     private static Operation<TestClient, String> dummyOperation = new TestOperation();
+    private static IPartitioner partitioner = new RandomPartitioner();
 
     // private static ConnectionPoolConfigurationImpl config;
 
@@ -267,7 +270,7 @@ public abstract class BaseConnectionPoolTest {
         CountingConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
         try {
             ConnectionPool<TestClient> pool = new RoundRobinConnectionPoolImpl<TestClient>(
-                    config, new TestConnectionFactory(config, monitor), monitor);
+                    config, new TestConnectionFactory(config, monitor), partitioner, monitor);
         } catch (Exception e) {
             e.printStackTrace();
             Assert.fail();
@@ -279,14 +282,14 @@ public abstract class BaseConnectionPoolTest {
         ConnectionPool<TestClient> pool = createPool();
 
         Host host1 = new Host("127.0.0.1", TestHostType.GOOD_FAST.ordinal());
-        Map<BigInteger, List<Host>> ring1 = Maps.newHashMap();
-        ring1.put(new BigInteger("0"), Lists.newArrayList(host1));
+        Map<Token, List<Host>> ring1 = Maps.newHashMap();
+        ring1.put(partitioner.getRandomToken(), Lists.newArrayList(host1));
 
         Host host2 = new Host("127.0.0.2", TestHostType.GOOD_FAST.ordinal());
-        Map<BigInteger, List<Host>> ring2 = Maps.newHashMap();
-        ring2.put(new BigInteger("0"), Lists.newArrayList(host2));
+        Map<Token, List<Host>> ring2 = Maps.newHashMap();
+        ring2.put(partitioner.getRandomToken(), Lists.newArrayList(host2));
 
-        Map<BigInteger, List<Host>> ring3 = Maps.newHashMap();
+        Map<Token, List<Host>> ring3 = Maps.newHashMap();
 
         pool.setHosts(ring1);
         Assert.assertTrue(pool.hasHost(host1));
@@ -350,8 +353,8 @@ public abstract class BaseConnectionPoolTest {
 
         Host host1 = new Host("127.0.0.1",
                 TestHostType.CONNECT_FAIL_FIRST.ordinal());
-        Map<BigInteger, List<Host>> ring1 = Maps.newHashMap();
-        ring1.put(new BigInteger("0"), Lists.newArrayList(host1));
+        Map<Token, List<Host>> ring1 = Maps.newHashMap();
+        ring1.put(partitioner.getRandomToken(), Lists.newArrayList(host1));
 
         OperationResult<String> result;
 

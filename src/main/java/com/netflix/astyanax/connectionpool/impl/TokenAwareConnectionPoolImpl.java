@@ -15,11 +15,12 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.impl;
 
-import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.apache.cassandra.dht.IPartitioner;
 
 import com.netflix.astyanax.connectionpool.ConnectionFactory;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
@@ -49,8 +50,8 @@ public class TokenAwareConnectionPoolImpl<CL> extends AbstractHostPartitionConne
     private AtomicInteger roundRobinCounter = new AtomicInteger(new Random().nextInt(997));
 
     public TokenAwareConnectionPoolImpl(ConnectionPoolConfiguration configuration, ConnectionFactory<CL> factory,
-            ConnectionPoolMonitor monitor) {
-        super(configuration, factory, monitor);
+            IPartitioner partitioner, ConnectionPoolMonitor monitor) {
+        super(configuration, factory, partitioner, monitor);
     }
 
     @SuppressWarnings("unchecked")

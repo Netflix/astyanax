@@ -15,23 +15,18 @@
  ******************************************************************************/
 package com.netflix.astyanax.test;
 
-import java.math.BigInteger;
-
-import com.netflix.astyanax.connectionpool.Host;
-import com.netflix.astyanax.connectionpool.Operation;
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.exceptions.OperationException;
+import org.apache.cassandra.dht.Token;
 
 public class TokenTestOperation extends TestOperation {
 
-    private final BigInteger token;
+    private final Token token;
 
-    public TokenTestOperation(BigInteger token) {
+    public TokenTestOperation(Token token) {
         this.token = token;
     }
 
     @Override
-    public BigInteger getToken() {
+    public Token getToken() {
         return token;
     }
 

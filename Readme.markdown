@@ -3,12 +3,12 @@ Astyanax
 Astyanax is a high level Java client for [Apache Cassandra](http://cassandra.apache.org).
 Apache Cassandra is a highly available column oriented database.
 
-Astyanax is currently in use at [Netflix](http://movies.netflix.com). Issues generally are fixed as quickly as possbile and releases done frequently.
+Astyanax is currently in use at [Netflix](http://movies.netflix.com). Issues generally are fixed as quickly as possible and releases done frequently.
 
 
 Features
 --------
-A quick overview can be found at the [Netfilx Tech Blog](http://techblog.netflix.com/2012/01/announcing-astyanax.html). Some features provided by this client:
+A quick overview can be found at the [Netflix Tech Blog](http://techblog.netflix.com/2012/01/announcing-astyanax.html). Some features provided by this client:
 
 * High level, simple object oriented interface to Cassandra.
 * Fail-over behavior on the client side.

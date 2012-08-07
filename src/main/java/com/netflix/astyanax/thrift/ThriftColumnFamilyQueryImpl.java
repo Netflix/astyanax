@@ -30,10 +30,11 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.cassandra.dht.BigIntegerToken;
-import org.apache.cassandra.dht.RandomPartitioner;
+import org.apache.cassandra.dht.IPartitioner;
+import org.apache.cassandra.dht.Token;
 import org.apache.cassandra.thrift.Cassandra;
-import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.Cassandra.Client;
+import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.Compression;
 import org.apache.cassandra.thrift.CounterSuperColumn;
@@ -47,8 +48,8 @@ import org.mortbay.log.Log;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.CassandraOperationType;
+import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.KeyspaceTracerFactory;
 import com.netflix.astyanax.RowCallback;
 import com.netflix.astyanax.RowCopier;
@@ -77,7 +78,15 @@ import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.shallows.EmptyColumnList;
 import com.netflix.astyanax.shallows.EmptyRowsImpl;
-import com.netflix.astyanax.thrift.model.*;
+import com.netflix.astyanax.thrift.model.ThriftColumnImpl;
+import com.netflix.astyanax.thrift.model.ThriftColumnOrSuperColumnListImpl;
+import com.netflix.astyanax.thrift.model.ThriftCounterColumnImpl;
+import com.netflix.astyanax.thrift.model.ThriftCounterSuperColumnImpl;
+import com.netflix.astyanax.thrift.model.ThriftCqlResultImpl;
+import com.netflix.astyanax.thrift.model.ThriftCqlRowsImpl;
+import com.netflix.astyanax.thrift.model.ThriftRowsListImpl;
+import com.netflix.astyanax.thrift.model.ThriftRowsSliceImpl;
+import com.netflix.astyanax.thrift.model.ThriftSuperColumnImpl;
 import com.netflix.astyanax.util.TokenGenerator;
 
 /**
@@ -94,16 +103,17 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
     private final KeyspaceTracerFactory tracerFactory;
     private final Keyspace keyspace;
     private ConsistencyLevel consistencyLevel;
-    private static final RandomPartitioner partitioner = new RandomPartitioner();
+    private final IPartitioner partitioner;
     private final ExecutorService executor;
     private Host pinnedHost;
     private RetryPolicy retry;
 
     public ThriftColumnFamilyQueryImpl(ExecutorService executor, KeyspaceTracerFactory tracerFactory,
-            Keyspace keyspace, ConnectionPool<Cassandra.Client> cp, ColumnFamily<K, C> columnFamily,
-            ConsistencyLevel consistencyLevel, RetryPolicy retry) {
+            Keyspace keyspace, ConnectionPool<Cassandra.Client> cp, IPartitioner partitioner,
+            ColumnFamily<K, C> columnFamily, ConsistencyLevel consistencyLevel, RetryPolicy retry) {
         this.keyspace = keyspace;
         this.connectionPool = cp;
+        this.partitioner = partitioner;
         this.consistencyLevel = consistencyLevel;
         this.columnFamily = columnFamily;
         this.tracerFactory = tracerFactory;
@@ -163,8 +173,8 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                             }
 
                             @Override
-                            public BigInteger getToken() {
-                                return partitioner.getToken(columnFamily.getKeySerializer().toByteBuffer(rowKey)).token;
+                            public Token getToken() {
+                                return toToken(columnFamily.getKeySerializer().toByteBuffer(rowKey));
                             }
                         }, retry);
                     }
@@ -238,8 +248,8 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                             }
 
                             @Override
-                            public BigInteger getToken() {
-                                return partitioner.getToken(columnFamily.getKeySerializer().toByteBuffer(rowKey)).token;
+                            public Token getToken() {
+                                return toToken(columnFamily.getKeySerializer().toByteBuffer(rowKey));
                             }
                         }, retry);
             }
@@ -260,8 +270,8 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                             }
 
                             @Override
-                            public BigInteger getToken() {
-                                return partitioner.getToken(columnFamily.getKeySerializer().toByteBuffer(rowKey)).token;
+                            public Token getToken() {
+                                return toToken(columnFamily.getKeySerializer().toByteBuffer(rowKey));
                             }
                         }, retry);
                     }
@@ -379,9 +389,9 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                             }
 
                             @Override
-                            public BigInteger getToken() {
+                            public Token getToken() {
                                 if (startKey != null)
-                                    return partitioner.getToken(columnFamily.getKeySerializer().toByteBuffer(startKey)).token;
+                                    return toToken(columnFamily.getKeySerializer().toByteBuffer(startKey));
                                 return null;
                             }
                         }, retry);
@@ -424,9 +434,9 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                             }
 
                             @Override
-                            public BigInteger getToken() {
+                            public Token getToken() {
                                 // / return
-                                // partitioner.getToken(columnFamily.getKeySerializer().toByteBuffer(keys.iterator().next())).token;
+                                // toToken(columnFamily.getKeySerializer().toByteBuffer(keys.iterator().next()));
                                 return null;
                             }
                         }, retry);
@@ -474,9 +484,9 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                             }
 
                             @Override
-                            public BigInteger getToken() {
+                            public Token getToken() {
                                 // / return
-                                // partitioner.getToken(columnFamily.getKeySerializer().toByteBuffer(keys.iterator().next())).token;
+                                // toToken(columnFamily.getKeySerializer().toByteBuffer(keys.iterator().next()));
                                 return null;
                             }
                         }, retry);
@@ -633,9 +643,9 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                     }
 
                                     @Override
-                                    public BigInteger getToken() {
+                                    public Token getToken() {
                                         if (range.getStart_key() != null)
-                                            return partitioner.getToken(range.start_key).token;
+                                            return toToken(range.start_key);
                                         return null;
                                     }
                                 }, retry).getResult();
@@ -663,7 +673,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
             @Override
             public OperationResult<Rows<K, C>> execute() throws ConnectionException {
                 return new OperationResultImpl<Rows<K, C>>(Host.NO_HOST, new ThriftAllRowsImpl<K, C>(getThisQuery(),
-                        columnFamily), 0);
+                        columnFamily, partitioner), 0);
             }
 
             @Override
@@ -673,12 +683,11 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
 
             @Override
             public void executeWithCallback(final RowCallback<K, C> callback) throws ConnectionException {
-                final RandomPartitioner partitioner = new RandomPartitioner();
-
                 final AtomicReference<ConnectionException> error = new AtomicReference<ConnectionException>();
 
                 List<Pair<String, String>> ranges = Lists.newArrayList();
-                if (this.getConcurrencyLevel() != null) {
+                if (this.getConcurrencyLevel() != null && !partitioner.preservesOrder()) {
+                    // Note: ConcurrencyLevel is supported only with the RandomPartitioner
                     int nThreads = this.getConcurrencyLevel();
                     for (int i = 0; i < nThreads; i++) {
                         BigIntegerToken start =  new BigIntegerToken(TokenGenerator.initialToken(nThreads, i,   TokenGenerator.MINIMUM, TokenGenerator.MAXIMUM));
@@ -725,10 +734,9 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                                     }
 
                                                     @Override
-                                                    public BigInteger getToken() {
+                                                    public Token getToken() {
                                                         if (range.getStart_key() != null)
-                                                            return partitioner.getToken(ByteBuffer.wrap(range
-                                                                    .getStart_key())).token;
+                                                            return toToken(ByteBuffer.wrap(range.getStart_key()));
                                                         return null;
                                                     }
                                                 }, retry.duplicate()).getResult();
@@ -743,17 +751,13 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
 
                                                 // Determine the start token
                                                 // for the next page
-                                                String token = partitioner.getToken(lastRow.getRawKey()).toString();
-                                                if (getRepeatLastToken()) {
-                                                    // Start token is
-                                                    // non-inclusive
-                                                    BigInteger intToken = new BigInteger(token)
-                                                            .subtract(new BigInteger("1"));
-                                                    range.setStart_token(intToken.toString());
+                                                Token token = partitioner.getToken(lastRow.getRawKey());
+                                                if (getRepeatLastToken() && partitioner.preservesOrder()) {
+                                                    // Start token is non-inclusive
+                                                    token = new BigIntegerToken(
+                                                            ((BigIntegerToken) token).token.subtract(BigInteger.ONE));
                                                 }
-                                                else {
-                                                    range.setStart_token(token);
-                                                }
+                                                range.setStart_token(tokenToString(token));
                                             }
                                             else {
                                                 return null;
@@ -802,5 +806,13 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
     public ColumnFamilyQuery<K, C> withRetryPolicy(RetryPolicy retry) {
         this.retry = retry;
         return this;
+    }
+
+    private Token toToken(ByteBuffer key) {
+        return (Token) partitioner.getToken(key).token;
+    }
+
+    private String tokenToString(Token token) {
+        return partitioner.getTokenFactory().toString(token);
     }
 }

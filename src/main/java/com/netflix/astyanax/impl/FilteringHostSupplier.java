@@ -1,9 +1,10 @@
 package com.netflix.astyanax.impl;
 
-import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import org.apache.cassandra.dht.Token;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -20,21 +21,21 @@ import com.netflix.astyanax.connectionpool.Host;
  * @author elandau
  * 
  */
-public class FilteringHostSupplier implements Supplier<Map<BigInteger, List<Host>>> {
+public class FilteringHostSupplier implements Supplier<Map<Token, List<Host>>> {
 
-    private final Supplier<Map<BigInteger, List<Host>>> sourceSupplier;
-    private final Supplier<Map<BigInteger, List<Host>>> filterSupplier;
+    private final Supplier<Map<Token, List<Host>>> sourceSupplier;
+    private final Supplier<Map<Token, List<Host>>> filterSupplier;
 
-    public FilteringHostSupplier(Supplier<Map<BigInteger, List<Host>>> sourceSupplier,
-            Supplier<Map<BigInteger, List<Host>>> filterSupplier) {
+    public FilteringHostSupplier(Supplier<Map<Token, List<Host>>> sourceSupplier,
+            Supplier<Map<Token, List<Host>>> filterSupplier) {
         this.sourceSupplier = sourceSupplier;
         this.filterSupplier = filterSupplier;
     }
 
     @Override
-    public Map<BigInteger, List<Host>> get() {
-        Map<BigInteger, List<Host>> filterList = Maps.newHashMap();
-        Map<BigInteger, List<Host>> sourceList;
+    public Map<Token, List<Host>> get() {
+        Map<Token, List<Host>> filterList = Maps.newHashMap();
+        Map<Token, List<Host>> sourceList;
         try {
             filterList = filterSupplier.get();
             sourceList = sourceSupplier.get();
@@ -46,7 +47,7 @@ public class FilteringHostSupplier implements Supplier<Map<BigInteger, List<Host
         }
 
         final Map<String, Host> lookup = Maps.newHashMap();
-        for (Entry<BigInteger, List<Host>> token : filterList.entrySet()) {
+        for (Entry<Token, List<Host>> token : filterList.entrySet()) {
             for (Host host : token.getValue()) {
                 lookup.put(host.getIpAddress(), host);
                 for (String addr : host.getAlternateIpAddresses()) {
@@ -55,8 +56,8 @@ public class FilteringHostSupplier implements Supplier<Map<BigInteger, List<Host
             }
         }
 
-        Map<BigInteger, List<Host>> response = Maps.newHashMap();
-        for (Entry<BigInteger, List<Host>> token : sourceList.entrySet()) {
+        Map<Token, List<Host>> response = Maps.newHashMap();
+        for (Entry<Token, List<Host>> token : sourceList.entrySet()) {
             response.put(
                     token.getKey(),
                     Lists.newArrayList(Collections2.transform(

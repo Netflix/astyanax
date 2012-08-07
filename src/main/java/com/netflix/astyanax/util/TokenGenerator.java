@@ -18,8 +18,8 @@ package com.netflix.astyanax.util;
 import java.math.BigInteger;
 
 public class TokenGenerator {
-    public static final BigInteger MINIMUM = new BigInteger("" + 0);
-    public static final BigInteger MAXIMUM = new BigInteger("" + 2).pow(127);
+    public static final BigInteger MINIMUM = BigInteger.ZERO;
+    public static final BigInteger MAXIMUM = BigInteger.valueOf(2).pow(127);
 
     public static String initialToken(int size, int position) {
         return TokenGenerator.initialToken(size,position,MINIMUM,MAXIMUM);
@@ -28,7 +28,7 @@ public class TokenGenerator {
     public static String initialToken(int size, int position, BigInteger minInitialToken, BigInteger maxInitialToken ) {
         BigInteger decValue = minInitialToken;
         if (position != 0)
-            decValue = maxInitialToken.divide(new BigInteger("" + size)).multiply(new BigInteger("" + position));
+            decValue = maxInitialToken.divide(BigInteger.valueOf(size)).multiply(BigInteger.valueOf(position));
         return decValue.toString();
     }
 
@@ -37,7 +37,7 @@ public class TokenGenerator {
         // if zero rotate to the Maximum else minus one.
         if (bigInt.equals(MINIMUM))
             bigInt = MAXIMUM;
-        bigInt = bigInt.subtract(new BigInteger("1"));
+        bigInt = bigInt.subtract(BigInteger.ONE);
         return bigInt.toString();
     }
 

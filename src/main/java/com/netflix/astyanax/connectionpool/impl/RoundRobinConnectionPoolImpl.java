@@ -15,12 +15,20 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.impl;
 
-import com.netflix.astyanax.connectionpool.*;
-import com.netflix.astyanax.connectionpool.exceptions.*;
-
 import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.apache.cassandra.dht.IPartitioner;
+
+import com.netflix.astyanax.connectionpool.ConnectionFactory;
+import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
+import com.netflix.astyanax.connectionpool.ConnectionPoolMonitor;
+import com.netflix.astyanax.connectionpool.ExecuteWithFailover;
+import com.netflix.astyanax.connectionpool.HostConnectionPool;
+import com.netflix.astyanax.connectionpool.Operation;
+import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.connectionpool.exceptions.NoAvailableHostsException;
 
 /**
  * Connection pool implementation using simple round robin.
@@ -34,8 +42,8 @@ public class RoundRobinConnectionPoolImpl<CL> extends AbstractHostPartitionConne
     private final AtomicInteger roundRobinCounter = new AtomicInteger(new Random().nextInt(997));
 
     public RoundRobinConnectionPoolImpl(ConnectionPoolConfiguration config, ConnectionFactory<CL> factory,
-            ConnectionPoolMonitor monitor) {
-        super(config, factory, monitor);
+            IPartitioner partitioner, ConnectionPoolMonitor monitor) {
+        super(config, factory, partitioner, monitor);
     }
 
     @SuppressWarnings("unchecked")

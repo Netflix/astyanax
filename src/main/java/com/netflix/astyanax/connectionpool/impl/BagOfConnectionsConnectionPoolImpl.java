@@ -6,8 +6,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.cassandra.dht.IPartitioner;
-
 import com.netflix.astyanax.connectionpool.Connection;
 import com.netflix.astyanax.connectionpool.ConnectionFactory;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
@@ -37,8 +35,8 @@ public class BagOfConnectionsConnectionPoolImpl<CL> extends AbstractHostPartitio
     private final Random randomIndex = new Random();
 
     public BagOfConnectionsConnectionPoolImpl(ConnectionPoolConfiguration config, ConnectionFactory<CL> factory,
-            IPartitioner partitioner, ConnectionPoolMonitor monitor) {
-        super(config, factory, partitioner, monitor);
+            ConnectionPoolMonitor monitor) {
+        super(config, factory, monitor);
     }
 
     private <R> Connection<CL> borrowConnection(Operation<CL, R> op) throws ConnectionException, OperationException {

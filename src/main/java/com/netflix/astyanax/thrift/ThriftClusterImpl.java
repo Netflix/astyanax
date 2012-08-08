@@ -19,17 +19,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.cassandra.dht.IPartitioner;
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.Cassandra.Client;
 import org.apache.cassandra.thrift.KsDef;
 
 import com.google.common.base.Function;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.netflix.astyanax.AstyanaxConfiguration;
+import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.Cluster;
 import com.netflix.astyanax.Keyspace;
-import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.KeyspaceTracerFactory;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
@@ -38,7 +40,10 @@ import com.netflix.astyanax.connectionpool.exceptions.SchemaDisagreementExceptio
 import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
-import com.netflix.astyanax.thrift.ddl.*;
+import com.netflix.astyanax.impl.RingDescribePartitionSupplier;
+import com.netflix.astyanax.thrift.ddl.ThriftColumnDefinitionImpl;
+import com.netflix.astyanax.thrift.ddl.ThriftColumnFamilyDefinitionImpl;
+import com.netflix.astyanax.thrift.ddl.ThriftKeyspaceDefinitionImpl;
 
 public class ThriftClusterImpl implements Cluster {
 
@@ -203,7 +208,9 @@ public class ThriftClusterImpl implements Cluster {
         Keyspace keyspace = keyspaces.get(ksName);
         if (keyspace == null) {
             synchronized (this) {
-                Keyspace newKeyspace = new ThriftKeyspaceImpl(ksName, this.connectionPool, this.config, tracerFactory);
+                Supplier<IPartitioner> partitioner = RingDescribePartitionSupplier.create(this);
+                Keyspace newKeyspace = new ThriftKeyspaceImpl(ksName, this.connectionPool, this.config, partitioner,
+                        tracerFactory);
                 keyspace = keyspaces.put(ksName, newKeyspace);
                 if (keyspace == null) {
                     keyspace = newKeyspace;

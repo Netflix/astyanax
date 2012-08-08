@@ -17,8 +17,6 @@ package com.netflix.astyanax;
 
 import java.util.concurrent.ExecutorService;
 
-import org.apache.cassandra.dht.IPartitioner;
-
 import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.model.ConsistencyLevel;
@@ -90,13 +88,6 @@ public interface AstyanaxConfiguration {
      * @return
      */
     ConnectionPoolType getConnectionPoolType();
-
-    /**
-     * The partitioner used by the Cassandra ring.
-     *
-     * @return
-     */
-    IPartitioner getPartitioner();
 
     /**
      * Get the CQL version to set when sending CQL queries

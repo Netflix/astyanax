@@ -20,7 +20,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.cassandra.dht.RandomPartitioner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,6 +30,8 @@ import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.NoAvailableHostsException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
+import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
+import com.netflix.astyanax.connectionpool.impl.RoundRobinConnectionPoolImpl;
 import com.netflix.astyanax.retry.RunOnce;
 import com.netflix.astyanax.test.TestClient;
 import com.netflix.astyanax.test.TestConnectionFactory;
@@ -65,7 +66,7 @@ public class Stress {
         TestConnectionFactory factory = new TestConnectionFactory(config,
                 monitor);
         final ConnectionPool<TestClient> pool = new RoundRobinConnectionPoolImpl<TestClient>(
-                config, factory, new RandomPartitioner(), monitor);
+                config, factory, monitor);
         for (int i = 0; i < numHosts; i++) {
             pool.addHost(
                     new Host("127.0.0." + i, TestHostType.GOOD_FAST.ordinal()),

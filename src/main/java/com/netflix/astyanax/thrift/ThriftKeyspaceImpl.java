@@ -30,6 +30,7 @@ import org.apache.cassandra.thrift.Cassandra.Client;
 import org.apache.cassandra.thrift.CounterColumn;
 
 import com.google.common.base.Function;
+import com.google.common.base.Supplier;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
@@ -65,17 +66,17 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     private final ConnectionPool<Cassandra.Client> connectionPool;
     private final AstyanaxConfiguration config;
     private final String ksName;
-    private final IPartitioner partitioner;
+    private final Supplier<IPartitioner> partitioner;
     private final ExecutorService executor;
     private final KeyspaceTracerFactory tracerFactory;
     private final Cache<String, Object> cache;
 
     public ThriftKeyspaceImpl(String ksName, ConnectionPool<Cassandra.Client> pool, AstyanaxConfiguration config,
-            final KeyspaceTracerFactory tracerFactory) {
+            Supplier<IPartitioner> partitioner, KeyspaceTracerFactory tracerFactory) {
         this.connectionPool = pool;
         this.config = config;
         this.ksName = ksName;
-        this.partitioner = config.getPartitioner();
+        this.partitioner = partitioner;
         this.executor = config.getAsyncExecutor();
         this.tracerFactory = tracerFactory;
         this.cache = CacheBuilder.newBuilder().expireAfterWrite(10, TimeUnit.MINUTES).build();
@@ -128,9 +129,8 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
                                 @Override
                                 public Token getToken() {
-                                    if (getMutationMap().size() == 1) {
+                                    if (getMutationMap().size() == 1)
                                         return toToken(getMutationMap().keySet().iterator().next());
-                                    }
                                     else
                                         return null;
                                 }
@@ -225,8 +225,8 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     }
 
     public <K, C> ColumnFamilyQuery<K, C> prepareQuery(ColumnFamily<K, C> cf) {
-        return new ThriftColumnFamilyQueryImpl<K, C>(executor, tracerFactory, this, connectionPool, partitioner, cf,
-                config.getDefaultReadConsistencyLevel(), config.getRetryPolicy());
+        return new ThriftColumnFamilyQueryImpl<K, C>(executor, tracerFactory, this, connectionPool, this.partitioner,
+                cf, config.getDefaultReadConsistencyLevel(), config.getRetryPolicy());
     }
 
     @Override
@@ -450,7 +450,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     }
 
     private Token toToken(ByteBuffer key) {
-        return (Token) partitioner.getToken(key).token;
+        return this.partitioner.get().getToken(key);
     }
 
     private <R> OperationResult<R> executeOperation(Operation<Cassandra.Client, R> operation, RetryPolicy retry)

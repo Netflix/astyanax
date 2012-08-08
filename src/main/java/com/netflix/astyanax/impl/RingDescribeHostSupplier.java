@@ -18,9 +18,9 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 public class RingDescribeHostSupplier implements Supplier<Map<Token, List<Host>>> {
     private final Keyspace keyspace;
     private final int defaultPort;
-    private final IPartitioner partitioner;
+    private final Supplier<IPartitioner> partitioner;
 
-    public RingDescribeHostSupplier(Keyspace keyspace, int defaultPort, IPartitioner partitioner) {
+    public RingDescribeHostSupplier(Keyspace keyspace, int defaultPort, Supplier<IPartitioner> partitioner) {
         this.keyspace = keyspace;
         this.defaultPort = defaultPort;
         this.partitioner = partitioner;
@@ -32,7 +32,8 @@ public class RingDescribeHostSupplier implements Supplier<Map<Token, List<Host>>
             Map<Token, List<Host>> hosts = Maps.newLinkedHashMap();
 
             for (TokenRange range : keyspace.describeRing()) {
-                hosts.put(partitioner.getTokenFactory().fromString(range.getEndToken()),
+                Token.TokenFactory tokenFactory = partitioner.get().getTokenFactory();
+                hosts.put(tokenFactory.fromString(range.getEndToken()),
                         Lists.transform(range.getEndpoints(), new Function<String, Host>() {
                             @Override
                             public Host apply(String ip) {

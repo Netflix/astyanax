@@ -10,6 +10,7 @@ import org.apache.cassandra.dht.IPartitioner;
 import org.apache.cassandra.dht.Token;
 import org.apache.cassandra.thrift.KeyRange;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.Row;
@@ -20,10 +21,10 @@ import com.netflix.astyanax.thrift.model.ThriftRowImpl;
 public class ThriftAllRowsImpl<K, C> implements Rows<K, C> {
     private final ColumnFamily<K, C> columnFamily;
     private final AbstractThriftAllRowsQueryImpl<K, C> query;
-    private final IPartitioner partitioner;
+    private final Supplier<IPartitioner> partitioner;
 
     public ThriftAllRowsImpl(AbstractThriftAllRowsQueryImpl<K, C> query, ColumnFamily<K, C> columnFamily,
-                             IPartitioner partitioner) {
+                             Supplier<IPartitioner> partitioner) {
         this.columnFamily = columnFamily;
         this.query = query;
         this.partitioner = partitioner;
@@ -36,7 +37,8 @@ public class ThriftAllRowsImpl<K, C> implements Rows<K, C> {
     @Override
     public Iterator<Row<K, C>> iterator() {
         return new Iterator<Row<K, C>>() {
-            private KeyRange range;
+            private final IPartitioner partitioner = ThriftAllRowsImpl.this.partitioner.get();
+            private final KeyRange range;
             private org.apache.cassandra.thrift.KeySlice lastRow;
             private List<org.apache.cassandra.thrift.KeySlice> list = null;
             private Iterator<org.apache.cassandra.thrift.KeySlice> iter = null;
@@ -95,6 +97,10 @@ public class ThriftAllRowsImpl<K, C> implements Rows<K, C> {
             public void remove() {
                 throw new IllegalStateException();
             }
+
+            private String tokenToString(Token token) {
+                return partitioner.getTokenFactory().toString(token);
+            }
         };
     }
 
@@ -116,9 +122,5 @@ public class ThriftAllRowsImpl<K, C> implements Rows<K, C> {
     @Override
     public Row<K, C> getRowByIndex(int i) {
         throw new IllegalStateException();
-    }
-
-    private String tokenToString(Token token) {
-        return partitioner.getTokenFactory().toString(token);
     }
 }

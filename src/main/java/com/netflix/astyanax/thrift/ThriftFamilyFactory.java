@@ -1,10 +1,12 @@
 package com.netflix.astyanax.thrift;
 
+import org.apache.cassandra.dht.IPartitioner;
 import org.apache.cassandra.thrift.Cassandra;
 
+import com.google.common.base.Supplier;
 import com.netflix.astyanax.AstyanaxConfiguration;
-import com.netflix.astyanax.Cluster;
 import com.netflix.astyanax.AstyanaxTypeFactory;
+import com.netflix.astyanax.Cluster;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.KeyspaceTracerFactory;
 import com.netflix.astyanax.connectionpool.ConnectionFactory;
@@ -22,8 +24,8 @@ public class ThriftFamilyFactory implements AstyanaxTypeFactory<Cassandra.Client
 
     @Override
     public Keyspace createKeyspace(String ksName, ConnectionPool<Cassandra.Client> cp, AstyanaxConfiguration asConfig,
-            KeyspaceTracerFactory tracerFactory) {
-        return new ThriftKeyspaceImpl(ksName, cp, asConfig, tracerFactory);
+            Supplier<IPartitioner> partitioner, KeyspaceTracerFactory tracerFactory) {
+        return new ThriftKeyspaceImpl(ksName, cp, asConfig, partitioner, tracerFactory);
     }
 
     @Override

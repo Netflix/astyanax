@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.cassandra.dht.IPartitioner;
+import org.apache.cassandra.dht.BigIntegerToken;
 import org.apache.cassandra.dht.Token;
 import org.cliffc.high_scale_lib.NonBlockingHashMap;
 
@@ -56,16 +56,14 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
     protected final NonBlockingHashMap<Host, HostConnectionPool<CL>> hosts;
     protected final ConnectionPoolConfiguration config;
     protected final ConnectionFactory<CL> factory;
-    protected final IPartitioner partitioner;
     protected final ConnectionPoolMonitor monitor;
     private final LatencyScoreStrategy latencyScoreStrategy;
     protected final Topology<CL> topology;
 
     public AbstractHostPartitionConnectionPool(ConnectionPoolConfiguration config, ConnectionFactory<CL> factory,
-            IPartitioner partitioner, ConnectionPoolMonitor monitor) {
+            ConnectionPoolMonitor monitor) {
         this.config = config;
         this.factory = factory;
-        this.partitioner = partitioner;
         this.hosts = new NonBlockingHashMap<Host, HostConnectionPool<CL>>();
         this.monitor = monitor;
         this.latencyScoreStrategy = config.getLatencyScoreStrategy();
@@ -79,7 +77,7 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
         String seeds = config.getSeeds();
         if (seeds != null && !seeds.isEmpty()) {
             Map<Token, List<Host>> ring = Maps.newHashMap();
-            ring.put(partitioner.getRandomToken(), config.getSeedHosts());
+            ring.put(new BigIntegerToken("0"), config.getSeedHosts());
             setHosts(ring);
         }
 
@@ -209,7 +207,7 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
             removeHost(host, false);
         }
 
-        // Recreate the toplogy
+        // Recreate the topology
         Map<Token, Collection<HostConnectionPool<CL>>> tokens = Maps.newHashMap();
         for (Map.Entry<Token, List<Host>> entry : ring.entrySet()) {
             Set<HostConnectionPool<CL>> pools = Sets.newHashSet();

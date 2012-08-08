@@ -20,8 +20,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.cassandra.dht.IPartitioner;
-
 import com.netflix.astyanax.connectionpool.ConnectionFactory;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
 import com.netflix.astyanax.connectionpool.ConnectionPoolMonitor;
@@ -50,8 +48,8 @@ public class TokenAwareConnectionPoolImpl<CL> extends AbstractHostPartitionConne
     private AtomicInteger roundRobinCounter = new AtomicInteger(new Random().nextInt(997));
 
     public TokenAwareConnectionPoolImpl(ConnectionPoolConfiguration configuration, ConnectionFactory<CL> factory,
-            IPartitioner partitioner, ConnectionPoolMonitor monitor) {
-        super(configuration, factory, partitioner, monitor);
+            ConnectionPoolMonitor monitor) {
+        super(configuration, factory, monitor);
     }
 
     @SuppressWarnings("unchecked")

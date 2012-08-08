@@ -119,4 +119,11 @@ public class TestKeyspace implements Keyspace {
         // TODO Auto-generated method stub
         return null;
     }
+
+    @Override
+    public List<String> describeSplits(String cfName, String startToken, String endToken, int keysPerSplit)
+            throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
 }

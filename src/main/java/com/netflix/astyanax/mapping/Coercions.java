@@ -5,6 +5,7 @@ import com.netflix.astyanax.model.Column;
 
 import java.lang.reflect.Field;
 import java.util.Date;
+import java.util.UUID;
 
 class Coercions {
     static <T> void setFieldFromColumn(T instance, Field field,
@@ -36,6 +37,8 @@ class Coercions {
             objValue = column.getStringValue();
         } else if (field.getType() == byte[].class) {
             objValue = column.getByteArrayValue();
+        } else if (field.getType() == UUID.class) {
+            objValue = column.getUUIDValue();
         } else {
             throw new UnsupportedOperationException();
         }
@@ -80,6 +83,8 @@ class Coercions {
                     mutation.putColumn(columnName, (String) objValue, null);
                 } else if(objValue.getClass() == byte[].class) {
                     mutation.putColumn(columnName, (byte[]) objValue, null);
+                } else if (objValue.getClass() == UUID.class) {
+                    mutation.putColumn(columnName, (UUID) objValue, null);
                 } else {
                     throw new UnsupportedOperationException();
                 }

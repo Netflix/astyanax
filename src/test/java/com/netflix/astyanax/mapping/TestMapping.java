@@ -3,11 +3,13 @@ package com.netflix.astyanax.mapping;
 import junit.framework.Assert;
 import org.junit.Test;
 
+import java.util.UUID;
+
 public class TestMapping {
     @Test
     public void testKeyspaceAnnotations() {
         FakeKeyspaceBean override = new FakeKeyspaceBean();
-        override.setId("1");
+        override.setId(UUID.fromString("553a6af3-14f0-419c-b257-b6c55babafe7"));
         override.setCountry("USA");
         override.setCountryStatus(2);
         override.setCreateTS(12345678L);
@@ -20,10 +22,10 @@ public class TestMapping {
         Mapping<FakeKeyspaceBean> mapping = Mapping
                 .make(FakeKeyspaceBean.class);
 
-        Assert.assertEquals(mapping.getIdValue(override, String.class),
+        Assert.assertEquals(mapping.getIdValue(override, UUID.class),
                 override.getId());
         Assert.assertEquals(
-                mapping.getColumnValue(override, "PK", String.class),
+                mapping.getColumnValue(override, "PK", UUID.class),
                 override.getId());
         Assert.assertEquals(mapping.getColumnValue(override,
                 "COUNTRY_OVERRIDE", String.class), override.getCountry());

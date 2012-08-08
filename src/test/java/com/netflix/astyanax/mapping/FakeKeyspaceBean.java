@@ -1,9 +1,11 @@
 package com.netflix.astyanax.mapping;
 
+import java.util.UUID;
+
 @SuppressWarnings({ "UnusedDeclaration", "SimplifiableIfStatement" })
 public class FakeKeyspaceBean implements Comparable<FakeKeyspaceBean> {
     @Id("PK")
-    private String id;
+    private UUID id;
 
     @Column("OVERRIDE_BY_TYPE")
     private String type;
@@ -40,7 +42,7 @@ public class FakeKeyspaceBean implements Comparable<FakeKeyspaceBean> {
      * 
      * @return value
      */
-    public String getId() {
+    public UUID getId() {
         return id;
     }
 
@@ -50,7 +52,7 @@ public class FakeKeyspaceBean implements Comparable<FakeKeyspaceBean> {
      * @param id
      *            value
      */
-    public void setId(String id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 

@@ -6,8 +6,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.cassandra.dht.BigIntegerToken;
-import org.apache.cassandra.dht.IPartitioner;
-import org.apache.cassandra.dht.RandomPartitioner;
 import org.apache.cassandra.dht.Token;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -38,8 +36,6 @@ public class TokenAwareConnectionPoolTest extends BaseConnectionPoolTest {
     private static Logger LOG = LoggerFactory
             .getLogger(TokenAwareConnectionPoolTest.class);
 
-    private static IPartitioner partitioner = new RandomPartitioner();
-
     protected ConnectionPool<TestClient> createPool() {
         ConnectionPoolConfiguration config = new ConnectionPoolConfigurationImpl(
                 TestConstants.CLUSTER_NAME + "_" + TestConstants.KEYSPACE_NAME);
@@ -47,7 +43,7 @@ public class TokenAwareConnectionPoolTest extends BaseConnectionPoolTest {
         CountingConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
 
         return new TokenAwareConnectionPoolImpl<TestClient>(
-                config, new TestConnectionFactory(config, monitor), partitioner, monitor);
+                config, new TestConnectionFactory(config, monitor), monitor);
 
     }
 

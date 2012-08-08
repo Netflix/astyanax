@@ -3,9 +3,6 @@ package com.netflix.astyanax.impl;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.apache.cassandra.dht.IPartitioner;
-import org.apache.cassandra.dht.RandomPartitioner;
-
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.Clock;
@@ -27,7 +24,6 @@ public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
     private NodeDiscoveryType discoveryType = NodeDiscoveryType.NONE;
     private int discoveryIntervalInSeconds = 30;
     private ConnectionPoolType connectionPoolType = ConnectionPoolType.ROUND_ROBIN;
-    private IPartitioner partitioner = new RandomPartitioner();
     private String cqlVersion = null;
 
     public AstyanaxConfigurationImpl() {
@@ -116,32 +112,6 @@ public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
     public AstyanaxConfigurationImpl setDiscoveryType(NodeDiscoveryType discoveryType) {
         this.discoveryType = discoveryType;
         return this;
-    }
-
-    @Override
-    public IPartitioner getPartitioner() {
-        return partitioner;
-    }
-
-    public AstyanaxConfigurationImpl setPartitioner(IPartitioner partitioner) {
-        this.partitioner = partitioner;
-        return this;
-    }
-
-    public AstyanaxConfigurationImpl setPartitionerType(String className) {
-        // Prepend the package name to short class names like "RandomPartitioner" and "ByteOrderedPartitioner".
-        if (className.indexOf('.') == -1) {
-            className = "org.apache.cassandra.dht." + className;
-        }
-        IPartitioner partitioner;
-        try {
-            partitioner = (IPartitioner) Class.forName(className).newInstance();
-        } catch (ClassNotFoundException e) {
-            throw new IllegalArgumentException(className);
-        } catch (Exception e) {
-            throw new IllegalStateException("Unable to instantiate partitioner: " + className, e);
-        }
-        return setPartitioner(partitioner);
     }
 
     @Override

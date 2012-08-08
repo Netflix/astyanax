@@ -6,11 +6,13 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.cassandra.dht.BigIntegerToken;
+import org.apache.cassandra.dht.IPartitioner;
 import org.apache.cassandra.dht.RandomPartitioner;
 import org.apache.cassandra.dht.Token;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.google.common.base.Suppliers;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.test.TestKeyspace;
@@ -37,7 +39,8 @@ public class RingDescribeHostSupplierTest {
     public void setUp() throws Exception {
         TestKeyspace keyspace = new TestKeyspace("ringDescribeTestKeyspace");
         keyspace.setTokenRange(createTokenRange());
-        hostSupplier = new RingDescribeHostSupplier(keyspace, 1234, new RandomPartitioner());
+        hostSupplier = new RingDescribeHostSupplier(keyspace, 1234,
+                Suppliers.<IPartitioner>ofInstance(new RandomPartitioner()));
     }
 
 

@@ -46,6 +46,7 @@ import org.apache.cassandra.utils.Pair;
 import org.mortbay.log.Log;
 
 import com.google.common.base.Function;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.CassandraOperationType;
@@ -103,13 +104,13 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
     private final KeyspaceTracerFactory tracerFactory;
     private final Keyspace keyspace;
     private ConsistencyLevel consistencyLevel;
-    private final IPartitioner partitioner;
+    private final Supplier<IPartitioner> partitioner;
     private final ExecutorService executor;
     private Host pinnedHost;
     private RetryPolicy retry;
 
     public ThriftColumnFamilyQueryImpl(ExecutorService executor, KeyspaceTracerFactory tracerFactory,
-            Keyspace keyspace, ConnectionPool<Cassandra.Client> cp, IPartitioner partitioner,
+            Keyspace keyspace, ConnectionPool<Cassandra.Client> cp, Supplier<IPartitioner> partitioner,
             ColumnFamily<K, C> columnFamily, ConsistencyLevel consistencyLevel, RetryPolicy retry) {
         this.keyspace = keyspace;
         this.connectionPool = cp;
@@ -672,8 +673,8 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
 
             @Override
             public OperationResult<Rows<K, C>> execute() throws ConnectionException {
-                return new OperationResultImpl<Rows<K, C>>(Host.NO_HOST, new ThriftAllRowsImpl<K, C>(getThisQuery(),
-                        columnFamily, partitioner), 0);
+                return new OperationResultImpl<Rows<K, C>>(Host.NO_HOST,
+                        new ThriftAllRowsImpl<K, C>(getThisQuery(), columnFamily, partitioner), 0);
             }
 
             @Override
@@ -685,9 +686,11 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
             public void executeWithCallback(final RowCallback<K, C> callback) throws ConnectionException {
                 final AtomicReference<ConnectionException> error = new AtomicReference<ConnectionException>();
 
+                final IPartitioner partitioner = ThriftColumnFamilyQueryImpl.this.partitioner.get();
+
                 List<Pair<String, String>> ranges = Lists.newArrayList();
                 if (this.getConcurrencyLevel() != null && !partitioner.preservesOrder()) {
-                    // Note: ConcurrencyLevel is supported only with the RandomPartitioner
+                    // Note: ConcurrencyLevel is supported only with the RandomPartitioner for now
                     int nThreads = this.getConcurrencyLevel();
                     for (int i = 0; i < nThreads; i++) {
                         BigIntegerToken start =  new BigIntegerToken(TokenGenerator.initialToken(nThreads, i,   TokenGenerator.MINIMUM, TokenGenerator.MAXIMUM));
@@ -757,7 +760,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                                     token = new BigIntegerToken(
                                                             ((BigIntegerToken) token).token.subtract(BigInteger.ONE));
                                                 }
-                                                range.setStart_token(tokenToString(token));
+                                                range.setStart_token(partitioner.getTokenFactory().toString(token));
                                             }
                                             else {
                                                 return null;
@@ -809,10 +812,6 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
     }
 
     private Token toToken(ByteBuffer key) {
-        return (Token) partitioner.getToken(key).token;
-    }
-
-    private String tokenToString(Token token) {
-        return partitioner.getTokenFactory().toString(token);
+        return partitioner.get().getToken(key);
     }
 }

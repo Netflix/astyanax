@@ -25,6 +25,7 @@ import com.netflix.astyanax.connectionpool.impl.RoundRobinConnectionPoolImpl;
 import com.netflix.astyanax.connectionpool.impl.TokenAwareConnectionPoolImpl;
 import com.netflix.astyanax.impl.FilteringHostSupplier;
 import com.netflix.astyanax.impl.RingDescribeHostSupplier;
+import com.netflix.astyanax.impl.RingDescribePartitionSupplier;
 import com.netflix.astyanax.shallows.EmptyKeyspaceTracerFactory;
 
 /**
@@ -109,20 +110,18 @@ public class AstyanaxContext<Entity> {
 
         protected <T> ConnectionPool<T> createConnectionPool(ConnectionFactory<T> connectionFactory) {
             ConnectionPool<T> connectionPool;
-            IPartitioner partitioner = asConfig.getPartitioner();
             switch (asConfig.getConnectionPoolType()) {
             case TOKEN_AWARE:
-                connectionPool = new TokenAwareConnectionPoolImpl<T>(cpConfig, connectionFactory, partitioner, monitor);
+                connectionPool = new TokenAwareConnectionPoolImpl<T>(cpConfig, connectionFactory, monitor);
                 break;
 
             case BAG:
-                connectionPool = new BagOfConnectionsConnectionPoolImpl<T>(cpConfig, connectionFactory, partitioner,
-                        monitor);
+                connectionPool = new BagOfConnectionsConnectionPoolImpl<T>(cpConfig, connectionFactory, monitor);
                 break;
 
             case ROUND_ROBIN:
             default:
-                connectionPool = new RoundRobinConnectionPoolImpl<T>(cpConfig, connectionFactory, partitioner, monitor);
+                connectionPool = new RoundRobinConnectionPoolImpl<T>(cpConfig, connectionFactory, monitor);
                 break;
             }
 
@@ -138,7 +137,10 @@ public class AstyanaxContext<Entity> {
                     monitor));
             this.cp = cp;
 
-            final Keyspace keyspace = factory.createKeyspace(keyspaceName, cp, asConfig, tracerFactory);
+            Cluster cluster = factory.createCluster(cp, asConfig, tracerFactory);
+            Supplier<IPartitioner> partitioner = RingDescribePartitionSupplier.create(cluster);
+            
+            final Keyspace keyspace = factory.createKeyspace(keyspaceName, cp, asConfig, partitioner, tracerFactory);
 
             Supplier<Map<Token, List<Host>>> supplier = null;
 
@@ -149,11 +151,11 @@ public class AstyanaxContext<Entity> {
                 break;
 
             case RING_DESCRIBE:
-                supplier = new RingDescribeHostSupplier(keyspace, cpConfig.getPort(), asConfig.getPartitioner());
+                supplier = new RingDescribeHostSupplier(keyspace, cpConfig.getPort(), partitioner);
                 break;
 
             case TOKEN_AWARE:
-                supplier = new RingDescribeHostSupplier(keyspace, cpConfig.getPort(), asConfig.getPartitioner());
+                supplier = new RingDescribeHostSupplier(keyspace, cpConfig.getPort(), partitioner);
                 if (hostSupplier != null) {
                     supplier = new FilteringHostSupplier(supplier, hostSupplier);
                 }

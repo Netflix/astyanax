@@ -19,8 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.cassandra.dht.IPartitioner;
-import org.apache.cassandra.dht.RandomPartitioner;
+import org.apache.cassandra.dht.BigIntegerToken;
 import org.apache.cassandra.dht.Token;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -53,7 +52,6 @@ public abstract class BaseConnectionPoolTest {
             .getLogger(RoundRobinConnectionPoolImplTest.class);
 
     private static Operation<TestClient, String> dummyOperation = new TestOperation();
-    private static IPartitioner partitioner = new RandomPartitioner();
 
     // private static ConnectionPoolConfigurationImpl config;
 
@@ -270,7 +268,7 @@ public abstract class BaseConnectionPoolTest {
         CountingConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
         try {
             ConnectionPool<TestClient> pool = new RoundRobinConnectionPoolImpl<TestClient>(
-                    config, new TestConnectionFactory(config, monitor), partitioner, monitor);
+                    config, new TestConnectionFactory(config, monitor), monitor);
         } catch (Exception e) {
             e.printStackTrace();
             Assert.fail();
@@ -283,11 +281,11 @@ public abstract class BaseConnectionPoolTest {
 
         Host host1 = new Host("127.0.0.1", TestHostType.GOOD_FAST.ordinal());
         Map<Token, List<Host>> ring1 = Maps.newHashMap();
-        ring1.put(partitioner.getRandomToken(), Lists.newArrayList(host1));
+        ring1.put(new BigIntegerToken("0"), Lists.newArrayList(host1));
 
         Host host2 = new Host("127.0.0.2", TestHostType.GOOD_FAST.ordinal());
         Map<Token, List<Host>> ring2 = Maps.newHashMap();
-        ring2.put(partitioner.getRandomToken(), Lists.newArrayList(host2));
+        ring2.put(new BigIntegerToken("0"), Lists.newArrayList(host2));
 
         Map<Token, List<Host>> ring3 = Maps.newHashMap();
 
@@ -354,7 +352,7 @@ public abstract class BaseConnectionPoolTest {
         Host host1 = new Host("127.0.0.1",
                 TestHostType.CONNECT_FAIL_FIRST.ordinal());
         Map<Token, List<Host>> ring1 = Maps.newHashMap();
-        ring1.put(partitioner.getRandomToken(), Lists.newArrayList(host1));
+        ring1.put(new BigIntegerToken("0"), Lists.newArrayList(host1));
 
         OperationResult<String> result;
 

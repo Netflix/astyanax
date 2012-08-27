@@ -413,6 +413,19 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     }
 
     @Override
+    public List<String> describeSplits(final String cfName, final String startToken, final String endToken,
+            final int keysPerSplit) throws ConnectionException {
+        return executeOperation(
+                new AbstractKeyspaceOperationImpl<List<String>>(tracerFactory
+                        .newTracer(CassandraOperationType.DESCRIBE_SPLITS), getKeyspaceName()) {
+                    @Override
+                    public List<String> internalExecute(Cassandra.Client client) throws Exception {
+                        return client.describe_splits(cfName, startToken, endToken, keysPerSplit);
+                    }
+                }, getConfig().getRetryPolicy().duplicate()).getResult();
+    }
+
+    @Override
     public OperationResult<Void> testOperation(final Operation<?, ?> operation) throws ConnectionException {
         return testOperation(operation, config.getRetryPolicy().duplicate());
     }

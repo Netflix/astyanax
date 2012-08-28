@@ -10,9 +10,9 @@ import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.recipes.locks.ColumnPrefixDistributedRowLock;
 
 /**
- * Perform a uniqueness constraint using the locking recipe.  The usage here is to 
+ * Perform a uniqueness constraint using the locking recipe.  The usage here is to
  * take the lock and then re-write the column without a TTL to 'persist' it in cassandra.
- * 
+ *
  * @author elandau
  *
  * @param <K>
@@ -39,13 +39,13 @@ public class ColumnPrefixUniquenessConstraint<K> implements UniquenessConstraint
         lock.withColumnPrefix(prefix);
         return this;
     }
-    
+
     /**
      * Specify the unique value to use for the column name when doing the uniqueness
      * constraint.  In many cases this will be a TimeUUID that is used as the row
      * key to store the actual data for the unique key tracked in this column
      * family.
-     * 
+     *
      * @param unique
      * @return
      */
@@ -53,7 +53,7 @@ public class ColumnPrefixUniquenessConstraint<K> implements UniquenessConstraint
         lock.withLockId(unique);
         return this;
     }
-    
+
     public String readUniqueColumn() throws Exception {
         String column = null;
         for (Entry<String, Long> entry : lock.readLockColumns().entrySet()) {
@@ -66,13 +66,13 @@ public class ColumnPrefixUniquenessConstraint<K> implements UniquenessConstraint
                 }
             }
         }
-        
+
         if (column == null)
             throw new NotFoundException("Unique column not found for " + lock.getKey());
         return column;
-        
+
     }
-    
+
     @Override
     public void acquire() throws NotUniqueException, Exception {
         acquireAndMutate(lock.getKeyspace().prepareMutationBatch());
@@ -88,8 +88,8 @@ public class ColumnPrefixUniquenessConstraint<K> implements UniquenessConstraint
         m.setConsistencyLevel(lock.getConsistencyLevel())
             .execute();
     }
-    
-    
+
+
     @Override
     public void release() throws Exception {
         lock.release();

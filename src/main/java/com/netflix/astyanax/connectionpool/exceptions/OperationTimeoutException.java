@@ -2,7 +2,7 @@ package com.netflix.astyanax.connectionpool.exceptions;
 
 public class OperationTimeoutException extends ConnectionException implements IsTimeoutException, IsRetryableException {
     /**
-     * 
+     *
      */
     private static final long serialVersionUID = 5676170035940390111L;
 

@@ -13,20 +13,20 @@ import com.google.common.collect.Maps;
 public class OrderedColumnMap<C> implements ColumnMap<C> {
 
     private final LinkedHashMap<C, Column<C>> columns = Maps.newLinkedHashMap();
-    
+
     public OrderedColumnMap() {
     }
-    
+
     public OrderedColumnMap(Collection<Column<C>> columns) {
         addAll(columns);
     }
-    
+
     @Override
     public OrderedColumnMap<C> add(Column<C> column) {
         columns.put(column.getName(), column);
         return this;
     }
-    
+
     @Override
     public OrderedColumnMap<C> addAll(Collection<Column<C>> columns) {
         for (Column<C> column : columns){
@@ -34,7 +34,7 @@ public class OrderedColumnMap<C> implements ColumnMap<C> {
         }
         return this;
     }
-    
+
     @Override
     public Iterator<Column<C>> iterator() {
         return this.columns.values().iterator();

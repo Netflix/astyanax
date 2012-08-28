@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright 2011 Netflix
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,28 +31,28 @@ import com.netflix.astyanax.serializers.UnknownComparatorException;
 /**
  * Interface providing access to mutate and query columns from a cassandra
  * keyspace.
- * 
+ *
  * @author elandau
- * 
+ *
  */
 public interface Keyspace {
     /**
      * Return the configuration object used to set up this keyspace
-     * 
+     *
      * @return
      */
     AstyanaxConfiguration getConfig();
 
     /**
      * Returns keyspace name
-     * 
+     *
      * @return
      */
     String getKeyspaceName();
 
     /**
      * Get a list of all tokens and their endpoints
-     * 
+     *
      * @return
      * @throws ConnectionException
      */
@@ -68,7 +68,7 @@ public interface Keyspace {
 
     /**
      * Return a complete description of the keyspace and its column families
-     * 
+     *
      * @return
      * @throws ConnectionException
      */
@@ -78,7 +78,7 @@ public interface Keyspace {
      * Return the serializer package for a specific column family. This requires
      * a call to the Cassandra cluster and is therefore cached to reduce load on
      * Cassandra and since this data rarely changes.
-     * 
+     *
      * @param columnFamily
      * @param ignoreErrors
      * @return
@@ -91,7 +91,7 @@ public interface Keyspace {
      * Prepare a batch mutation object. It is possible to create multiple batch
      * mutations and later merge them into a single mutation by calling
      * mergeShallow on a batch mutation object.
-     * 
+     *
      * @return
      * @throws ConnectionException
      */
@@ -101,7 +101,7 @@ public interface Keyspace {
      * Starting point for constructing a query. From the column family the
      * client can perform all 4 types of queries: get column, get key slice, get
      * key range and and index query.
-     * 
+     *
      * @param <K>
      * @param <C>
      * @param cf
@@ -114,7 +114,7 @@ public interface Keyspace {
 
     /**
      * Mutation for a single column
-     * 
+     *
      * @param <K>
      * @param <C>
      * @param columnFamily
@@ -124,7 +124,7 @@ public interface Keyspace {
 
     /**
      * Delete all rows in a column family
-     * 
+     *
      * @param <K>
      * @param <C>
      * @param columnFamily
@@ -138,7 +138,7 @@ public interface Keyspace {
     /**
      * This method is used for testing purposes only. It is used to inject
      * errors in the connection pool.
-     * 
+     *
      * @param operation
      * @return
      * @throws ConnectionException
@@ -148,7 +148,7 @@ public interface Keyspace {
     /**
      * This method is used for testing purposes only. It is used to inject
      * errors in the connection pool.
-     * 
+     *
      * @param operation
      * @return
      * @throws ConnectionException

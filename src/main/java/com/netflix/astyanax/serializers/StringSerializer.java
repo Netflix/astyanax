@@ -8,9 +8,9 @@ import org.apache.cassandra.db.marshal.UTF8Type;
 /**
  * A StringSerializer translates the byte[] to and from string using utf-8
  * encoding.
- * 
+ *
  * @author Ran Tavory
- * 
+ *
  */
 public final class StringSerializer extends AbstractSerializer<String> {
 

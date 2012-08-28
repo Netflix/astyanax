@@ -42,7 +42,7 @@ public class Mapping<T> {
 
     /**
      * Convenience for allocation a mapping object
-     * 
+     *
      * @param clazz
      *            clazz type to map
      * @return mapper
@@ -53,7 +53,7 @@ public class Mapping<T> {
 
     /**
      * Convenience for allocation a mapping object
-     * 
+     *
      * @param clazz
      *            clazz type to map
      * @param annotationSet
@@ -104,7 +104,7 @@ public class Mapping<T> {
 
     /**
      * Return the value for the ID/Key column from the given instance
-     * 
+     *
      * @param instance
      *            the instance
      * @param valueClass
@@ -118,7 +118,7 @@ public class Mapping<T> {
 
     /**
      * Return the value for the given column from the given instance
-     * 
+     *
      * @param instance
      *            the instance
      * @param columnName
@@ -145,7 +145,7 @@ public class Mapping<T> {
 
     /**
      * Set the value for the ID/Key column for the given instance
-     * 
+     *
      * @param instance
      *            the instance
      * @param value
@@ -158,7 +158,7 @@ public class Mapping<T> {
 
     /**
      * Set the value for the given column for the given instance
-     * 
+     *
      * @param instance
      *            the instance
      * @param columnName
@@ -184,7 +184,7 @@ public class Mapping<T> {
     /**
      * Map a bean to a column mutation. i.e. set the columns in the mutation to
      * the corresponding values from the instance
-     * 
+     *
      * @param instance
      *            instance
      * @param mutation
@@ -200,7 +200,7 @@ public class Mapping<T> {
     /**
      * Allocate a new instance and populate it with the values from the given
      * column list
-     * 
+     *
      * @param columns
      *            column list
      * @return the allocated instance
@@ -216,7 +216,7 @@ public class Mapping<T> {
 
     /**
      * Populate the given instance with the values from the given column list
-     * 
+     *
      * @param instance
      *            instance
      * @param columns
@@ -237,7 +237,7 @@ public class Mapping<T> {
     /**
      * Load a set of rows into new instances populated with values from the
      * column lists
-     * 
+     *
      * @param rows
      *            the rows
      * @return list of new instances
@@ -259,7 +259,7 @@ public class Mapping<T> {
 
     /**
      * Return the set of column names discovered from the bean class
-     * 
+     *
      * @return column names
      */
     public Collection<String> getNames() {

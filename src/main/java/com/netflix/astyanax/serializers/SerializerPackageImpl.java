@@ -23,9 +23,9 @@ import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
  * a ColumnFamilyDefinition or by manually setting either the ComparatorType or
  * Serializer for keys, columns and values. Use this in conjunction with the CSV
  * uploader to specify how values are serializer.
- * 
+ *
  * @author elandau
- * 
+ *
  */
 public class SerializerPackageImpl implements SerializerPackage {
 
@@ -47,7 +47,7 @@ public class SerializerPackageImpl implements SerializerPackage {
      * from the keyspace. This is the preferred method of initialing the
      * serializer since it most closely matches the validators and comparator
      * type set in cassandra.
-     * 
+     *
      * @param cfDef
      * @param ignoreErrors
      * @throws UnknownComparatorException

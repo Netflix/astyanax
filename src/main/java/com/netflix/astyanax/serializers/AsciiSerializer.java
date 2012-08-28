@@ -8,7 +8,7 @@ import org.apache.cassandra.db.marshal.AsciiType;
 /**
  * Almost identical to StringSerializer except we use the US-ASCII character set
  * code
- * 
+ *
  * @author zznate
  */
 public final class AsciiSerializer extends AbstractSerializer<String> {

@@ -7,12 +7,12 @@ public class ObjectDirectoryLister implements Callable<Map<String, ObjectMetadat
 
     private final ChunkedStorageProvider provider;
     private final String path;
-    
+
     public ObjectDirectoryLister(ChunkedStorageProvider provider, String path) {
         this.provider = provider;
         this.path = path;
     }
-    
+
     @Override
     public Map<String, ObjectMetadata> call() throws Exception {
         return null;

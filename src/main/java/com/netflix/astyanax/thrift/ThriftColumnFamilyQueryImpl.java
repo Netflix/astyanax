@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright 2011 Netflix
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -82,9 +82,9 @@ import com.netflix.astyanax.util.TokenGenerator;
 
 /**
  * Implementation of all column family queries using the thrift API.
- * 
+ *
  * @author elandau
- * 
+ *
  * @param <K>
  * @param <C>
  */
@@ -398,7 +398,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
             }
         };
     }
-    
+
     @Override
     public RowSliceQuery<K, C> getKeySlice(final Iterable<K> keys) {
         return new AbstractRowSliceQueryImpl<K, C>(columnFamily.getColumnSerializer()) {
@@ -448,7 +448,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
     public RowSliceQuery<K, C> getKeySlice(final K keys[]) {
         return getKeySlice(Arrays.asList(keys));
     }
-    
+
     @Override
     public RowSliceQuery<K, C> getKeySlice(final Collection<K> keys) {
         return new AbstractRowSliceQueryImpl<K, C>(columnFamily.getColumnSerializer()) {
@@ -695,7 +695,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                     });
                 }
                 final CountDownLatch doneSignal = new CountDownLatch(ranges.size());
-                
+
                 for (final Pair<String, String> token : ranges) {
                     executor.submit(new Callable<Void>() {
                         @Override
@@ -765,7 +765,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                     }
                                     catch (Exception e) {
                                         ConnectionException ce = ThriftConverter.ToConnectionPoolException(e);
-                                        if (!callback.failure(ce))   
+                                        if (!callback.failure(ce))
                                             error.set(ce);
                                     }
                                 }

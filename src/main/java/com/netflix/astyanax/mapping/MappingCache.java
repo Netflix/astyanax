@@ -13,7 +13,7 @@ public class MappingCache {
 
     /**
      * Return a new or cached mapper
-     * 
+     *
      * @param clazz
      *            class for the mapper
      * @return mapper
@@ -24,7 +24,7 @@ public class MappingCache {
 
     /**
      * Return a new or cached mapper
-     * 
+     *
      * @param clazz
      *            class for the mapper
      * @param annotationSet

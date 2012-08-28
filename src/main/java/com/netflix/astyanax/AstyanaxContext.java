@@ -29,9 +29,9 @@ import com.netflix.astyanax.shallows.EmptyKeyspaceTracerFactory;
 /**
  * This object tracks the context of an astyanax instance of either a Cluster or
  * Keyspace
- * 
+ *
  * @author elandau
- * 
+ *
  * @param <T>
  */
 public class AstyanaxContext<Entity> {

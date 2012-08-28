@@ -6,7 +6,7 @@ import com.netflix.astyanax.model.DynamicComposite;
 
 /**
  * @author Todd Nine
- * 
+ *
  */
 public class DynamicCompositeSerializer extends AbstractSerializer<DynamicComposite> {
     private static final DynamicCompositeSerializer instance = new DynamicCompositeSerializer();

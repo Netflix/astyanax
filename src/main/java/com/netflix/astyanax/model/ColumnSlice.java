@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright 2011 Netflix
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,9 +21,9 @@ import java.util.Collection;
  * Definition for a sub set of slices. A subset can either be a fixed set of
  * columns a range of ordered columns. The slice defines the sub set of columns
  * at the ColumnPath position within the row.
- * 
+ *
  * @author elandau
- * 
+ *
  * @param <C>
  */
 public class ColumnSlice<C> {

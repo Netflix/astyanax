@@ -33,7 +33,7 @@ public class HostConnectionPoolPartition<CL> {
     /**
      * Sets all pools for this partition. Removes old partitions and adds new
      * one.
-     * 
+     *
      * @param pools
      */
     public synchronized boolean setPools(Collection<HostConnectionPool<CL>> pools) {
@@ -72,7 +72,7 @@ public class HostConnectionPoolPartition<CL> {
 
     /**
      * Token or shard identifying this partition.
-     * 
+     *
      * @return
      */
     public BigInteger id() {

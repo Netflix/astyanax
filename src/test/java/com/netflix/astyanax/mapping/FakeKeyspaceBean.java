@@ -37,7 +37,7 @@ public class FakeKeyspaceBean implements Comparable<FakeKeyspaceBean> {
 
     /**
      * Unique identifying id
-     * 
+     *
      * @return value
      */
     public String getId() {
@@ -46,7 +46,7 @@ public class FakeKeyspaceBean implements Comparable<FakeKeyspaceBean> {
 
     /**
      * Set unique override id.
-     * 
+     *
      * @param id
      *            value
      */
@@ -56,7 +56,7 @@ public class FakeKeyspaceBean implements Comparable<FakeKeyspaceBean> {
 
     /**
      * Returns the type of override
-     * 
+     *
      * @return value
      */
     public String getType() {
@@ -65,7 +65,7 @@ public class FakeKeyspaceBean implements Comparable<FakeKeyspaceBean> {
 
     /**
      * Sets the override type
-     * 
+     *
      * @param type
      *            value
      */
@@ -75,7 +75,7 @@ public class FakeKeyspaceBean implements Comparable<FakeKeyspaceBean> {
 
     /**
      * Return the ISO 3166 country code to force on the current request context
-     * 
+     *
      * @return value
      */
     public String getCountry() {
@@ -84,7 +84,7 @@ public class FakeKeyspaceBean implements Comparable<FakeKeyspaceBean> {
 
     /**
      * Sets the ISOCountry to force on the current request context
-     * 
+     *
      * @param country
      *            value
      */
@@ -94,7 +94,7 @@ public class FakeKeyspaceBean implements Comparable<FakeKeyspaceBean> {
 
     /**
      * Return country status to force on the overriden country.
-     * 
+     *
      * @return value
      */
     public Integer getCountryStatus() {
@@ -103,7 +103,7 @@ public class FakeKeyspaceBean implements Comparable<FakeKeyspaceBean> {
 
     /**
      * Sets country status to force on the overriden country
-     * 
+     *
      * @param countryStatus
      *            value
      */
@@ -113,7 +113,7 @@ public class FakeKeyspaceBean implements Comparable<FakeKeyspaceBean> {
 
     /**
      * Returns the ldap login that made the last update
-     * 
+     *
      * @return value
      */
     public String getUpdatedBy() {
@@ -122,7 +122,7 @@ public class FakeKeyspaceBean implements Comparable<FakeKeyspaceBean> {
 
     /**
      * Sets who made the last update
-     * 
+     *
      * @param login
      *            value
      */
@@ -132,7 +132,7 @@ public class FakeKeyspaceBean implements Comparable<FakeKeyspaceBean> {
 
     /**
      * Returns the creation timestamp in milis since epoch.
-     * 
+     *
      * @return value
      */
     public Long getCreateTS() {
@@ -141,7 +141,7 @@ public class FakeKeyspaceBean implements Comparable<FakeKeyspaceBean> {
 
     /**
      * Sets the creation timestamp in millis since epoch
-     * 
+     *
      * @param createTimestamp
      *            value
      */
@@ -151,7 +151,7 @@ public class FakeKeyspaceBean implements Comparable<FakeKeyspaceBean> {
 
     /**
      * Returns the last updated timestamp in millis since epoch
-     * 
+     *
      * @return value
      */
     public Long getLastUpdateTS() {
@@ -160,7 +160,7 @@ public class FakeKeyspaceBean implements Comparable<FakeKeyspaceBean> {
 
     /**
      * Sets the last updated timestamp in millis since epoch
-     * 
+     *
      * @param updateTimestamp
      *            value
      */
@@ -180,7 +180,7 @@ public class FakeKeyspaceBean implements Comparable<FakeKeyspaceBean> {
 
     /**
      * Returns the expiration timestamp in millis since epoch
-     * 
+     *
      * @return value
      */
     public Long getExpirationTS() {
@@ -189,7 +189,7 @@ public class FakeKeyspaceBean implements Comparable<FakeKeyspaceBean> {
 
     /**
      * Sets the expiration timestamp in millis since epoch
-     * 
+     *
      * @param expTS
      *            value
      */

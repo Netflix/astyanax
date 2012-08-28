@@ -18,9 +18,9 @@ import com.netflix.astyanax.serializers.UnknownComparatorException;
 
 /**
  * Writer rows where the first pair is the key and subsequent pairs are columns.
- * 
+ *
  * @author elandau
- * 
+ *
  */
 public class ColumnarRecordWriter implements RecordWriter {
 

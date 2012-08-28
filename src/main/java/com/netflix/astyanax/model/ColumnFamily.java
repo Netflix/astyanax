@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright 2011 Netflix
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,9 +25,9 @@ import com.netflix.astyanax.serializers.ByteBufferSerializer;
  * column family name as well as the type and serializers for the row keys and
  * first level columns. Super column subcolumn name type and serializers are
  * specified using a ColumnPath.
- * 
+ *
  * @author elandau
- * 
+ *
  * @param <K>
  * @param <C>
  */
@@ -65,7 +65,7 @@ public class ColumnFamily<K, C> {
         this.defaultValueSerializer = defaultValueSerializer;
         this.type = ColumnType.STANDARD;
     }
-    
+
     public String getName() {
         return columnFamilyName;
     }
@@ -73,7 +73,7 @@ public class ColumnFamily<K, C> {
     /**
      * Serializer for first level column names. This serializer does not apply
      * to sub column names.
-     * 
+     *
      * @return
      */
     public Serializer<C> getColumnSerializer() {
@@ -82,20 +82,20 @@ public class ColumnFamily<K, C> {
 
     /**
      * Serializer used to generate row keys.
-     * 
+     *
      * @return
      */
     public Serializer<K> getKeySerializer() {
         return keySerializer;
     }
-    
+
     public Serializer<?> getDefaultValueSerializer() {
         return defaultValueSerializer;
     }
 
     /**
      * Type of columns in this column family (Standard or Super)
-     * 
+     *
      * @deprecated Super columns should be replaced with composite columns
      * @return
      */

@@ -33,7 +33,7 @@ import com.netflix.astyanax.serializers.UUIDSerializer;
  * that get serialized into a composite column name. Unless
  * setAutoDeserialize(true) is called, it's going to try to match serializers to
  * Cassandra comparator types.
- * 
+ *
  * @author edanuff
  */
 @SuppressWarnings("rawtypes")

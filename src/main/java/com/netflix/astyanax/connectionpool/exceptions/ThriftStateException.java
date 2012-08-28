@@ -3,7 +3,7 @@ package com.netflix.astyanax.connectionpool.exceptions;
 public class ThriftStateException extends ConnectionException implements IsDeadConnectionException,
         IsRetryableException {
     /**
-	 * 
+	 *
 	 */
     private static final long serialVersionUID = -7163779789960683466L;
 

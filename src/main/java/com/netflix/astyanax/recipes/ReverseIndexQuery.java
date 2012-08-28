@@ -32,19 +32,19 @@ import com.netflix.astyanax.util.RangeBuilder;
 
 /**
  * Performs a search on a reverse index and fetches all the matching rows
- * 
+ *
  * CFData:K C=V1 C=V2
- * 
+ *
  * CFIndex: V1:K
- * 
+ *
  * <h3>Data and Index column family</h3> The CFData column family has key of
  * type K and fields or columns of type C. Each column may have a different
  * value type. The CFIndex column family is a sorted index by one of the value
  * types V. The column names in the reverse index are a composite of the value
  * type V and the CFData rowkey type K (V:K).
- * 
+ *
  * @author elandau
- * 
+ *
  * @param <K>
  *            Key type for data table
  * @param <C>
@@ -138,7 +138,7 @@ public class ReverseIndexQuery<K, C, V> {
 
     /**
      * Set the number shard keys to fetch for the first query
-     * 
+     *
      * @param size
      * @return
      */
@@ -149,7 +149,7 @@ public class ReverseIndexQuery<K, C, V> {
 
     /**
      * Set the number columns to read from each shard when paginating.
-     * 
+     *
      * @param size
      * @return
      */

@@ -6,14 +6,14 @@ import com.netflix.astyanax.MutationBatch;
 
 /**
  * Abstraction for a durable queue requiring an ack to do the final remove
- * 
+ *
  * @author elandau
- * 
+ *
  */
 public interface AckingQueue {
     /**
      * Get the next item from the queue
-     * 
+     *
      * @param timeout
      * @param units
      * @return
@@ -22,7 +22,7 @@ public interface AckingQueue {
 
     /**
      * Insert an item into the queue
-     * 
+     *
      * @param m
      * @throws Exception
      */
@@ -30,7 +30,7 @@ public interface AckingQueue {
 
     /**
      * Ack a mutation so that it may be removed from the queue
-     * 
+     *
      * @param m
      */
     void ackMutation(MutationBatch m) throws Exception;
@@ -38,7 +38,7 @@ public interface AckingQueue {
     /**
      * Return a mutation that couldn't be retried for it be requeued and retryed
      * later
-     * 
+     *
      * @param m
      * @throws Exception
      */
@@ -46,7 +46,7 @@ public interface AckingQueue {
 
     /**
      * Return the number of mutations in the queue
-     * 
+     *
      * @return
      */
     int size();

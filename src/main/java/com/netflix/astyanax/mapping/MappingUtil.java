@@ -63,7 +63,7 @@ public class MappingUtil {
 
     /**
      * Remove the given item
-     * 
+     *
      * @param columnFamily
      *            column family of the item
      * @param item
@@ -94,7 +94,7 @@ public class MappingUtil {
 
     /**
      * Add/update the given item
-     * 
+     *
      * @param columnFamily
      *            column family of the item
      * @param item
@@ -127,7 +127,7 @@ public class MappingUtil {
 
     /**
      * Get the specified item by its key/id
-     * 
+     *
      * @param columnFamily
      *            column family of the item
      * @param id
@@ -148,7 +148,7 @@ public class MappingUtil {
 
     /**
      * Get all rows of the specified item
-     * 
+     *
      * @param columnFamily
      *            column family of the item
      * @param itemClass
@@ -167,7 +167,7 @@ public class MappingUtil {
 
     /**
      * Return the mapping instance for the given class
-     * 
+     *
      * @param clazz
      *            the class
      * @return mapping instance (new or from cache)

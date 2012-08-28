@@ -19,10 +19,10 @@ import com.netflix.astyanax.util.TimeUUIDUtils;
  * 2.  Reading back the unique columns from each row (must be done in a separate call)
  *      and making sure there is only one such column
  * 3.  Committing the columns without a TTL
- * 
- * 
+ *
+ *
  * @author elandau
- * 
+ *
  */
 public class MultiRowUniquenessConstraint implements UniquenessConstraint {
 
@@ -43,7 +43,7 @@ public class MultiRowUniquenessConstraint implements UniquenessConstraint {
      * TTL to use for the uniquness operation. This is the TTL for the columns
      * to expire in the event of a client crash before the uniqueness can be
      * committed
-     * 
+     *
      * @param ttl
      * @return
      */
@@ -55,7 +55,7 @@ public class MultiRowUniquenessConstraint implements UniquenessConstraint {
     /**
      * Specify the prefix that uniquely distinguishes the lock columns from data
      * columns
-     * 
+     *
      * @param prefix
      * @return
      */
@@ -76,7 +76,7 @@ public class MultiRowUniquenessConstraint implements UniquenessConstraint {
 
     /**
      * Consistency level used
-     * 
+     *
      * @param consistencyLevel
      * @return
      */
@@ -87,7 +87,7 @@ public class MultiRowUniquenessConstraint implements UniquenessConstraint {
 
     /**
      * Add a row to the set of rows being tested for uniqueness
-     * 
+     *
      * @param columnFamily
      * @param rowKey
      * @return
@@ -99,7 +99,7 @@ public class MultiRowUniquenessConstraint implements UniquenessConstraint {
 
     /**
      * Return the lock column written to ALL rows
-     * 
+     *
      * @return
      */
     public String getLockColumn() {
@@ -110,7 +110,7 @@ public class MultiRowUniquenessConstraint implements UniquenessConstraint {
     public void acquire() throws NotUniqueException, Exception {
         acquireAndMutate(null);
     }
-    
+
     @Override
     public void acquireAndMutate(MutationBatch mutation) throws NotUniqueException, Exception {
         long now = TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS);

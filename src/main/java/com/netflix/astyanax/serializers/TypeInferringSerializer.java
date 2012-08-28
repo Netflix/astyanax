@@ -7,9 +7,9 @@ import com.netflix.astyanax.Serializer;
 /**
  * A serializer that dynamically delegates to a proper serializer based on the
  * value passed
- * 
+ *
  * @author Bozhidar Bozhanov
- * 
+ *
  * @param <T>
  *            type
  */

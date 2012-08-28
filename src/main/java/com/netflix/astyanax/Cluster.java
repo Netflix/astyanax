@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright 2011 Netflix
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,14 +27,14 @@ import com.netflix.astyanax.ddl.KeyspaceDefinition;
 /**
  * Interface for cluster operations. Use the Keyspace interface to perform
  * keyspace query and mutation operations.
- * 
+ *
  * @author elandau
- * 
+ *
  */
 public interface Cluster {
     /**
      * The cluster name is completely arbitrary
-     * 
+     *
      * @return
      * @throws ConnectionException
      */
@@ -42,7 +42,7 @@ public interface Cluster {
 
     /**
      * Return version of cassandra running on the cluster
-     * 
+     *
      * @return
      * @throws ConnectionException
      */
@@ -50,7 +50,7 @@ public interface Cluster {
 
     /**
      * Describe the snitch name used on the cluster
-     * 
+     *
      * @return
      * @throws ConnectionException
      */
@@ -58,7 +58,7 @@ public interface Cluster {
 
     /**
      * Describe the partitioner used by the cluster
-     * 
+     *
      * @return
      * @throws ConnectionException
      */
@@ -69,21 +69,21 @@ public interface Cluster {
     /**
      * Prepare a column family definition. Call execute() on the returned object
      * to create the column family.
-     * 
+     *
      * @return
      */
     ColumnFamilyDefinition makeColumnFamilyDefinition();
 
     /**
      * Make a column definitio to be added to a ColumnFamilyDefinition
-     * 
+     *
      * @return
      */
     ColumnDefinition makeColumnDefinition();
 
     /**
      * Delete the column family from the keyspace
-     * 
+     *
      * @param columnFamilyName
      * @return
      * @throws OperationException
@@ -93,7 +93,7 @@ public interface Cluster {
 
     /**
      * Add a column family to an existing keyspace
-     * 
+     *
      * @param def
      *            - Created by calling prepareColumnFamilyDefinition();
      * @return
@@ -103,7 +103,7 @@ public interface Cluster {
 
     /**
      * Update an existing column family
-     * 
+     *
      * @param def
      *            - Created by calling prepareColumnFamilyDefinition();
      * @return
@@ -114,17 +114,17 @@ public interface Cluster {
     /**
      * Prepare a keyspace definition. Call execute() on the returned object to
      * create the keyspace.
-     * 
+     *
      * Not that column families can be added the keyspace definition here
      * instead of calling prepareColumnFamilyDefinition separately.
-     * 
+     *
      * @return
      */
     KeyspaceDefinition makeKeyspaceDefinition();
 
     /**
      * Return details about all keyspaces in the cluster
-     * 
+     *
      * @return
      * @throws ConnectionException
      */
@@ -132,7 +132,7 @@ public interface Cluster {
 
     /**
      * Describe a single keyspace
-     * 
+     *
      * @param ksName
      * @return
      * @throws ConnectionException
@@ -144,14 +144,14 @@ public interface Cluster {
      * connection pool as the cluster and any other keyspaces created from this
      * cluster instance. As a result each keyspace operation is likely to have
      * some overhead for switching keyspaces.
-     * 
+     *
      * @return
      */
     Keyspace getKeyspace(String keyspace);
 
     /**
      * Delete a keyspace from the cluster
-     * 
+     *
      * @param keyspaceName
      * @return
      * @throws OperationException
@@ -163,7 +163,7 @@ public interface Cluster {
      * Add a new keyspace to the cluster. The keyspace object may include column
      * families as well. Create a KeyspaceDefinition object by calling
      * prepareKeyspaceDefinition().
-     * 
+     *
      * @param def
      * @return
      */
@@ -173,14 +173,14 @@ public interface Cluster {
      * Update a new keyspace in the cluster. The keyspace object may include
      * column families as well. Create a KeyspaceDefinition object by calling
      * prepareKeyspaceDefinition().
-     * 
+     *
      * @param def
      */
     String updateKeyspace(KeyspaceDefinition def) throws ConnectionException;
 
     /**
      * Configuration object for this Cluster
-     * 
+     *
      * @return
      */
     AstyanaxConfiguration getConfig();

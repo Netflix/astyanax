@@ -8,9 +8,9 @@ import com.netflix.astyanax.Serializer;
 
 /**
  * A BytesArraySerializer translates the byte[] to and from ByteBuffer.
- * 
+ *
  * @author Patricio Echague
- * 
+ *
  */
 public final class BytesArraySerializer extends AbstractSerializer<byte[]> implements Serializer<byte[]> {
 

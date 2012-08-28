@@ -16,7 +16,7 @@ public interface LatencyScoreStrategy {
     public interface Instance {
         /**
          * Add a single latency sample
-         * 
+         *
          * @param sample
          * @param now
          */
@@ -24,7 +24,7 @@ public interface LatencyScoreStrategy {
 
         /**
          * Get the cached score for this endpoint
-         * 
+         *
          * @return
          */
         double getScore();
@@ -41,7 +41,7 @@ public interface LatencyScoreStrategy {
 
         /**
          * Get the mean for the sample window
-         * 
+         *
          * @return
          */
         double getMean();
@@ -59,14 +59,14 @@ public interface LatencyScoreStrategy {
 
     /**
      * Create a new instance to associate with an endpoint
-     * 
+     *
      * @return
      */
     Instance createInstance();
 
     /**
      * Remove the instance for an endpoint that is no longer being tracked
-     * 
+     *
      * @param instance
      */
     void removeInstance(Instance instance);
@@ -75,7 +75,7 @@ public interface LatencyScoreStrategy {
      * Start updating stats for instances created using createInstance. This
      * usually spawns an update thread as well as a reset thread operating at
      * configurable intervals
-     * 
+     *
      * @param listener
      */
     void start(Listener listener);
@@ -87,7 +87,7 @@ public interface LatencyScoreStrategy {
 
     /**
      * Sorts and filters a list of hosts by looking at their up state and score.
-     * 
+     *
      * @param <CL>
      * @param pools
      * @param prioritized

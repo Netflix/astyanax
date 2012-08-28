@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright 2011 Netflix
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -50,11 +50,11 @@ import com.netflix.astyanax.connectionpool.exceptions.UnknownException;
 
 /**
  * Pool of connections for a single host.
- * 
+ *
  * Features 1. Async open connection 2.
- * 
+ *
  * @author elandau
- * 
+ *
  */
 public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
 
@@ -62,9 +62,9 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
      * Interface to notify the owning connection pool of up/down state changes.
      * This give the owning connection pool a chance to remove a downed host
      * from its internal state until it's back up.
-     * 
+     *
      * @author elandau
-     * 
+     *
      * @param <CL>
      */
     public interface Listener<CL> {
@@ -126,7 +126,7 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
 
     /**
      * Create a connection as long the max hasn't been reached
-     * 
+     *
      * @param timeout
      *            - Max wait timeout if max connections have been allocated and
      *            pool is empty. 0 to throw a MaxConnsPerHostReachedException.
@@ -172,7 +172,7 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
     /**
      * Internal method to wait for a connection from the available connection
      * pool.
-     * 
+     *
      * @param timeout
      * @return
      * @throws ConnectionException
@@ -204,7 +204,7 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
 
     /**
      * Return a connection to this host
-     * 
+     *
      * @param connection
      */
     @Override
@@ -329,7 +329,7 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
 
     /**
      * Open a new connection synchronously
-     * 
+     *
      * @return
      * @throws ConnectionException
      */

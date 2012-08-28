@@ -10,9 +10,9 @@ import com.netflix.astyanax.Serializer;
 /**
  * Utility class that infers the concrete Serializer needed to turn a value into
  * its binary representation
- * 
+ *
  * @author Bozhidar Bozhanov
- * 
+ *
  */
 public class SerializerTypeInferer {
 

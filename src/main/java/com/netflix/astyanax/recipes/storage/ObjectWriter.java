@@ -172,7 +172,7 @@ public class ObjectWriter implements Callable<ObjectMetadata> {
     /**
      * Should switch to IOUtils.read() when we update to the latest version of
      * commons-io
-     * 
+     *
      * @param in
      * @param b
      * @param off

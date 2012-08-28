@@ -7,9 +7,9 @@ import org.apache.cassandra.db.marshal.UUIDType;
 
 /**
  * A UUIDSerializer translates the byte[] to and from UUID types.
- * 
+ *
  * @author Ed Anuff
- * 
+ *
  */
 public class UUIDSerializer extends AbstractSerializer<UUID> {
 

@@ -26,7 +26,7 @@ import java.util.List;
 /**
  * Utility to collect data written to an {@link OutputStream} in
  * {@link ByteBuffer}s.
- * 
+ *
  * Originally from org.apache.avro.util.ByteBufferOutputStream, moved into
  * Hector and added getByteBuffer to return single ByteBuffer from contents.
  */

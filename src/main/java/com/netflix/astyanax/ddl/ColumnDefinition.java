@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright 2011 Netflix
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,14 +20,14 @@ import java.nio.ByteBuffer;
 /**
  * Interface to get/set a single column definition. The column definition is
  * only valid within the context of a ColumnFamilyDefinition
- * 
+ *
  * @author elandau
- * 
+ *
  */
 public interface ColumnDefinition {
     /**
      * Sets the column string name
-     * 
+     *
      * @param name
      * @return
      */
@@ -35,7 +35,7 @@ public interface ColumnDefinition {
 
     /**
      * Sets the column byte array name
-     * 
+     *
      * @param name
      * @return
      */
@@ -43,7 +43,7 @@ public interface ColumnDefinition {
 
     /**
      * Sets the column byte buffer name
-     * 
+     *
      * @param name
      * @return
      */
@@ -53,7 +53,7 @@ public interface ColumnDefinition {
      * Sets the validation class for the column values. See ComparatorType for
      * possible values. Setting the validation class here makes it possible to
      * have different values types per column within the same column family.
-     * 
+     *
      * @param value
      * @return
      */
@@ -61,7 +61,7 @@ public interface ColumnDefinition {
 
     /**
      * Sets an index on this column.
-     * 
+     *
      * @param name
      *            Name of index
      * @param type
@@ -72,7 +72,7 @@ public interface ColumnDefinition {
 
     /**
      * Sets a keys index on this column
-     * 
+     *
      * @param name
      * @return
      */
@@ -80,7 +80,7 @@ public interface ColumnDefinition {
 
     /**
      * Get the column name
-     * 
+     *
      * @return
      */
     String getName();
@@ -88,21 +88,21 @@ public interface ColumnDefinition {
     /**
      * Get the raw column name. In most cases the column name is a string but
      * the actual column name is stored as a byte array
-     * 
+     *
      * @return
      */
     ByteBuffer getRawName();
 
     /**
      * Return the value validation type. See ComparatorType for possible values.
-     * 
+     *
      * @return
      */
     String getValidationClass();
 
     /**
      * Return the index name
-     * 
+     *
      * @return
      */
     String getIndexName();
@@ -110,14 +110,14 @@ public interface ColumnDefinition {
     /**
      * Return the index type. At the time of this writing only KEYS index is
      * supported
-     * 
+     *
      * @return
      */
     String getIndexType();
 
     /**
      * Returns true if there is an index on this column
-     * 
+     *
      * @return
      */
     boolean hasIndex();

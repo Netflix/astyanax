@@ -9,9 +9,9 @@ import org.apache.cassandra.utils.Pair;
 import org.apache.commons.csv.CSVParser;
 
 /**
- * 
+ *
  * @author elandau
- * 
+ *
  */
 public class CsvRecordReader implements RecordReader {
     private CSVParser parser;

@@ -7,9 +7,9 @@ import com.google.common.collect.Lists;
 
 /**
  * MBean monitoring for a connection pool
- * 
+ *
  * @author elandau
- * 
+ *
  */
 public class JmxConnectionPoolMonitor implements JmxConnectionPoolMonitorMBean {
     private final ConnectionPool<?> pool;

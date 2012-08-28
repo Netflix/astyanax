@@ -19,9 +19,9 @@ import com.netflix.astyanax.serializers.StringSerializer;
  * ChunkProvider responsible for reading and writing chunks to cassandra. Chunks
  * are written to different row keys with the row key name having the format
  * <chunknumber>$<objectname>
- * 
+ *
  * @author elandau
- * 
+ *
  */
 public class CassandraChunkedStorageProvider implements ChunkedStorageProvider {
 

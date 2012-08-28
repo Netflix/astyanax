@@ -7,7 +7,7 @@ import org.apache.cassandra.db.marshal.FloatType;
 /**
  * Uses IntSerializer via translating Float objects to and from raw long bytes
  * form.
- * 
+ *
  * @author Todd Nine
  */
 public class FloatSerializer extends AbstractSerializer<Float> {

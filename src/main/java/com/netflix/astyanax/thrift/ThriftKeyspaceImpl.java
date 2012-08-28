@@ -43,12 +43,14 @@ import com.netflix.astyanax.WriteAheadEntry;
 import com.netflix.astyanax.WriteAheadLog;
 import com.netflix.astyanax.SerializerPackage;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
+import com.netflix.astyanax.connectionpool.Endpoint;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
+import com.netflix.astyanax.connectionpool.impl.EndpointImpl;
 import com.netflix.astyanax.connectionpool.impl.TokenRangeImpl;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.model.*;
@@ -180,7 +182,15 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                     @Override
                                     public TokenRange apply(
                                             org.apache.cassandra.thrift.TokenRange tr) {
-                                        return new TokenRangeImpl(tr.getStart_token(), tr.getEnd_token(), tr.getEndpoints());
+                                        List<Endpoint> endpoints = Lists.transform(tr.getEndpoint_details(),
+                                            new Function<org.apache.cassandra.thrift.EndpointDetails, Endpoint>() {
+                                                @Override
+                                                public Endpoint apply(
+                                                        org.apache.cassandra.thrift.EndpointDetails ed) {
+                                                    return new EndpointImpl(ed.getHost(), ed.getDatacenter(), ed.getRack());
+                                                }
+                                            });
+                                        return new TokenRangeImpl(tr.getStart_token(), tr.getEnd_token(), endpoints);
                                     }
                                 });
                     }

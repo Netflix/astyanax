@@ -95,4 +95,11 @@ public interface AstyanaxConfiguration {
      * @return
      */
     String getCqlVersion();
+
+    /**
+     * TODO
+     *
+     * @return
+     */
+    boolean getNetworkTopologyAware();
 }

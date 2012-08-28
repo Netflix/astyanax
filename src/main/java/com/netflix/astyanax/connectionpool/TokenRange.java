@@ -22,5 +22,5 @@ public interface TokenRange {
 
     String getEndToken();
 
-    List<String> getEndpoints();
+    List<Endpoint> getEndpoints();
 }

@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.base.Objects;
 import com.google.common.collect.Sets;
 
 public class Host {
@@ -28,6 +29,8 @@ public class Host {
     private final String host;
     private final String ipAddress;
     private final int port;
+    private final String datacenter;
+    private final String rack;
     private final String name;
     private final String url;
     private String id;
@@ -43,13 +46,15 @@ public class Host {
         this.port = port;
         this.name = String.format("%s(%s):%d", this.host, this.ipAddress, this.port);
         this.url = String.format("%s:%d", this.host, this.port);
+        this.datacenter = null;
+        this.rack = null;
     }
 
     private Host() {
         this("None", "0.0.0.0", 0, null, null);
     }
 
-    public Host(String url2, int defaultPort) {
+    public Host(String url2, int defaultPort, String datacenter, String rack) {
 
         String tempHost = parseHostFromUrl(url2);
         this.port = parsePortFromUrl(url2, defaultPort);
@@ -77,6 +82,13 @@ public class Host {
 
         this.name = String.format("%s(%s):%d", tempHost, this.ipAddress, this.port);
         this.url = String.format("%s:%d", this.host, this.port);
+
+        this.datacenter = datacenter;
+        this.rack = rack;
+    }
+
+    public Host(String url2, int defaultPort) {
+        this(url2, defaultPort, null, null);
     }
 
     /**
@@ -111,7 +123,9 @@ public class Host {
             return false;
         }
         Host other = (Host) obj;
-        return other.ipAddress.equals(ipAddress) && other.port == port;
+        return other.ipAddress.equals(ipAddress) && other.port == port &&
+                Objects.equal(other.getDatacenter(), datacenter) &&
+                Objects.equal(other.getRack(), rack);
     }
 
     public int hashCode() {
@@ -136,6 +150,14 @@ public class Host {
 
     public int getPort() {
         return this.port;
+    }
+
+    public String getDatacenter() {
+        return this.datacenter;
+    }
+
+    public String getRack() {
+        return this.rack;
     }
 
     public Set<String> getAlternateIpAddresses() {

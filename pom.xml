@@ -26,8 +26,8 @@
     </scm>
 
     <properties>
-        <next.release.version>1.0.4-bv4</next.release.version>
-        <next.development.version>1.0.4-bv5-SNAPSHOT</next.development.version>
+        <next.release.version>1.0.4-bv5</next.release.version>
+        <next.development.version>1.0.4-bv6-SNAPSHOT</next.development.version>
     </properties>
 
     <distributionManagement>

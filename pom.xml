@@ -4,7 +4,7 @@
 
     <groupId>com.netflix.astyanax</groupId>
     <artifactId>astyanax</artifactId>
-    <version>1.0.4-SNAPSHOT</version>
+    <version>1.0.7-SNAPSHOT</version>
 
     <parent>
       <groupId>org.sonatype.oss</groupId>

@@ -37,12 +37,16 @@ public class Host {
     public static Pattern ipPattern = Pattern
             .compile("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$");
 
-    private Host() {
-        this.host = "None";
-        this.ipAddress = "0.0.0.0";
-        this.port = 0;
+    protected Host(String host, String ipAddess, int port, String datacenter, String rack) {
+        this.host = host;
+        this.ipAddress = ipAddess;
+        this.port = port;
         this.name = String.format("%s(%s):%d", this.host, this.ipAddress, this.port);
         this.url = String.format("%s:%d", this.host, this.port);
+    }
+
+    private Host() {
+        this("None", "0.0.0.0", 0, null, null);
     }
 
     public Host(String url2, int defaultPort) {

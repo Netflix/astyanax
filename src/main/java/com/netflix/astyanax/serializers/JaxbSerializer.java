@@ -21,7 +21,7 @@ import com.netflix.astyanax.connectionpool.exceptions.SerializationException;
 /**
  * Serializes Objects using Jaxb. An instance of this class may only serialize
  * JAXB compatible objects of classes known to its configured context.
- * 
+ *
  * @author shuzhang0@gmail.com
  */
 public class JaxbSerializer extends AbstractSerializer<Object> {
@@ -44,7 +44,7 @@ public class JaxbSerializer extends AbstractSerializer<Object> {
 
     /**
      * Constructor.
-     * 
+     *
      * @param serializableClasses
      *            List of classes which can be serialized by this instance. Note
      *            that concrete classes directly referenced by any class in the
@@ -125,7 +125,7 @@ public class JaxbSerializer extends AbstractSerializer<Object> {
 
     /**
      * Get a new XML stream writer.
-     * 
+     *
      * @param output
      *            An underlying OutputStream to write to.
      * @return a new {@link XMLStreamWriter} which writes to the specified
@@ -145,7 +145,7 @@ public class JaxbSerializer extends AbstractSerializer<Object> {
 
     /**
      * Get a new XML stream reader.
-     * 
+     *
      * @param input
      *            the underlying InputStream to read from.
      * @return a new {@link XmlStreamReader} which reads from the specified

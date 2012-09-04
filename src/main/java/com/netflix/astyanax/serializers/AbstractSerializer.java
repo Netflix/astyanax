@@ -17,9 +17,9 @@ import com.netflix.astyanax.Serializer;
  * A base class for serializer implementations. Takes care of the default
  * implementations of to/fromBytesList and to/fromBytesMap. Extenders of this
  * class only need to implement the toBytes and fromBytes.
- * 
+ *
  * @author Ed Anuff
- * 
+ *
  * @param <T>
  */
 public abstract class AbstractSerializer<T> implements Serializer<T> {
@@ -43,7 +43,7 @@ public abstract class AbstractSerializer<T> implements Serializer<T> {
     /*
      * public ByteBuffer toByteBuffer(T obj) { return
      * ByteBuffer.wrap(toBytes(obj)); }
-     * 
+     *
      * public ByteBuffer toByteBuffer(T obj, ByteBuffer byteBuffer, int offset,
      * int length) { byteBuffer.put(toBytes(obj), offset, length); return
      * byteBuffer; }
@@ -55,7 +55,7 @@ public abstract class AbstractSerializer<T> implements Serializer<T> {
     /*
      * public T fromByteBuffer(ByteBuffer byteBuffer) { return
      * fromBytes(byteBuffer.array()); }
-     * 
+     *
      * public T fromByteBuffer(ByteBuffer byteBuffer, int offset, int length) {
      * return fromBytes(Arrays.copyOfRange(byteBuffer.array(), offset, length));
      * }

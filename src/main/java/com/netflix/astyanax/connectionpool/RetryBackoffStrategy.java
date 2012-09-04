@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright 2011 Netflix
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,9 +18,9 @@ package com.netflix.astyanax.connectionpool;
 /**
  * Strategy used to calculate how much to back off for each subsequent attempt
  * to reconnect to a downed host
- * 
+ *
  * @author elandau
- * 
+ *
  */
 public interface RetryBackoffStrategy {
     public interface Callback {
@@ -40,7 +40,7 @@ public interface RetryBackoffStrategy {
 
         /**
          * Return the next backoff delay in the strategy
-         * 
+         *
          * @return
          */
         long getNextDelay();
@@ -55,7 +55,7 @@ public interface RetryBackoffStrategy {
 
     /**
      * Create an instance of the strategy for a single host
-     * 
+     *
      * @return
      */
     Instance createInstance();

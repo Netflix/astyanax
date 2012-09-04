@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright 2011 Netflix
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,13 +21,13 @@ import java.util.Map;
  * Monitoring interface to receive notification of pool events. A concrete
  * monitor will make event stats available to a monitoring application and may
  * also log events to a log file.
- * 
+ *
  * @author elandau
  */
 public interface ConnectionPoolMonitor {
     /**
      * Errors trying to execute an operation
-     * 
+     *
      * @param reason
      * @param host
      */
@@ -37,7 +37,7 @@ public interface ConnectionPoolMonitor {
 
     /**
      * Succeeded in executing an operation
-     * 
+     *
      * @param host
      * @param latency
      */
@@ -54,7 +54,7 @@ public interface ConnectionPoolMonitor {
 
     /**
      * Closed a connection
-     * 
+     *
      * @param reason
      *            TODO: Make the host available to this
      */
@@ -64,7 +64,7 @@ public interface ConnectionPoolMonitor {
 
     /**
      * Attempt to create a connection failed
-     * 
+     *
      * @param host
      * @param reason
      */
@@ -74,7 +74,7 @@ public interface ConnectionPoolMonitor {
 
     /**
      * Incremented for each connection borrowed
-     * 
+     *
      * @param host
      *            Host from which the connection was borrowed
      * @param delay
@@ -86,7 +86,7 @@ public interface ConnectionPoolMonitor {
 
     /**
      * Incremented for each connection returned.
-     * 
+     *
      * @param host
      *            Host to which connection is returned
      */
@@ -119,7 +119,7 @@ public interface ConnectionPoolMonitor {
     /**
      * A host was added and given the associated pool. The pool is immutable and
      * can be used to get info about the number of open connections
-     * 
+     *
      * @param host
      * @param pool
      */
@@ -128,14 +128,14 @@ public interface ConnectionPoolMonitor {
     /**
      * A host was removed from the pool. This is usually called when a downed
      * host is removed from the ring.
-     * 
+     *
      * @param host
      */
     void onHostRemoved(Host host);
 
     /**
      * A host was identified as downed.
-     * 
+     *
      * @param host
      * @param reason
      *            Exception that caused the host to be identified as down
@@ -144,7 +144,7 @@ public interface ConnectionPoolMonitor {
 
     /**
      * A host was reactivated after being marked down
-     * 
+     *
      * @param host
      * @param pool
      */
@@ -159,7 +159,7 @@ public interface ConnectionPoolMonitor {
 
     /**
      * Return a mapping of all hosts and their statistics
-     * 
+     *
      * @return
      */
     Map<Host, HostStats> getHostStats();

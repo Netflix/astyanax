@@ -6,9 +6,9 @@ import org.apache.cassandra.db.marshal.IntegerType;
 
 /**
  * Converts bytes to Integer and vice versa
- * 
+ *
  * @author Bozhidar Bozhanov
- * 
+ *
  */
 public final class IntegerSerializer extends AbstractSerializer<Integer> {
 

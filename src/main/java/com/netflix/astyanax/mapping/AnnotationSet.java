@@ -20,7 +20,7 @@ public interface AnnotationSet<ID extends Annotation, COLUMN extends Annotation>
 
     /**
      * Return the ID/Key name to use
-     * 
+     *
      * @param field
      *            the field from the bean
      * @param annotation
@@ -32,7 +32,7 @@ public interface AnnotationSet<ID extends Annotation, COLUMN extends Annotation>
     /**
      * Return the column name to use for the given field. NOTE: if the field
      * should not be persisted, return <code>null</code>.
-     * 
+     *
      * @param field
      *            the field from the bean
      * @param annotation

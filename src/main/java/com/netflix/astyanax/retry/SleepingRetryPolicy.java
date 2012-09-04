@@ -5,9 +5,9 @@ import com.netflix.astyanax.util.StringUtils;
 /**
  * Base sleeping retry policy with optional count limit.  The sleep time
  * is delegated to the subclass.
- * 
+ *
  * @author elandau
- * 
+ *
  */
 public abstract class SleepingRetryPolicy implements RetryPolicy {
     private final int maxAttempts;
@@ -56,7 +56,7 @@ public abstract class SleepingRetryPolicy implements RetryPolicy {
     public int getMax() {
         return getMaxAttemptCount();
     }
-    
+
     public int getMaxAttemptCount() {
         return maxAttempts;
     }

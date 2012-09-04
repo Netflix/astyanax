@@ -135,11 +135,11 @@ public class ThrifeKeyspaceImplTest {
     public static ColumnFamily<String, UUID> CF_USER_UNIQUE_UUID = ColumnFamily
             .newColumnFamily("UserUniqueUUID", StringSerializer.get(),
                     TimeUUIDSerializer.get());
-    
+
     public static ColumnFamily<String, UUID> CF_EMAIL_UNIQUE_UUID = ColumnFamily
             .newColumnFamily("EmailUniqueUUID", StringSerializer.get(),
                     TimeUUIDSerializer.get());
-    
+
     public static AnnotatedCompositeSerializer<SessionEvent> SE_SERIALIZER = new AnnotatedCompositeSerializer<SessionEvent>(
             SessionEvent.class);
 
@@ -150,16 +150,16 @@ public class ThrifeKeyspaceImplTest {
     private static final String SEEDS = "localhost:9160";
 
     private static final long CASSANDRA_WAIT_TIME = 3000;
-    
+
     @BeforeClass
     public static void setup() throws Exception {
         System.out.println("TESTING THRIFT KEYSPACE");
 
         cassandra = new EmbeddedCassandra();
         cassandra.start();
-        
+
         Thread.sleep(CASSANDRA_WAIT_TIME);
-        
+
         if (TEST_INIT_KEYSPACE) {
             AstyanaxContext<Cluster> clusterContext = new AstyanaxContext.Builder()
                     .forCluster(TEST_CLUSTER_NAME)
@@ -307,7 +307,7 @@ public class ThrifeKeyspaceImplTest {
     public static void teardown() {
         if (keyspaceContext != null)
             keyspaceContext.shutdown();
-        
+
         if (cassandra != null)
             cassandra.stop();
     }
@@ -478,7 +478,7 @@ public class ThrifeKeyspaceImplTest {
         }
 
     }
-    
+
     @Test
     public void testMultiRowUniqueness() {
         DedicatedMultiRowUniquenessConstraint<UUID> constraint = new DedicatedMultiRowUniquenessConstraint<UUID>
@@ -486,13 +486,13 @@ public class ThrifeKeyspaceImplTest {
                   .withConsistencyLevel(ConsistencyLevel.CL_ONE)
                   .withRow(CF_USER_UNIQUE_UUID, "user1")
                   .withRow(CF_EMAIL_UNIQUE_UUID, "user1@domain.com");
-        
+
         DedicatedMultiRowUniquenessConstraint<UUID> constraint2 = new DedicatedMultiRowUniquenessConstraint<UUID>
                   (keyspace, TimeUUIDUtils.getUniqueTimeUUIDinMicros())
                   .withConsistencyLevel(ConsistencyLevel.CL_ONE)
                   .withRow(CF_USER_UNIQUE_UUID, "user1")
                   .withRow(CF_EMAIL_UNIQUE_UUID, "user1@domain.com");
-        
+
         try {
             Column<UUID> c = constraint.getUniqueColumn();
             Assert.fail();
@@ -500,19 +500,19 @@ public class ThrifeKeyspaceImplTest {
         catch (Exception e) {
             LOG.info(e.getMessage());
         }
-        
+
         try {
             constraint.acquire();
-            
+
             Column<UUID> c = constraint.getUniqueColumn();
             LOG.info("Unique column is " + c.getName());
-            
+
             try {
                 constraint2.acquire();
                 Assert.fail("Should already be acquired");
             }
             catch (NotUniqueException e) {
-                
+
             }
             catch (Exception e) {
                 e.printStackTrace();
@@ -541,7 +541,7 @@ public class ThrifeKeyspaceImplTest {
                 Assert.fail();
             }
         }
-        
+
         try {
             constraint2.acquire();
             Column<UUID> c = constraint.getUniqueColumn();
@@ -563,7 +563,7 @@ public class ThrifeKeyspaceImplTest {
                 Assert.fail();
             }
         }
-        
+
     }
 
     @Test
@@ -1237,16 +1237,16 @@ public class ThrifeKeyspaceImplTest {
         /*
          * Composite c = new Composite(); c.addComponent("String1",
          * StringSerializer.get()) .addComponent(123, IntegerSerializer.get());
-         * 
+         *
          * MutationBatch m = keyspace.prepareMutationBatch();
          * m.withRow(CF_COMPOSITE, "Key1") .putColumn(c, 123, null);
-         * 
+         *
          * try { m.execute(); } catch (ConnectionException e) { Assert.fail(); }
-         * 
+         *
          * try { OperationResult<Column<Composite>> result =
          * keyspace.prepareQuery(CF_COMPOSITE) .getKey("Key1") .getColumn(c)
          * .execute();
-         * 
+         *
          * Assert.assertEquals(123, result.getResult().getIntegerValue()); }
          * catch (ConnectionException e) { Assert.fail(); }
          */

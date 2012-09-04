@@ -2,9 +2,9 @@ package com.netflix.astyanax.retry;
 
 /**
  * Interface for any retry logic
- * 
+ *
  * @author elandau
- * 
+ *
  */
 public interface RetryPolicy {
     /**
@@ -24,21 +24,21 @@ public interface RetryPolicy {
 
     /**
      * Ask the policy if a retry is allowed. This may internally sleep
-     * 
+     *
      * @return
      */
     boolean allowRetry();
 
     /**
      * Return the number of attempts since begin was called
-     * 
+     *
      * @return
      */
     int getAttemptCount();
 
     /**
      * Duplicate this policy into a fresh instance
-     * 
+     *
      * @return
      */
     RetryPolicy duplicate();

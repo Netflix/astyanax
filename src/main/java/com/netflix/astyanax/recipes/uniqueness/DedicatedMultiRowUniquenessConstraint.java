@@ -29,25 +29,25 @@ public class DedicatedMultiRowUniquenessConstraint<C> implements UniquenessConst
     private Integer ttl = null;
     private ConsistencyLevel consistencyLevel = ConsistencyLevel.CL_LOCAL_QUORUM;
     private final C uniqueColumnName;
-    
+
     private class Row<K> {
         private final ColumnFamily<K, C> columnFamily;
         private final K row;
-        
+
         Row(ColumnFamily<K, C> columnFamily, K row) {
             super();
             this.columnFamily = columnFamily;
             this.row = row;
         }
-        
+
         void fillMutation(MutationBatch m, Integer ttl) {
             m.withRow(columnFamily, row).putEmptyColumn(uniqueColumnName, ttl);
         }
-        
+
         void fillReleaseMutation(MutationBatch m) {
             m.withRow(columnFamily, row).deleteColumn(uniqueColumnName);
         }
-        
+
         void verifyLock() throws Exception {
             // Phase 2: Read back all columns. There should be only 1
             ColumnList<C> result = keyspace.prepareQuery(columnFamily).setConsistencyLevel(consistencyLevel)
@@ -57,7 +57,7 @@ public class DedicatedMultiRowUniquenessConstraint<C> implements UniquenessConst
                 throw new NotUniqueException(row.toString());
             }
         }
-        
+
         Column<C> getUniqueColumn() throws ConnectionException {
             ColumnList<C> columns = keyspace.prepareQuery(columnFamily).getKey(row).execute().getResult();
             Column<C> foundColumn = null;
@@ -74,7 +74,7 @@ public class DedicatedMultiRowUniquenessConstraint<C> implements UniquenessConst
             return foundColumn;
         }
     }
-    
+
     private final List<Row<?>> locks = Lists.newArrayList();
 
     public DedicatedMultiRowUniquenessConstraint(Keyspace keyspace, Supplier<C> uniqueColumnSupplier) {
@@ -91,7 +91,7 @@ public class DedicatedMultiRowUniquenessConstraint<C> implements UniquenessConst
      * TTL to use for the uniquness operation. This is the TTL for the columns
      * to expire in the event of a client crash before the uniqueness can be
      * committed
-     * 
+     *
      * @param ttl
      * @return
      */
@@ -102,7 +102,7 @@ public class DedicatedMultiRowUniquenessConstraint<C> implements UniquenessConst
 
     /**
      * Consistency level used
-     * 
+     *
      * @param consistencyLevel
      * @return
      */
@@ -113,7 +113,7 @@ public class DedicatedMultiRowUniquenessConstraint<C> implements UniquenessConst
 
     /**
      * Add a row to the set of rows being tested for uniqueness
-     * 
+     *
      * @param columnFamily
      * @param rowKey
      * @return
@@ -122,7 +122,7 @@ public class DedicatedMultiRowUniquenessConstraint<C> implements UniquenessConst
         locks.add(new Row<K>(columnFamily, rowKey));
         return this;
     }
-    
+
     public C getLockColumn() {
         return uniqueColumnName;
     }
@@ -131,7 +131,7 @@ public class DedicatedMultiRowUniquenessConstraint<C> implements UniquenessConst
     public void acquire() throws NotUniqueException, Exception {
         acquireAndMutate(null);
     }
-    
+
     @Override
     public void acquireAndMutate(MutationBatch other) throws NotUniqueException, Exception {
         // Insert lock check column for all rows in a single batch mutation
@@ -151,7 +151,7 @@ public class DedicatedMultiRowUniquenessConstraint<C> implements UniquenessConst
             for (Row<?> lock : locks) {
                 lock.fillMutation(m, null);
             }
-            
+
             if (other != null) {
                 m.mergeShallow(other);
             }
@@ -179,22 +179,22 @@ public class DedicatedMultiRowUniquenessConstraint<C> implements UniquenessConst
         }
         m.execute();
     }
-    
+
     /**
      * @return
      * @throws Exception
      */
     public Column<C> getUniqueColumn() throws Exception {
-        if (locks.size() == 0) 
+        if (locks.size() == 0)
             throw new IllegalStateException("Missing call to withRow to add rows to the uniqueness constraint");
-        
+
         // Get the unique row from all columns
         List<Column<C>> columns = Lists.newArrayList();
         for (Row<?> row : locks) {
             columns.add(row.getUniqueColumn());
         }
-        
-        // Check that all rows have the same unique column otherwise they are not part of 
+
+        // Check that all rows have the same unique column otherwise they are not part of
         // the same unique group
         Column<C> foundColumn = columns.get(0);
         for (int i = 1; i < columns.size(); i++) {
@@ -202,16 +202,16 @@ public class DedicatedMultiRowUniquenessConstraint<C> implements UniquenessConst
             if (!nextColumn.getRawName().equals(foundColumn.getRawName())) {
                 throw new NotUniqueException("The provided rows are not part of the same uniquness constraint");
             }
-            
+
             if (foundColumn.hasValue() != nextColumn.hasValue()) {
                 throw new NotUniqueException("The provided rows are not part of the same uniquness constraint");
             }
-            
+
             if (foundColumn.hasValue() && !nextColumn.getByteBufferValue().equals((foundColumn.getByteBufferValue()))) {
                 throw new NotUniqueException("The provided rows are not part of the same uniquness constraint");
             }
         }
-        
+
         return foundColumn;
     }
 }

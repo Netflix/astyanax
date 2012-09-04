@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 
 /**
  * Uses Char Serializer
- * 
+ *
  * @author Todd Nine
  */
 public class CharSerializer extends AbstractSerializer<Character> {

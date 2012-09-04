@@ -6,8 +6,8 @@ import com.netflix.astyanax.util.StringUtils;
 
 /**
  * Unbounded exponential backoff will sleep a random number of intervals within an
- * exponentially increasing number of intervals.  
- * 
+ * exponentially increasing number of intervals.
+ *
  * @author elandau
  *
  */
@@ -29,7 +29,7 @@ public class ExponentialBackoff extends SleepingRetryPolicy {
     public int getBaseSleepTimeMs() {
         return baseSleepTimeMs;
     }
-    
+
     @Override
     public RetryPolicy duplicate() {
         return new ExponentialBackoff(baseSleepTimeMs, getMaxAttemptCount());

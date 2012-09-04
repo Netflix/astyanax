@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright 2011 Netflix
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -43,12 +43,14 @@ import com.netflix.astyanax.WriteAheadEntry;
 import com.netflix.astyanax.WriteAheadLog;
 import com.netflix.astyanax.SerializerPackage;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
+import com.netflix.astyanax.connectionpool.Endpoint;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
+import com.netflix.astyanax.connectionpool.impl.EndpointImpl;
 import com.netflix.astyanax.connectionpool.impl.TokenRangeImpl;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.model.*;
@@ -180,7 +182,15 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                     @Override
                                     public TokenRange apply(
                                             org.apache.cassandra.thrift.TokenRange tr) {
-                                        return new TokenRangeImpl(tr.getStart_token(), tr.getEnd_token(), tr.getEndpoints());
+                                        List<Endpoint> endpoints = Lists.transform(tr.getEndpoint_details(),
+                                            new Function<org.apache.cassandra.thrift.EndpointDetails, Endpoint>() {
+                                                @Override
+                                                public Endpoint apply(
+                                                        org.apache.cassandra.thrift.EndpointDetails ed) {
+                                                    return new EndpointImpl(ed.getHost(), ed.getDatacenter(), ed.getRack());
+                                                }
+                                            });
+                                        return new TokenRangeImpl(tr.getStart_token(), tr.getEnd_token(), endpoints);
                                     }
                                 });
                     }
@@ -208,7 +218,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
             return describeRing();
         }
     }
-    
+
     @Override
     public KeyspaceDefinition describeKeyspace() throws ConnectionException {
         return executeOperation(

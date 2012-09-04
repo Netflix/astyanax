@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright 2011 Netflix
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,7 +26,7 @@ import com.netflix.astyanax.model.Rows;
 public interface IndexQuery<K, C> extends Execution<Rows<K, C>> {
     /**
      * Limit the number of rows in the response
-     * 
+     *
      * @param count
      * @return
      * @deprecated Use setRowLimit instead
@@ -36,7 +36,7 @@ public interface IndexQuery<K, C> extends Execution<Rows<K, C>> {
 
     /**
      * Limits the number of rows returned
-     * 
+     *
      * @param count
      * @return
      */
@@ -44,7 +44,7 @@ public interface IndexQuery<K, C> extends Execution<Rows<K, C>> {
 
     /**
      * ?
-     * 
+     *
      * @param key
      * @return
      */
@@ -53,14 +53,14 @@ public interface IndexQuery<K, C> extends Execution<Rows<K, C>> {
     /**
      * Add an expression (EQ, GT, GTE, LT, LTE) to the clause. Expressions are
      * inherently ANDed
-     * 
+     *
      * @return
      */
     IndexColumnExpression<K, C> addExpression();
 
     /**
      * Add a set of prepare index expressions.
-     * 
+     *
      * @param expressions
      * @return
      */
@@ -68,7 +68,7 @@ public interface IndexQuery<K, C> extends Execution<Rows<K, C>> {
 
     /**
      * Specify a non-contiguous set of columns to retrieve.
-     * 
+     *
      * @param columns
      * @return
      */
@@ -76,7 +76,7 @@ public interface IndexQuery<K, C> extends Execution<Rows<K, C>> {
 
     /**
      * Specify a non-contiguous set of columns to retrieve.
-     * 
+     *
      * @param columns
      * @return
      */
@@ -84,7 +84,7 @@ public interface IndexQuery<K, C> extends Execution<Rows<K, C>> {
 
     /**
      * Use this when your application caches the column slice.
-     * 
+     *
      * @param slice
      * @return
      */
@@ -92,7 +92,7 @@ public interface IndexQuery<K, C> extends Execution<Rows<K, C>> {
 
     /**
      * Specify a range of columns to return.
-     * 
+     *
      * @param startColumn
      *            First column in the range
      * @param endColumn
@@ -109,7 +109,7 @@ public interface IndexQuery<K, C> extends Execution<Rows<K, C>> {
     /**
      * Specify a range and provide pre-constructed start and end columns. Use
      * this with Composite columns
-     * 
+     *
      * @param startColumn
      * @param endColumn
      * @param reversed
@@ -121,7 +121,7 @@ public interface IndexQuery<K, C> extends Execution<Rows<K, C>> {
     /**
      * Specify a range of composite columns. Use this in conjunction with the
      * AnnotatedCompositeSerializer.buildRange().
-     * 
+     *
      * @param range
      * @return
      */
@@ -136,7 +136,7 @@ public interface IndexQuery<K, C> extends Execution<Rows<K, C>> {
     /**
      * Automatically sets the next start key so that the next call to execute
      * will fetch the next block of rows
-     * 
+     *
      * @return
      */
     IndexQuery<K, C> autoPaginateRows(boolean autoPaginate);

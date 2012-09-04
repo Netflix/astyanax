@@ -7,7 +7,7 @@ import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 public interface ChunkedStorageProvider {
     /**
      * Write a single chunk to the storage
-     * 
+     *
      * @param chunk
      * @returns bytes written
      * @throws Exception
@@ -16,7 +16,7 @@ public interface ChunkedStorageProvider {
 
     /**
      * Read the request chunk id from the storage
-     * 
+     *
      * @param name
      * @param chunkId
      * @return
@@ -25,7 +25,7 @@ public interface ChunkedStorageProvider {
 
     /**
      * Delete a chunk
-     * 
+     *
      * @param objectName
      * @param chunkId
      * @throws Exception
@@ -37,7 +37,7 @@ public interface ChunkedStorageProvider {
      * start of the operation but are updated after the file has been written
      * with additional information such as the total number of chunks and the
      * file size
-     * 
+     *
      * @param objectName
      * @param attr
      * @throws Exception
@@ -46,7 +46,7 @@ public interface ChunkedStorageProvider {
 
     /**
      * Retrieve information for a file
-     * 
+     *
      * @param objectName
      * @return
      * @throws Exception
@@ -55,7 +55,7 @@ public interface ChunkedStorageProvider {
 
     /**
      * Return the preferred chunk size for this provider
-     * 
+     *
      * @return
      */
     int getDefaultChunkSize();

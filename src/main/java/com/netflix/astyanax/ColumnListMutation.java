@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright 2011 Netflix
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,9 +23,9 @@ import com.netflix.astyanax.model.ColumnPath;
 
 /**
  * Abstraction for batching column operations on a single row.
- * 
+ *
  * @author elandau
- * 
+ *
  * @param <C>
  */
 public interface ColumnListMutation<C> {
@@ -33,7 +33,7 @@ public interface ColumnListMutation<C> {
      * Generic call to insert a column value with a custom serializer. User this
      * only when you need a custom serializer otherwise use the overloaded
      * putColumn calls to insert common value types.
-     * 
+     *
      * @param <V>
      * @param columnName
      * @param value
@@ -93,7 +93,7 @@ public interface ColumnListMutation<C> {
      * root of a row effectively deletes the entire row. This operation also
      * increments the internal timestamp by 1 so new mutations can be added to
      * this row.
-     * 
+     *
      * @return
      */
     ColumnListMutation<C> delete();
@@ -101,7 +101,7 @@ public interface ColumnListMutation<C> {
     /**
      * Set the default TTL to use when null is specified to a column insert. The
      * default TTL is null, which means no TTL.
-     * 
+     *
      * @param ttl
      * @return
      */

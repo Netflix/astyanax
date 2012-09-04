@@ -9,6 +9,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.netflix.astyanax.Keyspace;
+import com.netflix.astyanax.connectionpool.Endpoint;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
@@ -29,10 +30,10 @@ public class RingDescribeHostSupplier implements Supplier<Map<BigInteger, List<H
 
             for (TokenRange range : keyspace.describeRing()) {
                 hosts.put(new BigInteger(range.getEndToken()),
-                        Lists.transform(range.getEndpoints(), new Function<String, Host>() {
+                        Lists.transform(range.getEndpoints(), new Function<Endpoint, Host>() {
                             @Override
-                            public Host apply(String ip) {
-                                return new Host(ip, defaultPort);
+                            public Host apply(Endpoint ep) {
+                                return new Host(ep.getHost(), defaultPort, ep.getDatacenter(), ep.getRack());
                             }
                         }));
             }

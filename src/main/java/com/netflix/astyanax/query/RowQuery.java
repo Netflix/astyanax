@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright 2011 Netflix
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,9 +29,9 @@ import com.netflix.astyanax.model.ColumnSlice;
 /**
  * Interface to narrow down the path and column slices within a query after the
  * keys were seleted using the ColumnFamilyQuery.
- * 
+ *
  * @author elandau
- * 
+ *
  * @param <K>
  * @param <C>
  */
@@ -39,7 +39,7 @@ public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
     /**
      * Specify the path to a single column (either Standard or Super). Notice
      * that the sub column type and serializer will be used now.
-     * 
+     *
      * @param <C2>
      * @param path
      * @return
@@ -48,7 +48,7 @@ public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
 
     /**
      * Specify a non-contiguous set of columns to retrieve.
-     * 
+     *
      * @param columns
      * @return
      */
@@ -56,7 +56,7 @@ public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
 
     /**
      * Specify a non-contiguous set of columns to retrieve.
-     * 
+     *
      * @param columns
      * @return
      */
@@ -64,7 +64,7 @@ public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
 
     /**
      * Use this when your application caches the column slice.
-     * 
+     *
      * @param slice
      * @return
      */
@@ -75,7 +75,7 @@ public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
      * non-composite column names. For Composite column names use
      * withColumnRange(ByteBufferRange range) and the
      * AnnotatedCompositeSerializer.buildRange()
-     * 
+     *
      * @param startColumn
      *            First column in the range
      * @param endColumn
@@ -92,7 +92,7 @@ public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
     /**
      * Specify a range and provide pre-constructed start and end columns. Use
      * this with Composite columns
-     * 
+     *
      * @param startColumn
      * @param endColumn
      * @param reversed
@@ -104,7 +104,7 @@ public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
     /**
      * Specify a range of composite columns. Use this in conjunction with the
      * AnnotatedCompositeSerializer.buildRange().
-     * 
+     *
      * @param range
      * @return
      */
@@ -119,14 +119,14 @@ public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
     /**
      * When used in conjunction with a column range this will call subsequent
      * calls to execute() to get the next block of columns.
-     * 
+     *
      * @return
      */
     RowQuery<K, C> autoPaginate(boolean enabled);
 
     /**
      * Copy the results of the query to another column family
-     * 
+     *
      * @param columnFamily
      * @param otherRowKey
      * @return
@@ -135,7 +135,7 @@ public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
 
     /**
      * Returns the number of columns in the response without returning any data
-     * 
+     *
      * @return
      * @throws ConnectionException
      */

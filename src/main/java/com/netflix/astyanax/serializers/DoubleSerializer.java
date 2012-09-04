@@ -6,7 +6,7 @@ import org.apache.cassandra.db.marshal.DoubleType;
 
 /**
  * Uses LongSerializer via translating Doubles to and from raw long bytes form.
- * 
+ *
  * @author Yuri Finkelstein
  */
 public class DoubleSerializer extends AbstractSerializer<Double> {

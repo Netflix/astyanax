@@ -7,7 +7,7 @@ import org.apache.cassandra.db.marshal.IntegerType;
 
 /**
  * Serializer implementation for BigInteger
- * 
+ *
  * @author zznate
  */
 public final class BigIntegerSerializer extends AbstractSerializer<BigInteger> {

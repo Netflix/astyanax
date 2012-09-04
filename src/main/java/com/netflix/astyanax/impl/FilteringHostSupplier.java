@@ -16,9 +16,9 @@ import com.netflix.astyanax.connectionpool.Host;
 /**
  * Node discovery supplier that only return suppliers that come from both
  * sources
- * 
+ *
  * @author elandau
- * 
+ *
  */
 public class FilteringHostSupplier implements Supplier<Map<BigInteger, List<Host>>> {
 

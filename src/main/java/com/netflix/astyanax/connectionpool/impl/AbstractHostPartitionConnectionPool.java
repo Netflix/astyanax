@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright 2011 Netflix
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -45,9 +45,9 @@ import com.netflix.astyanax.retry.RetryPolicy;
 /**
  * Base for all connection pools that keep a separate pool of connections for
  * each host.
- * 
+ *
  * @author elandau
- * 
+ *
  * @param <CL>
  */
 public abstract class AbstractHostPartitionConnectionPool<CL> implements ConnectionPool<CL>,
@@ -245,7 +245,7 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
     /**
      * Return a new failover context. The context captures the connection pool
      * state and implements the necessary failover logic.
-     * 
+     *
      * @param <R>
      * @return
      * @throws ConnectionException

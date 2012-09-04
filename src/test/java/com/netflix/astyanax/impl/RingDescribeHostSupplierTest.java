@@ -12,8 +12,10 @@ import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.netflix.astyanax.connectionpool.Endpoint;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.TokenRange;
+import com.netflix.astyanax.test.TestEndpoint;
 import com.netflix.astyanax.test.TestKeyspace;
 import com.netflix.astyanax.test.TestTokenRange;
 
@@ -22,9 +24,9 @@ import com.netflix.astyanax.test.TestTokenRange;
  * Date: 5/23/12
  */
 public class RingDescribeHostSupplierTest {
-    private static final String NODE1 = "127.0.0.1";
-    private static final String NODE2 = "127.0.0.2";
-    private static final String NODE3 = "127.0.0.3";
+    private static final Endpoint NODE1 = new TestEndpoint("127.0.0.1", "dc1", "rack1");
+    private static final Endpoint NODE2 = new TestEndpoint("127.0.0.2", "dc2", "rack2");
+    private static final Endpoint NODE3 = new TestEndpoint("127.0.0.3", "dc3", "rack3");
     private static final String RANGE_1_END_TOKEN = "0";
     private static final String RANGE_2_END_TOKEN = "2000";
     private static final String RANGE_3_END_TOKEN = "4000";
@@ -47,15 +49,21 @@ public class RingDescribeHostSupplierTest {
 
         List<Host> endpoints = hostMap.get(new BigInteger(RANGE_1_END_TOKEN));
         assertEquals(1,endpoints.size());
-        assertEquals(NODE1, endpoints.get(0).getIpAddress());
+        assertEquals(NODE1.getHost(), endpoints.get(0).getIpAddress());
+        assertEquals(NODE1.getDatacenter(), endpoints.get(0).getDatacenter());
+        assertEquals(NODE1.getRack(), endpoints.get(0).getRack());
 
         endpoints = hostMap.get(new BigInteger(RANGE_2_END_TOKEN));
         assertEquals(1,endpoints.size());
-        assertEquals(NODE2, endpoints.get(0).getIpAddress());
+        assertEquals(NODE2.getHost(), endpoints.get(0).getIpAddress());
+        assertEquals(NODE2.getDatacenter(), endpoints.get(0).getDatacenter());
+        assertEquals(NODE2.getRack(), endpoints.get(0).getRack());
 
         endpoints = hostMap.get(new BigInteger(RANGE_3_END_TOKEN));
         assertEquals(1,endpoints.size());
-        assertEquals(NODE3,endpoints.get(0).getIpAddress());
+        assertEquals(NODE3.getHost(),endpoints.get(0).getIpAddress());
+        assertEquals(NODE3.getDatacenter(), endpoints.get(0).getDatacenter());
+        assertEquals(NODE3.getRack(), endpoints.get(0).getRack());
     }
 
     private List<TokenRange> createTokenRange() {

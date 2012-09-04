@@ -25,6 +25,7 @@ public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
     private int discoveryIntervalInSeconds = 30;
     private ConnectionPoolType connectionPoolType = ConnectionPoolType.ROUND_ROBIN;
     private String cqlVersion = null;
+    private boolean networkTopologyAware = false;
 
     public AstyanaxConfigurationImpl() {
     }
@@ -117,6 +118,16 @@ public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
     @Override
     public String getCqlVersion() {
         return cqlVersion;
+    }
+
+    @Override
+    public boolean getNetworkTopologyAware() {
+        return networkTopologyAware;
+    }
+
+    public AstyanaxConfigurationImpl setNetworkTopologyAware(boolean networkTopologyAware) {
+        this.networkTopologyAware = networkTopologyAware;
+        return this;
     }
 
     public AstyanaxConfigurationImpl setCqlVersion(String cqlVersion) {

@@ -10,11 +10,11 @@ import org.apache.commons.csv.CSVParser;
 
 /**
  * Read a CSV where each row represents a single column
- * 
+ *
  * rowkey, columname, columnvalue
- * 
+ *
  * @author elandau
- * 
+ *
  */
 public class CsvColumnReader implements RecordReader {
     private CSVParser parser;

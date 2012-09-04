@@ -12,7 +12,7 @@ import com.google.common.collect.Collections2;
 public class StringUtils {
     /**
      * Convert a string from "_" delimited to lower camel case
-     * 
+     *
      * @param s
      * @return
      */

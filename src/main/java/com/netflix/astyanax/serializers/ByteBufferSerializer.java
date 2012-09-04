@@ -11,8 +11,8 @@ import org.apache.cassandra.db.marshal.BytesType;
  * interface and implements the fromBytes and toBytes as simple identity
  * functions. However, the from and to methods both return the results of
  * {@link ByteBuffer#duplicate()}
- * 
- * 
+ *
+ *
  * @author Ran Tavory
  * @author zznate
  */

@@ -9,14 +9,14 @@ import com.netflix.astyanax.connectionpool.exceptions.WalException;
  * able to survive from a crash or hardware failure. After a crash the system
  * will inspect the WAL for records and replay them. If a record is successfully
  * written to cassandra it will be removed from the WAL.
- * 
+ *
  * @author elandau
- * 
+ *
  */
 public interface WriteAheadLog {
     /**
      * Add an entry to WAL before it is sent to Cassandra.
-     * 
+     *
      * @param batch
      * @return
      */
@@ -25,7 +25,7 @@ public interface WriteAheadLog {
     /**
      * Remove an entry from the WAL after it was successfully written to
      * cassandra
-     * 
+     *
      * @param entry
      */
     void removeEntry(WriteAheadEntry entry);
@@ -33,14 +33,14 @@ public interface WriteAheadLog {
     /**
      * Read the next entry to retry from the wall. Call remove if successful or
      * retryEntry if unable to write to cassandra.
-     * 
+     *
      * @return
      */
     WriteAheadEntry readNextEntry();
 
     /**
      * Retry an entry retrieved by calling getNextEntry();
-     * 
+     *
      * @param entry
      */
     void retryEntry(WriteAheadEntry entry);

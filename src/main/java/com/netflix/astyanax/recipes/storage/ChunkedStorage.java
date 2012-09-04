@@ -19,7 +19,7 @@ public class ChunkedStorage {
     public static ObjectInfoReader newInfoReader(ChunkedStorageProvider provider, String objectName) {
         return new ObjectInfoReader(provider, objectName);
     }
-    
+
     public static ObjectDirectoryLister newObjectDirectoryLister(ChunkedStorageProvider provider, String path) {
         return new ObjectDirectoryLister(provider, path);
     }

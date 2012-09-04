@@ -6,9 +6,9 @@ import org.apache.cassandra.db.marshal.LongType;
 
 /**
  * Converts bytes to Long and vise a versa
- * 
+ *
  * @author Ran Tavory
- * 
+ *
  */
 public final class LongSerializer extends AbstractSerializer<Long> {
 

@@ -6,9 +6,9 @@ import org.apache.cassandra.db.marshal.BooleanType;
 
 /**
  * Converts bytes to Boolean and vice versa
- * 
+ *
  * @author Bozhidar Bozhanov
- * 
+ *
  */
 public final class BooleanSerializer extends AbstractSerializer<Boolean> {
 

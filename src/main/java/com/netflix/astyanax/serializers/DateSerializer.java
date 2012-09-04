@@ -10,7 +10,7 @@ import org.apache.cassandra.db.marshal.DateType;
  * from a long which represents the specified number of milliseconds since the
  * standard base time known as "the Unix epoch", that is January 1, 1970,
  * 00:00:00 UTC.
- * 
+ *
  * @author Jim Ancona
  * @see java.util.Date
  */

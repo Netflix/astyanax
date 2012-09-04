@@ -13,12 +13,12 @@ import com.netflix.astyanax.model.RangeEndpoint;
 
 /**
  * Serializer for a Pojo annotated with Component field annotations
- * 
+ *
  * Serialized data is formatted as a list of components with each component
  * having the format: <2 byte length><data><0>
- * 
+ *
  * @author elandau
- * 
+ *
  * @param <T>
  */
 public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
@@ -27,9 +27,9 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
 
     /**
      * Serializer for a single component within the Pojo
-     * 
+     *
      * @author elandau
-     * 
+     *
      * @param <P>
      */
     public static class ComponentSerializer<P> implements Comparable<ComponentSerializer<?>> {

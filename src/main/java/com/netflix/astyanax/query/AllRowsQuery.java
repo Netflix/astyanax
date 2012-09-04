@@ -13,20 +13,20 @@ import com.netflix.astyanax.model.Rows;
 
 /**
  * Specialized query to iterate the contents of a column family.
- * 
+ *
  * ColumnFamily<String, String> CF_STANDARD1 = new ColumnFamily<String,
  * String>("Standard1", StringSerializer.get(), StringSerializer.get());
- * 
+ *
  * Iterator<Row<String,String>> iter =
  * keyspace.prepareQuery(MockConstants.CF_STANDARD1).iterator(); while
  * (iter.hasNext()) { Row<String,String> row = iter.next(); LOG.info("ROW: " +
  * row.getKey()); }
- * 
+ *
  * The iterator is implemented by making 'paginated' queries to Cassandra with
  * each query returning up to a the block size set by setBlockSize (default is
  * 10). The incremental query is hidden from the caller thereby providing a
  * virtual view into the column family.
- * 
+ *
  * There are a few important implementation details that need to be considered.
  * This implementation assumes the random partitioner is used. Consequently the
  * KeyRange query is done using tokens and not row keys. This is done because
@@ -41,9 +41,9 @@ import com.netflix.astyanax.model.Rows;
  * that is large enough so that the likelyhood of this happening is very low.
  * Also, if your application can tolerate the potential for skipped row keys
  * then call setRepeatLastToken(false) to turn off this features.
- * 
+ *
  * @author elandau
- * 
+ *
  * @param <K>
  * @param <C>
  */
@@ -56,7 +56,7 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
     /**
      * Maximum number of rows to return for each incremental query to Cassandra.
      * This limit also represents the page size when paginating.
-     * 
+     *
      * @param blockSize
      * @return
      */
@@ -66,7 +66,7 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
      * Sets the exception handler to use when handling exceptions inside
      * Iterator.next(). This gives the caller a chance to implement a backoff
      * strategy or stop the iteration.
-     * 
+     *
      * @param cb
      * @return
      */
@@ -74,7 +74,7 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
 
     /**
      * If true will repeat the last token in the previous block.
-     * 
+     *
      * @param repeatLastToken
      * @return
      */
@@ -82,7 +82,7 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
 
     /**
      * Specify a non-contiguous set of columns to retrieve.
-     * 
+     *
      * @param columns
      * @return
      */
@@ -90,7 +90,7 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
 
     /**
      * Specify a non-contiguous set of columns to retrieve.
-     * 
+     *
      * @param columns
      * @return
      */
@@ -98,7 +98,7 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
 
     /**
      * Use this when your application caches the column slice.
-     * 
+     *
      * @param slice
      * @return
      */
@@ -106,7 +106,7 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
 
     /**
      * Specify a range of columns to return.
-     * 
+     *
      * @param startColumn
      *            First column in the range
      * @param endColumn
@@ -123,7 +123,7 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
     /**
      * Specify a range and provide pre-constructed start and end columns. Use
      * this with Composite columns
-     * 
+     *
      * @param startColumn
      * @param endColumn
      * @param reversed
@@ -135,7 +135,7 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
     /**
      * Specify a range of composite columns. Use this in conjunction with the
      * AnnotatedCompositeSerializer.buildRange().
-     * 
+     *
      * @param range
      * @return
      */
@@ -143,22 +143,22 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
 
     /**
      * Split the query into N threads with each thread processing an equal size chunk from the token range.
-     * 
+     *
      * Note that the actual number of threads is still limited by the available threads in the thread
      * pool that was set with the AstyanaxConfiguration.
-     * 
+     *
      * @param numberOfThreads
      * @return
      */
     AllRowsQuery<K, C> setConcurrencyLevel(int numberOfThreads);
-    
+
     @Deprecated
     AllRowsQuery<K, C> setThreadCount(int numberOfThreads);
-    
+
     /**
      * Execute the operation in a separate thread for each token range and
      * provide the results in a callback.
-     * 
+     *
      * @param predicate
      * @return
      * @throws ConnectionException

@@ -6,14 +6,14 @@ import java.util.Set;
 /**
  * Grouping of serializers for a single column family. Use this only for
  * implementing advanced data models.
- * 
+ *
  * @author elandau
- * 
+ *
  */
 public interface SerializerPackage {
     /**
      * Return the serializer for keys
-     * 
+     *
      * @return
      */
     Serializer<?> getKeySerializer();
@@ -26,7 +26,7 @@ public interface SerializerPackage {
 
     /**
      * Return serializer for column names
-     * 
+     *
      * @author elandau
      * @return
      */
@@ -41,7 +41,7 @@ public interface SerializerPackage {
 
     /**
      * Return the default value serializer
-     * 
+     *
      * @return
      */
     Serializer<?> getDefaultValueSerializer();
@@ -54,7 +54,7 @@ public interface SerializerPackage {
 
     /**
      * Return the value serializer for the specified column name
-     * 
+     *
      * @param columnName
      * @return
      */
@@ -68,7 +68,7 @@ public interface SerializerPackage {
 
     /**
      * Return the value serializer for the specified column name
-     * 
+     *
      * @param columnName
      * @return
      */
@@ -76,14 +76,14 @@ public interface SerializerPackage {
 
     /**
      * Return the set of supported column names
-     * 
+     *
      * @return
      */
     Set<ByteBuffer> getColumnNames();
 
     /**
      * Convert a key to a string using the package's key serializer
-     * 
+     *
      * @param key
      * @return
      */
@@ -91,7 +91,7 @@ public interface SerializerPackage {
 
     /**
      * Convert a column name to a string using the package's column serializer
-     * 
+     *
      * @param key
      * @return
      */
@@ -101,7 +101,7 @@ public interface SerializerPackage {
      * Convert a value to a string using the package's value serializer. Will
      * use either a column specific serializer, if one was specified, or the
      * default value serializer.
-     * 
+     *
      * @param key
      * @return
      */
@@ -109,7 +109,7 @@ public interface SerializerPackage {
 
     /**
      * Convert a string key to a ByteBuffer using the package's key serializer
-     * 
+     *
      * @param key
      * @return
      */
@@ -118,7 +118,7 @@ public interface SerializerPackage {
     /**
      * Convert a string column name to a ByteBuffer using the package's column
      * serializer
-     * 
+     *
      * @param key
      * @return
      */
@@ -126,7 +126,7 @@ public interface SerializerPackage {
 
     /**
      * Convert a string value to a string using the package's value serializer
-     * 
+     *
      * @param key
      * @return
      */
@@ -134,7 +134,7 @@ public interface SerializerPackage {
 
     /**
      * Convert a string value to a string using the package's value serializer
-     * 
+     *
      * @param column
      * @param value
      * @return

@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright 2011 Netflix
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.base.Objects;
 import com.google.common.collect.Sets;
 
 public class Host {
@@ -28,6 +29,8 @@ public class Host {
     private final String host;
     private final String ipAddress;
     private final int port;
+    private final String datacenter;
+    private final String rack;
     private final String name;
     private final String url;
     private String id;
@@ -37,15 +40,21 @@ public class Host {
     public static Pattern ipPattern = Pattern
             .compile("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$");
 
-    private Host() {
-        this.host = "None";
-        this.ipAddress = "0.0.0.0";
-        this.port = 0;
+    protected Host(String host, String ipAddess, int port, String datacenter, String rack) {
+        this.host = host;
+        this.ipAddress = ipAddess;
+        this.port = port;
         this.name = String.format("%s(%s):%d", this.host, this.ipAddress, this.port);
         this.url = String.format("%s:%d", this.host, this.port);
+        this.datacenter = null;
+        this.rack = null;
     }
 
-    public Host(String url2, int defaultPort) {
+    private Host() {
+        this("None", "0.0.0.0", 0, null, null);
+    }
+
+    public Host(String url2, int defaultPort, String datacenter, String rack) {
 
         String tempHost = parseHostFromUrl(url2);
         this.port = parsePortFromUrl(url2, defaultPort);
@@ -73,11 +82,18 @@ public class Host {
 
         this.name = String.format("%s(%s):%d", tempHost, this.ipAddress, this.port);
         this.url = String.format("%s:%d", this.host, this.port);
+
+        this.datacenter = datacenter;
+        this.rack = rack;
+    }
+
+    public Host(String url2, int defaultPort) {
+        this(url2, defaultPort, null, null);
     }
 
     /**
      * Parse the hostname from a "hostname:port" formatted string
-     * 
+     *
      * @param urlPort
      * @return
      */
@@ -87,7 +103,7 @@ public class Host {
 
     /**
      * Parse the port from a "hostname:port" formatted string
-     * 
+     *
      * @param urlPort
      * @param defaultPort
      * @return
@@ -107,7 +123,9 @@ public class Host {
             return false;
         }
         Host other = (Host) obj;
-        return other.ipAddress.equals(ipAddress) && other.port == port;
+        return other.ipAddress.equals(ipAddress) && other.port == port &&
+                Objects.equal(other.getDatacenter(), datacenter) &&
+                Objects.equal(other.getRack(), rack);
     }
 
     public int hashCode() {
@@ -132,6 +150,14 @@ public class Host {
 
     public int getPort() {
         return this.port;
+    }
+
+    public String getDatacenter() {
+        return this.datacenter;
+    }
+
+    public String getRack() {
+        return this.rack;
     }
 
     public Set<String> getAlternateIpAddresses() {

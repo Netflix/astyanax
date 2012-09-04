@@ -6,9 +6,9 @@ import java.util.List;
 import org.apache.cassandra.utils.Pair;
 
 /**
- * 
+ *
  * @author elandau
- * 
+ *
  */
 public interface RecordReader {
     List<Pair<String, String>> next() throws IOException;

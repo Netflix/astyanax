@@ -23,9 +23,9 @@ import com.netflix.astyanax.connectionpool.exceptions.TimeoutException;
 /**
  * Connection pool which puts all connections in a single queue. The load
  * balancing is essentially random here.
- * 
+ *
  * @author elandau
- * 
+ *
  * @param <CL>
  */
 public class BagOfConnectionsConnectionPoolImpl<CL> extends AbstractHostPartitionConnectionPool<CL> {

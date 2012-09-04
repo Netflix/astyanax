@@ -2,9 +2,13 @@ package com.netflix.astyanax;
 
 import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.netflix.astyanax.impl.DatacenterFilteringHostSupplier;
 import org.apache.commons.lang.StringUtils;
 
 import com.google.common.base.Preconditions;
@@ -29,9 +33,9 @@ import com.netflix.astyanax.shallows.EmptyKeyspaceTracerFactory;
 /**
  * This object tracks the context of an astyanax instance of either a Cluster or
  * Keyspace
- * 
+ *
  * @author elandau
- * 
+ *
  * @param <T>
  */
 public class AstyanaxContext<Entity> {
@@ -165,6 +169,18 @@ public class AstyanaxContext<Entity> {
             }
 
             if (supplier != null) {
+
+                if (asConfig.getNetworkTopologyAware()) {
+                    List<Host> initialHosts;
+                    if (hostSupplier != null) {
+                        initialHosts = Lists.newArrayList(Iterables.concat(hostSupplier.get().values()));
+                    } else {
+                        Preconditions.checkState(!cpConfig.getSeedHosts().isEmpty(), "Missing seed hosts");
+                        initialHosts = cpConfig.getSeedHosts();
+                    }
+                    supplier = new DatacenterFilteringHostSupplier(initialHosts, supplier);
+                }
+
                 discovery = new NodeDiscoveryImpl(StringUtils.join(Arrays.asList(clusterName, keyspaceName), "_"),
                         asConfig.getDiscoveryDelayInSeconds() * 1000, supplier, cp);
             }

@@ -18,9 +18,9 @@ import com.netflix.astyanax.serializers.UUIDSerializer;
 
 /**
  * Utility builder to construct a ByteBufferRange to be used in a slice query.
- * 
+ *
  * @author elandau
- * 
+ *
  */
 public class RangeBuilder {
     private static ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);

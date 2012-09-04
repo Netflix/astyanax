@@ -13,12 +13,12 @@ import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.serializers.StringSerializer;
 
 /**
- * Test uniqueness for a single row.  This implementation allows for any 
+ * Test uniqueness for a single row.  This implementation allows for any
  * column type.  If the column family uses UTF8Type for the comparator
  * then it is preferable to use ColumnPrefixUniquenessConstraint.
- * 
+ *
  * @author elandau
- * 
+ *
  * @param <K>
  * @param <C>
  */
@@ -48,9 +48,9 @@ public class RowUniquenessConstraint<K, C> implements UniquenessConstraint {
         this.consistencyLevel = consistencyLevel;
         return this;
     }
-    
+
     /**
-     * Specify the data value to add to the column.  
+     * Specify the data value to add to the column.
      * @param data
      * @return
      */
@@ -58,17 +58,17 @@ public class RowUniquenessConstraint<K, C> implements UniquenessConstraint {
         this.data = data;
         return this;
     }
-    
+
     public RowUniquenessConstraint<K, C> withData(String data) {
         this.data = StringSerializer.get().fromString(data);
         return this;
     }
-    
+
     @Override
     public void acquire() throws NotUniqueException, Exception {
         acquireAndMutate(null);
     }
-    
+
     @Override
     public void acquireAndMutate(MutationBatch mutation) throws NotUniqueException, Exception {
         try {
@@ -90,12 +90,12 @@ public class RowUniquenessConstraint<K, C> implements UniquenessConstraint {
                 throw new NotUniqueException(key.toString());
             }
 
-            // Phase 3: Persist the uniqueness with 
+            // Phase 3: Persist the uniqueness with
             m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
             if (mutation != null) {
                 m.mergeShallow(mutation);
             }
-            
+
             if (data == null) {
                 m.withRow(columnFamily, key).putEmptyColumn(uniqueColumn, null);
             }
@@ -116,7 +116,7 @@ public class RowUniquenessConstraint<K, C> implements UniquenessConstraint {
         m.withRow(columnFamily, key).deleteColumn(uniqueColumn);
         m.execute();
     }
-    
+
     /**
      * Read the data stored with the unique row.  This data is normally a 'foreign' key to
      * another column family.
@@ -130,7 +130,7 @@ public class RowUniquenessConstraint<K, C> implements UniquenessConstraint {
                     .getKey(key)
                 .execute()
                     .getResult();
-        
+
         boolean hasColumn = false;
         ByteBuffer data = null;
         for (Column<C> column : result) {
@@ -142,15 +142,15 @@ public class RowUniquenessConstraint<K, C> implements UniquenessConstraint {
                 data = column.getByteBufferValue();
             }
         }
-        
+
         if (!hasColumn) {
             throw new NotFoundException(this.key.toString() + " has no uniquness lock");
         }
         return data;
     }
-    
+
     public String readDataAsString() throws Exception {
         return StringSerializer.get().fromByteBuffer(readData());
     }
-    
+
 }

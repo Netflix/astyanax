@@ -9,9 +9,9 @@ import com.netflix.astyanax.clock.MicrosecondsSyncClock;
 
 /**
  * Utilitary class to generate TimeUUID (type 1)
- * 
+ *
  * @author Patricio Echague (pechague@gmail.com)
- * 
+ *
  */
 public final class TimeUUIDUtils {
 
@@ -21,7 +21,7 @@ public final class TimeUUIDUtils {
     /**
      * Gets a new and unique time uuid in milliseconds. It is useful to use in a
      * TimeUUIDType sorted column family.
-     * 
+     *
      * @return the time uuid
      */
     public static java.util.UUID getUniqueTimeUUIDinMillis() {
@@ -36,7 +36,7 @@ public final class TimeUUIDUtils {
      * Gets a new time uuid using {@link ClockResolution#createClock()} as a
      * time generator. It is useful to use in a TimeUUIDType sorted column
      * family.
-     * 
+     *
      * @param clock
      *            a ClockResolution
      * @return the time uuid
@@ -51,7 +51,7 @@ public final class TimeUUIDUtils {
      * {@link getTimeUUID(ClockResolution clock)} with an implementaion that provides unique timestamp resolution, like
      * {@link MicrosecondsSyncClockResolution}
      * It is useful to use in a TimeUUIDType sorted column family.
-     * 
+     *
      * @param clock
      *            a ClockResolution
      * @return the time uuid
@@ -101,7 +101,7 @@ public final class TimeUUIDUtils {
     /**
      * Returns an instance of uuid. Useful for when you read out of cassandra
      * you are getting a byte[] that needs to be converted into a TimeUUID.
-     * 
+     *
      * @param uuid
      *            the uuid
      * @return the java.util.uuid
@@ -112,7 +112,7 @@ public final class TimeUUIDUtils {
 
     /**
      * Retrieves the time as long based on the byte[] representation of a UUID.
-     * 
+     *
      * @param uuid
      *            byte[] uuid representation
      * @return a long representing the time
@@ -132,10 +132,10 @@ public final class TimeUUIDUtils {
     /**
      * As byte array. This method is often used in conjunction with @link
      * {@link #getTimeUUID()}
-     * 
+     *
      * @param uuid
      *            the uuid
-     * 
+     *
      * @return the byte[]
      */
     public static byte[] asByteArray(java.util.UUID uuid) {
@@ -156,7 +156,7 @@ public final class TimeUUIDUtils {
 
     /**
      * Coverts a java.util.UUID into a ByteBuffer.
-     * 
+     *
      * @param uuid
      *            a java.util.UUID
      * @return a ByteBuffer representaion of the param UUID
@@ -176,7 +176,7 @@ public final class TimeUUIDUtils {
 
     /**
      * Converts a ByteBuffer containing a UUID into a java.util.UUID
-     * 
+     *
      * @param bb
      *            a ByteBuffer containing a UUID
      * @return a java.util.UUID

@@ -19,33 +19,33 @@ public abstract class AbstractExecuteWithFailoverImpl<CL, R> implements ExecuteW
     private int attemptCounter = 0;
     private final ConnectionPoolMonitor monitor;
     protected final ConnectionPoolConfiguration config;
-    
+
     public AbstractExecuteWithFailoverImpl(ConnectionPoolConfiguration config, ConnectionPoolMonitor monitor)
             throws ConnectionException {
     	this.monitor = monitor;
     	this.config = config;
         startTime = poolStartTime = System.currentTimeMillis();
     }
-    
+
 	final public Host getCurrentHost() {
 		HostConnectionPool<CL> pool = getCurrentHostConnectionPool();
 		if (pool != null)
 			return pool.getHost();
-		else 
+		else
 			return Host.NO_HOST;
 	}
-	
+
 	abstract public HostConnectionPool<CL> getCurrentHostConnectionPool();
 
     abstract public Connection<CL> borrowConnection(Operation<CL, R> operation) throws ConnectionException;
 
 	abstract public boolean canRetry();
-	
+
 	@Override
 	public OperationResult<R> tryOperation(Operation<CL, R> operation) throws ConnectionException {
         while (true) {
             attemptCounter++;
-            
+
             try {
                 connection = borrowConnection(operation);
                 startTime = System.currentTimeMillis();
@@ -77,7 +77,7 @@ public abstract class AbstractExecuteWithFailoverImpl<CL, R> implements ExecuteW
 	        connection = null;
 	    }
 	}
-    
+
     public void informException(ConnectionException connectionException) throws ConnectionException {
         connectionException
             .setHost(getCurrentHost())
@@ -89,12 +89,12 @@ public abstract class AbstractExecuteWithFailoverImpl<CL, R> implements ExecuteW
             if (!canRetry()) {
                 throw connectionException;
             }
-            
+
         	monitor.incFailover(connectionException.getHost(), connectionException);
         }
         else {
             // Most likely an operation error
             throw connectionException;
         }
-    }		
+    }
 }

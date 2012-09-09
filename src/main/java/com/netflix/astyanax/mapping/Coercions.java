@@ -7,6 +7,7 @@ import java.lang.reflect.Field;
 import java.util.Date;
 
 class Coercions {
+    @SuppressWarnings("unchecked")
     static <T> void setFieldFromColumn(T instance, Field field,
             Column<String> column) {
         Object objValue;
@@ -36,6 +37,8 @@ class Coercions {
             objValue = column.getStringValue();
         } else if (field.getType() == byte[].class) {
             objValue = column.getByteArrayValue();
+        } else if (field.getType().isEnum()) {
+            objValue = Enum.valueOf((Class<? extends Enum>)field.getType(), column.getStringValue());
         } else {
             throw new UnsupportedOperationException();
         }
@@ -47,6 +50,7 @@ class Coercions {
         }
     }
 
+    @SuppressWarnings("unchecked")
     static <T> void setColumnMutationFromField(T instance, Field field,
             String columnName, ColumnListMutation<String> mutation) {
         try {
@@ -80,6 +84,8 @@ class Coercions {
                     mutation.putColumn(columnName, (String) objValue, null);
                 } else if(objValue.getClass() == byte[].class) {
                     mutation.putColumn(columnName, (byte[]) objValue, null);
+                } else if (objValue.getClass().isEnum()) {
+                    mutation.putColumn(columnName, objValue.toString(), null);
                 } else {
                     throw new UnsupportedOperationException();
                 }

@@ -48,7 +48,7 @@ import com.netflix.astyanax.retry.RetryPolicy;
  * 
  * @author elandau
  * 
- * @param <CL>
+ * @param <CL>  
  */
 public abstract class AbstractHostPartitionConnectionPool<CL> implements ConnectionPool<CL>,
         SimpleHostConnectionPool.Listener<CL> {
@@ -56,17 +56,17 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
     protected final ConnectionPoolConfiguration config;
     protected final ConnectionFactory<CL> factory;
     protected final ConnectionPoolMonitor monitor;
-    private final LatencyScoreStrategy latencyScoreStrategy;
     protected final Topology<CL> topology;
+    private final LatencyScoreStrategy latencyScoreStrategy;
 
     public AbstractHostPartitionConnectionPool(ConnectionPoolConfiguration config, ConnectionFactory<CL> factory,
             ConnectionPoolMonitor monitor) {
-        this.config = config;
-        this.factory = factory;
-        this.hosts = new NonBlockingHashMap<Host, HostConnectionPool<CL>>();
-        this.monitor = monitor;
+        this.config     = config;
+        this.factory    = factory;
+        this.hosts      = new NonBlockingHashMap<Host, HostConnectionPool<CL>>();
+        this.monitor    = monitor;
         this.latencyScoreStrategy = config.getLatencyScoreStrategy();
-        this.topology = new TokenPartitionedTopology<CL>(this.latencyScoreStrategy);
+        this.topology   = new TokenPartitionedTopology<CL>(this.latencyScoreStrategy);
     }
 
     @Override
@@ -120,9 +120,9 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
     }
 
     @Override
-    public final boolean addHost(Host host, boolean refresh) {
+    public final synchronized boolean addHost(Host host, boolean refresh) {
         // Already exists
-        if (hosts.get(host) != null) {
+        if (hosts.containsKey(host)) {
             return false;
         }
 
@@ -166,7 +166,7 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
     }
 
     @Override
-    public boolean removeHost(Host host, boolean refresh) {
+    public synchronized boolean removeHost(Host host, boolean refresh) {
         HostConnectionPool<CL> pool = hosts.remove(host);
         if (pool != null) {
             monitor.onHostRemoved(host);

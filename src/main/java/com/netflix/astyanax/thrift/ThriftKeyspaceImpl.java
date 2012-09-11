@@ -29,7 +29,6 @@ import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.CounterColumn;
 import org.apache.cassandra.thrift.Cassandra.Client;
 
-import com.google.common.base.Function;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
@@ -169,20 +168,43 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
     @Override
     public List<TokenRange> describeRing() throws ConnectionException {
+        return describeRing(null, null);
+    }
+    
+    @Override
+    public List<TokenRange> describeRing(final String dc) throws ConnectionException {
+        return describeRing(dc, null);
+    }
+    
+    @Override
+    public List<TokenRange> describeRing(final String dc, final String rack) throws ConnectionException {
         return executeOperation(
                 new AbstractKeyspaceOperationImpl<List<TokenRange>>(tracerFactory
                         .newTracer(CassandraOperationType.DESCRIBE_RING), getKeyspaceName()) {
                     @Override
-                    public List<TokenRange> internalExecute(Cassandra.Client client)
-                            throws Exception {
-                        return Lists.transform(client.describe_ring(getKeyspaceName()),
-                                new Function<org.apache.cassandra.thrift.TokenRange, TokenRange>() {
-                                    @Override
-                                    public TokenRange apply(
-                                            org.apache.cassandra.thrift.TokenRange tr) {
-                                        return new TokenRangeImpl(tr.getStart_token(), tr.getEnd_token(), tr.getEndpoints());
-                                    }
-                                });
+                    public List<TokenRange> internalExecute(Cassandra.Client client) throws Exception {
+                        List<org.apache.cassandra.thrift.TokenRange> trs = client.describe_ring(getKeyspaceName());
+                        List<TokenRange> range = Lists.newArrayList();
+                        
+                        for (org.apache.cassandra.thrift.TokenRange tr : trs) {
+                            List<String> endpoints = Lists.newArrayList();
+                            for (org.apache.cassandra.thrift.EndpointDetails ed : tr.getEndpoint_details()) {
+                                if (dc != null && !ed.getDatacenter().equals(dc)) {
+                                    continue;
+                                }
+                                else if (rack != null && !ed.getRack().equals(dc)) {
+                                    continue;
+                                }
+                                else {
+                                    endpoints.add(ed.getHost());
+                                }
+                            }
+                            
+                            if (!endpoints.isEmpty()) {
+                                range.add(new TokenRangeImpl(tr.getStart_token(), tr.getEnd_token(), endpoints));
+                            }
+                        }
+                        return range;
                     }
                 }, getConfig().getRetryPolicy().duplicate()).getResult();
     }
@@ -439,12 +461,17 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     @Override
     public <K, C> OperationResult<Void> truncateColumnFamily(final ColumnFamily<K, C> columnFamily)
             throws OperationException, ConnectionException {
+        return truncateColumnFamily(columnFamily.getName());
+    }
+
+    @Override
+    public OperationResult<Void> truncateColumnFamily(final String columnFamily) throws ConnectionException {
         return executeOperation(
                 new AbstractKeyspaceOperationImpl<Void>(tracerFactory.newTracer(CassandraOperationType.TRUNCATE),
                         getKeyspaceName()) {
                     @Override
                     public Void internalExecute(Cassandra.Client client) throws Exception {
-                        client.truncate(columnFamily.getName());
+                        client.truncate(columnFamily);
                         return null;
                     }
                 }, config.getRetryPolicy().duplicate());
@@ -453,6 +480,19 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     private <R> OperationResult<R> executeOperation(Operation<Cassandra.Client, R> operation, RetryPolicy retry)
             throws OperationException, ConnectionException {
         return connectionPool.executeWithFailover(operation, retry);
+    }
+
+    @Override
+    public String describePartitioner() throws ConnectionException {
+        return connectionPool
+                .executeWithFailover(
+                        new AbstractOperationImpl<String>(
+                                tracerFactory.newTracer(CassandraOperationType.DESCRIBE_PARTITIONER)) {
+                            @Override
+                            public String internalExecute(Client client) throws Exception {
+                                return client.describe_partitioner();
+                            }
+                        }, config.getRetryPolicy().duplicate()).getResult();
     }
 
 }

@@ -376,7 +376,7 @@ public class SimpleHostConnectionPoolTest {
     }
 
     @Test
-    public void testAsyncOpenConnectionWithUnCheckedException() {
+    public void testAsyncOpenConnectionWithUnCheckedException() throws Exception {
         Host host = new Host("127.0.0.1",
                 TestHostType.CONNECT_WITH_UNCHECKED_EXCEPTION.ordinal());
 
@@ -394,6 +394,7 @@ public class SimpleHostConnectionPoolTest {
             Assert.fail();
         } catch (ConnectionException e) {
         }
+        
         Assert.assertEquals(0, pool.getActiveConnectionCount());
         Assert.assertEquals(true, pool.isShutdown());
         Assert.assertEquals(0, pool.getIdleConnectionCount());

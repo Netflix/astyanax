@@ -1,5 +1,6 @@
 package com.netflix.astyanax.thrift;
 
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
@@ -14,10 +15,15 @@ import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnSlice;
 import com.netflix.astyanax.query.AllRowsQuery;
+import com.netflix.astyanax.query.CheckpointManager;
+import com.netflix.astyanax.shallows.EmptyCheckpointManager;
+import com.netflix.astyanax.util.TokenGenerator;
 
 public abstract class AbstractThriftAllRowsQueryImpl<K, C> implements AllRowsQuery<K, C> {
 
     protected SlicePredicate predicate = new SlicePredicate().setSlice_range(ThriftUtils.RANGE_ALL);
+    protected CheckpointManager checkpointManager = new EmptyCheckpointManager();
+    
     // protected KeyRange range = new
     // KeyRange().setCount(100).setStart_token("0").setEnd_token("0");
     private int blockSize = 100;
@@ -25,6 +31,9 @@ public abstract class AbstractThriftAllRowsQueryImpl<K, C> implements AllRowsQue
     private boolean repeatLastToken = true;
     private ExceptionCallback exceptionCallback;
     private Integer nThreads;
+    private BigInteger startToken = TokenGenerator.MINIMUM;
+    private BigInteger endToken   = TokenGenerator.MAXIMUM;
+    private Boolean includeEmptyRows;
     
     public AbstractThriftAllRowsQueryImpl(ColumnFamily<K, C> columnFamily) {
         this.columnFamily = columnFamily;
@@ -50,7 +59,14 @@ public abstract class AbstractThriftAllRowsQueryImpl<K, C> implements AllRowsQue
         this.nThreads = numberOfThreads;
         return this;
     }
-    
+
+
+	@Override
+	public AllRowsQuery<K, C> setCheckpointManager(CheckpointManager manager) {
+		this.checkpointManager = manager;
+		return this;
+	}
+
     @Override
     public AllRowsQuery<K, C> withColumnSlice(C... columns) {
         if (columns != null)
@@ -129,5 +145,37 @@ public abstract class AbstractThriftAllRowsQueryImpl<K, C> implements AllRowsQue
         return this.nThreads;
     }
     
+    public AllRowsQuery<K, C> setIncludeEmptyRows(boolean flag) {
+        this.includeEmptyRows = flag;
+        return this;
+    }
+
+    public BigInteger getStartToken() {
+    	return this.startToken;
+    }
+    
+    public BigInteger getEndToken() {
+    	return this.endToken;
+    }
+    
+    @Override
+    public AllRowsQuery<K, C> forTokenRange(BigInteger startToken, BigInteger endToken) {
+    	this.startToken = startToken;
+    	this.endToken = endToken;
+    	return this;
+    }
+    
+	public AllRowsQuery<K, C> forTokenRange(String startToken, String endToken) {
+		return forTokenRange(new BigInteger(startToken), new BigInteger(endToken));
+	}
+	
+    SlicePredicate getPredicate() {
+        return predicate;
+    }
+    
+    Boolean getIncludeEmptyRows() {
+        return this.includeEmptyRows;
+    }
+
     protected abstract List<org.apache.cassandra.thrift.KeySlice> getNextBlock(KeyRange range);
 }

@@ -51,12 +51,39 @@ public interface Keyspace {
     String getKeyspaceName();
 
     /**
-     * Get a list of all tokens and their endpoints
+     * Describe the partitioner used by the cluster
+     * 
+     * @return
+     * @throws ConnectionException
+     */
+    String describePartitioner() throws ConnectionException;
+
+    /**
+     * Get a list of all tokens and their endpoints.  This call will return this list of ALL nodes
+     * in the cluster, including other regions.  If you are only interested in the subset of
+     * nodes for a specific region then use describeRing(dc);
      * 
      * @return
      * @throws ConnectionException
      */
     List<TokenRange> describeRing() throws ConnectionException;
+
+    /**
+     * Get a list of all tokens and their endpoints for a specific dc only.
+     * 
+     * @param dc - null for all dcs
+     * @return
+     * @throws ConnectionException
+     */
+    List<TokenRange> describeRing(String dc) throws ConnectionException;
+    
+    /**
+     * Get a list of tokens and their endpoints for a specific dc/rack combination.
+     * @param dc
+     * @return
+     * @throws ConnectionException
+     */
+    List<TokenRange> describeRing(String dc, String rack) throws ConnectionException;
 
     /**
      * Describe the ring but use the last locally cached version if available.
@@ -134,6 +161,16 @@ public interface Keyspace {
      */
     <K, C> OperationResult<Void> truncateColumnFamily(ColumnFamily<K, C> columnFamily) throws OperationException,
             ConnectionException;
+    
+    /**
+     * Delete all rows in a column family
+     * 
+     * @param columnFamily
+     * @return
+     * @throws ConnectionException
+     * @throws OperationException
+     */
+    OperationResult<Void> truncateColumnFamily(String columnFamily) throws ConnectionException;
 
     /**
      * This method is used for testing purposes only. It is used to inject

@@ -30,9 +30,10 @@ public class BoundedExponentialBackoff extends ExponentialBackoff {
 
     @Override
     public RetryPolicy duplicate() {
-        return new BoundedExponentialBackoff(this.getBaseSleepTimeMs(), this.maxSleepTimeMs, getMaxAttemptCount());
+        return new BoundedExponentialBackoff(getBaseSleepTimeMs(), maxSleepTimeMs, getMaxAttemptCount());
     }
-    
+
+
     public String toString() {
         return StringUtils.joinClassAttributeValues(this, "BoundedExponentialBackoff", BoundedExponentialBackoff.class);
     }

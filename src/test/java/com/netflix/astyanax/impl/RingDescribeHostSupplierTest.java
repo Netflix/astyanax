@@ -30,10 +30,11 @@ public class RingDescribeHostSupplierTest {
     private static final String RANGE_3_END_TOKEN = "4000";
 
     private RingDescribeHostSupplier hostSupplier;
+    private TestKeyspace keyspace;
 
     @Before
     public void setUp() throws Exception {
-        TestKeyspace keyspace = new TestKeyspace("ringDescribeTestKeyspace");
+        keyspace = new TestKeyspace("ringDescribeTestKeyspace");
         keyspace.setTokenRange(createTokenRange());
         hostSupplier = new RingDescribeHostSupplier(keyspace,1234);
     }

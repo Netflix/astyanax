@@ -119,4 +119,26 @@ public class TestKeyspace implements Keyspace {
         // TODO Auto-generated method stub
         return null;
     }
+
+    @Override
+    public List<TokenRange> describeRing(String dc) throws ConnectionException {
+        return this.tokenRange;
+    }
+
+    @Override
+    public List<TokenRange> describeRing(String dc, String rack) throws ConnectionException {
+        return this.tokenRange;
+    }
+
+    @Override
+    public OperationResult<Void> truncateColumnFamily(String columnFamily) throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public String describePartitioner() throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
 }

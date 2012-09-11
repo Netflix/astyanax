@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -42,7 +43,8 @@ import org.apache.cassandra.thrift.KeySlice;
 import org.apache.cassandra.thrift.Mutation;
 import org.apache.cassandra.thrift.SuperColumn;
 import org.apache.cassandra.utils.Pair;
-import org.mortbay.log.Log;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
@@ -89,6 +91,8 @@ import com.netflix.astyanax.util.TokenGenerator;
  * @param <C>
  */
 public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C> {
+    private final static Logger LOG = LoggerFactory.getLogger(ThriftColumnFamilyQueryImpl.class);
+    
     private final ConnectionPool<Cassandra.Client> connectionPool;
     private final ColumnFamily<K, C> columnFamily;
     private final KeyspaceTracerFactory tracerFactory;
@@ -671,19 +675,41 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                 throw new UnsupportedOperationException("executeAsync not supported here.  Use execute()");
             }
 
+            private boolean shouldIgnoreEmptyRows() {
+                if (getIncludeEmptyRows() == null) {
+                    if (getPredicate().isSetSlice_range() && getPredicate().getSlice_range().getCount() == 0) {
+                        return false;
+                    }
+                }
+                else {
+                    return !getIncludeEmptyRows();
+                }
+                
+                return true;
+            }
+            
             @Override
             public void executeWithCallback(final RowCallback<K, C> callback) throws ConnectionException {
                 final RandomPartitioner partitioner = new RandomPartitioner();
-
                 final AtomicReference<ConnectionException> error = new AtomicReference<ConnectionException>();
+                final boolean bIgnoreTombstones = shouldIgnoreEmptyRows();
 
-                List<Pair<String, String>> ranges = Lists.newArrayList();
+                List<Pair<String, String>> ranges;
                 if (this.getConcurrencyLevel() != null) {
+                    ranges = Lists.newArrayList();
                     int nThreads = this.getConcurrencyLevel();
                     for (int i = 0; i < nThreads; i++) {
-                        BigIntegerToken start =  new BigIntegerToken(TokenGenerator.initialToken(nThreads, i,   TokenGenerator.MINIMUM, TokenGenerator.MAXIMUM));
-                        BigIntegerToken end   =  new BigIntegerToken(TokenGenerator.initialToken(nThreads, i+1, TokenGenerator.MINIMUM, TokenGenerator.MAXIMUM));
-                        ranges.add(Pair.create(start.toString(), end.toString()));
+                        BigIntegerToken start =  new BigIntegerToken(TokenGenerator.initialToken(nThreads, i,   getStartToken(), getEndToken()));
+                        BigIntegerToken end   =  new BigIntegerToken(TokenGenerator.initialToken(nThreads, i+1, getStartToken(), getEndToken()));
+                        
+                        try {
+                            Pair<String, String> pair = Pair.create(checkpointManager.getCheckpoint(start.toString()), end.toString());
+                            if (!pair.left.equals(pair.right)) {
+                                ranges.add(pair);
+                            }
+                        } catch (Exception e) {
+                            throw ThriftConverter.ToConnectionPoolException(e);
+                        }
                     }
                 }
                 else {
@@ -696,13 +722,15 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                 }
                 final CountDownLatch doneSignal = new CountDownLatch(ranges.size());
                 
-                for (final Pair<String, String> token : ranges) {
+                for (final Pair<String, String> tokenPair : ranges) {
                     executor.submit(new Callable<Void>() {
                         @Override
                         public Void call() throws Exception {
                             // Prepare the range of tokens for this token range
-                            final KeyRange range = new KeyRange().setCount(getBlockSize())
-                                    .setStart_token(token.left).setEnd_token(token.right);
+                            final KeyRange range = new KeyRange()
+                                    .setCount(getBlockSize())
+                                    .setStart_token(tokenPair.left)
+                                    .setEnd_token(tokenPair.right);
 
                             try {
                                 // Loop until we get all the rows for this
@@ -735,20 +763,36 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
 
                                         // Notify the callback
                                         if (!ks.isEmpty()) {
+                                            boolean bContinue = ks.size() == getBlockSize();
+                                            if (bIgnoreTombstones) {
+                                                Iterator<KeySlice> iter = ks.iterator();
+                                                while (iter.hasNext()) {
+                                                    if (iter.next().getColumnsSize() == 0)
+                                                        iter.remove();
+                                                }
+                                            }
                                             Rows<K, C> rows = new ThriftRowsSliceImpl<K, C>(ks, columnFamily
                                                     .getKeySerializer(), columnFamily.getColumnSerializer());
-                                            callback.success(rows);
-                                            if (rows.size() == getBlockSize()) {
+                                            try {
+                                            	callback.success(rows);
+                                            }
+                                            catch (Throwable t) {
+                                                ConnectionException ce = ThriftConverter.ToConnectionPoolException(t);
+                                                error.set(ce);
+                                                return null;
+                                            }
+                                            
+                                            if (bContinue) {
                                                 Row<K, C> lastRow = rows.getRowByIndex(rows.size() - 1);
 
                                                 // Determine the start token
                                                 // for the next page
                                                 String token = partitioner.getToken(lastRow.getRawKey()).toString();
+                                                checkpointManager.trackCheckpoint(tokenPair.left, token);
                                                 if (getRepeatLastToken()) {
                                                     // Start token is
                                                     // non-inclusive
-                                                    BigInteger intToken = new BigInteger(token)
-                                                            .subtract(new BigInteger("1"));
+                                                    BigInteger intToken = new BigInteger(token).subtract(new BigInteger("1"));
                                                     range.setStart_token(intToken.toString());
                                                 }
                                                 else {
@@ -756,17 +800,21 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                                 }
                                             }
                                             else {
+                                                checkpointManager.trackCheckpoint(tokenPair.left, tokenPair.right);
                                                 return null;
                                             }
                                         }
                                         else {
+                                            checkpointManager.trackCheckpoint(tokenPair.left, tokenPair.right);
                                             return null;
                                         }
                                     }
                                     catch (Exception e) {
                                         ConnectionException ce = ThriftConverter.ToConnectionPoolException(e);
-                                        if (!callback.failure(ce))   
+                                        if (!callback.failure(ce)) {
                                             error.set(ce);
+                                            return null;
+                                        }
                                     }
                                 }
                             }
@@ -782,7 +830,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                     doneSignal.await();
                 }
                 catch (InterruptedException e) {
-                    Log.debug("Execution interrupted on get all rows for keyspace " + keyspace.getKeyspaceName());
+                    LOG.debug("Execution interrupted on get all rows for keyspace " + keyspace.getKeyspaceName());
                 }
 
                 if (error.get() != null) {

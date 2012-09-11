@@ -48,7 +48,7 @@
         <dependency>
             <groupId>joda-time</groupId>
             <artifactId>joda-time</artifactId>
-            <version>2.0</version>
+            <version>1.6.1</version>
         </dependency>
     
         <dependency>
@@ -64,6 +64,12 @@
         </dependency>
 
         <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>1.6</version>
+        </dependency>
+
+        <dependency>
             <groupId>com.github.stephenc.high-scale-lib</groupId>
             <artifactId>high-scale-lib</artifactId>
             <version>1.1.2</version>
@@ -72,7 +78,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>11.0.2</version>
+            <version>11.0</version>
         </dependency>
 
         <dependency>
@@ -80,7 +86,6 @@
             <artifactId>cassandra-all</artifactId>
             <version>1.1.0</version>
         </dependency>
-
         
         <dependency>
           <groupId>com.github.stephenc.eaio-uuid</groupId>
@@ -102,6 +107,12 @@
             <scope>compile</scope>
         </dependency>
         
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.8.1</version>
+            <scope>test</scope>
+        </dependency>
 
     </dependencies>
     

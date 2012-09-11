@@ -23,6 +23,14 @@ import java.util.regex.Pattern;
 
 import com.google.common.collect.Sets;
 
+/**
+ * Wrapper for the representation of the address for a cassandra node.  
+ * This Host object is used by the connection pool to uniquely identify the host
+ * and track it's connections.
+ * 
+ * @author elandau
+ *
+ */
 public class Host {
 
     private final String host;
@@ -37,6 +45,9 @@ public class Host {
     public static Pattern ipPattern = Pattern
             .compile("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$");
 
+    /**
+     * Empty host used in error return codes
+     */
     private Host() {
         this.host = "None";
         this.ipAddress = "0.0.0.0";
@@ -45,10 +56,17 @@ public class Host {
         this.url = String.format("%s:%d", this.host, this.port);
     }
 
-    public Host(String url2, int defaultPort) {
+    /**
+     * Construct a Host from a host:port combination.  The defaultPort is provided in case
+     * the hostAndPort2 value does not have a port specified.
+     * 
+     * @param hostAndPort
+     * @param defaultPort
+     */
+    public Host(String hostAndPort, int defaultPort) {
 
-        String tempHost = parseHostFromUrl(url2);
-        this.port = parsePortFromUrl(url2, defaultPort);
+        String tempHost = parseHostFromHostAndPort(hostAndPort);
+        this.port = parsePortFromHostAndPort(hostAndPort, defaultPort);
 
         Matcher match = ipPattern.matcher(tempHost);
         String workHost;
@@ -78,11 +96,11 @@ public class Host {
     /**
      * Parse the hostname from a "hostname:port" formatted string
      * 
-     * @param urlPort
+     * @param hostAndPort
      * @return
      */
-    public static String parseHostFromUrl(String urlPort) {
-        return urlPort.lastIndexOf(':') > 0 ? urlPort.substring(0, urlPort.lastIndexOf(':')) : urlPort;
+    public static String parseHostFromHostAndPort(String hostAndPort) {
+        return hostAndPort.lastIndexOf(':') > 0 ? hostAndPort.substring(0, hostAndPort.lastIndexOf(':')) : hostAndPort;
     }
 
     /**
@@ -92,7 +110,7 @@ public class Host {
      * @param defaultPort
      * @return
      */
-    public static int parsePortFromUrl(String urlPort, int defaultPort) {
+    public static int parsePortFromHostAndPort(String urlPort, int defaultPort) {
         return urlPort.lastIndexOf(':') > 0 ? Integer.valueOf(urlPort.substring(urlPort.lastIndexOf(':') + 1,
                 urlPort.length())) : defaultPort;
     }

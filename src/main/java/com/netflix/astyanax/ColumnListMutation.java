@@ -86,6 +86,12 @@ public interface ColumnListMutation<C> {
 
     ColumnListMutation<C> deleteColumn(C columnName);
 
+    /**
+     * The the timestamp for all subsequent column operation in this ColumnListMutation
+     * This timestamp does not affect the current timestamp for the entire MutationBatch
+     * @param timestamp
+     * @return
+     */
     ColumnListMutation<C> setTimestamp(long timestamp);
 
     /**

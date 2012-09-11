@@ -150,7 +150,7 @@ public class ThriftConverter {
      * @param e
      * @return
      */
-    public static ConnectionException ToConnectionPoolException(Exception e) {
+    public static ConnectionException ToConnectionPoolException(Throwable e) {
         if (e instanceof ConnectionException) {
             return (ConnectionException) e;
         }

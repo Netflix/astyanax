@@ -30,8 +30,12 @@ public class RoundRobinExecuteWithFailover<CL, R> extends AbstractExecuteWithFai
             monitor.incNoHosts();
             throw new NoAvailableHostsException("No hosts to borrow from");
         }
-
+        
         size = pools.size();
+        if (size <= 0) {
+            throw new NoAvailableHostsException("Strange pool size: " + size);
+        }
+        
         retryCountdown = Math.min(config.getMaxFailoverCount(), size);
         if (retryCountdown < 0)
             retryCountdown = size;
@@ -42,7 +46,12 @@ public class RoundRobinExecuteWithFailover<CL, R> extends AbstractExecuteWithFai
     }
 
     public int getNextHostIndex() {
-        return index++ % size;
+        try {
+            return index % size;
+        }
+        finally {
+            index++;
+        }
     }
 
     public boolean canRetry() {

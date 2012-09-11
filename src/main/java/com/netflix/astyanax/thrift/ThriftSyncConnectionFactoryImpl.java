@@ -43,6 +43,8 @@ import org.apache.cassandra.thrift.TBinaryProtocol;
 import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransportException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -52,7 +54,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassandra.Client> {
     private static final String NAME_FORMAT = "ThriftConnection<%s-%d>";
-
+    private static final Logger LOG = LoggerFactory.getLogger(ThriftSyncConnectionFactoryImpl.class);
+    
     private final AtomicLong idCounter = new AtomicLong(0);
     private final ExecutorService executor = Executors.newCachedThreadPool(new ThreadFactoryBuilder().setDaemon(true)
             .build());
@@ -175,6 +178,14 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
                 catch (Exception e) {
                     closeClient();
                     ConnectionException ce = ThriftConverter.ToConnectionPoolException(e).setHost(getHost())
+                            .setLatency(System.currentTimeMillis() - startTime);
+                    monitor.incConnectionCreateFailed(getHost(), ce);
+                    throw ce;
+                }
+                catch (Throwable t) {
+                    LOG.error("Error creating connection", t);
+                    closeClient();
+                    ConnectionException ce = ThriftConverter.ToConnectionPoolException(new RuntimeException("Error openning connection", t)).setHost(getHost())
                             .setLatency(System.currentTimeMillis() - startTime);
                     monitor.incConnectionCreateFailed(getHost(), ce);
                     throw ce;

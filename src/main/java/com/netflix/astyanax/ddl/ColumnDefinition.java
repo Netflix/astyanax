@@ -16,6 +16,7 @@
 package com.netflix.astyanax.ddl;
 
 import java.nio.ByteBuffer;
+import java.util.Map;
 
 /**
  * Interface to get/set a single column definition. The column definition is
@@ -121,4 +122,34 @@ public interface ColumnDefinition {
      * @return
      */
     boolean hasIndex();
+
+    /**
+     * Get a map of all options associated with this column
+     * @return
+     */
+    Map<String, String> getOptions();
+
+    /**
+     * Get an option
+     * @param name          Option name (TODO: Document these)
+     *                      'class_name' - com.datastax.bdp.cassandra.index.solr.SolrSecondaryIndex
+     * @param defaultValue  Default value to return if option not found
+     * @return 
+     */
+    String getOption(String name, String defaultValue);
+    
+    /**
+     * Set all extra options for this column.  Will override any previous values.
+     * @param index_options
+     * @return
+     */
+    ColumnDefinition setOptions(Map<String, String> index_options);
+
+    /**
+     * Set an option
+     * @param name
+     * @param value
+     * @return Previous value or null if not previously set
+     */
+    String setOption(String name, String value);
 }

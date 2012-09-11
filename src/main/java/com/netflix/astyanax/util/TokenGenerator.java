@@ -40,7 +40,20 @@ public class TokenGenerator {
         bigInt = bigInt.subtract(new BigInteger("1"));
         return bigInt.toString();
     }
-
+    
+    public static BigInteger tokenDifference(BigInteger startToken, BigInteger endToken) {
+        if (startToken.compareTo(endToken) < 0) {
+            return endToken.subtract(startToken);
+        }
+        else {
+            return endToken.add(MAXIMUM).subtract(startToken);
+        }
+    }
+    
+    public static BigInteger tokenDifference(String startToken, String endToken) {
+        return tokenDifference(new BigInteger(startToken), new BigInteger(endToken));
+    }
+    
     public static String getMaximumToken() {
         return MAXIMUM.toString();
     }

@@ -59,7 +59,6 @@ public class AstyanaxCheckpointManager implements CheckpointManager {
 	@Override
 	public String getCheckpoint(String startToken) throws ConnectionException {
 		try {
-			System.out.println("Looking for token " + startToken);
 			return keyspace.prepareQuery(columnFamily).getKey(bbKey).getColumn(startToken).execute().getResult().getStringValue();
 		}
 		catch (NotFoundException e) {

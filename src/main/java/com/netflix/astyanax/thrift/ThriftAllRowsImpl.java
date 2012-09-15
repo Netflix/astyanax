@@ -91,7 +91,6 @@ public class ThriftAllRowsImpl<K, C> implements Rows<K, C> {
                         while (iter.hasNext()) {
                             KeySlice row = iter.next();
                             if (row.getColumns().isEmpty()) {
-                                System.out.println("Remove empty row");
                                 iter.remove();
                             }
                         }

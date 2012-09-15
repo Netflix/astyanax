@@ -763,6 +763,8 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
 
                                         // Notify the callback
                                         if (!ks.isEmpty()) {
+                                            KeySlice lastRow = Iterables.getLast(ks);
+                                            
                                             boolean bContinue = ks.size() == getBlockSize();
                                             if (bIgnoreTombstones) {
                                                 Iterator<KeySlice> iter = ks.iterator();
@@ -783,11 +785,9 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                             }
                                             
                                             if (bContinue) {
-                                                Row<K, C> lastRow = rows.getRowByIndex(rows.size() - 1);
-
                                                 // Determine the start token
                                                 // for the next page
-                                                String token = partitioner.getToken(lastRow.getRawKey()).toString();
+                                                String token = partitioner.getToken(lastRow.bufferForKey()).toString();
                                                 checkpointManager.trackCheckpoint(tokenPair.left, token);
                                                 if (getRepeatLastToken()) {
                                                     // Start token is

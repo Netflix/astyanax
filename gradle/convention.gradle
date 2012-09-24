@@ -1,40 +1,25 @@
+apply plugin: 'java' // Plugin as major conventions
 
-// For Artifactory
-rootProject.status = version.contains('-SNAPSHOT')?'snapshot':'release'
+sourceCompatibility = 1.6
 
-subprojects { project ->
-    apply plugin: 'java' // Plugin as major conventions
+// GRADLE-2087 workaround, perform after java plugin
+status = version.contains('-SNAPSHOT')?'snapshot':'release'
 
-    version = rootProject.version
-
-    sourceCompatibility = 1.6
-
-    // GRADLE-2087 workaround, perform after java plugin
-    status = rootProject.status
-
-    task sourcesJar(type: Jar, dependsOn:classes) {
-        classifier = 'sources'
-        from sourceSets.main.allSource
-    }
-
-    task javadocJar(type: Jar, dependsOn:javadoc) {
-        classifier = 'javadoc'
-        from javadoc.destinationDir
-    }
-
-    artifacts {
-        archives sourcesJar
-        archives javadocJar
-    }
-
-    javadoc.doFirst { println "" }
+task sourcesJar(type: Jar, dependsOn:classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
 }
 
-task aggregateJavadoc(type: Javadoc) {
-    description = 'Aggregate all subproject docs into a single docs directory'
-    source subprojects.collect {project -> project.sourceSets.main.allJava }
-    classpath = files(subprojects.collect {project -> project.sourceSets.main.compileClasspath})
-    destinationDir = new File(projectDir, 'doc')
+task javadocJar(type: Jar, dependsOn:javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+javadoc.doFirst { println "" }
+
+artifacts {
+    archives sourcesJar
+    archives javadocJar
 }
 
 // Generate wrapper, which is distributed as part of source to alleviate the need of installing gradle

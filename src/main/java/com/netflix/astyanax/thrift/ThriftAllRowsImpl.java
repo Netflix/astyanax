@@ -85,26 +85,33 @@ public class ThriftAllRowsImpl<K, C> implements Rows<K, C> {
                         return false;
                     }
                     
-                    org.apache.cassandra.thrift.KeySlice currLastRow = Iterables.getLast(list);
+                    if (query.getRepeatLastToken() && lastRow != null) {
+                        iter.next();
+                        iter.remove();
+                    }
                     
-                    if (bIgnoreTombstones) {
-                        while (iter.hasNext()) {
-                            KeySlice row = iter.next();
-                            if (row.getColumns().isEmpty()) {
-                                iter.remove();
+                    if (iter.hasNext()) {
+                        org.apache.cassandra.thrift.KeySlice currLastRow = Iterables.getLast(list);
+                        
+                        if (bIgnoreTombstones) {
+                            while (iter.hasNext()) {
+                                KeySlice row = iter.next();
+                                if (row.getColumns().isEmpty()) {
+                                    iter.remove();
+                                }
                             }
                         }
+                        
+                        // If repeating last token then skip the first row in the result
+                        if (currLastRow != null && query.getRepeatLastToken() && iter.hasNext()) {
+                            iter.next();
+                        }
+                        
+                        lastRow = currLastRow;
+                        
+                        // Get the iterator again
+                        iter = list.iterator();
                     }
-                    
-                    // If repeating last token then skip the first row in the result
-                    if (lastRow != null && query.getRepeatLastToken() && iter.hasNext()) {
-                        iter.next();
-                    }
-                    
-                    lastRow = currLastRow;
-                    
-                    // Get the iterator again
-                    iter = list.iterator();
                 }
                 return iter.hasNext();
             }

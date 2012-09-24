@@ -9,10 +9,16 @@ checkstyle {
 // FindBugs
 apply plugin: 'findbugs'
 //tasks.withType(Findbugs) { reports.html.enabled true }
+findbugs {
+    ignoreFailures = true
+}
 
 // PMD
 apply plugin: 'pmd'
 //tasks.withType(Pmd) { reports.html.enabled true }
+pmd {
+    ignoreFailures = true
+}
 
 apply plugin: 'cobertura'
 cobertura {

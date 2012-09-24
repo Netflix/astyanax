@@ -7,8 +7,7 @@ task release(overwrite: true, dependsOn: commitNewVersion) << {
 commitNewVersion.dependsOn updateVersion
 updateVersion.dependsOn createReleaseTag
 createReleaseTag.dependsOn preTagCommit
-def buildTasks = tasks.matching { it.name =~ /:build/ }
-preTagCommit.dependsOn buildTasks
+preTagCommit.dependsOn build
 preTagCommit.dependsOn checkSnapshotDependencies
 //checkSnapshotDependencies.dependsOn confirmReleaseVersion // Introduced in 1.0, forces readLine
 //confirmReleaseVersion.dependsOn unSnapshotVersion
@@ -24,8 +23,8 @@ task uploadArtifactory(type: GradleBuild) {
     startParameter.getExcludedTaskNames().add('check')
     tasks = [ 'build', 'artifactoryPublish' ]
 }
-
 task releaseArtifactory(dependsOn: [checkSnapshotDependencies, uploadArtifactory])
+
 
 task buildWithArtifactory(type: GradleBuild) {
     startParameter = project.gradle.startParameter.newInstance()
@@ -35,21 +34,19 @@ task buildWithArtifactory(type: GradleBuild) {
 }
 
 // Ensure upload happens before taggging but after all pre-checks
-//releaseArtifactory.dependsOn checkSnapshotDependencies
+releaseArtifactory.dependsOn checkSnapshotDependencies
 createReleaseTag.dependsOn releaseArtifactory
 gradle.taskGraph.whenReady { taskGraph ->
     if ( taskGraph.hasTask(uploadArtifactory) && rootProject.status == 'release' && !taskGraph.hasTask(':release') ) {
-        throw new GradleException('Project has to be release status releasing to Artifactory')
+        throw new GradleException('"release" task has to be run before uploading a release to Artifactory')
     }
 }
-subprojects.each { project ->
-    project.uploadMavenCentral.dependsOn rootProject.checkSnapshotDependencies
-    rootProject.createReleaseTag.dependsOn project.uploadMavenCentral
 
-    gradle.taskGraph.whenReady { taskGraph ->
-        if ( taskGraph.hasTask(project.uploadMavenCentral) && !taskGraph.hasTask(':release') ) {
-            throw new GradleException('"release" task has to be run before uploading to Maven Central')
-        }
+project.uploadMavenCentral.dependsOn rootProject.checkSnapshotDependencies
+rootProject.createReleaseTag.dependsOn project.uploadMavenCentral
+gradle.taskGraph.whenReady { taskGraph ->
+    if ( taskGraph.hasTask(project.uploadMavenCentral) && !taskGraph.hasTask(':release') ) {
+        throw new GradleException('"release" task has to be run before uploading to Maven Central')
     }
 }
 

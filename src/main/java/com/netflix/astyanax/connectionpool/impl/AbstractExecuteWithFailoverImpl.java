@@ -43,13 +43,15 @@ public abstract class AbstractExecuteWithFailoverImpl<CL, R> implements ExecuteW
 	
 	@Override
 	public OperationResult<R> tryOperation(Operation<CL, R> operation) throws ConnectionException {
+	    Operation<CL, R> filteredOperation = config.getOperationFilterFactory().attachFilter(operation);
+	    
         while (true) {
             attemptCounter++;
             
             try {
-                connection = borrowConnection(operation);
+                connection = borrowConnection(filteredOperation);
                 startTime = System.currentTimeMillis();
-                OperationResult<R> result = connection.execute(operation);
+                OperationResult<R> result = connection.execute(filteredOperation);
                 result.setAttemptsCount(attemptCounter);
                 monitor.incOperationSuccess(getCurrentHost(), result.getLatency());
                 return result;

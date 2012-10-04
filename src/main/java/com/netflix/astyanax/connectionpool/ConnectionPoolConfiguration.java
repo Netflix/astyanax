@@ -237,4 +237,11 @@ public interface ConnectionPoolConfiguration {
      * @return
      */
     AuthenticationCredentials getAuthenticationCredentials();
+    
+    /**
+     * Return factory that will wrap an operation with filters, such as logging filters
+     * and simulation filters
+     * @return
+     */
+    OperationFilterFactory getOperationFilterFactory();
 }

@@ -24,9 +24,11 @@ import com.netflix.astyanax.connectionpool.BadHostDetector;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
+import com.netflix.astyanax.connectionpool.OperationFilterFactory;
 import com.netflix.astyanax.connectionpool.RetryBackoffStrategy;
 import com.netflix.astyanax.shallows.EmptyBadHostDetectorImpl;
 import com.netflix.astyanax.shallows.EmptyLatencyScoreStrategyImpl;
+import com.netflix.astyanax.shallows.EmptyOperationFilterFactory;
 import com.netflix.astyanax.util.StringUtils;
 
 public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfiguration {
@@ -90,6 +92,7 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     private LatencyScoreStrategy latencyScoreStrategy = new EmptyLatencyScoreStrategyImpl();
     private BadHostDetector badHostDetector = DEFAULT_BAD_HOST_DETECTOR;
     private AuthenticationCredentials credentials = null;
+    private OperationFilterFactory filterFactory = EmptyOperationFilterFactory.getInstance();
 
     public ConnectionPoolConfigurationImpl(String name) {
         this.name = name;
@@ -456,6 +459,16 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
 
     public ConnectionPoolConfigurationImpl setAuthenticationCredentials(AuthenticationCredentials credentials) {
         this.credentials = credentials;
+        return this;
+    }
+
+    @Override
+    public OperationFilterFactory getOperationFilterFactory() {
+        return filterFactory;
+    }
+    
+    public ConnectionPoolConfigurationImpl setOperationFilterFactory(OperationFilterFactory filterFactory) {
+        this.filterFactory = filterFactory;
         return this;
     }
 

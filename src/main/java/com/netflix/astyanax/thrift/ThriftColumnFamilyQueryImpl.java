@@ -393,6 +393,9 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                             public Token getToken() {
                                 if (startKey != null)
                                     return toToken(columnFamily.getKeySerializer().toByteBuffer(startKey));
+                                if (startToken != null) {
+                                    return toToken(startToken);
+                                }
                                 return null;
                             }
                         }, retry);
@@ -647,7 +650,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                     public Token getToken() {
                                         if (range.getStart_key() != null)
                                             return toToken(range.start_key);
-                                        return null;
+                                        return toToken(range.getStart_token());
                                     }
                                 }, retry).getResult();
                     }
@@ -740,7 +743,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                                     public Token getToken() {
                                                         if (range.getStart_key() != null)
                                                             return toToken(ByteBuffer.wrap(range.getStart_key()));
-                                                        return null;
+                                                        return toToken(range.getStart_token());
                                                     }
                                                 }, retry.duplicate()).getResult();
 
@@ -813,5 +816,9 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
 
     private Token toToken(ByteBuffer key) {
         return partitioner.get().getToken(key);
+    }
+
+    private Token toToken(String token) {
+        return partitioner.get().getTokenFactory().fromString(token);
     }
 }

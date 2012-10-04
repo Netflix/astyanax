@@ -297,12 +297,6 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
         return this;
     }
 
-    @Override
-    public MutationBatch withValidation(boolean validate) {
-        this.validate = validate;
-        return this;
-    }
-
     public boolean getValidate() {
         return this.validate;
     }

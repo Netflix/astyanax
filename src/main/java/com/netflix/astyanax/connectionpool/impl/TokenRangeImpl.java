@@ -25,11 +25,13 @@ public class TokenRangeImpl implements TokenRange {
     private final String startToken;
     private final String endToken;
     private final List<String> endpoints;
+    private final List<EndpointDetails> endpointDetails;
 
-    public TokenRangeImpl(String startToken, String endToken, List<String> endpoints) {
+    public TokenRangeImpl(String startToken, String endToken, List<String> endpoints, List<EndpointDetails> endpointDetails) {
         this.startToken = startToken;
         this.endToken = endToken;
         this.endpoints = ImmutableList.copyOf(endpoints);
+        this.endpointDetails = ImmutableList.copyOf(endpointDetails);
     }
 
     @Override
@@ -45,6 +47,11 @@ public class TokenRangeImpl implements TokenRange {
     @Override
     public List<String> getEndpoints() {
         return this.endpoints;
+    }
+
+    @Override
+    public List<EndpointDetails> getEndpointDetails() {
+        return this.endpointDetails;
     }
 
     @Override

@@ -9,6 +9,8 @@ import org.apache.cassandra.dht.Token;
 import org.apache.commons.lang.StringUtils;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.netflix.astyanax.connectionpool.ConnectionFactory;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
@@ -17,6 +19,7 @@ import com.netflix.astyanax.connectionpool.ConnectionPoolMonitor;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.NodeDiscovery;
 import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
+import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.impl.BagOfConnectionsConnectionPoolImpl;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
@@ -55,6 +58,7 @@ public class AstyanaxContext<Entity> {
         protected String keyspaceName;
         protected KeyspaceTracerFactory tracerFactory = EmptyKeyspaceTracerFactory.getInstance();
         protected Supplier<Map<Token, List<Host>>> hostSupplier;
+        protected Predicate<TokenRange.EndpointDetails> hostFilter = Predicates.alwaysTrue();
         protected ConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
 
         public Builder forCluster(String clusterName) {
@@ -79,6 +83,11 @@ public class AstyanaxContext<Entity> {
 
         public Builder withHostSupplier(Supplier<Map<Token, List<Host>>> tokenRangeSupplier) {
             this.hostSupplier = tokenRangeSupplier;
+            return this;
+        }
+
+        public Builder withHostFilter(Predicate<TokenRange.EndpointDetails> hostFilter) {
+            this.hostFilter = hostFilter;
             return this;
         }
 
@@ -151,11 +160,11 @@ public class AstyanaxContext<Entity> {
                 break;
 
             case RING_DESCRIBE:
-                supplier = new RingDescribeHostSupplier(keyspace, cpConfig.getPort(), partitioner);
+                supplier = new RingDescribeHostSupplier(keyspace, cpConfig.getPort(), partitioner, hostFilter);
                 break;
 
             case TOKEN_AWARE:
-                supplier = new RingDescribeHostSupplier(keyspace, cpConfig.getPort(), partitioner);
+                supplier = new RingDescribeHostSupplier(keyspace, cpConfig.getPort(), partitioner, hostFilter);
                 if (hostSupplier != null) {
                     supplier = new FilteringHostSupplier(supplier, hostSupplier);
                 }

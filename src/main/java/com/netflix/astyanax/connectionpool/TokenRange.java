@@ -23,4 +23,12 @@ public interface TokenRange {
     String getEndToken();
 
     List<String> getEndpoints();
+
+    List<EndpointDetails> getEndpointDetails();
+
+    interface EndpointDetails {
+        String getHost();
+        String getDataCenter();
+        String getRack();
+    }
 }

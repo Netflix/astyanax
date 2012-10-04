@@ -17,7 +17,10 @@ package com.netflix.astyanax.test;
 
 import java.util.List;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
 import com.netflix.astyanax.connectionpool.TokenRange;
+import com.netflix.astyanax.connectionpool.impl.EndpointDetailsImpl;
 
 public class TestTokenRange implements TokenRange {
     private String start;
@@ -45,4 +48,13 @@ public class TestTokenRange implements TokenRange {
         return endpoints;
     }
 
+    @Override
+    public List<EndpointDetails> getEndpointDetails() {
+        return Lists.transform(endpoints, new Function<String, EndpointDetails>() {
+            @Override
+            public EndpointDetails apply(String host) {
+                return new EndpointDetailsImpl(host, "dataCenter1", "rack1");
+            }
+        });
+    }
 }

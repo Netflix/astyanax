@@ -28,6 +28,7 @@ import org.apache.cassandra.dht.Token;
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.Cassandra.Client;
 import org.apache.cassandra.thrift.CounterColumn;
+import org.apache.cassandra.thrift.EndpointDetails;
 
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
@@ -51,6 +52,7 @@ import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
+import com.netflix.astyanax.connectionpool.impl.EndpointDetailsImpl;
 import com.netflix.astyanax.connectionpool.impl.TokenRangeImpl;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.model.ColumnFamily;
@@ -183,7 +185,14 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                     @Override
                                     public TokenRange apply(
                                             org.apache.cassandra.thrift.TokenRange tr) {
-                                        return new TokenRangeImpl(tr.getStart_token(), tr.getEnd_token(), tr.getEndpoints());
+                                        return new TokenRangeImpl(tr.getStart_token(), tr.getEnd_token(), tr.getEndpoints(),
+                                                Lists.transform(tr.getEndpoint_details(), new Function<EndpointDetails, TokenRange.EndpointDetails>() {
+                                                    @Override
+                                                    public TokenRange.EndpointDetails apply(EndpointDetails endpointDetails) {
+                                                        return new EndpointDetailsImpl(
+                                                                endpointDetails.getHost(), endpointDetails.getDatacenter(), endpointDetails.getRack());
+                                                    }
+                                                }));
                                     }
                                 });
                     }

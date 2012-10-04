@@ -21,6 +21,7 @@ import com.netflix.astyanax.test.TestTokenRange;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 /**
  * User: mkoch
@@ -75,7 +76,7 @@ public class RingDescribeHostSupplierTest {
         Map<Token, List<Host>> hostMap = hostSupplier.get();
         assertEquals(1, hostMap.get(new BigIntegerToken(RANGE_1_END_TOKEN)).size());
         assertEquals(1, hostMap.get(new BigIntegerToken(RANGE_2_END_TOKEN)).size());
-        assertEquals(0, hostMap.get(new BigIntegerToken(RANGE_3_END_TOKEN)).size());
+        assertNull(hostMap.get(new BigIntegerToken(RANGE_3_END_TOKEN)));
     }
 
     private List<TokenRange> createTokenRange() {

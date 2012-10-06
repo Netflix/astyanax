@@ -18,14 +18,32 @@ package com.netflix.astyanax.thrift.ddl;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map.Entry;
 
 import org.apache.cassandra.thrift.CfDef;
+import org.apache.cassandra.thrift.CfDef._Fields;
 import org.apache.cassandra.thrift.ColumnDef;
+import org.apache.thrift.meta_data.FieldMetaData;
 
+import com.google.common.collect.Lists;
 import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
+import com.netflix.astyanax.ddl.FieldMetadata;
 
 public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
+    private final static List<FieldMetadata> fieldsMetadata = Lists.newArrayList();
+    private final static List<String> fieldNames = Lists.newArrayList();
+    
+    {
+        for (Entry<_Fields, FieldMetaData> field : CfDef.metaDataMap.entrySet()) {
+            fieldsMetadata.add(new FieldMetadata(
+                        field.getValue().fieldName, 
+                        field.getValue().valueMetaData.getTypedefName(),
+                        field.getValue().valueMetaData.isContainer()));
+            fieldNames.add(field.getValue().fieldName);
+        }
+    }
+    
     private final CfDef cfDef;
 
     public ThriftColumnFamilyDefinitionImpl() {
@@ -293,7 +311,28 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
     }
 
     @Override
+    public List<String> getFieldNames() {
+        return fieldNames;
+    }
+    
+    @Override
+    public Object getFieldValue(String name) {
+        return cfDef.getFieldValue(_Fields.valueOf(name));
+    }
+    
+    @Override
+    public ColumnFamilyDefinition setFieldValue(String name, Object value) {
+        cfDef.setFieldValue(_Fields.valueOf(name), value);
+        return this;
+    }
+    
+    @Override
     public ColumnDefinition makeColumnDefinition() {
         return new ThriftColumnDefinitionImpl();
+    }
+
+    @Override
+    public List<FieldMetadata> getFieldsMetadata() {
+        return fieldsMetadata;
     }
 }

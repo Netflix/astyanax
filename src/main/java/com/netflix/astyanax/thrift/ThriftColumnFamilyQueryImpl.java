@@ -65,7 +65,6 @@ import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.model.CqlResult;
-import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.query.AllRowsQuery;
 import com.netflix.astyanax.query.ColumnCountQuery;
@@ -295,6 +294,8 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
             @Override
             public RowCopier<K, C> copyTo(final ColumnFamily<K, C> otherColumnFamily, final K otherRowKey) {
                 return new RowCopier<K, C>() {
+                    private boolean useOriginalTimestamp = true;
+                    
                     @Override
                     public OperationResult<Void> execute() throws ConnectionException {
                         return connectionPool.executeWithFailover(
@@ -303,6 +304,9 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                         .getKeyspaceName()) {
                                     @Override
                                     public Void internalExecute(Client client) throws Exception {
+                                        
+                                        long currentTime = keyspace.getConfig().getClock().getCurrentTime();
+                                        
                                         List<ColumnOrSuperColumn> columnList = client.get_slice(columnFamily
                                                 .getKeySerializer().toByteBuffer(rowKey), new ColumnParent()
                                                 .setColumn_family(columnFamily.getName()), predicate, ThriftConverter
@@ -312,10 +316,33 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                         // the response
                                         List<Mutation> mutationList = new ArrayList<Mutation>();
                                         for (ColumnOrSuperColumn sosc : columnList) {
-                                            Mutation mutation = new Mutation();
-                                            mutation.setColumn_or_supercolumn(new ColumnOrSuperColumn().setColumn(sosc
-                                                    .getColumn()));
-                                            mutationList.add(mutation);
+                                            ColumnOrSuperColumn cosc;
+                                            
+                                            if (sosc.isSetColumn()) {
+                                                cosc = new ColumnOrSuperColumn().setColumn(sosc.getColumn());
+                                                if (!useOriginalTimestamp)
+                                                    cosc.getColumn().setTimestamp(currentTime);
+                                            }
+                                            else if (sosc.isSetSuper_column()) {
+                                                cosc = new ColumnOrSuperColumn().setSuper_column(sosc.getSuper_column());
+                                                if (!useOriginalTimestamp) {
+                                                    for (org.apache.cassandra.thrift.Column subColumn : sosc.getSuper_column().getColumns()) {
+                                                        subColumn.setTimestamp(currentTime);
+                                                        subColumn.setTimestamp(currentTime);
+                                                    }
+                                                }
+                                            }
+                                            else if (sosc.isSetCounter_column()) {
+                                                cosc = new ColumnOrSuperColumn().setCounter_column(sosc.getCounter_column());
+                                            }
+                                            else if (sosc.isSetCounter_super_column()) {
+                                                cosc = new ColumnOrSuperColumn().setCounter_super_column(sosc.getCounter_super_column());
+                                            }
+                                            else {
+                                                continue;
+                                            }
+                                            
+                                            mutationList.add(new Mutation().setColumn_or_supercolumn(cosc));
                                         }
 
                                         // Create mutation map
@@ -341,6 +368,12 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                 return execute();
                             }
                         });
+                    }
+
+                    @Override
+                    public RowCopier<K, C> withOriginalTimestamp(boolean useOriginalTimestamp) {
+                        this.useOriginalTimestamp = useOriginalTimestamp;
+                        return this;
                     }
                 };
             }

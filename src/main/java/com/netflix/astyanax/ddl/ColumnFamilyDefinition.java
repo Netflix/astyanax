@@ -113,4 +113,17 @@ public interface ColumnFamilyDefinition {
     ColumnDefinition makeColumnDefinition();
 
     void clearColumnDefinitionList();
+
+    List<String> getFieldNames();
+
+    Object getFieldValue(String name);
+
+    ColumnFamilyDefinition setFieldValue(String name, Object value);
+    
+    /**
+     * Get metadata for all fields
+     * @return
+     */
+    List<FieldMetadata> getFieldsMetadata();
+
 }

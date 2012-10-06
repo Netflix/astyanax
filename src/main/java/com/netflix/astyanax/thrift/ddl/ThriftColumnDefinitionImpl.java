@@ -17,18 +17,36 @@ package com.netflix.astyanax.thrift.ddl;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.cassandra.thrift.ColumnDef;
 import org.apache.cassandra.thrift.IndexType;
+import org.apache.cassandra.thrift.ColumnDef._Fields;
+import org.apache.thrift.meta_data.FieldMetaData;
 
-import com.google.common.collect.Maps;
+import com.google.common.collect.Lists;
 import com.netflix.astyanax.ddl.ColumnDefinition;
+import com.netflix.astyanax.ddl.FieldMetadata;
 import com.netflix.astyanax.serializers.StringSerializer;
 
 public class ThriftColumnDefinitionImpl implements ColumnDefinition {
+    private final static List<FieldMetadata> fieldsMetadata = Lists.newArrayList();
+    private final static List<String> fieldNames = Lists.newArrayList();
+    
     private final ColumnDef columnDef;
 
+    {
+        for (Entry<_Fields, FieldMetaData> field : ColumnDef.metaDataMap.entrySet()) {
+            fieldsMetadata.add(new FieldMetadata(
+                        field.getValue().fieldName, 
+                        field.getValue().valueMetaData.getTypedefName(),
+                        field.getValue().valueMetaData.isContainer()));
+            fieldNames.add(field.getValue().fieldName);
+        }
+    }
+    
     public ThriftColumnDefinitionImpl() {
         this.columnDef = new ColumnDef();
     }
@@ -137,4 +155,26 @@ public class ThriftColumnDefinitionImpl implements ColumnDefinition {
         }
         return this.columnDef.getIndex_options().put(name, value);
     }
+    
+    @Override
+    public List<String> getFieldNames() {
+        return fieldNames;
+    }
+    
+    @Override
+    public Object getFieldValue(String name) {
+        return columnDef.getFieldValue(_Fields.valueOf(name));
+    }
+    
+    @Override
+    public ColumnDefinition setFieldValue(String name, Object value) {
+        columnDef.setFieldValue(_Fields.valueOf(name), value);
+        return this;
+    }
+
+    @Override
+    public List<FieldMetadata> getFieldsMetadata() {
+        return fieldsMetadata;
+    }
+
 }

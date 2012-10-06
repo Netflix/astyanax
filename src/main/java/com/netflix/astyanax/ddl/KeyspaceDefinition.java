@@ -39,4 +39,17 @@ public interface KeyspaceDefinition {
     List<ColumnFamilyDefinition> getColumnFamilyList();
 
     ColumnFamilyDefinition getColumnFamily(String columnFamily);
+
+    List<String> getFieldNames();
+
+    Object getFieldValue(String name);
+
+    KeyspaceDefinition setFieldValue(String name, Object value);
+    
+    /**
+     * Get metadata for all fields
+     * @return
+     */
+    List<FieldMetadata> getFieldsMetadata();
+
 }

@@ -163,11 +163,15 @@ public class ThrifeKeyspaceImplTest {
         if (TEST_INIT_KEYSPACE) {
             AstyanaxContext<Cluster> clusterContext = new AstyanaxContext.Builder()
                     .forCluster(TEST_CLUSTER_NAME)
-                    .withAstyanaxConfiguration(new AstyanaxConfigurationImpl())
+                    .withAstyanaxConfiguration(
+                            new AstyanaxConfigurationImpl()
+                            )
                     .withConnectionPoolConfiguration(
-                            new ConnectionPoolConfigurationImpl(
-                                    TEST_CLUSTER_NAME).setMaxConnsPerHost(1)
-                                    .setSeeds(SEEDS))
+                            new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME)
+                                .setMaxConnsPerHost(2)
+                                .setInitConnsPerHost(2)
+                                .setSeeds(SEEDS)
+                            )
                     .withConnectionPoolMonitor(
                             new CountingConnectionPoolMonitor())
                     .buildCluster(ThriftFamilyFactory.getInstance());
@@ -324,7 +328,9 @@ public class ThrifeKeyspaceImplTest {
                                 + "_" + TEST_KEYSPACE_NAME)
                                 .setSocketTimeout(30000)
                                 .setMaxTimeoutWhenExhausted(2000)
-                                .setMaxConnsPerHost(1).setSeeds(SEEDS))
+                                .setMaxConnsPerHost(10)
+                                .setInitConnsPerHost(10)
+                                .setSeeds(SEEDS))
                 .withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
                 .buildKeyspace(ThriftFamilyFactory.getInstance());
 
@@ -1039,8 +1045,8 @@ public class ThrifeKeyspaceImplTest {
             Assert.assertFalse(iter2.hasNext());
 
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
-            Assert.fail();
+            LOG.error(e.getMessage(), e);
+            Assert.fail(e.getMessage());
         }
     }
 

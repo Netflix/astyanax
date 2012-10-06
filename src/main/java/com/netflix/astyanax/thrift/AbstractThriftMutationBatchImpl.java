@@ -61,7 +61,6 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
     private Host pinnedHost;
     private RetryPolicy retry;
     private WriteAheadLog wal;
-    private boolean validate;
 
     private Map<ByteBuffer, Map<String, List<Mutation>>> mutationMap = Maps.newLinkedHashMap();
 
@@ -297,10 +296,6 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
         return this;
     }
 
-    public boolean getValidate() {
-        return this.validate;
-    }
-    
     public Host getPinnedHost() {
         return this.pinnedHost;
     }

@@ -340,13 +340,13 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
 
     @Override
     public ColumnFamilyDefinition setMaxCompactionThreshold(int value) {
+        cfDef.setMax_compaction_threshold(value);
         return this;
     }
 
     @Override
     public int getMaxCompactionThreshold() {
-        
-        return 0;
+        return cfDef.getMax_compaction_threshold();
     }
 
     @Override

@@ -61,6 +61,7 @@ public abstract class AbstractExecuteWithFailoverImpl<CL, R> implements ExecuteW
                         : new UnknownException(e);
             	try {
             		informException(ce);
+                    monitor.incFailover(ce.getHost(), ce);
             	}
             	catch (ConnectionException ex) {
                     monitor.incOperationFailure(getCurrentHost(), ex);
@@ -80,7 +81,7 @@ public abstract class AbstractExecuteWithFailoverImpl<CL, R> implements ExecuteW
 	    }
 	}
     
-    public void informException(ConnectionException connectionException) throws ConnectionException {
+    private void informException(ConnectionException connectionException) throws ConnectionException {
         connectionException
             .setHost(getCurrentHost())
         	.setLatency(System.currentTimeMillis() - startTime)
@@ -91,8 +92,6 @@ public abstract class AbstractExecuteWithFailoverImpl<CL, R> implements ExecuteW
             if (!canRetry()) {
                 throw connectionException;
             }
-            
-        	monitor.incFailover(connectionException.getHost(), connectionException);
         }
         else {
             // Most likely an operation error

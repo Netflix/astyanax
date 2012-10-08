@@ -26,7 +26,7 @@ import java.util.Map;
  */
 public interface ConnectionPoolMonitor {
     /**
-     * Errors trying to execute an operation
+     * Errors trying to execute an operation.
      * 
      * @param reason
      * @param host
@@ -34,6 +34,14 @@ public interface ConnectionPoolMonitor {
     void incOperationFailure(Host host, Exception reason);
 
     long getOperationFailureCount();
+
+    /**
+     * An operation failed but the connection pool will attempt to fail over to
+     * another host/connection.  
+     */
+    void incFailover(Host host, Exception reason);
+
+    long getFailoverCount();
 
     /**
      * Succeeded in executing an operation
@@ -97,24 +105,43 @@ public interface ConnectionPoolMonitor {
     /**
      * Timeout trying to get a connection from the pool
      */
-    void incPoolExhaustedTimeout();
-
     long getPoolExhaustedTimeoutCount();
 
     /**
      * Timeout waiting for a response from the cluster
      */
-    void incOperationTimeout();
-
     long getOperationTimeoutCount();
 
     /**
-     * An operation failed by the connection pool will attempt to fail over to
-     * another host/connection.
+     * Count of socket timeouts trying to execute an operation
+     * @return
      */
-    void incFailover(Host host, Exception reason);
-
-    long getFailoverCount();
+    long getSocketTimeoutCount();
+    
+    /**
+     * Get number of unknown errors
+     * @return
+     */
+    long getUnknownErrorCount();
+    
+    /**
+     * Get number of invalid requests (i.e. bad argument values)
+     * @return
+     */
+    long getBadRequestCount();
+    
+    /**
+     * Count of times no hosts at all were available to execute an operation.
+     * 
+     * @return
+     */
+    long getNoHostCount();
+    
+    /**
+     * Tracks the number of column not found error
+     * @return
+     */
+    long notFoundCount();
 
     /**
      * A host was added and given the associated pool. The pool is immutable and
@@ -149,13 +176,6 @@ public interface ConnectionPoolMonitor {
      * @param pool
      */
     void onHostReactivated(Host host, HostConnectionPool<?> pool);
-
-    /**
-     * There were no active hosts in the pool to borrow from.
-     */
-    void incNoHosts();
-
-    long getNoHostCount();
 
     /**
      * Return a mapping of all hosts and their statistics

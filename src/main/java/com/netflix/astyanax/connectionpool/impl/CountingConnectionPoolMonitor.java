@@ -7,30 +7,71 @@ import com.netflix.astyanax.connectionpool.ConnectionPoolMonitor;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
 import com.netflix.astyanax.connectionpool.HostStats;
+import com.netflix.astyanax.connectionpool.exceptions.PoolTimeoutException;
+import com.netflix.astyanax.connectionpool.exceptions.TimeoutException;
+import com.netflix.astyanax.connectionpool.exceptions.BadRequestException;
+import com.netflix.astyanax.connectionpool.exceptions.NoAvailableHostsException;
+import com.netflix.astyanax.connectionpool.exceptions.OperationTimeoutException;
+import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 
 public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
-    private AtomicLong operationFailureCount = new AtomicLong();
-    private AtomicLong operationSuccessCount = new AtomicLong();
-    private AtomicLong connectionCreateCount = new AtomicLong();
-    private AtomicLong connectionClosedCount = new AtomicLong();
+    private AtomicLong operationFailureCount  = new AtomicLong();
+    private AtomicLong operationSuccessCount  = new AtomicLong();
+    private AtomicLong connectionCreateCount  = new AtomicLong();
+    private AtomicLong connectionClosedCount  = new AtomicLong();
     private AtomicLong connectionCreateFailureCount = new AtomicLong();
-    private AtomicLong connectionBorrowCount = new AtomicLong();
-    private AtomicLong connectionReturnCount = new AtomicLong();
-    private AtomicLong poolExhastedCount = new AtomicLong();
-    private AtomicLong operationTimeoutCount = new AtomicLong();
+    private AtomicLong connectionBorrowCount  = new AtomicLong();
+    private AtomicLong connectionReturnCount  = new AtomicLong();
+    
     private AtomicLong operationFailoverCount = new AtomicLong();
-    private AtomicLong hostAddedCount = new AtomicLong();
-    private AtomicLong hostRemovedCount = new AtomicLong();
-    private AtomicLong hostDownCount = new AtomicLong();
-    private AtomicLong hostReactivatedCount = new AtomicLong();
-    private AtomicLong noHostsCount = new AtomicLong();
+    
+    private AtomicLong hostAddedCount         = new AtomicLong();
+    private AtomicLong hostRemovedCount       = new AtomicLong();
+    private AtomicLong hostDownCount          = new AtomicLong();
+    private AtomicLong hostReactivatedCount   = new AtomicLong();
+    
+    private AtomicLong poolExhastedCount      = new AtomicLong();
+    private AtomicLong operationTimeoutCount  = new AtomicLong();
+    private AtomicLong socketTimeoutCount     = new AtomicLong();
+    private AtomicLong noHostsCount           = new AtomicLong();
+    private AtomicLong unknownErrorCount      = new AtomicLong();
+    private AtomicLong badRequestCount        = new AtomicLong();
 
+    private AtomicLong notFoundCounter        = new AtomicLong();
+    
     public CountingConnectionPoolMonitor() {
+    }
+    
+    private void trackError(Host host, Exception reason) {
+        if (reason instanceof PoolTimeoutException) {
+            this.poolExhastedCount.incrementAndGet();
+        }
+        else if (reason instanceof TimeoutException) {
+            this.socketTimeoutCount.incrementAndGet();
+        }
+        else if (reason instanceof OperationTimeoutException) {
+            this.operationTimeoutCount.incrementAndGet();
+        }
+        else if (reason instanceof BadRequestException) {
+            this.badRequestCount.incrementAndGet();
+        }
+        else if (reason instanceof NoAvailableHostsException ) {
+            this.noHostsCount.incrementAndGet();
+        }
+        else {
+            this.unknownErrorCount.incrementAndGet();
+        }
     }
 
     @Override
     public void incOperationFailure(Host host, Exception reason) {
+        if (reason instanceof NotFoundException) {
+            this.notFoundCounter.incrementAndGet();
+            return;
+        }
+        
         this.operationFailureCount.incrementAndGet();
+        trackError(host, reason);
     }
 
     public long getOperationFailureCount() {
@@ -91,20 +132,15 @@ public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
         return this.connectionReturnCount.get();
     }
 
-    @Override
-    public void incPoolExhaustedTimeout() {
-        this.poolExhastedCount.incrementAndGet();
-    }
-
     public long getPoolExhaustedTimeoutCount() {
         return this.poolExhastedCount.get();
     }
 
     @Override
-    public void incOperationTimeout() {
-        this.operationTimeoutCount.incrementAndGet();
+    public long getSocketTimeoutCount() {
+        return this.socketTimeoutCount.get();
     }
-
+    
     public long getOperationTimeoutCount() {
         return this.operationTimeoutCount.get();
     }
@@ -112,6 +148,7 @@ public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
     @Override
     public void incFailover(Host host, Exception reason) {
         this.operationFailoverCount.incrementAndGet();
+        trackError(host, reason);
     }
 
     public long getFailoverCount() {
@@ -155,13 +192,18 @@ public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
     }
 
     @Override
-    public void incNoHosts() {
-        this.noHostsCount.incrementAndGet();
-        this.operationFailoverCount.incrementAndGet();
+    public long getNoHostCount() {
+        return this.noHostsCount.get();
     }
 
-    public long getNoHostsCount() {
-        return this.noHostsCount.get();
+    @Override
+    public long getUnknownErrorCount() {
+        return this.unknownErrorCount.get();
+    }
+
+    @Override
+    public long getBadRequestCount() {
+        return this.badRequestCount.get();
     }
 
     public long getNumBusyConnections() {
@@ -171,6 +213,12 @@ public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
     public long getNumOpenConnections() {
         return this.connectionCreateCount.get() - this.connectionClosedCount.get();
     }
+    
+    @Override
+    public long notFoundCount() {
+        return this.notFoundCounter.get();
+    }
+
 
     public String toString() {
         // Build the complete status string
@@ -191,10 +239,4 @@ public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
     public Map<Host, HostStats> getHostStats() {
         throw new UnsupportedOperationException("Not supported");
     }
-
-    @Override
-    public long getNoHostCount() {
-        return this.noHostsCount.get();
-    }
-
 }

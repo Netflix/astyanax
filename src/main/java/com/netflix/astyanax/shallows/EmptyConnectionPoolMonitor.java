@@ -47,14 +47,6 @@ public class EmptyConnectionPoolMonitor implements ConnectionPoolMonitor {
     }
 
     @Override
-    public void incPoolExhaustedTimeout() {
-    }
-
-    @Override
-    public void incOperationTimeout() {
-    }
-
-    @Override
     public void incConnectionBorrowed(Host host, long delay) {
     }
 
@@ -92,10 +84,6 @@ public class EmptyConnectionPoolMonitor implements ConnectionPoolMonitor {
 
     @Override
     public void incConnectionCreateFailed(Host host, Exception e) {
-    }
-
-    @Override
-    public void incNoHosts() {
     }
 
     @Override
@@ -163,6 +151,26 @@ public class EmptyConnectionPoolMonitor implements ConnectionPoolMonitor {
 
     @Override
     public long getNoHostCount() {
+        return 0;
+    }
+
+    @Override
+    public long getSocketTimeoutCount() {
+        return 0;
+    }
+
+    @Override
+    public long getUnknownErrorCount() {
+        return 0;
+    }
+
+    @Override
+    public long getBadRequestCount() {
+        return 0;
+    }
+
+    @Override
+    public long notFoundCount() {
         return 0;
     }
 }

@@ -319,7 +319,6 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
     
     @Override
     public Object getFieldValue(String name) {
-        System.out.println("Field " + name);
         return cfDef.getFieldValue(_Fields.valueOf(name));
     }
     

@@ -17,6 +17,7 @@ package com.netflix.astyanax.ddl;
 
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
 
 public interface ColumnFamilyDefinition {
 
@@ -54,6 +55,30 @@ public interface ColumnFamilyDefinition {
 
     int getMinCompactionThreshold();
 
+    ColumnFamilyDefinition setMaxCompactionThreshold(int value);
+
+    int getMaxCompactionThreshold();
+
+    ColumnFamilyDefinition setCompactionStrategy(String strategy);
+
+    String getCompactionStrategy();
+
+    ColumnFamilyDefinition setCompactionStrategyOptions(Map<String, String>  options);
+    
+    Map<String, String> getCompactionStrategyOptions();
+
+    ColumnFamilyDefinition setCompressionOptions(Map<String, String>  options);
+    
+    Map<String, String> getCompressionOptions();
+    
+    ColumnFamilyDefinition setBloomFilterFpChance(double chance);
+    
+    double getBloomFilterFpChance();
+    
+    ColumnFamilyDefinition setCaching(String caching);
+    
+    String getCaching();
+    
     ColumnFamilyDefinition setName(String name);
 
     String getName();
@@ -61,6 +86,10 @@ public interface ColumnFamilyDefinition {
     ColumnFamilyDefinition setReadRepairChance(double value);
 
     double getReadRepairChance();
+
+    ColumnFamilyDefinition setLocalReadRepairChance(double value);
+
+    double getLocalReadRepairChance();
 
     ColumnFamilyDefinition setReplicateOnWrite(boolean value);
 
@@ -119,6 +148,10 @@ public interface ColumnFamilyDefinition {
     Object getFieldValue(String name);
 
     ColumnFamilyDefinition setFieldValue(String name, Object value);
+    
+    ColumnFamilyDefinition setGcGraceSeconds(int seconds);
+    
+    int getGcGraceSeconds();
     
     /**
      * Get metadata for all fields

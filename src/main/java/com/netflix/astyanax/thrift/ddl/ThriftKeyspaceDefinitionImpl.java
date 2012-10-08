@@ -30,6 +30,7 @@ import com.google.common.collect.Lists;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.FieldMetadata;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
+import com.netflix.astyanax.thrift.ThriftTypes;
 
 public class ThriftKeyspaceDefinitionImpl implements KeyspaceDefinition {
     private final static List<FieldMetadata> fieldsMetadata = Lists.newArrayList();
@@ -38,8 +39,8 @@ public class ThriftKeyspaceDefinitionImpl implements KeyspaceDefinition {
     {
         for (Entry<_Fields, FieldMetaData> field : KsDef.metaDataMap.entrySet()) {
             fieldsMetadata.add(new FieldMetadata(
-                        field.getValue().fieldName, 
-                        field.getValue().valueMetaData.getTypedefName(),
+                        field.getKey().name(), 
+                        ThriftTypes.values()[field.getValue().valueMetaData.type].name(),
                         field.getValue().valueMetaData.isContainer()));
             fieldNames.add(field.getValue().fieldName);
         }

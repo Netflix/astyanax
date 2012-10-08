@@ -36,6 +36,8 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
+import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
+import com.netflix.astyanax.ddl.FieldMetadata;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.Column;
@@ -401,6 +403,31 @@ public class ThrifeKeyspaceImplTest {
         }
     }
 
+    @Test
+    public void getKeyspaceDefinition() throws Exception {
+        KeyspaceDefinition def = keyspaceContext.getEntity().describeKeyspace();
+        List<String> fieldNames = def.getFieldNames();
+        LOG.info("Getting field names");
+        for (String field : fieldNames) {
+            LOG.info(field);
+        }
+        LOG.info(fieldNames.toString());
+        
+        System.out.println(fieldNames.toString());
+        
+        for (FieldMetadata field : def.getFieldsMetadata()) {
+            System.out.println(field.getName() + " " + field.getType());
+            System.out.println(field.getName() + " = " + def.getFieldValue(field.getName()));
+        }
+        
+        for (ColumnFamilyDefinition cfDef : def.getColumnFamilyList()) {
+            for (FieldMetadata field : cfDef.getFieldsMetadata()) {
+                System.out.println(field.getName() + " " + field.getType());
+                System.out.println(field.getName() + " = " + cfDef.getFieldValue(field.getName()));
+            }
+        }
+    }
+    
     @Test
     public void paginateColumns() {
         String column = "";

@@ -16,7 +16,7 @@ public class FieldMetadata {
         this.type = type;
         this.isContainer = isContainer;
     }
-
+    
     public String getName() {
         return name;
     }

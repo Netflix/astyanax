@@ -18,6 +18,7 @@ package com.netflix.astyanax.thrift.ddl;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.cassandra.thrift.CfDef;
@@ -29,6 +30,7 @@ import com.google.common.collect.Lists;
 import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.FieldMetadata;
+import com.netflix.astyanax.thrift.ThriftTypes;
 
 public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
     private final static List<FieldMetadata> fieldsMetadata = Lists.newArrayList();
@@ -37,8 +39,8 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
     {
         for (Entry<_Fields, FieldMetaData> field : CfDef.metaDataMap.entrySet()) {
             fieldsMetadata.add(new FieldMetadata(
-                        field.getValue().fieldName, 
-                        field.getValue().valueMetaData.getTypedefName(),
+                        field.getKey().name(), 
+                        ThriftTypes.values()[field.getValue().valueMetaData.type].name(),
                         field.getValue().valueMetaData.isContainer()));
             fieldNames.add(field.getValue().fieldName);
         }
@@ -317,6 +319,7 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
     
     @Override
     public Object getFieldValue(String name) {
+        System.out.println("Field " + name);
         return cfDef.getFieldValue(_Fields.valueOf(name));
     }
     
@@ -334,5 +337,93 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
     @Override
     public List<FieldMetadata> getFieldsMetadata() {
         return fieldsMetadata;
+    }
+
+    @Override
+    public ColumnFamilyDefinition setMaxCompactionThreshold(int value) {
+        return this;
+    }
+
+    @Override
+    public int getMaxCompactionThreshold() {
+        
+        return 0;
+    }
+
+    @Override
+    public ColumnFamilyDefinition setCompactionStrategy(String strategy) {
+        cfDef.setCompaction_strategy(strategy);
+        return this;
+    }
+
+    @Override
+    public String getCompactionStrategy() {
+        return cfDef.getCompaction_strategy();
+    }
+
+    @Override
+    public ColumnFamilyDefinition setCompactionStrategyOptions(Map<String, String> options) {
+        cfDef.setCompaction_strategy_options(options);
+        return this;
+    }
+
+    @Override
+    public Map<String, String> getCompactionStrategyOptions() {
+        return cfDef.getCompaction_strategy_options();
+    }
+
+    @Override
+    public ColumnFamilyDefinition setCompressionOptions(Map<String, String> options) {
+        cfDef.setCompression_options(options);
+        return this;
+    }
+
+    @Override
+    public Map<String, String> getCompressionOptions() {
+        return cfDef.getCompression_options();
+    }
+
+    @Override
+    public ColumnFamilyDefinition setBloomFilterFpChance(double chance) {
+        cfDef.setBloom_filter_fp_chance(chance);
+        return this;
+    }
+
+    @Override
+    public double getBloomFilterFpChance() {
+        return cfDef.getBloom_filter_fp_chance();
+    }
+
+    @Override
+    public ColumnFamilyDefinition setCaching(String caching) {
+        cfDef.setCaching(caching);
+        return this;
+    }
+
+    @Override
+    public String getCaching() {
+        return cfDef.getCaching();
+    }
+
+    @Override
+    public ColumnFamilyDefinition setLocalReadRepairChance(double value) {
+        cfDef.setDclocal_read_repair_chance(value);
+        return this;
+    }
+
+    @Override
+    public double getLocalReadRepairChance() {
+        return cfDef.getDclocal_read_repair_chance();
+    }
+
+    @Override
+    public ColumnFamilyDefinition setGcGraceSeconds(int seconds) {
+        cfDef.setGc_grace_seconds(seconds);
+        return this;
+    }
+
+    @Override
+    public int getGcGraceSeconds() {
+        return cfDef.getGc_grace_seconds();
     }
 }

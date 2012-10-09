@@ -84,43 +84,44 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
 
     @Override
     @Deprecated
-    public ColumnFamilyDefinition setMemtableFlushAfterMins(int value) {
+    public ColumnFamilyDefinition setMemtableFlushAfterMins(Integer value) {
         throw new RuntimeException("API Remove in Cassandra 1.0");
     }
 
     @Override
     @Deprecated
-    public int getMemtableFlushAfterMins() {
+    public Integer getMemtableFlushAfterMins() {
         throw new RuntimeException("API Remove in Cassandra 1.0");
     }
 
     @Override
     @Deprecated
-    public ColumnFamilyDefinition setMemtableOperationsInMillions(double value) {
+    public ColumnFamilyDefinition setMemtableOperationsInMillions(Double value) {
         throw new RuntimeException("API Remove in Cassandra 1.0");
     }
 
     @Override
     @Deprecated
-    public double getMemtableOperationsInMillions() {
+    public Double getMemtableOperationsInMillions() {
         throw new RuntimeException("API Remove in Cassandra 1.0");
     }
 
     @Override
     @Deprecated
-    public ColumnFamilyDefinition setMemtableThroughputInMb(int value) {
+    public ColumnFamilyDefinition setMemtableThroughputInMb(Integer value) {
         throw new RuntimeException("API Remove in Cassandra 1.0");
     }
 
     @Override
-    public ColumnFamilyDefinition setMergeShardsChance(double value) {
+    public ColumnFamilyDefinition setMergeShardsChance(Double value) {
         cfDef.setMerge_shards_chance(value);
         return this;
     }
 
     @Override
-    public ColumnFamilyDefinition setMinCompactionThreshold(int value) {
-        cfDef.setMin_compaction_threshold(value);
+    public ColumnFamilyDefinition setMinCompactionThreshold(Integer value) {
+        if (value != null)
+            cfDef.setMin_compaction_threshold(value);
         return this;
     }
 
@@ -135,14 +136,16 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
     }
 
     @Override
-    public ColumnFamilyDefinition setReadRepairChance(double value) {
-        cfDef.setRead_repair_chance(value);
+    public ColumnFamilyDefinition setReadRepairChance(Double value) {
+        if (value != null)
+            cfDef.setRead_repair_chance(value);
         return this;
     }
 
     @Override
-    public ColumnFamilyDefinition setReplicateOnWrite(boolean value) {
-        cfDef.setReplicate_on_write(value);
+    public ColumnFamilyDefinition setReplicateOnWrite(Boolean value) {
+        if (value != null)
+            cfDef.setReplicate_on_write(value);
         return this;
     }
 
@@ -153,14 +156,16 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
     }
 
     @Override
-    public ColumnFamilyDefinition setRowCacheSavePeriodInSeconds(int value) {
-        cfDef.setRow_cache_save_period_in_seconds(value);
+    public ColumnFamilyDefinition setRowCacheSavePeriodInSeconds(Integer value) {
+        if (value != null)
+            cfDef.setRow_cache_save_period_in_seconds(value);
         return this;
     }
 
     @Override
-    public ColumnFamilyDefinition setRowCacheSize(double size) {
-        cfDef.setRow_cache_size(size);
+    public ColumnFamilyDefinition setRowCacheSize(Double size) {
+        if (size != null)
+            cfDef.setRow_cache_size(size);
         return this;
     }
 
@@ -187,13 +192,13 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
     }
 
     @Override
-    public ColumnFamilyDefinition setId(int id) {
+    public ColumnFamilyDefinition setId(Integer id) {
         cfDef.setId(id);
         return this;
     }
 
     @Override
-    public int getId() {
+    public Integer getId() {
         return cfDef.getId();
     }
 
@@ -209,19 +214,21 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
     }
 
     @Override
-    public ColumnFamilyDefinition setKeyCacheSavePeriodInSeconds(int value) {
-        cfDef.setKey_cache_save_period_in_seconds(value);
+    public ColumnFamilyDefinition setKeyCacheSavePeriodInSeconds(Integer value) {
+        if (value != null)
+            cfDef.setKey_cache_save_period_in_seconds(value);
         return this;
     }
 
     @Override
-    public int getKeyCacheSavePeriodInSeconds() {
+    public Integer getKeyCacheSavePeriodInSeconds() {
         return cfDef.getKey_cache_save_period_in_seconds();
     }
 
     @Override
-    public ColumnFamilyDefinition setKeyCacheSize(double keyCacheSize) {
-        cfDef.setKey_cache_size(keyCacheSize);
+    public ColumnFamilyDefinition setKeyCacheSize(Double keyCacheSize) {
+        if (keyCacheSize != null)
+            cfDef.setKey_cache_size(keyCacheSize);
         return this;
     }
 
@@ -268,27 +275,27 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
 
     @Override
     @Deprecated
-    public int getMemtableThroughputInMb() {
+    public Integer getMemtableThroughputInMb() {
         throw new RuntimeException("API Remove in Cassandra 1.0");
     }
 
     @Override
-    public double getMergeShardsChance() {
+    public Double getMergeShardsChance() {
         return cfDef.merge_shards_chance;
     }
 
     @Override
-    public int getMinCompactionThreshold() {
+    public Integer getMinCompactionThreshold() {
         return cfDef.min_compaction_threshold;
     }
 
     @Override
-    public double getReadRepairChance() {
+    public Double getReadRepairChance() {
         return cfDef.read_repair_chance;
     }
 
     @Override
-    public boolean getReplicateOnWrite() {
+    public Boolean getReplicateOnWrite() {
         return cfDef.replicate_on_write;
     }
 
@@ -298,17 +305,17 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
     }
 
     @Override
-    public int getRowCacheSavePeriodInSeconds() {
+    public Integer getRowCacheSavePeriodInSeconds() {
         return cfDef.row_cache_save_period_in_seconds;
     }
 
     @Override
-    public double getRowCacheSize() {
+    public Double getRowCacheSize() {
         return cfDef.row_cache_size;
     }
 
     @Override
-    public double getKeyCacheSize() {
+    public Double getKeyCacheSize() {
         return cfDef.key_cache_size;
     }
 
@@ -339,13 +346,14 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
     }
 
     @Override
-    public ColumnFamilyDefinition setMaxCompactionThreshold(int value) {
-        cfDef.setMax_compaction_threshold(value);
+    public ColumnFamilyDefinition setMaxCompactionThreshold(Integer value) {
+        if (value != null)
+            cfDef.setMax_compaction_threshold(value);
         return this;
     }
 
     @Override
-    public int getMaxCompactionThreshold() {
+    public Integer getMaxCompactionThreshold() {
         return cfDef.getMax_compaction_threshold();
     }
 
@@ -383,13 +391,14 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
     }
 
     @Override
-    public ColumnFamilyDefinition setBloomFilterFpChance(double chance) {
-        cfDef.setBloom_filter_fp_chance(chance);
+    public ColumnFamilyDefinition setBloomFilterFpChance(Double chance) {
+        if (chance != null)
+            cfDef.setBloom_filter_fp_chance(chance);
         return this;
     }
 
     @Override
-    public double getBloomFilterFpChance() {
+    public Double getBloomFilterFpChance() {
         return cfDef.getBloom_filter_fp_chance();
     }
 
@@ -405,24 +414,26 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
     }
 
     @Override
-    public ColumnFamilyDefinition setLocalReadRepairChance(double value) {
-        cfDef.setDclocal_read_repair_chance(value);
+    public ColumnFamilyDefinition setLocalReadRepairChance(Double value) {
+        if (value != null)
+            cfDef.setDclocal_read_repair_chance(value);
         return this;
     }
 
     @Override
-    public double getLocalReadRepairChance() {
+    public Double getLocalReadRepairChance() {
         return cfDef.getDclocal_read_repair_chance();
     }
 
     @Override
-    public ColumnFamilyDefinition setGcGraceSeconds(int seconds) {
-        cfDef.setGc_grace_seconds(seconds);
+    public ColumnFamilyDefinition setGcGraceSeconds(Integer seconds) {
+        if (seconds != null)
+            cfDef.setGc_grace_seconds(seconds);
         return this;
     }
 
     @Override
-    public int getGcGraceSeconds() {
+    public Integer getGcGraceSeconds() {
         return cfDef.getGc_grace_seconds();
     }
 }

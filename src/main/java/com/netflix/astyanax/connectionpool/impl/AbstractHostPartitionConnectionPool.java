@@ -134,7 +134,7 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
                     topology.addPool(pool);
                     rebuildPartitions();
                 }
-                pool.growConnections(config.getInitConnsPerHost());
+                pool.primeConnections(config.getInitConnsPerHost());
             }
             catch (Exception e) {
                 // Ignore, pool will have been marked down internally
@@ -150,7 +150,7 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
     public boolean isHostUp(Host host) {
         HostConnectionPool<CL> pool = hosts.get(host);
         if (pool != null) {
-            return !pool.isShutdown();
+            return !pool.isReconnecting();
         }
         return false;
     }

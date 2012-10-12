@@ -222,17 +222,31 @@ public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
 
     public String toString() {
         // Build the complete status string
-        return new StringBuilder().append("CountingConnectionPoolMonitor(").append("Connections[").append("open=")
-                .append(getNumOpenConnections()).append(",busy=").append(getNumBusyConnections()).append(",create=")
-                .append(connectionCreateCount.get()).append(",close=").append(connectionClosedCount.get())
-                .append(",borrow=").append(connectionBorrowCount.get()).append(",return=")
-                .append(connectionReturnCount.get()).append("], Operations[").append("success=")
-                .append(operationSuccessCount.get()).append(",failure=").append(operationFailureCount.get())
-                .append(",timeout=").append(operationTimeoutCount.get()).append(",failover=")
-                .append(operationFailoverCount.get()).append(",nohosts=").append(noHostsCount.get())
-                .append("], Hosts[").append("add=").append(hostAddedCount.get()).append(",remove=")
-                .append(hostRemovedCount.get()).append(",down=").append(hostDownCount.get()).append(",reactivate=")
-                .append(hostReactivatedCount.get()).append("])").toString();
+        return new StringBuilder()
+                .append("CountingConnectionPoolMonitor(")
+                .append("Connections[" )
+                    .append( "open="      ).append(getNumOpenConnections())
+                    .append(",busy="      ).append(getNumBusyConnections())
+                    .append(",create="    ).append(connectionCreateCount.get())
+                    .append(",close="     ).append(connectionClosedCount.get())
+                    .append(",borrow="    ).append(connectionBorrowCount.get())
+                    .append(",return="    ).append(connectionReturnCount.get())
+                .append("], Operations[")
+                    .append( "success="   ).append(operationSuccessCount.get())
+                    .append(",failure="   ).append(operationFailureCount.get())
+                    .append(",optimeout=" ).append(operationTimeoutCount.get())
+                    .append(",timeout="   ).append(socketTimeoutCount.get())
+                    .append(",failover="  ).append(operationFailoverCount.get())
+                    .append(",nohosts="   ).append(noHostsCount.get())
+                    .append(",unknownErrorCount=").append(unknownErrorCount.get())
+                    .append(",poolExhausted=").append(poolExhastedCount.get())
+                .append("], Hosts[")
+                    .append( "add="       ).append(hostAddedCount.get())
+                    .append(",remove="    ).append(hostRemovedCount.get())
+                    .append(",down="      ).append(hostDownCount.get())
+                    .append(",reactivate=").append(hostReactivatedCount.get())
+                    .append(",active="    ).append(hostAddedCount.get() - hostRemovedCount.get() + hostReactivatedCount.get() - hostDownCount.get())
+                .append("])").toString();
     }
 
     @Override

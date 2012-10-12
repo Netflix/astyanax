@@ -6,7 +6,7 @@ package com.netflix.astyanax.connectionpool.exceptions;
  * @author elandau
  * 
  */
-public class HostDownException extends ConnectionException implements IsRetryableException, IsDeadConnectionException {
+public class HostDownException extends ConnectionException implements IsRetryableException {
     /**
      * 
      */

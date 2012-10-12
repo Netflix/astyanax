@@ -36,16 +36,6 @@ public interface HostConnectionPool<CL> {
     Connection<CL> borrowConnection(int timeout) throws ConnectionException;
 
     /**
-     * This open is different from borrowConnection in that it actually creates
-     * a new connection without waiting for one that may be idle. openConnection
-     * is still subject to all other connection pool limitations.
-     * 
-     * @return
-     * @throws ConnectionException
-     */
-    Connection<CL> openConnection() throws ConnectionException;
-
-    /**
      * Return a connection to the host's pool. May close the connection if the
      * pool is down or the last exception on the connection is determined to be
      * fatal.
@@ -82,7 +72,7 @@ public interface HostConnectionPool<CL> {
      * @throws InterruptedException
      * @returns Actual number of connections created
      */
-    int growConnections(int numConnections) throws ConnectionException, InterruptedException;
+    int primeConnections(int numConnections) throws ConnectionException, InterruptedException;
 
     /**
      * Get the host to which this pool is associated
@@ -134,7 +124,7 @@ public interface HostConnectionPool<CL> {
      * 
      * @return
      */
-    boolean isShutdown();
+    boolean isReconnecting();
 
     /**
      * Return implementation specific score to be used by weighted pool

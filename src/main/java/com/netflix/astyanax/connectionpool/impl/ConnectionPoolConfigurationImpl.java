@@ -51,7 +51,7 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     public static final int DEFAULT_CONNECTION_LIMITER_WINDOW_SIZE = 2000;
     public static final int DEFAULT_CONNECTION_LIMITER_MAX_PENDING_COUNT = 50;
     public static final int DEFAULT_MAX_PENDING_CONNECTIONS_PER_HOST = 5;
-    public static final int DEFAULT_MAX_BLOCKED_THREADS_PER_HOST = 10;
+    public static final int DEFAULT_MAX_BLOCKED_THREADS_PER_HOST = 25;
     public static final int DEFAULT_MAX_TIMEOUT_COUNT = 3;
     public static final int DEFAULT_TIMEOUT_WINDOW = 10000;
     public static final int DEFAULT_RETRY_SUSPEND_WINDOW = 20000;

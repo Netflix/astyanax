@@ -17,9 +17,7 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.IsDeadConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.IsTimeoutException;
 import com.netflix.astyanax.connectionpool.exceptions.NoAvailableHostsException;
-import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.connectionpool.exceptions.PoolTimeoutException;
-import com.netflix.astyanax.connectionpool.exceptions.TimeoutException;
 
 /**
  * Connection pool which puts all connections in a single queue. The load
@@ -108,7 +106,7 @@ public class BagOfConnectionsConnectionPoolImpl<CL> extends AbstractHostPartitio
 
     protected boolean returnConnection(Connection<CL> connection) {
         if (connection != null) {
-            if (connection.getHostConnectionPool().isShutdown()
+            if (connection.getHostConnectionPool().isReconnecting()
                     || connection.getOperationCount() > config.getMaxOperationsPerConnection()) {
                 closeConnection(connection);
             }

@@ -117,7 +117,7 @@ public class HostConnectionPoolPartition<CL> {
     public synchronized void refresh() {
         List<HostConnectionPool<CL>> pools = Lists.newArrayList();
         for (HostConnectionPool<CL> pool : this.pools) {
-            if (!pool.isShutdown()) {
+            if (!pool.isReconnecting()) {
                 pools.add(pool);
             }
         }

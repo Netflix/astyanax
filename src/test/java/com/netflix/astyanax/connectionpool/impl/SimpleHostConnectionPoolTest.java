@@ -46,12 +46,12 @@ public class SimpleHostConnectionPoolTest {
         SimpleHostConnectionPool<TestClient> pool = new SimpleHostConnectionPool<TestClient>(
                 host, new TestConnectionFactory(config, monitor), monitor,
                 config, new NoOpListener());
-        Assert.assertEquals(0, pool.getActiveConnectionCount());
-        Assert.assertEquals(false, pool.isShutdown());
-        Assert.assertEquals(0, pool.getIdleConnectionCount());
+        Assert.assertEquals(0,      pool.getActiveConnectionCount());
+        Assert.assertEquals(false,  pool.isReconnecting());
+        Assert.assertEquals(0,      pool.getIdleConnectionCount());
 
         try {
-            pool.growConnections(1);
+            pool.primeConnections(1);
         } catch (ConnectionException e) {
             LOG.error(e.getMessage());
             Assert.fail();
@@ -59,9 +59,9 @@ public class SimpleHostConnectionPoolTest {
             LOG.error(e.getMessage());
             Assert.fail();
         }
-        Assert.assertEquals(1, pool.getActiveConnectionCount());
-        Assert.assertEquals(false, pool.isShutdown());
-        Assert.assertEquals(1, pool.getIdleConnectionCount());
+        Assert.assertEquals(1,      pool.getActiveConnectionCount());
+        Assert.assertEquals(false,  pool.isReconnecting());
+        Assert.assertEquals(1,      pool.getIdleConnectionCount());
     }
 
     @Test
@@ -76,16 +76,16 @@ public class SimpleHostConnectionPoolTest {
                 config, new NoOpListener());
 
         try {
-            pool.growConnections(1);
+            pool.primeConnections(1);
             Assert.fail();
         } catch (InterruptedException e) {
             LOG.error(e.getMessage());
             Assert.fail();
         } catch (ConnectionException e) {
         }
-        Assert.assertEquals(0, pool.getActiveConnectionCount());
-        Assert.assertEquals(true, pool.isShutdown());
-        Assert.assertEquals(0, pool.getIdleConnectionCount());
+        Assert.assertEquals(0,    pool.getActiveConnectionCount());
+        Assert.assertEquals(true, pool.isReconnecting());
+        Assert.assertEquals(0,    pool.getIdleConnectionCount());
     }
 
     @Test
@@ -100,16 +100,16 @@ public class SimpleHostConnectionPoolTest {
                 config, new NoOpListener());
 
         try {
-            pool.growConnections(1);
+            pool.primeConnections(1);
             Assert.fail();
         } catch (InterruptedException e) {
             LOG.error(e.getMessage());
             Assert.fail();
         } catch (ConnectionException e) {
         }
-        Assert.assertEquals(0, pool.getActiveConnectionCount());
-        Assert.assertEquals(true, pool.isShutdown());
-        Assert.assertEquals(0, pool.getIdleConnectionCount());
+        Assert.assertEquals(0,    pool.getActiveConnectionCount());
+        Assert.assertEquals(true, pool.isReconnecting());
+        Assert.assertEquals(0,    pool.getIdleConnectionCount());
     }
 
     @Test
@@ -123,7 +123,7 @@ public class SimpleHostConnectionPoolTest {
                 config, new NoOpListener());
 
         try {
-            pool.growConnections(2);
+            pool.primeConnections(2);
         } catch (InterruptedException e) {
             LOG.error(e.getMessage());
             Assert.fail();
@@ -131,20 +131,18 @@ public class SimpleHostConnectionPoolTest {
             LOG.error(e.getMessage());
             Assert.fail();
         }
-        Assert.assertEquals(2, pool.getActiveConnectionCount());
-        Assert.assertEquals(false, pool.isShutdown());
-        Assert.assertEquals(2, pool.getIdleConnectionCount());
+        Assert.assertEquals(2,     pool.getActiveConnectionCount());
+        Assert.assertEquals(false, pool.isReconnecting());
+        Assert.assertEquals(2,     pool.getIdleConnectionCount());
 
         try {
-            pool.growConnections(2);
-            Assert.fail();
-        } catch (InterruptedException e) {
+            pool.primeConnections(2);
+        } catch (Exception e) {
             LOG.error(e.getMessage());
             Assert.fail();
-        } catch (ConnectionException e) {
         }
-        Assert.assertEquals(2, pool.getActiveConnectionCount());
-        Assert.assertEquals(false, pool.isShutdown());
+        Assert.assertEquals(2,     pool.getActiveConnectionCount());
+        Assert.assertEquals(false, pool.isReconnecting());
     }
 
     @Test
@@ -161,7 +159,7 @@ public class SimpleHostConnectionPoolTest {
                 config, new NoOpListener());
 
         try {
-            pool.growConnections(2);
+            pool.primeConnections(2);
         } catch (InterruptedException e) {
             LOG.error(e.getMessage());
             Assert.fail();
@@ -169,27 +167,26 @@ public class SimpleHostConnectionPoolTest {
             LOG.error(e.getMessage());
             Assert.fail();
         }
-        Assert.assertEquals(2, pool.getActiveConnectionCount());
-        Assert.assertEquals(false, pool.isShutdown());
-        Assert.assertEquals(2, pool.getIdleConnectionCount());
+        Assert.assertEquals(2,     pool.getActiveConnectionCount());
+        Assert.assertEquals(false, pool.isReconnecting());
+        Assert.assertEquals(2,     pool.getIdleConnectionCount());
 
         pool.markAsDown(null);
 
-        Assert.assertEquals(0, pool.getActiveConnectionCount());
-        Assert.assertEquals(0, pool.getIdleConnectionCount());
-        Assert.assertEquals(true, pool.isShutdown());
+        Assert.assertEquals(2,    pool.getActiveConnectionCount());
+        Assert.assertEquals(2,    pool.getIdleConnectionCount());
+        Assert.assertEquals(true, pool.isReconnecting());
 
         try {
-            pool.growConnections(1);
-            Assert.fail();
+            pool.primeConnections(1);
         } catch (HostDownException e) {
         } catch (Exception e) {
             Assert.fail();
         }
 
-        Assert.assertEquals(0, pool.getActiveConnectionCount());
-        Assert.assertEquals(0, pool.getIdleConnectionCount());
-        Assert.assertEquals(true, pool.isShutdown());
+        Assert.assertEquals(2,    pool.getActiveConnectionCount());
+        Assert.assertEquals(2,    pool.getIdleConnectionCount());
+        Assert.assertEquals(true, pool.isReconnecting());
 
         try {
             Thread.sleep(1000);
@@ -198,12 +195,12 @@ public class SimpleHostConnectionPoolTest {
             e.printStackTrace();
         }
 
-        Assert.assertEquals(1, pool.getActiveConnectionCount());
-        Assert.assertEquals(1, pool.getIdleConnectionCount());
-        Assert.assertEquals(false, pool.isShutdown());
+        Assert.assertEquals(2,     pool.getActiveConnectionCount());
+        Assert.assertEquals(2,     pool.getIdleConnectionCount());
+        Assert.assertEquals(false, pool.isReconnecting());
 
         try {
-            pool.growConnections(2);
+            pool.primeConnections(2);
         } catch (InterruptedException e) {
             LOG.error(e.getMessage());
             Assert.fail();
@@ -211,9 +208,9 @@ public class SimpleHostConnectionPoolTest {
             LOG.error(e.getMessage());
             Assert.fail();
         }
-        Assert.assertEquals(3, pool.getActiveConnectionCount());
-        Assert.assertEquals(false, pool.isShutdown());
-        Assert.assertEquals(3, pool.getIdleConnectionCount());
+        Assert.assertEquals(3,     pool.getActiveConnectionCount());
+        Assert.assertEquals(false, pool.isReconnecting());
+        Assert.assertEquals(3,     pool.getIdleConnectionCount());
     }
 
     @Test
@@ -227,29 +224,29 @@ public class SimpleHostConnectionPoolTest {
                 config, new NoOpListener());
 
         try {
-            pool.growConnections(2);
+            pool.primeConnections(2);
 
-            Assert.assertEquals(2, pool.getActiveConnectionCount());
-            Assert.assertEquals(false, pool.isShutdown());
-            Assert.assertEquals(2, pool.getIdleConnectionCount());
+            Assert.assertEquals(2,     pool.getActiveConnectionCount());
+            Assert.assertEquals(false, pool.isReconnecting());
+            Assert.assertEquals(2,     pool.getIdleConnectionCount());
 
             Connection<TestClient> connection = pool.borrowConnection(0);
 
-            Assert.assertEquals(2, pool.getActiveConnectionCount());
-            Assert.assertEquals(false, pool.isShutdown());
-            Assert.assertEquals(1, pool.getIdleConnectionCount());
+            Assert.assertEquals(2,     pool.getActiveConnectionCount());
+            Assert.assertEquals(false, pool.isReconnecting());
+            Assert.assertEquals(1,     pool.getIdleConnectionCount());
 
             pool.returnConnection(connection);
 
-            Assert.assertEquals(2, pool.getActiveConnectionCount());
-            Assert.assertEquals(false, pool.isShutdown());
-            Assert.assertEquals(2, pool.getIdleConnectionCount());
+            Assert.assertEquals(2,     pool.getActiveConnectionCount());
+            Assert.assertEquals(false, pool.isReconnecting());
+            Assert.assertEquals(2,     pool.getIdleConnectionCount());
 
             connection = pool.borrowConnection(0);
 
-            Assert.assertEquals(2, pool.getActiveConnectionCount());
-            Assert.assertEquals(false, pool.isShutdown());
-            Assert.assertEquals(1, pool.getIdleConnectionCount());
+            Assert.assertEquals(2,     pool.getActiveConnectionCount());
+            Assert.assertEquals(false, pool.isReconnecting());
+            Assert.assertEquals(1,     pool.getIdleConnectionCount());
 
         } catch (InterruptedException e) {
             LOG.error(e.getMessage());
@@ -280,9 +277,9 @@ public class SimpleHostConnectionPoolTest {
             LOG.error(e.getMessage());
             Assert.fail();
         }
-        Assert.assertEquals(1, pool.getActiveConnectionCount());
-        Assert.assertEquals(false, pool.isShutdown());
-        Assert.assertEquals(0, pool.getIdleConnectionCount());
+        Assert.assertEquals(1,    pool.getActiveConnectionCount());
+        Assert.assertEquals(false, pool.isReconnecting());
+        Assert.assertEquals(0,    pool.getIdleConnectionCount());
 
         // Subsequent open should fail
         try {
@@ -294,9 +291,9 @@ public class SimpleHostConnectionPoolTest {
             LOG.error(e.getMessage());
             Assert.fail();
         }
-        Assert.assertEquals(1, pool.getActiveConnectionCount());
-        Assert.assertEquals(false, pool.isShutdown());
-        Assert.assertEquals(0, pool.getIdleConnectionCount());
+        Assert.assertEquals(1,    pool.getActiveConnectionCount());
+        Assert.assertEquals(false, pool.isReconnecting());
+        Assert.assertEquals(0,    pool.getIdleConnectionCount());
     }
 
     @Test
@@ -321,9 +318,9 @@ public class SimpleHostConnectionPoolTest {
             Assert.fail();
         }
         pool.markAsDown(null);
-        Assert.assertEquals(1, pool.getActiveConnectionCount());
-        Assert.assertEquals(true, pool.isShutdown());
-        Assert.assertEquals(0, pool.getIdleConnectionCount());
+        Assert.assertEquals(1,    pool.getActiveConnectionCount());
+        Assert.assertEquals(true, pool.isReconnecting());
+        Assert.assertEquals(0,    pool.getIdleConnectionCount());
 
         // This should fail because we shut down
         try {
@@ -337,18 +334,18 @@ public class SimpleHostConnectionPoolTest {
         }
 
         // Count should still be 1 because we have a pending connection
-        Assert.assertEquals(1, pool.getActiveConnectionCount());
-        Assert.assertEquals(true, pool.isShutdown());
-        Assert.assertEquals(0, pool.getIdleConnectionCount());
+        Assert.assertEquals(1,    pool.getActiveConnectionCount());
+        Assert.assertEquals(true, pool.isReconnecting());
+        Assert.assertEquals(0,    pool.getIdleConnectionCount());
 
         try {
             Thread.sleep(1000);
         } catch (InterruptedException e) {
         }
 
-        Assert.assertEquals(0, pool.getActiveConnectionCount());
-        Assert.assertEquals(true, pool.isShutdown());
-        Assert.assertEquals(0, pool.getIdleConnectionCount());
+        Assert.assertEquals(0,    pool.getActiveConnectionCount());
+        Assert.assertEquals(true, pool.isReconnecting());
+        Assert.assertEquals(0,    pool.getIdleConnectionCount());
     }
 
     @Test
@@ -370,9 +367,9 @@ public class SimpleHostConnectionPoolTest {
             Assert.fail();
         } catch (ConnectionException e) {
         }
-        Assert.assertEquals(0, pool.getActiveConnectionCount());
-        Assert.assertEquals(true, pool.isShutdown());
-        Assert.assertEquals(0, pool.getIdleConnectionCount());
+        Assert.assertEquals(0,    pool.getActiveConnectionCount());
+        Assert.assertEquals(true, pool.isReconnecting());
+        Assert.assertEquals(0,    pool.getIdleConnectionCount());
     }
 
     @Test
@@ -395,9 +392,9 @@ public class SimpleHostConnectionPoolTest {
         } catch (ConnectionException e) {
         }
         
-        Assert.assertEquals(0, pool.getActiveConnectionCount());
-        Assert.assertEquals(true, pool.isShutdown());
-        Assert.assertEquals(0, pool.getIdleConnectionCount());
+        Assert.assertEquals(0,    pool.getActiveConnectionCount());
+        Assert.assertEquals(true, pool.isReconnecting());
+        Assert.assertEquals(0,    pool.getIdleConnectionCount());
     }
 
     public ConnectionPoolConfigurationImpl createConfig() {

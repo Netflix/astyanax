@@ -27,9 +27,17 @@ import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.ConnectionPoolMonitor;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.OperationResult;
+import com.netflix.astyanax.connectionpool.exceptions.BadRequestException;
+import com.netflix.astyanax.connectionpool.exceptions.ConnectionAbortedException;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.connectionpool.exceptions.HostDownException;
 import com.netflix.astyanax.connectionpool.exceptions.NoAvailableHostsException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
+import com.netflix.astyanax.connectionpool.exceptions.OperationTimeoutException;
+import com.netflix.astyanax.connectionpool.exceptions.TimeoutException;
+import com.netflix.astyanax.connectionpool.exceptions.TokenRangeOfflineException;
+import com.netflix.astyanax.connectionpool.exceptions.TransportException;
+import com.netflix.astyanax.connectionpool.exceptions.UnknownException;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.connectionpool.impl.RoundRobinConnectionPoolImpl;
 import com.netflix.astyanax.retry.RunOnce;
@@ -46,8 +54,8 @@ public class Stress {
      * @param args
      */
     public static void main(String[] args) {
-        final int numThreads = 100;
-        final int numHosts = 15;
+        final int numThreads = 50;
+        final int numHosts = 12;
         final int numOperations = 1000000000;
 
         ConnectionPoolConfigurationImpl config;
@@ -57,7 +65,7 @@ public class Stress {
         config.setMaxFailoverCount(-1);
         config.setMaxTimeoutWhenExhausted(1000);
         config.setMaxConnsPerHost(10);
-        config.setInitConnsPerHost(0);
+        config.setInitConnsPerHost(1);
         // config.setRetryBackoffStrategy(new
         // ExponentialRetryBackoffStrategy(20, 1000, 2000));
 
@@ -78,13 +86,13 @@ public class Stress {
             // pool.addHost(new Host("127.0.0" + i,
             // MockHostType.GOOD_FAST.ordinal()));
         }
-        pool.addHost(new Host("127.0.0." + numHosts,
-                TestHostType.SOCKET_TIMEOUT_AFTER10.ordinal()), true);
+//        pool.addHost(new Host("127.0.0." + numHosts,
+//                TestHostType.SOCKET_TIMEOUT_AFTER10.ordinal()), true);
 
         // pool.addHost(new Host("127.0." + numHosts + ".0",
         // MockHostType.FAIL_AFTER_10_SLOW_CLOSE.ordinal()));
 
-        LOG.info(monitor.toString());
+        System.out.println(monitor.toString());
 
         long startTime = System.currentTimeMillis();
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
@@ -102,46 +110,46 @@ public class Stress {
                                                 throws ConnectionException,
                                                 OperationException {
 
-                                            /*
-                                             * long tm1 =
-                                             * System.currentTimeMillis();
-                                             * think(5, 10); try { double p =
-                                             * new Random().nextDouble(); double
-                                             * factor = 50000; if (p < 1/factor)
-                                             * { throw new
-                                             * UnknownException("UnknownException"
-                                             * ); } else if (p < 2/factor) {
-                                             * throw new BadRequestException(
-                                             * "BadRequestException"); } else if
-                                             * (p < 3/factor) { think(1000, 0);
-                                             * throw new
-                                             * OperationTimeoutException
-                                             * ("OperationTimeoutException"); }
-                                             * else if (p < 4/factor) { throw
-                                             * new ConnectionAbortedException(
-                                             * "ConnectionAbortedException"); }
-                                             * else if (p < 5/factor) { throw
-                                             * new
-                                             * HostDownException("HostDownException"
-                                             * ); } else if (p < 6/factor) {
-                                             * think(1000, 0); throw new
-                                             * TimeoutException
-                                             * ("TimeoutException"); } else if
-                                             * (p < 7/factor) { throw new
-                                             * TokenRangeOfflineException
-                                             * ("TokenRangeOfflineException"); }
-                                             * else if (p < 8/factor) { throw
-                                             * new TransportException(
-                                             * "TransportException"); } } catch
-                                             * (ConnectionException e) {
-                                             * e.setLatency
-                                             * (System.currentTimeMillis() -
-                                             * tm1); throw e; } //
-                                             * LOG.info("Execute 1");
-                                             */
-                                            return "RESULT";
-                                        }
-                                    }, RunOnce.get());
+                                            
+                                             long tm1 = System.currentTimeMillis();
+                                             think(3, 5); 
+//                                    try {
+//                                        double p = new Random().nextDouble();
+//                                        double factor = 10000;
+//                                        if (p < 1 / factor) {
+//                                            throw new UnknownException(new Exception("UnknownExceptionDescription"));
+//                                        } else if (p < 2 / factor) {
+//                                            throw new BadRequestException("BadRequestException");
+//                                        } else if (p < 3 / factor) {
+////                                            think(1000, 0);
+//                                            throw new OperationTimeoutException("OperationTimeoutException");
+//                                        } else if (p < 4 / factor) {
+//                                            throw new ConnectionAbortedException("ConnectionAbortedException");
+//                                        } else if (p < 5 / factor) {
+//                                            throw new HostDownException("HostDownException");
+//                                        } else if (p < 6 / factor) {
+////                                            think(1000, 0);
+//                                            throw new TimeoutException("TimeoutException");
+//                                        } else if (p < 7 / factor) {
+//                                            throw new TokenRangeOfflineException("TokenRangeOfflineException");
+//                                        } else if (p < 8 / factor) {
+//                                            throw new TransportException("TransportException");
+//                                        }
+//                                    } catch (ConnectionException e) {
+//                                        e.setLatency(System.currentTimeMillis() - tm1);
+//                                        throw e;
+//                                    } //
+//                                    System.out.println("Execute 1");
+                                             
+                                    return "RESULT";
+                                }
+                            }, RunOnce.get());
+                            
+                            long total = System.currentTimeMillis() - startTime;
+                            long delta = total - result.getLatency(TimeUnit.MILLISECONDS);
+                            
+                            System.out.println("tatal=" + total + "  latency=" + result.getLatency(TimeUnit.MILLISECONDS) + " delta=" + delta);
+                            
                         } catch (NoAvailableHostsException e) {
                             // think(1000, 0);
                         } catch (Exception e) {
@@ -156,7 +164,7 @@ public class Stress {
             executor.shutdown();
             int i = 0;
             while (!executor.awaitTermination(1000, TimeUnit.MILLISECONDS)) {
-                LOG.info(monitor.toString());
+                System.out.println(monitor.toString());
                 /*
                  * if (i++ % 10 == 9) { //
                  * config.setMaxConnsPerHost(config.getMaxConnsPerHost() - 1); }
@@ -172,9 +180,9 @@ public class Stress {
         pool.shutdown();
         think(1000, 1000);
 
-        LOG.info("*** DONE ***");
-        LOG.info(monitor.toString());
-        // LOG.info(runTime + " ops/msec");
+        System.out.println("*** DONE ***");
+        System.out.println(monitor.toString());
+        // System.out.println(runTime + " ops/msec");
     }
 
     private static void think(int min, int max) {

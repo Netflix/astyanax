@@ -24,12 +24,6 @@ public class TestHostConnectionPool implements HostConnectionPool<TestClient> {
     }
 
     @Override
-    public Connection<TestClient> openConnection() throws ConnectionException {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
     public boolean returnConnection(Connection<TestClient> connection) {
         // TODO Auto-generated method stub
         return false;
@@ -46,7 +40,7 @@ public class TestHostConnectionPool implements HostConnectionPool<TestClient> {
     }
 
     @Override
-    public int growConnections(int numConnections) throws ConnectionException,
+    public int primeConnections(int numConnections) throws ConnectionException,
             InterruptedException {
         // TODO Auto-generated method stub
         return 0;
@@ -88,7 +82,7 @@ public class TestHostConnectionPool implements HostConnectionPool<TestClient> {
     }
 
     @Override
-    public boolean isShutdown() {
+    public boolean isReconnecting() {
         // TODO Auto-generated method stub
         return false;
     }

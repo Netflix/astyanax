@@ -5,6 +5,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.netflix.astyanax.ColumnListMutation;
@@ -218,6 +219,8 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
      */
     @Override
     public void acquire() throws Exception {
+        Preconditions.checkArgument(timeout < ttl, "Timeout " + timeout + " must be less than TTL " + ttl);
+        
         RetryPolicy retry = backoffPolicy.duplicate();
         retryCount = 0;
         while (true) {
@@ -304,14 +307,24 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
      * @throws Exception
      */
     public void releaseWithMutation(MutationBatch m) throws Exception {
+        releaseWithMutation(m, false);
+    }
+    
+    public boolean releaseWithMutation(MutationBatch m, boolean force) throws Exception {
         long elapsed = System.currentTimeMillis() - acquireTime;
+        boolean isStale = false;
         if (timeout > 0 && elapsed > TimeUnit.MILLISECONDS.convert(timeout, this.timeoutUnits)) {
-            throw new StaleLockException("Lock for '" + getKey() + "' became stale");
+            isStale = true;
+            if (!force) {
+                throw new StaleLockException("Lock for '" + getKey() + "' became stale");
+            }
         }
         
         m.setConsistencyLevel(consistencyLevel);
         fillReleaseMutation(m, false);
         m.execute();
+        
+        return isStale;
     }
     
     /**

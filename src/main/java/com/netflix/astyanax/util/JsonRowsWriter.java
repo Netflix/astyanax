@@ -341,6 +341,14 @@ public class JsonRowsWriter implements RowsWriter {
                     timestampString = "none";
                 }
 
+                int ttl;
+                try {
+                    ttl = column.getTtl();
+                }
+                catch (Exception e) {
+                    ttl = 0;
+                }
+                
                 columnCount++;
                 out.append(jsonifyString(this.fieldNames.get(Field.COLUMN))).append(":")
                         .append(jsonifyString(columnString)).append(",")
@@ -349,7 +357,7 @@ public class JsonRowsWriter implements RowsWriter {
                         .append(jsonifyString(this.fieldNames.get(Field.TIMESTAMP))).append(":")
                         .append(jsonifyString(timestampString)).append(",")
                         .append(jsonifyString(this.fieldNames.get(Field.TTL))).append(":")
-                        .append(jsonifyString(Integer.toString(column.getTtl()))).append("}")
+                        .append(jsonifyString(Integer.toString(ttl))).append("}")
                         ;
             }
             catch (Exception e) {

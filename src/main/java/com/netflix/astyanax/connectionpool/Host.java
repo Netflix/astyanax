@@ -33,15 +33,18 @@ import com.google.common.collect.Sets;
  */
 public class Host {
 
+    public static final Host NO_HOST = new Host();
+    public static final String UKNOWN_DC = "";
+    
     private final String host;
     private final String ipAddress;
-    private final int port;
+    private final int    port;
     private final String name;
     private final String url;
-    private String id;
+    private String       dc = UKNOWN_DC;
+    private String       id;
     private Set<String> alternateIpAddress = Sets.newHashSet();
 
-    public static final Host NO_HOST = new Host();
     public static Pattern ipPattern = Pattern
             .compile("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$");
 
@@ -169,4 +172,14 @@ public class Host {
         this.id = id;
         return this;
     }
+    
+    public Host setDc(String dc) {
+        this.dc = dc;
+        return this;
+    }
+    
+    public String getDc() {
+        return dc;
+    }
+    
 }

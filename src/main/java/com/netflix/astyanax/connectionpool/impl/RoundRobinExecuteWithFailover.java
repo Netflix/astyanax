@@ -46,6 +46,8 @@ public class RoundRobinExecuteWithFailover<CL, R> extends AbstractExecuteWithFai
         }
         finally {
             index++;
+            if (index < 0)
+                index = 0;
         }
     }
 

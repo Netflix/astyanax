@@ -113,12 +113,13 @@ public class Stress {
                                             
                                              long tm1 = System.currentTimeMillis();
                                              think(3, 5); 
-//                                    try {
-//                                        double p = new Random().nextDouble();
-//                                        double factor = 10000;
-//                                        if (p < 1 / factor) {
-//                                            throw new UnknownException(new Exception("UnknownExceptionDescription"));
-//                                        } else if (p < 2 / factor) {
+                                    try {
+                                        double p = new Random().nextDouble();
+                                        double factor = 1000;
+                                        if (p < 1 / factor) {
+                                            throw new UnknownException(new Exception("UnknownExceptionDescription"));
+                                        } 
+//                                        else if (p < 2 / factor) {
 //                                            throw new BadRequestException("BadRequestException");
 //                                        } else if (p < 3 / factor) {
 ////                                            think(1000, 0);
@@ -135,10 +136,10 @@ public class Stress {
 //                                        } else if (p < 8 / factor) {
 //                                            throw new TransportException("TransportException");
 //                                        }
-//                                    } catch (ConnectionException e) {
-//                                        e.setLatency(System.currentTimeMillis() - tm1);
-//                                        throw e;
-//                                    } //
+                                    } catch (ConnectionException e) {
+                                        e.setLatency(System.currentTimeMillis() - tm1);
+                                        throw e;
+                                    } //
 //                                    System.out.println("Execute 1");
                                              
                                     return "RESULT";
@@ -147,8 +148,8 @@ public class Stress {
                             
                             long total = System.currentTimeMillis() - startTime;
                             long delta = total - result.getLatency(TimeUnit.MILLISECONDS);
-                            
-                            System.out.println("tatal=" + total + "  latency=" + result.getLatency(TimeUnit.MILLISECONDS) + " delta=" + delta);
+//                            
+//                            System.out.println("tatal=" + total + "  latency=" + result.getLatency(TimeUnit.MILLISECONDS) + " delta=" + delta);
                             
                         } catch (NoAvailableHostsException e) {
                             // think(1000, 0);

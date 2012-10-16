@@ -39,6 +39,8 @@ import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
 import com.netflix.astyanax.connectionpool.RetryBackoffStrategy;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionAbortedException;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.connectionpool.exceptions.TransportException;
+import com.netflix.astyanax.connectionpool.exceptions.UnknownException;
 import com.netflix.astyanax.connectionpool.exceptions.HostDownException;
 import com.netflix.astyanax.connectionpool.exceptions.IsDeadConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.PoolTimeoutException;
@@ -244,9 +246,8 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
             // The connection died and is no longer usable
             else if (ce instanceof IsDeadConnectionException) {
                 internalCloseConnection(connection);
-                if (!(ce instanceof ConnectionAbortedException)) {
+                if (ce instanceof TransportException && !(ce instanceof ConnectionAbortedException)) {
                     markAsDown(ce);
-                    return true;
                 }
                 return true;
             }

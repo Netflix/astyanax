@@ -208,6 +208,9 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
         }
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            throw new PoolTimeoutException("Thread interrupted waiting for connection")
+                .setHost(getHost())
+                .setLatency(System.currentTimeMillis() - startTime);
         }
         finally {
             blockedThreads.decrementAndGet();

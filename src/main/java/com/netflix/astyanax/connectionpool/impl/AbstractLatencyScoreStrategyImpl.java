@@ -85,9 +85,9 @@ public abstract class AbstractLatencyScoreStrategyImpl implements LatencyScoreSt
                     Thread.currentThread().setName(name + "_ScoreUpdate");
                     update();
                     listener.onUpdate();
-                    executor.schedule(this, updateInterval, TimeUnit.MILLISECONDS);
+                    executor.schedule(this, getUpdateInterval(), TimeUnit.MILLISECONDS);
                 }
-            }, new Random().nextInt(updateInterval), TimeUnit.MILLISECONDS);
+            }, new Random().nextInt(getUpdateInterval()), TimeUnit.MILLISECONDS);
         }
 
         if (resetInterval > 0) {
@@ -97,9 +97,9 @@ public abstract class AbstractLatencyScoreStrategyImpl implements LatencyScoreSt
                     Thread.currentThread().setName(name + "_ScoreReset");
                     reset();
                     listener.onReset();
-                    executor.schedule(this, resetInterval, TimeUnit.MILLISECONDS);
+                    executor.schedule(this, getResetInterval(), TimeUnit.MILLISECONDS);
                 }
-            }, new Random().nextInt(resetInterval), TimeUnit.MILLISECONDS);
+            }, new Random().nextInt(getResetInterval()), TimeUnit.MILLISECONDS);
         }
     }
 
@@ -148,7 +148,7 @@ public abstract class AbstractLatencyScoreStrategyImpl implements LatencyScoreSt
         Collections.sort(pools, scoreComparator);
         prioritized.set(false);
         int poolSize = pools.size();
-        int keep     = (int) Math.max(1, Math.ceil(poolSize * keepRatio));
+        int keep     = (int) Math.max(1, Math.ceil(poolSize * getKeepRatio()));
 
         // Step 1: Remove any host that is current reconnecting
         Iterator<HostConnectionPool<CL>> iter = pools.iterator();
@@ -168,7 +168,7 @@ public abstract class AbstractLatencyScoreStrategyImpl implements LatencyScoreSt
             for (int i = pools.size() - 1; i >= keep; i--) {
                 HostConnectionPool<CL> pool  = pools.get(i);
                 int busy = pool.getBusyConnectionCount() + pool.getBlockedThreadCount();
-                if ( (busy - firstBusy) > blockedThreshold) {
+                if ( (busy - firstBusy) > getBlockedThreshold()) {
 //                    System.out.println("**** Removing host (blocked) : " + pool.toString());
                     pools.remove(i);
                 }
@@ -181,14 +181,16 @@ public abstract class AbstractLatencyScoreStrategyImpl implements LatencyScoreSt
         
         if (first < pools.size()) {
             double scoreFirst = pools.get(first).getScore();
-            for (int i = pools.size() - 1; i >= keep && i > first; i--) {
-                HostConnectionPool<CL> pool  = pools.get(i);
-                if ((pool.getScore() / scoreFirst) > scoreThreshold) {
-//                    System.out.println("**** Removing host (score) : " + pool.toString());
-                    pools.remove(i);
-                }
-                else {
-                    break;
+            if (scoreFirst > 0.0) {
+                for (int i = pools.size() - 1; i >= keep && i > first; i--) {
+                    HostConnectionPool<CL> pool  = pools.get(i);
+                    if ((pool.getScore() / scoreFirst) > getScoreThreshold()) {
+    //                    System.out.println("**** Removing host (score) : " + pool.toString());
+                        pools.remove(i);
+                    }
+                    else {
+                        break;
+                    }
                 }
             }
         }
@@ -213,22 +215,27 @@ public abstract class AbstractLatencyScoreStrategyImpl implements LatencyScoreSt
         }
     }
     
+    @Override
     public int getUpdateInterval() {
         return this.updateInterval;
     }
     
-    public int getReserInteval() {
+    @Override
+    public int getResetInterval() {
         return this.resetInterval;
     }
     
+    @Override
     public double getScoreThreshold() {
         return scoreThreshold;
     }
 
+    @Override
     public int getBlockedThreshold() {
         return this.blockedThreshold;
     }
     
+    @Override
     public double getKeepRatio() {
         return this.keepRatio;
     }

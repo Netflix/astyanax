@@ -67,4 +67,29 @@ public class EmptyLatencyScoreStrategyImpl implements LatencyScoreStrategy {
     public String toString() {
         return "EmptyLatencyScoreStrategy[]";
     }
+
+    @Override
+    public int getUpdateInterval() {
+        return 0;
+    }
+
+    @Override
+    public int getResetInterval() {
+        return 0;
+    }
+
+    @Override
+    public double getScoreThreshold() {
+        return 10.0;
+    }
+
+    @Override
+    public int getBlockedThreshold() {
+        return 100;
+    }
+
+    @Override
+    public double getKeepRatio() {
+        return 1.0;
+    }
 }

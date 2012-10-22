@@ -41,6 +41,37 @@ public interface LatencyScoreStrategy {
     }
 
     /**
+     * Return interval for updating the scores
+     * @return
+     */
+    int getUpdateInterval();
+    
+    /**
+     * Return interval for clearing scores
+     * @return
+     */
+    int getResetInterval();
+    
+    /**
+     * Return threshold after which hosts will be excluded if their score 
+     * is getScoreThreshold() times larger than the best performing node
+     * @return
+     */
+    double getScoreThreshold();
+    
+    /**
+     * Return threshold of blocked connections after which a host is excluded
+     * @return
+     */
+    int getBlockedThreshold();
+    
+    /**
+     * Get ratio for calculating minimum number of hosts that most remain in the pool
+     * @return
+     */
+    double getKeepRatio();
+
+    /**
      * Update all instance scores
      */
     void update();

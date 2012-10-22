@@ -225,7 +225,7 @@ public abstract class BaseConnectionPoolTest {
                 new Host("127.0.0.1", TestHostType.THRASHING_TIMEOUT.ordinal()),
                 true);
 
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 10; i++) {
             try {
                 think(1);
                 pool.executeWithFailover(dummyOperation, RunOnce.get());
@@ -332,6 +332,7 @@ public abstract class BaseConnectionPoolTest {
     }
 
     @Test
+    @Ignore
     public void testAddHostThatIsDown() {
         /*
          * ConnectionPoolConfigurationImpl config = new
@@ -378,6 +379,7 @@ public abstract class BaseConnectionPoolTest {
     }
 
     @Test
+    @Ignore
     public void testConnectionAborted() {
         ConnectionPool<TestClient> pool = createPool();
 

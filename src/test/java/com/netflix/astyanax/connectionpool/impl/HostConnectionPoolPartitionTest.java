@@ -71,7 +71,7 @@ public class HostConnectionPoolPartitionTest {
         List<HostConnectionPool<TestClient>> flatRing = pools;
         boolean didChange = topology.setPools(flatRing);
         Assert.assertTrue(didChange);
-        Assert.assertEquals(1, topology.getPartitionCount());
+        Assert.assertEquals(0, topology.getPartitionCount());
         System.out.println(topology);
 
         // Make a ring with tokens and RF

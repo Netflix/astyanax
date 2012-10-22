@@ -175,7 +175,8 @@ public class RoundRobinConnectionPoolImplTest extends BaseConnectionPoolTest {
         CountingConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
 
         ConnectionPoolConfigurationImpl config = new ConnectionPoolConfigurationImpl(
-                TestConstants.CLUSTER_NAME + "_" + TestConstants.KEYSPACE_NAME);
+                TestConstants.CLUSTER_NAME + "_" + TestConstants.KEYSPACE_NAME)
+            .setRetrySuspendWindow(100);
         // config.setRetryBackoffStrategy(new FixedRetryBackoffStrategy(200,
         // 2000));
         config.setMaxConnsPerHost(3);
@@ -190,14 +191,14 @@ public class RoundRobinConnectionPoolImplTest extends BaseConnectionPoolTest {
 
         OperationResult<String> result;
 
-        try {
-            result = cp.executeWithFailover(new TestOperation(), RunOnce.get());
-            Assert.fail();
-        } catch (ConnectionException e) {
-            LOG.info(e);
+        for (int i = 0; i < 2; i++) {
+            try {
+                result = cp.executeWithFailover(new TestOperation(), RunOnce.get());
+                Assert.fail();
+            } catch (ConnectionException e) {
+                LOG.info(e);
+            }
         }
-
-        think(10000);
 
         try {
             result = cp.executeWithFailover(new TestOperation(), RunOnce.get());

@@ -192,7 +192,7 @@ public enum TestHostType {
         public <R> OperationResult<R> execute(
                 HostConnectionPool<TestClient> pool, Operation<TestClient, R> op)
                 throws ConnectionException {
-            think(11000);
+            think(2000);
             throw new TimeoutException("SocketTimeException");
         }
 
@@ -207,7 +207,7 @@ public enum TestHostType {
                 HostConnectionPool<TestClient> pool, Operation<TestClient, R> op)
                 throws ConnectionException {
             if (counter.incrementAndGet() / 200 % 2 == 1) {
-                think(11000);
+                think(200);
                 throw new TimeoutException("SocketTimeException");
             }
             else {

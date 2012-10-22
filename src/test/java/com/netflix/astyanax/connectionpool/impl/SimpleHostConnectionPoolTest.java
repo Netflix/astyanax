@@ -14,15 +14,17 @@ import com.netflix.astyanax.connectionpool.HostConnectionPool;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.HostDownException;
 import com.netflix.astyanax.connectionpool.exceptions.PoolTimeoutException;
+import com.netflix.astyanax.connectionpool.exceptions.TimeoutException;
 import com.netflix.astyanax.test.TestClient;
 import com.netflix.astyanax.test.TestConnectionFactory;
 import com.netflix.astyanax.test.TestHostType;
+import com.netflix.astyanax.test.TestOperation;
 
 public class SimpleHostConnectionPoolTest {
     private static Logger LOG = LoggerFactory
             .getLogger(SimpleHostConnectionPoolTest.class);
 
-    private static int WAIT_TIMEOUT = 100;
+    private static int WAIT_TIMEOUT = 50;
 
     public static class NoOpListener implements
             SimpleHostConnectionPool.Listener<TestClient> {
@@ -107,9 +109,17 @@ public class SimpleHostConnectionPoolTest {
             Assert.fail();
         } catch (ConnectionException e) {
         }
+        
+        LOG.info(pool.toString());
+        
         Assert.assertEquals(0,    pool.getActiveConnectionCount());
-        Assert.assertEquals(true, pool.isReconnecting());
         Assert.assertEquals(0,    pool.getIdleConnectionCount());
+        Assert.assertEquals(0,    pool.getOpenedConnectionCount());
+        Assert.assertEquals(0,    pool.getClosedConnectionCount());
+        Assert.assertEquals(2,    pool.getFailedOpenConnectionCount());
+        Assert.assertEquals(0,    pool.getBusyConnectionCount());
+        Assert.assertEquals(0,    pool.getPendingConnectionCount());
+        Assert.assertEquals(true, pool.isReconnecting());
     }
 
     @Test
@@ -277,9 +287,9 @@ public class SimpleHostConnectionPoolTest {
             LOG.error(e.getMessage());
             Assert.fail();
         }
-        Assert.assertEquals(1,    pool.getActiveConnectionCount());
+        Assert.assertEquals(1,     pool.getActiveConnectionCount());
         Assert.assertEquals(false, pool.isReconnecting());
-        Assert.assertEquals(0,    pool.getIdleConnectionCount());
+        Assert.assertEquals(0,     pool.getIdleConnectionCount());
 
         // Subsequent open should fail
         try {
@@ -367,9 +377,16 @@ public class SimpleHostConnectionPoolTest {
             Assert.fail();
         } catch (ConnectionException e) {
         }
+        
+        LOG.info(pool.toString());
         Assert.assertEquals(0,    pool.getActiveConnectionCount());
-        Assert.assertEquals(true, pool.isReconnecting());
         Assert.assertEquals(0,    pool.getIdleConnectionCount());
+        Assert.assertEquals(0,    pool.getOpenedConnectionCount());
+        Assert.assertEquals(0,    pool.getClosedConnectionCount());
+        Assert.assertEquals(1,    pool.getFailedOpenConnectionCount());
+        Assert.assertEquals(0,    pool.getBusyConnectionCount());
+        Assert.assertEquals(0,    pool.getPendingConnectionCount());
+        Assert.assertEquals(false, pool.isReconnecting());
     }
 
     @Test
@@ -392,9 +409,88 @@ public class SimpleHostConnectionPoolTest {
         } catch (ConnectionException e) {
         }
         
-        Assert.assertEquals(0,    pool.getActiveConnectionCount());
-        Assert.assertEquals(true, pool.isReconnecting());
-        Assert.assertEquals(0,    pool.getIdleConnectionCount());
+        Assert.assertEquals(0,     pool.getActiveConnectionCount());
+        Assert.assertEquals(false, pool.isReconnecting());
+        Assert.assertEquals(0,     pool.getIdleConnectionCount());
+    }
+    
+    @Test
+    public void testExcessiveTimeouts() throws Exception {
+        Host host = new Host("127.0.0.1",
+                TestHostType.GOOD_FAST.ordinal());
+
+        ConnectionPoolConfigurationImpl config = createConfig();
+        config.setRetryBackoffStrategy(new FixedRetryBackoffStrategy(500, 500));
+
+        // Open the first connection
+        CountingConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
+        SimpleHostConnectionPool<TestClient> pool = new SimpleHostConnectionPool<TestClient>(
+                host, new TestConnectionFactory(config, monitor), monitor,
+                config, new NoOpListener());
+
+        try {
+            for (int i = 0; i < 3; i++) {
+                Connection<TestClient> connection = pool.borrowConnection(WAIT_TIMEOUT);
+                try {
+                    Assert.assertEquals(1,     pool.getActiveConnectionCount());
+                    Assert.assertEquals(false, pool.isReconnecting());
+                    Assert.assertEquals(0,     pool.getIdleConnectionCount());
+                    
+                    connection.execute(new TestOperation() {
+                        @Override
+                        public String execute(TestClient client) throws ConnectionException {
+                            throw new TimeoutException("Test");
+                        }
+                    });
+                    
+                    Assert.fail();
+                }
+                catch (Throwable t) {
+                }
+                finally {
+                    pool.returnConnection(connection);
+                }
+                Assert.assertEquals(i+1,     pool.getErrorsSinceLastSuccess());
+                Assert.assertEquals(0,     pool.getActiveConnectionCount());
+                Assert.assertEquals(false, pool.isReconnecting());
+                Assert.assertEquals(0,     pool.getIdleConnectionCount());
+            }
+            
+            Connection<TestClient> connection = pool.borrowConnection(WAIT_TIMEOUT);
+            try {
+                Assert.assertEquals(1,     pool.getActiveConnectionCount());
+                Assert.assertEquals(false, pool.isReconnecting());
+                Assert.assertEquals(0,     pool.getIdleConnectionCount());
+                
+                connection.execute(new TestOperation() {
+                    @Override
+                    public String execute(TestClient client) throws ConnectionException {
+                        throw new TimeoutException("Test");
+                    }
+                });
+            }
+            catch (Throwable t) {
+            }
+            finally {
+                pool.returnConnection(connection);
+            }
+            Assert.assertEquals(0,     pool.getActiveConnectionCount());
+            Assert.assertEquals(true,  pool.isReconnecting());
+            Assert.assertEquals(0,     pool.getIdleConnectionCount());
+
+            Thread.sleep(1000);
+            
+            connection = pool.borrowConnection(WAIT_TIMEOUT);
+            pool.returnConnection(connection);
+            
+            Assert.assertEquals(1,      pool.getActiveConnectionCount());
+            Assert.assertEquals(false,  pool.isReconnecting());
+            Assert.assertEquals(1,      pool.getIdleConnectionCount());
+            
+        } catch (ConnectionException e) {
+            LOG.error("Error", e);
+            Assert.fail(e.getMessage());
+        }
     }
 
     public ConnectionPoolConfigurationImpl createConfig() {
@@ -402,6 +498,7 @@ public class SimpleHostConnectionPoolTest {
                 "cluster_keyspace");
         config.setMaxConnsPerHost(2);
         config.setInitConnsPerHost(1);
+        config.setConnectTimeout(200);
         return config;
     }
 

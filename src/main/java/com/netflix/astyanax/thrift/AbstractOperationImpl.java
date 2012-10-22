@@ -15,7 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax.thrift;
 
-import java.math.BigInteger;
+import java.nio.ByteBuffer;
 
 import org.apache.cassandra.thrift.Cassandra;
 
@@ -39,7 +39,7 @@ public abstract class AbstractOperationImpl<R> implements Operation<Cassandra.Cl
     }
 
     @Override
-    public BigInteger getToken() {
+    public ByteBuffer getRowKey() {
         return null;
     }
 

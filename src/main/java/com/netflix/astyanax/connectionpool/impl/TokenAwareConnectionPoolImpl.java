@@ -66,7 +66,7 @@ public class TokenAwareConnectionPoolImpl<CL> extends AbstractHostPartitionConne
                 pools = Arrays.<HostConnectionPool<CL>> asList(pool);
             }
             else {
-                HostConnectionPoolPartition<CL> partition = topology.getPartition(op.getToken());
+                TokenHostConnectionPoolPartition<CL> partition = topology.getPartition(op.getRowKey());
                 pools = partition.getPools();
                 isSorted = partition.isSorted();
             }

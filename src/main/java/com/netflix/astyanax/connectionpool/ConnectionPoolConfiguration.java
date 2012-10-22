@@ -18,6 +18,7 @@ package com.netflix.astyanax.connectionpool;
 import java.util.List;
 
 import com.netflix.astyanax.AuthenticationCredentials;
+import com.netflix.astyanax.partitioner.Partitioner;
 
 public interface ConnectionPoolConfiguration {
     /**
@@ -163,6 +164,24 @@ public interface ConnectionPoolConfiguration {
     float getLatencyAwareBadnessThreshold();
 
     /**
+     * Return the threshold for disabling hosts that have nBlockedThreads more than
+     * the least blocked host.  The idea here is to quarantine hosts that are slow to respond
+     * and free up connections.
+     * 
+     * @return
+     */
+    int getBlockedThreadThreshold();
+    
+    /**
+     * Return the ratio for keeping a minimum number of hosts in the pool even if they are slow
+     * or are blocked.  For example, a ratio of 0.75 with a connection pool of 12 hosts will 
+     * ensure that no more than 4 hosts can be quaratined.
+     * 
+     * @return
+     */
+    float getMinHostInPoolRatio();
+    
+    /**
      * 
      * @return
      */
@@ -244,4 +263,10 @@ public interface ConnectionPoolConfiguration {
      * @return
      */
     OperationFilterFactory getOperationFilterFactory();
+    
+    /**
+     * Get the partitioner used to convert row keys to TOKEN
+     * @return
+     */
+    Partitioner getPartitioner();
 }

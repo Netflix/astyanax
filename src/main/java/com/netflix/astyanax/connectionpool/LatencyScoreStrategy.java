@@ -38,13 +38,6 @@ public interface LatencyScoreStrategy {
          * Update the score
          */
         void update();
-
-        /**
-         * Get the mean for the sample window
-         * 
-         * @return
-         */
-        double getMean();
     }
 
     /**

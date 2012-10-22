@@ -39,7 +39,7 @@ public class EmptyConnectionPoolMonitor implements ConnectionPoolMonitor {
     }
 
     public String toString() {
-        return "EmptyConnectionPoolMonitor";
+        return "EmptyConnectionPoolMonitor[]";
     }
 
     @Override
@@ -171,6 +171,11 @@ public class EmptyConnectionPoolMonitor implements ConnectionPoolMonitor {
 
     @Override
     public long notFoundCount() {
+        return 0;
+    }
+
+    @Override
+    public long getInterruptedCount() {
         return 0;
     }
 }

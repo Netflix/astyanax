@@ -135,18 +135,35 @@ public interface HostConnectionPool<CL> {
     double getScore();
 
     /**
-     * Get the average latency as calculated by the scoring strategy
-     * 
-     * @return
-     */
-    double getMeanLatency();
-
-    /**
      * Add a single latency sample after an operation on a connection belonging
      * to this pool
      * 
      * @param lastLatency
      */
     void addLatencySample(long lastLatency, long now);
+
+    /**
+     * Get total number of connections opened since the pool was created
+     * @return
+     */
+    int getOpenedConnectionCount();
+
+    /**
+     * Get the total number of failed connection open attempts
+     * @return
+     */
+    int getFailedOpenConnectionCount();
+
+    /**
+     * Get total number of connections closed
+     * @return
+     */
+    int getClosedConnectionCount();
+
+    /**
+     * Get number of errors since the last successful operation
+     * @return
+     */
+    int getErrorsSinceLastSuccess();
 
 }

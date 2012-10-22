@@ -144,6 +144,12 @@ public interface ConnectionPoolMonitor {
     long notFoundCount();
 
     /**
+     * Number of times operations were cancelled 
+     * @return
+     */
+    long getInterruptedCount();
+    
+    /**
      * A host was added and given the associated pool. The pool is immutable and
      * can be used to get info about the number of open connections
      * 

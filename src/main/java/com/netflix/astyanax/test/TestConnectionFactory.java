@@ -17,6 +17,7 @@ package com.netflix.astyanax.test;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -77,6 +78,9 @@ public class TestConnectionFactory implements ConnectionFactory<TestClient> {
                             .ToConnectionPoolException(e).setLatency(latency);
                     if (!(connectionException instanceof IsTimeoutException)) {
                         pool.addLatencySample(latency, now);
+                    }
+                    else {
+                        pool.addLatencySample(TimeUnit.NANOSECONDS.convert(config.getSocketTimeout(), TimeUnit.MILLISECONDS), System.nanoTime());
                     }
                     lastException = connectionException;
                     throw lastException;

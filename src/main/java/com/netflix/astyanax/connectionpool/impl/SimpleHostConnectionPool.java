@@ -37,15 +37,14 @@ import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
 import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
 import com.netflix.astyanax.connectionpool.RetryBackoffStrategy;
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionAbortedException;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.exceptions.TransportException;
-import com.netflix.astyanax.connectionpool.exceptions.UnknownException;
+import com.netflix.astyanax.connectionpool.exceptions.InterruptedOperationException;
 import com.netflix.astyanax.connectionpool.exceptions.HostDownException;
 import com.netflix.astyanax.connectionpool.exceptions.IsDeadConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.PoolTimeoutException;
 import com.netflix.astyanax.connectionpool.exceptions.ThrottledException;
 import com.netflix.astyanax.connectionpool.exceptions.TimeoutException;
+import com.netflix.astyanax.connectionpool.exceptions.UnknownException;
 
 /**
  * Pool of connections for a single host.
@@ -79,13 +78,21 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
     private final long                          id = poolIdCounter.incrementAndGet();
 
     private final BlockingQueue<Connection<CL>> availableConnections;
-    private final AtomicInteger                 activeCount        = new AtomicInteger(0);
-    private final AtomicInteger                 pendingConnections = new AtomicInteger(0);
-    private final AtomicInteger                 blockedThreads     = new AtomicInteger(0);
+    private final AtomicInteger                 activeCount          = new AtomicInteger(0);
+    private final AtomicInteger                 pendingConnections   = new AtomicInteger(0);
+    private final AtomicInteger                 blockedThreads       = new AtomicInteger(0);
+    private final AtomicInteger                 openConnections      = new AtomicInteger(0);
+    private final AtomicInteger                 failedOpenConnections= new AtomicInteger(0);
+    private final AtomicInteger                 closedConnections    = new AtomicInteger(0);
+    private final AtomicInteger                 borrowedCount        = new AtomicInteger(0);
+    private final AtomicInteger                 returnedCount        = new AtomicInteger(0);
+    
+    private final AtomicInteger                 errorsSinceLastSuccess = new AtomicInteger(0);
+
     private final ConnectionFactory<CL>         factory;
     private final Host                          host;
-    private final AtomicBoolean                 isShutdown         = new AtomicBoolean(false);
-    private final AtomicBoolean                 isReconnecting     = new AtomicBoolean(false);
+    private final AtomicBoolean                 isShutdown           = new AtomicBoolean(false);
+    private final AtomicBoolean                 isReconnecting       = new AtomicBoolean(false);
     private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder().setDaemon(true).build());
     private final RetryBackoffStrategy.Instance retryContext;
     private final BadHostDetector.Instance      badHostDetector;
@@ -114,13 +121,13 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
             throw new HostDownException("Can't prime connections on downed host.");
         }
         // Don't try to create more than we're allowed
-        int count = Math.min(numConnections, config.getMaxConnsPerHost() - getActiveConnectionCount());
+        int remaining = Math.min(numConnections, config.getMaxConnsPerHost() - getActiveConnectionCount());
         
         // Attempt to open 'count' connections and allow for MAX_PRIME_CONNECTIONS_RETRY_ATTEMPT
         // retries before giving up if we can't open more.
         int opened = 0;
         Exception lastException = null;
-        for (int i = 0; opened < count && i < MAX_PRIME_CONNECTIONS_RETRY_ATTEMPT;) {
+        for (int i = 0; opened < remaining && i < MAX_PRIME_CONNECTIONS_RETRY_ATTEMPT;) {
             try {
                 reconnect();
                 opened++;
@@ -133,7 +140,7 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
         }
         
         // If no connection was opened then mark this host as down
-        if (count > 0 && opened == 0) {
+        if (remaining > 0 && opened == 0) {
             this.markAsDown(null);
             throw new HostDownException("Failed to prime connections", lastException);
         }
@@ -154,10 +161,6 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
      */
     @Override
     public Connection<CL> borrowConnection(int timeout) throws ConnectionException {
-        if (isReconnecting()) {
-            throw new HostDownException("Can't borrow connection.  Host is down.");
-        }
-
         Connection<CL> connection = null;
         long startTime = System.currentTimeMillis();
         try {
@@ -181,6 +184,7 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
         }
         finally {
             if (connection != null) {
+                borrowedCount.incrementAndGet();
                 monitor.incConnectionBorrowed(host, System.currentTimeMillis() - startTime);
             }
         }
@@ -198,29 +202,24 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
         Connection<CL> connection = null;
         long startTime = System.currentTimeMillis();
         try {
-            if (blockedThreads.incrementAndGet() <= config.getMaxBlockedThreadsPerHost()) {
-                connection = availableConnections.poll(timeout, TimeUnit.MILLISECONDS);
-                if (connection != null)
-                    return connection;
-            }
-            else {
-                throw new PoolTimeoutException("Too many clients blocked on this pool " + blockedThreads.get())
-                        .setHost(getHost());
-            }
+            blockedThreads.incrementAndGet();
+            connection = availableConnections.poll(timeout, TimeUnit.MILLISECONDS);
+            if (connection != null)
+                return connection;
+            
+            throw new PoolTimeoutException("Timed out waiting for connection")
+                .setHost(getHost())
+                .setLatency(System.currentTimeMillis() - startTime);
         }
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new PoolTimeoutException("Thread interrupted waiting for connection")
+            throw new InterruptedOperationException("Thread interrupted waiting for connection")
                 .setHost(getHost())
                 .setLatency(System.currentTimeMillis() - startTime);
         }
         finally {
             blockedThreads.decrementAndGet();
         }
-
-        throw new PoolTimeoutException("Timed out waiting for connection")
-                .setHost(getHost())
-                .setLatency(System.currentTimeMillis() - startTime);
     }
 
     /**
@@ -230,28 +229,18 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
      */
     @Override
     public boolean returnConnection(Connection<CL> connection) {
+        returnedCount.incrementAndGet();
         monitor.incConnectionReturned(host);
 
         ConnectionException ce = connection.getLastException();
         if (ce != null) {
-            // This is a socket timeout.  The connection is no longer usable
-            if (ce instanceof TimeoutException) {
+            if (ce instanceof IsDeadConnectionException) {
+                noteError(ce);
                 internalCloseConnection(connection);
-                if (badHostDetector.addTimeoutSample()) {
-                    retryContext.suspend();
-                    markAsDown(ce);
-                }
-                return true;
-            }
-            // The connection died and is no longer usable
-            else if (ce instanceof IsDeadConnectionException) {
-                internalCloseConnection(connection);
-                if (ce instanceof TransportException && !(ce instanceof ConnectionAbortedException)) {
-                    markAsDown(ce);
-                }
                 return true;
             }
         }
+        errorsSinceLastSuccess.set(0);
 
         // Still within the number of max active connection
         if (activeCount.get() <= config.getMaxConnsPerHost()) {
@@ -281,6 +270,7 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
 
     private void internalCloseConnection(Connection<CL> connection) {
         try {
+            closedConnections.incrementAndGet();
             connection.close();
         }
         finally {
@@ -288,6 +278,11 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
         }
     }
 
+    private void noteError(ConnectionException reason) {
+        if (errorsSinceLastSuccess.incrementAndGet() > 3) 
+            markAsDown(reason);
+    }
+    
     /**
      * Mark the host as down. No new connections will be created from this host.
      * Connections currently in use will be allowed to continue processing.
@@ -307,20 +302,26 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
                 executor.schedule(new Runnable() {
                     @Override
                     public void run() {
-                        Thread.currentThread().setName("RetryService : " + host.toString());
+                        Thread.currentThread().setName("RetryService : " + host.getName());
                         try {
                             if (activeCount.get() == 0)
                                 reconnect();
                             
-                            // Created a new connection successfully. 
-                            retryContext.success();
-                            isReconnecting.set(false);
-                            monitor .onHostReactivated(host, SimpleHostConnectionPool.this);
-                            listener.onHostUp(SimpleHostConnectionPool.this);
+                            // Created a new connection successfully.
+                            try {
+                                retryContext.success();
+                                isReconnecting.set(false);
+                                monitor .onHostReactivated(host, SimpleHostConnectionPool.this);
+                                listener.onHostUp(SimpleHostConnectionPool.this);
+                            }
+                            catch (Throwable t) {
+                                t.printStackTrace();
+                            }
                             return;
                         }
                         catch (Throwable t) {
                             // Ignore
+                            // t.printStackTrace();
                         }
                         
                         if (!isShutdown())
@@ -340,16 +341,28 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
                 if (activeCount.incrementAndGet() <= config.getMaxConnsPerHost()) {
                     Connection<CL> connection = factory.createConnection(SimpleHostConnectionPool.this);
                     connection.open();
+                    
+                    errorsSinceLastSuccess.set(0);
                     availableConnections.add(connection);
+                    openConnections.incrementAndGet();
                 }
                 else {
                     activeCount.decrementAndGet();
                 }
             }
         }
-        catch (Exception e) {
+        catch (ConnectionException e) {
+            failedOpenConnections.incrementAndGet();
             activeCount.decrementAndGet();
+            noteError(e);
             throw e;
+        }
+        catch (Throwable t) {
+            failedOpenConnections.incrementAndGet();
+            activeCount.decrementAndGet();
+            ConnectionException ce = new UnknownException(t);
+            noteError(ce);
+            throw ce;
         }
     }
 
@@ -382,6 +395,7 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
                             connection.openAsync(new Connection.AsyncOpenCallback<CL>() {
                                 @Override
                                 public void success(Connection<CL> connection) {
+                                    openConnections.incrementAndGet();
                                     pendingConnections.decrementAndGet();
                                     availableConnections.add(connection);
     
@@ -394,11 +408,12 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
     
                                 @Override
                                 public void failure(Connection<CL> conn, ConnectionException e) {
+                                    failedOpenConnections.incrementAndGet();
                                     pendingConnections.decrementAndGet();
                                     activeCount.decrementAndGet();
     
                                     if (e instanceof IsDeadConnectionException) {
-                                        markAsDown(e);
+                                        noteError(e);
                                     }
                                 }
                             });
@@ -458,6 +473,22 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
     }
 
     @Override
+    public int getOpenedConnectionCount() {
+        return openConnections.get();
+    }
+    
+    @Override
+    public int getFailedOpenConnectionCount() {
+        return failedOpenConnections.get();
+    }
+    
+    @Override
+    public int getClosedConnectionCount() {
+        return closedConnections.get();
+    }
+
+    
+    @Override
     public int getBusyConnectionCount() {
         return getActiveConnectionCount() - getIdleConnectionCount() - getPendingConnectionCount();
     }
@@ -468,13 +499,13 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
     }
 
     @Override
-    public double getMeanLatency() {
-        return latencyStrategy.getMean();
-    }
-
-    @Override
     public void addLatencySample(long latency, long now) {
         latencyStrategy.addSample(latency);
+    }
+    
+    @Override
+    public int getErrorsSinceLastSuccess() {
+        return errorsSinceLastSuccess.get();
     }
 
     /**
@@ -488,6 +519,7 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
 
         for (Connection<CL> connection : connections) {
             try {
+                closedConnections.incrementAndGet();
                 connection.close(); // This is usually an async operation
             }
             catch (Throwable t) {
@@ -502,13 +534,19 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
         return new StringBuilder()
                 .append("SimpleHostConnectionPool[")
                 .append("host="    ).append(host).append("-").append(id)
-                .append(",active=" ).append(!isShutdown())
-                .append(",open="   ).append(open)
-                .append(",busy="   ).append(open - idle)
-                .append(",idle="   ).append(idle)
+                .append(",active=" ).append(!isReconnecting())
+                .append(",connections(")
+                .append(  "open=").append(open)
+                .append( ",idle="   ).append(idle)
+                .append( ",busy="   ).append(open - idle)
+                .append( ",closed=").append(closedConnections.get())
+                .append( ",failed=").append(failedOpenConnections.get())
+                .append(")")
+                .append(",borrow=" ).append(borrowedCount.get())
+                .append(",return=" ).append(returnedCount.get())
                 .append(",blocked=").append(getBlockedThreadCount())
                 .append(",pending=").append(getPendingConnectionCount())
-                .append(",score="  ).append(getScore())
+                .append(",score="  ).append(getScore()/1000000)
                 .append("]").toString();
     }
 }

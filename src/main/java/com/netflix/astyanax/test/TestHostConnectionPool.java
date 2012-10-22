@@ -94,12 +94,6 @@ public class TestHostConnectionPool implements HostConnectionPool<TestClient> {
     }
 
     @Override
-    public double getMeanLatency() {
-        // TODO Auto-generated method stub
-        return 0;
-    }
-
-    @Override
     public void addLatencySample(long lastLatency, long now) {
         // TODO Auto-generated method stub
 
@@ -109,6 +103,30 @@ public class TestHostConnectionPool implements HostConnectionPool<TestClient> {
     public boolean closeConnection(Connection<TestClient> connection) {
         // TODO Auto-generated method stub
         return false;
+    }
+
+    @Override
+    public int getOpenedConnectionCount() {
+        // TODO Auto-generated method stub
+        return 0;
+    }
+
+    @Override
+    public int getFailedOpenConnectionCount() {
+        // TODO Auto-generated method stub
+        return 0;
+    }
+
+    @Override
+    public int getClosedConnectionCount() {
+        // TODO Auto-generated method stub
+        return 0;
+    }
+
+    @Override
+    public int getErrorsSinceLastSuccess() {
+        // TODO Auto-generated method stub
+        return 0;
     }
 
 }

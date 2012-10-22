@@ -41,7 +41,7 @@ import com.netflix.astyanax.util.Callables;
 public class AllRowsReader<K, C> implements Callable<Boolean> {
     private static final Logger LOG = LoggerFactory.getLogger(AllRowsReader.class);
     
-    private static final Partitioner DEFAULT_PARTITIONER = new BigInteger127Partitioner();
+    private static final Partitioner DEFAULT_PARTITIONER = BigInteger127Partitioner.get();
     private final static int DEFAULT_PAGE_SIZE = 100;
     
     private final Keyspace      keyspace;

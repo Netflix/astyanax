@@ -14,6 +14,7 @@ import com.netflix.astyanax.connectionpool.ExecuteWithFailover;
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.connectionpool.exceptions.InterruptedOperationException;
 import com.netflix.astyanax.connectionpool.exceptions.IsDeadConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.IsTimeoutException;
 import com.netflix.astyanax.connectionpool.exceptions.NoAvailableHostsException;
@@ -63,7 +64,7 @@ public class BagOfConnectionsConnectionPoolImpl<CL> extends AbstractHostPartitio
                 }
                 catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    throw new RuntimeException("Interrupted waiting to borrow a connection");
+                    throw new InterruptedOperationException("Interrupted waiting to borrow a connection");
                 }
             }
             // Try to create a new one
@@ -175,4 +176,5 @@ public class BagOfConnectionsConnectionPoolImpl<CL> extends AbstractHostPartitio
     public <R> ExecuteWithFailover<CL, R> newExecuteWithFailover(Operation<CL, R> op) throws ConnectionException {
         return new BagExecuteWithFailover<R>(config);
     }
+
 }

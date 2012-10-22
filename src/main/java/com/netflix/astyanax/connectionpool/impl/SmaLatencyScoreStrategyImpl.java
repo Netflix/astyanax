@@ -21,7 +21,6 @@ public class SmaLatencyScoreStrategyImpl implements LatencyScoreStrategy {
 
     private final ScheduledExecutorService executor;
     private final Set<Instance> instances;
-    private final int updateInterval;
     private final int resetInterval;
     private final int windowSize;
     private final double badnessThreshold;

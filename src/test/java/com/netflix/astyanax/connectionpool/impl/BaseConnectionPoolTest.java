@@ -15,13 +15,10 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.impl;
 
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
 import com.netflix.astyanax.connectionpool.Host;
@@ -30,6 +27,7 @@ import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.NoAvailableHostsException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
+import com.netflix.astyanax.connectionpool.exceptions.PoolTimeoutException;
 import com.netflix.astyanax.connectionpool.exceptions.TransportException;
 import com.netflix.astyanax.retry.ConstantBackoff;
 import com.netflix.astyanax.retry.RetryPolicy;
@@ -93,10 +91,10 @@ public abstract class BaseConnectionPoolTest {
                 LOG.info(result.getHost());
             } catch (OperationException e) {
                 LOG.info(e.getMessage());
-                Assert.fail();
+                Assert.fail(e.getMessage());
             } catch (ConnectionException e) {
                 LOG.info(e.getCause());
-                Assert.fail();
+                Assert.fail(e.getMessage());
             }
         }
     }
@@ -220,7 +218,6 @@ public abstract class BaseConnectionPoolTest {
     }
 
     @Test
-    @Ignore
     public void testThrashingTimeout() {
         ConnectionPool<TestClient> pool = createPool();
 
@@ -270,7 +267,7 @@ public abstract class BaseConnectionPoolTest {
                     config, new TestConnectionFactory(config, monitor), monitor);
         } catch (Exception e) {
             e.printStackTrace();
-            Assert.fail();
+            Assert.fail(e.getMessage());
         }
     }
 
@@ -279,19 +276,18 @@ public abstract class BaseConnectionPoolTest {
         ConnectionPool<TestClient> pool = createPool();
 
         Host host1 = new Host("127.0.0.1", TestHostType.GOOD_FAST.ordinal());
-        Map<BigInteger, List<Host>> ring1 = Maps.newHashMap();
-        ring1.put(new BigInteger("0"), Lists.newArrayList(host1));
+        List<Host> ring1 = Lists.newArrayList(host1);
 
         Host host2 = new Host("127.0.0.2", TestHostType.GOOD_FAST.ordinal());
-        Map<BigInteger, List<Host>> ring2 = Maps.newHashMap();
-        ring2.put(new BigInteger("0"), Lists.newArrayList(host2));
+        List<Host> ring2 = Lists.newArrayList(host2);
 
-        Map<BigInteger, List<Host>> ring3 = Maps.newHashMap();
+        List<Host> ring3 = Lists.newArrayList();
 
         pool.setHosts(ring1);
-        Assert.assertTrue(pool.hasHost(host1));
-        Assert.assertTrue(pool.isHostUp(host1));
-        Assert.assertFalse(pool.hasHost(host2));
+        Assert.assertTrue (pool.hasHost (host1));
+        Assert.assertTrue (pool.isHostUp(host1));
+        
+        Assert.assertFalse(pool.hasHost (host2));
         Assert.assertFalse(pool.isHostUp(host2));
 
         try {
@@ -299,7 +295,8 @@ public abstract class BaseConnectionPoolTest {
                     dummyOperation, RunOnce.get());
             Assert.assertEquals(host1, result.getHost());
         } catch (Exception e) {
-            Assert.fail();
+            e.printStackTrace();
+            Assert.fail(e.getMessage());
         }
 
         pool.setHosts(ring3);
@@ -313,8 +310,8 @@ public abstract class BaseConnectionPoolTest {
         } catch (NoAvailableHostsException e) {
 
         } catch (Exception e) {
-            LOG.info(e);
-            Assert.fail();
+            e.printStackTrace();
+            Assert.fail(e.getMessage());
         }
 
         pool.setHosts(ring2);
@@ -328,13 +325,13 @@ public abstract class BaseConnectionPoolTest {
                     dummyOperation, RunOnce.get());
             Assert.assertEquals(host2, result.getHost());
         } catch (Exception e) {
-            Assert.fail();
+            e.printStackTrace();
+            Assert.fail(e.getMessage());
         }
 
     }
 
     @Test
-    @Ignore
     public void testAddHostThatIsDown() {
         /*
          * ConnectionPoolConfigurationImpl config = new
@@ -347,24 +344,24 @@ public abstract class BaseConnectionPoolTest {
          * MockConnectionFactory(config));
          */
         ConnectionPool<TestClient> pool = createPool();
-
+        
         Host host1 = new Host("127.0.0.1",
                 TestHostType.CONNECT_FAIL_FIRST.ordinal());
-        Map<BigInteger, List<Host>> ring1 = Maps.newHashMap();
-        ring1.put(new BigInteger("0"), Lists.newArrayList(host1));
+        List<Host> ring1 = Lists.newArrayList(host1);
 
         OperationResult<String> result;
 
         pool.setHosts(ring1);
         Assert.assertTrue(pool.hasHost(host1));
-        Assert.assertFalse(pool.isHostUp(host1));
+        Assert.assertTrue(pool.isHostUp(host1));
 
         try {
             pool.executeWithFailover(dummyOperation, RunOnce.get());
             Assert.fail();
-        } catch (NoAvailableHostsException e) {
+        } catch (PoolTimeoutException e) {
         } catch (ConnectionException e) {
-            Assert.fail();
+            e.printStackTrace();
+            Assert.fail(e.getMessage());
         }
 
         think(500);
@@ -375,13 +372,12 @@ public abstract class BaseConnectionPoolTest {
         try {
             pool.executeWithFailover(dummyOperation, RunOnce.get());
         } catch (Exception e) {
-            LOG.error(e.getMessage());
-            Assert.fail();
+            e.printStackTrace();
+            Assert.fail(e.getMessage());
         }
     }
 
     @Test
-    @Ignore
     public void testConnectionAborted() {
         ConnectionPool<TestClient> pool = createPool();
 
@@ -393,10 +389,8 @@ public abstract class BaseConnectionPoolTest {
 
         try {
             result = pool.executeWithFailover(dummyOperation, RunOnce.get());
-            Assert.assertEquals(2, result.getAttemptsCount());
-        } catch (ConnectionException e) {
-            LOG.error(e);
             Assert.fail();
+        } catch (ConnectionException e) {
         }
     }
 

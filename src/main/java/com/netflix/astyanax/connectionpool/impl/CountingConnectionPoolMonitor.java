@@ -3,6 +3,9 @@ package com.netflix.astyanax.connectionpool.impl;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.netflix.astyanax.connectionpool.ConnectionPoolMonitor;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
@@ -13,8 +16,13 @@ import com.netflix.astyanax.connectionpool.exceptions.BadRequestException;
 import com.netflix.astyanax.connectionpool.exceptions.NoAvailableHostsException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationTimeoutException;
 import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
+import com.netflix.astyanax.connectionpool.exceptions.HostDownException;
+import com.netflix.astyanax.connectionpool.exceptions.TransportException;
+import com.netflix.astyanax.connectionpool.exceptions.InterruptedOperationException;
 
 public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
+    private static Logger LOG = LoggerFactory.getLogger(CountingConnectionPoolMonitor.class);
+    
     private AtomicLong operationFailureCount  = new AtomicLong();
     private AtomicLong operationSuccessCount  = new AtomicLong();
     private AtomicLong connectionCreateCount  = new AtomicLong();
@@ -36,6 +44,8 @@ public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
     private AtomicLong noHostsCount           = new AtomicLong();
     private AtomicLong unknownErrorCount      = new AtomicLong();
     private AtomicLong badRequestCount        = new AtomicLong();
+    private AtomicLong interruptedCount       = new AtomicLong();
+    private AtomicLong transportErrorCount    = new AtomicLong();
 
     private AtomicLong notFoundCounter        = new AtomicLong();
     
@@ -58,7 +68,17 @@ public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
         else if (reason instanceof NoAvailableHostsException ) {
             this.noHostsCount.incrementAndGet();
         }
+        else if (reason instanceof InterruptedOperationException) {
+            this.interruptedCount.incrementAndGet();
+        }
+        else if (reason instanceof HostDownException) {
+            this.hostDownCount.incrementAndGet();
+        }
+        else if (reason instanceof TransportException) {
+            this.transportErrorCount.incrementAndGet();
+        }
         else {
+            LOG.error(reason.toString(), reason);
             this.unknownErrorCount.incrementAndGet();
         }
     }
@@ -157,6 +177,7 @@ public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
 
     @Override
     public void onHostAdded(Host host, HostConnectionPool<?> pool) {
+        LOG.info("AddHost: " + host.getHostName());
         this.hostAddedCount.incrementAndGet();
     }
 
@@ -166,6 +187,7 @@ public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
 
     @Override
     public void onHostRemoved(Host host) {
+        LOG.info("RemoveHost: " + host.getHostName());
         this.hostRemovedCount.incrementAndGet();
     }
 
@@ -184,6 +206,7 @@ public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
 
     @Override
     public void onHostReactivated(Host host, HostConnectionPool<?> pool) {
+        LOG.info("Reactivating " + host.getHostName());
         this.hostReactivatedCount.incrementAndGet();
     }
 
@@ -199,6 +222,11 @@ public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
     @Override
     public long getUnknownErrorCount() {
         return this.unknownErrorCount.get();
+    }
+    
+    @Override
+    public long getInterruptedCount() {
+        return this.interruptedCount.get();
     }
 
     @Override
@@ -225,27 +253,30 @@ public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
         return new StringBuilder()
                 .append("CountingConnectionPoolMonitor(")
                 .append("Connections[" )
-                    .append( "open="      ).append(getNumOpenConnections())
-                    .append(",busy="      ).append(getNumBusyConnections())
-                    .append(",create="    ).append(connectionCreateCount.get())
-                    .append(",close="     ).append(connectionClosedCount.get())
-                    .append(",borrow="    ).append(connectionBorrowCount.get())
-                    .append(",return="    ).append(connectionReturnCount.get())
+                    .append( "open="       ).append(getNumOpenConnections())
+                    .append(",busy="       ).append(getNumBusyConnections())
+                    .append(",create="     ).append(connectionCreateCount.get())
+                    .append(",close="      ).append(connectionClosedCount.get())
+                    .append(",failed="     ).append(connectionCreateFailureCount.get())
+                    .append(",borrow="     ).append(connectionBorrowCount.get())
+                    .append(",return="     ).append(connectionReturnCount.get())
                 .append("], Operations[")
-                    .append( "success="   ).append(operationSuccessCount.get())
-                    .append(",failure="   ).append(operationFailureCount.get())
-                    .append(",optimeout=" ).append(operationTimeoutCount.get())
-                    .append(",timeout="   ).append(socketTimeoutCount.get())
-                    .append(",failover="  ).append(operationFailoverCount.get())
-                    .append(",nohosts="   ).append(noHostsCount.get())
-                    .append(",unknownErrorCount=").append(unknownErrorCount.get())
-                    .append(",poolExhausted=").append(poolExhastedCount.get())
+                    .append( "success="    ).append(operationSuccessCount.get())
+                    .append(",failure="    ).append(operationFailureCount.get())
+                    .append(",optimeout="  ).append(operationTimeoutCount.get())
+                    .append(",timeout="    ).append(socketTimeoutCount.get())
+                    .append(",failover="   ).append(operationFailoverCount.get())
+                    .append(",nohosts="    ).append(noHostsCount.get())
+                    .append(",unknown="    ).append(unknownErrorCount.get())
+                    .append(",interrupted=").append(interruptedCount.get())
+                    .append(",exhausted="  ).append(poolExhastedCount.get())
+                    .append(",transport="  ).append(transportErrorCount.get())
                 .append("], Hosts[")
-                    .append( "add="       ).append(hostAddedCount.get())
-                    .append(",remove="    ).append(hostRemovedCount.get())
-                    .append(",down="      ).append(hostDownCount.get())
-                    .append(",reactivate=").append(hostReactivatedCount.get())
-                    .append(",active="    ).append(hostAddedCount.get() - hostRemovedCount.get() + hostReactivatedCount.get() - hostDownCount.get())
+                    .append( "add="        ).append(hostAddedCount.get())
+                    .append(",remove="     ).append(hostRemovedCount.get())
+                    .append(",down="       ).append(hostDownCount.get())
+                    .append(",reactivate=" ).append(hostReactivatedCount.get())
+                    .append(",active="     ).append(hostAddedCount.get() - hostRemovedCount.get() + hostReactivatedCount.get() - hostDownCount.get())
                 .append("])").toString();
     }
 

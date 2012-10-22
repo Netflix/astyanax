@@ -15,9 +15,8 @@
  ******************************************************************************/
 package com.netflix.astyanax.test;
 
-import java.math.BigInteger;
+import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.Host;
@@ -30,9 +29,9 @@ import com.netflix.astyanax.retry.RetryPolicy;
 
 public class TestConnectionPool implements ConnectionPool<TestClient> {
 
-    Map<BigInteger, List<Host>> ring;
+    Collection<Host> ring;
 
-    public Map<BigInteger, List<Host>> getHosts() {
+    public Collection<Host> getHosts() {
         return this.ring;
     }
 
@@ -47,7 +46,7 @@ public class TestConnectionPool implements ConnectionPool<TestClient> {
     }
 
     @Override
-    public void setHosts(Map<BigInteger, List<Host>> ring) {
+    public void setHosts(Collection<Host> ring) {
         this.ring = ring;
     }
 
@@ -84,6 +83,12 @@ public class TestConnectionPool implements ConnectionPool<TestClient> {
 
     @Override
     public List<HostConnectionPool<TestClient>> getActivePools() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public List<HostConnectionPool<TestClient>> getPools() {
         // TODO Auto-generated method stub
         return null;
     }

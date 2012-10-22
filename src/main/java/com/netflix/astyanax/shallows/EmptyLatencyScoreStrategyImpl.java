@@ -32,11 +32,6 @@ public class EmptyLatencyScoreStrategyImpl implements LatencyScoreStrategy {
             }
 
             @Override
-            public double getMean() {
-                return 0;
-            }
-
-            @Override
             public void update() {
             }
         };
@@ -70,6 +65,6 @@ public class EmptyLatencyScoreStrategyImpl implements LatencyScoreStrategy {
     }
 
     public String toString() {
-        return "Empty[]";
+        return "EmptyLatencyScoreStrategy[]";
     }
 }

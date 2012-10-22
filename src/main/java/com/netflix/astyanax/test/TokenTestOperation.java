@@ -16,23 +16,30 @@
 package com.netflix.astyanax.test;
 
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 
-import com.netflix.astyanax.connectionpool.Host;
-import com.netflix.astyanax.connectionpool.Operation;
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.exceptions.OperationException;
+import com.netflix.astyanax.serializers.BigIntegerSerializer;
+import com.netflix.astyanax.serializers.LongSerializer;
 
 public class TokenTestOperation extends TestOperation {
 
-    private final BigInteger token;
+    private final ByteBuffer rowKey;
 
-    public TokenTestOperation(BigInteger token) {
-        this.token = token;
+    public TokenTestOperation(ByteBuffer rowKey) {
+        this.rowKey = rowKey;
     }
-
+    
+    public TokenTestOperation(BigInteger rowKey) {
+        this.rowKey = BigIntegerSerializer.get().toByteBuffer(rowKey);
+    }
+    
+    public TokenTestOperation(Long rowKey) {
+        this.rowKey = LongSerializer.get().toByteBuffer(rowKey);
+    }
+    
     @Override
-    public BigInteger getToken() {
-        return token;
+    public ByteBuffer getRowKey() {
+        return rowKey.duplicate();
     }
 
 }

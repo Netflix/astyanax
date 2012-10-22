@@ -15,7 +15,6 @@
  ******************************************************************************/
 package com.netflix.astyanax.thrift;
 
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -24,7 +23,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.cassandra.dht.RandomPartitioner;
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.CounterColumn;
 import org.apache.cassandra.thrift.Cassandra.Client;
@@ -60,7 +58,6 @@ import com.netflix.astyanax.thrift.ddl.*;
 public final class ThriftKeyspaceImpl implements Keyspace {
 
     private final ConnectionPool<Cassandra.Client> connectionPool;
-    private static final RandomPartitioner partitioner = new RandomPartitioner();
     private final AstyanaxConfiguration config;
     private final String ksName;
     private final ExecutorService executor;
@@ -107,9 +104,9 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                 }
 
                                 @Override
-                                public BigInteger getToken() {
+                                public ByteBuffer getRowKey() {
                                     if (getMutationMap().size() == 1)
-                                        return partitioner.getToken(getMutationMap().keySet().iterator().next()).token;
+                                        return getMutationMap().keySet().iterator().next();
                                     else
                                         return null;
                                 }
@@ -254,9 +251,9 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                     }
 
                                     @Override
-                                    public BigInteger getToken() {
-                                        return partitioner.getToken(columnFamily.getKeySerializer()
-                                                .toByteBuffer(rowKey)).token;
+                                    public ByteBuffer getRowKey() {
+                                        return columnFamily.getKeySerializer()
+                                                .toByteBuffer(rowKey);
                                     }
                                 }, retry);
                     }
@@ -292,9 +289,8 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                     }
 
                                     @Override
-                                    public BigInteger getToken() {
-                                        return partitioner.getToken(columnFamily.getKeySerializer()
-                                                .toByteBuffer(rowKey)).token;
+                                    public ByteBuffer getRowKey() {
+                                        return columnFamily.getKeySerializer().toByteBuffer(rowKey);
                                     }
                                 }, retry);
                     }
@@ -334,9 +330,8 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                     }
 
                                     @Override
-                                    public BigInteger getToken() {
-                                        return partitioner.getToken(columnFamily.getKeySerializer()
-                                                .toByteBuffer(rowKey)).token;
+                                    public ByteBuffer getRowKey() {
+                                        return columnFamily.getKeySerializer().toByteBuffer(rowKey);
                                     }
                                 }, retry);
                     }
@@ -371,9 +366,8 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                     }
 
                                     @Override
-                                    public BigInteger getToken() {
-                                        return partitioner.getToken(columnFamily.getKeySerializer()
-                                                .toByteBuffer(rowKey)).token;
+                                    public ByteBuffer getRowKey() {
+                                        return columnFamily.getKeySerializer().toByteBuffer(rowKey);
                                     }
                                 }, retry);
                     }

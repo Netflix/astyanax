@@ -15,10 +15,19 @@ public class BigInteger127Partitioner implements Partitioner {
 
     public static final BigInteger MINIMUM = new BigInteger("" + 0);
     public static final BigInteger MAXIMUM = new BigInteger("" + 2).pow(127);
-    public static final BigInteger ONE = new BigInteger("1");
+    public static final BigInteger ONE     = new BigInteger("1");
     
     private static final RandomPartitioner partitioner = new RandomPartitioner();
-
+    private static final BigInteger127Partitioner instance = new BigInteger127Partitioner();
+    
+    public static Partitioner get() {
+        return instance;
+    }
+    
+    protected BigInteger127Partitioner() {
+        
+    }
+    
     @Override
     public String getMinToken() {
         return MINIMUM.toString();

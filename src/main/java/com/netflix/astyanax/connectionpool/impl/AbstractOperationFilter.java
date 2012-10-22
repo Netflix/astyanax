@@ -1,6 +1,6 @@
 package com.netflix.astyanax.connectionpool.impl;
 
-import java.math.BigInteger;
+import java.nio.ByteBuffer;
 
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.Operation;
@@ -20,8 +20,8 @@ public class AbstractOperationFilter<R, CL> implements Operation<R, CL>{
     }
 
     @Override
-    public BigInteger getToken() {
-        return next.getToken();
+    public ByteBuffer getRowKey() {
+        return next.getRowKey();
     }
 
     @Override

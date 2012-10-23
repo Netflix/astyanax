@@ -95,20 +95,20 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
     private final Keyspace keyspace;                    // The keyspace
     private final K key;                                // Key being locked
 
-    private long timeout = LOCK_TIMEOUT;                // Timeout after which the lock expires
-    private TimeUnit timeoutUnits = DEFAULT_OPERATION_TIMEOUT_UNITS;
-    private String prefix = DEFAULT_LOCK_PREFIX;        // Prefix to identify the lock columns
+    private long             timeout          = LOCK_TIMEOUT;                   // Timeout after which the lock expires.  Units defined by timeoutUnits.
+    private TimeUnit         timeoutUnits     = DEFAULT_OPERATION_TIMEOUT_UNITS;
+    private String           prefix           = DEFAULT_LOCK_PREFIX;            // Prefix to identify the lock columns
     private ConsistencyLevel consistencyLevel = ConsistencyLevel.CL_LOCAL_QUORUM;
-    private boolean failOnStaleLock = false;           
-    private String lockColumn = null;
-    private String lockId = null;
-    private Set<String> locksToDelete = Sets.newHashSet();
-    private ColumnMap<String> columns = null;
-    private Integer ttl = null;
-    private boolean readDataColumns = false;
-    private RetryPolicy backoffPolicy = RunOnce.get();
-    private long acquireTime = 0;
-    private int retryCount = 0;
+    private boolean          failOnStaleLock  = false;           
+    private String           lockColumn       = null;
+    private String           lockId           = null;
+    private Set<String>      locksToDelete    = Sets.newHashSet();
+    private ColumnMap<String> columns         = null;
+    private Integer          ttl              = null;                           // Units in seconds
+    private boolean          readDataColumns  = false;
+    private RetryPolicy      backoffPolicy    = RunOnce.get();
+    private long             acquireTime      = 0;
+    private int              retryCount       = 0;
 
     public ColumnPrefixDistributedRowLock(Keyspace keyspace, ColumnFamily<K, String> columnFamily, K key) {
         this.keyspace = keyspace;
@@ -219,7 +219,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
      */
     @Override
     public void acquire() throws Exception {
-        Preconditions.checkArgument(timeout < ttl, "Timeout " + timeout + " must be less than TTL " + ttl);
+        Preconditions.checkArgument(TimeUnit.SECONDS.convert(timeout, timeoutUnits) < ttl, "Timeout " + timeout + " must be less than TTL " + ttl);
         
         RetryPolicy retry = backoffPolicy.duplicate();
         retryCount = 0;

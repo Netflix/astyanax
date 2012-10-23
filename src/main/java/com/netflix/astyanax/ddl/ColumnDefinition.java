@@ -16,6 +16,7 @@
 package com.netflix.astyanax.ddl;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -152,4 +153,32 @@ public interface ColumnDefinition {
      * @return Previous value or null if not previously set
      */
     String setOption(String name, String value);
+
+    /**
+     * Return list of valid field names
+     * @return
+     */
+    List<String> getFieldNames();
+    
+    /**
+     * Get metadata for all fields
+     * @return
+     */
+    List<FieldMetadata> getFieldsMetadata();
+
+    /**
+     * Return a field value by name
+     * @param name
+     * @return
+     */
+    Object getFieldValue(String name);
+
+    /**
+     * Set a field value by name
+     * 
+     * @param name
+     * @param value
+     * @return
+     */
+    ColumnDefinition setFieldValue(String name, Object value);
 }

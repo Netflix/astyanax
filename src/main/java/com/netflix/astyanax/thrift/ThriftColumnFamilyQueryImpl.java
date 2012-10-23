@@ -65,7 +65,6 @@ import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.model.CqlResult;
-import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.query.AllRowsQuery;
 import com.netflix.astyanax.query.ColumnCountQuery;
@@ -98,7 +97,6 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
     private final KeyspaceTracerFactory tracerFactory;
     private final Keyspace keyspace;
     private ConsistencyLevel consistencyLevel;
-    private static final RandomPartitioner partitioner = new RandomPartitioner();
     private final ExecutorService executor;
     private Host pinnedHost;
     private RetryPolicy retry;
@@ -167,8 +165,8 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                             }
 
                             @Override
-                            public BigInteger getToken() {
-                                return partitioner.getToken(columnFamily.getKeySerializer().toByteBuffer(rowKey)).token;
+                            public ByteBuffer getRowKey() {
+                                return columnFamily.getKeySerializer().toByteBuffer(rowKey);
                             }
                         }, retry);
                     }
@@ -242,8 +240,8 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                             }
 
                             @Override
-                            public BigInteger getToken() {
-                                return partitioner.getToken(columnFamily.getKeySerializer().toByteBuffer(rowKey)).token;
+                            public ByteBuffer getRowKey() {
+                                return columnFamily.getKeySerializer().toByteBuffer(rowKey);
                             }
                         }, retry);
             }
@@ -264,8 +262,8 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                             }
 
                             @Override
-                            public BigInteger getToken() {
-                                return partitioner.getToken(columnFamily.getKeySerializer().toByteBuffer(rowKey)).token;
+                            public ByteBuffer getRowKey() {
+                                return columnFamily.getKeySerializer().toByteBuffer(rowKey);
                             }
                         }, retry);
                     }
@@ -295,6 +293,8 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
             @Override
             public RowCopier<K, C> copyTo(final ColumnFamily<K, C> otherColumnFamily, final K otherRowKey) {
                 return new RowCopier<K, C>() {
+                    private boolean useOriginalTimestamp = true;
+                    
                     @Override
                     public OperationResult<Void> execute() throws ConnectionException {
                         return connectionPool.executeWithFailover(
@@ -303,6 +303,9 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                         .getKeyspaceName()) {
                                     @Override
                                     public Void internalExecute(Client client) throws Exception {
+                                        
+                                        long currentTime = keyspace.getConfig().getClock().getCurrentTime();
+                                        
                                         List<ColumnOrSuperColumn> columnList = client.get_slice(columnFamily
                                                 .getKeySerializer().toByteBuffer(rowKey), new ColumnParent()
                                                 .setColumn_family(columnFamily.getName()), predicate, ThriftConverter
@@ -312,10 +315,33 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                         // the response
                                         List<Mutation> mutationList = new ArrayList<Mutation>();
                                         for (ColumnOrSuperColumn sosc : columnList) {
-                                            Mutation mutation = new Mutation();
-                                            mutation.setColumn_or_supercolumn(new ColumnOrSuperColumn().setColumn(sosc
-                                                    .getColumn()));
-                                            mutationList.add(mutation);
+                                            ColumnOrSuperColumn cosc;
+                                            
+                                            if (sosc.isSetColumn()) {
+                                                cosc = new ColumnOrSuperColumn().setColumn(sosc.getColumn());
+                                                if (!useOriginalTimestamp)
+                                                    cosc.getColumn().setTimestamp(currentTime);
+                                            }
+                                            else if (sosc.isSetSuper_column()) {
+                                                cosc = new ColumnOrSuperColumn().setSuper_column(sosc.getSuper_column());
+                                                if (!useOriginalTimestamp) {
+                                                    for (org.apache.cassandra.thrift.Column subColumn : sosc.getSuper_column().getColumns()) {
+                                                        subColumn.setTimestamp(currentTime);
+                                                        subColumn.setTimestamp(currentTime);
+                                                    }
+                                                }
+                                            }
+                                            else if (sosc.isSetCounter_column()) {
+                                                cosc = new ColumnOrSuperColumn().setCounter_column(sosc.getCounter_column());
+                                            }
+                                            else if (sosc.isSetCounter_super_column()) {
+                                                cosc = new ColumnOrSuperColumn().setCounter_super_column(sosc.getCounter_super_column());
+                                            }
+                                            else {
+                                                continue;
+                                            }
+                                            
+                                            mutationList.add(new Mutation().setColumn_or_supercolumn(cosc));
                                         }
 
                                         // Create mutation map
@@ -341,6 +367,12 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                 return execute();
                             }
                         });
+                    }
+
+                    @Override
+                    public RowCopier<K, C> withOriginalTimestamp(boolean useOriginalTimestamp) {
+                        this.useOriginalTimestamp = useOriginalTimestamp;
+                        return this;
                     }
                 };
             }
@@ -383,9 +415,9 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                             }
 
                             @Override
-                            public BigInteger getToken() {
+                            public ByteBuffer getRowKey() {
                                 if (startKey != null)
-                                    return partitioner.getToken(columnFamily.getKeySerializer().toByteBuffer(startKey)).token;
+                                    return columnFamily.getKeySerializer().toByteBuffer(startKey);
                                 return null;
                             }
                         }, retry);
@@ -428,7 +460,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                             }
 
                             @Override
-                            public BigInteger getToken() {
+                            public ByteBuffer getRowKey() {
                                 // / return
                                 // partitioner.getToken(columnFamily.getKeySerializer().toByteBuffer(keys.iterator().next())).token;
                                 return null;
@@ -478,7 +510,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                             }
 
                             @Override
-                            public BigInteger getToken() {
+                            public ByteBuffer getRowKey() {
                                 // / return
                                 // partitioner.getToken(columnFamily.getKeySerializer().toByteBuffer(keys.iterator().next())).token;
                                 return null;
@@ -637,9 +669,9 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                     }
 
                                     @Override
-                                    public BigInteger getToken() {
+                                    public ByteBuffer getRowKey() {
                                         if (range.getStart_key() != null)
-                                            return partitioner.getToken(range.start_key).token;
+                                            return range.start_key;
                                         return null;
                                     }
                                 }, retry).getResult();
@@ -753,10 +785,9 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                                     }
 
                                                     @Override
-                                                    public BigInteger getToken() {
+                                                    public ByteBuffer getRowKey() {
                                                         if (range.getStart_key() != null)
-                                                            return partitioner.getToken(ByteBuffer.wrap(range
-                                                                    .getStart_key())).token;
+                                                            return ByteBuffer.wrap(range.getStart_key());
                                                         return null;
                                                     }
                                                 }, retry.duplicate()).getResult();

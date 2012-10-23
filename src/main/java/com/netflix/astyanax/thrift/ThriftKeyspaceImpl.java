@@ -15,7 +15,6 @@
  ******************************************************************************/
 package com.netflix.astyanax.thrift;
 
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -24,7 +23,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.cassandra.dht.RandomPartitioner;
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.CounterColumn;
 import org.apache.cassandra.thrift.Cassandra.Client;
@@ -42,7 +40,6 @@ import com.netflix.astyanax.WriteAheadEntry;
 import com.netflix.astyanax.WriteAheadLog;
 import com.netflix.astyanax.SerializerPackage;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
-import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.TokenRange;
@@ -61,7 +58,6 @@ import com.netflix.astyanax.thrift.ddl.*;
 public final class ThriftKeyspaceImpl implements Keyspace {
 
     private final ConnectionPool<Cassandra.Client> connectionPool;
-    private static final RandomPartitioner partitioner = new RandomPartitioner();
     private final AstyanaxConfiguration config;
     private final String ksName;
     private final ExecutorService executor;
@@ -85,26 +81,10 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
     @Override
     public MutationBatch prepareMutationBatch() {
-        return new AbstractThriftMutationBatchImpl(config.getClock()) {
-            private ConsistencyLevel consistencyLevel = config.getDefaultWriteConsistencyLevel();
-            private RetryPolicy retry = config.getRetryPolicy().duplicate();
-            private Host pinnedHost;
-            private WriteAheadLog wal;
-
-            @Override
-            public MutationBatch pinToHost(Host host) {
-                this.pinnedHost = host;
-                return this;
-            }
-
-            @Override
-            public MutationBatch setConsistencyLevel(ConsistencyLevel consistencyLevel) {
-                this.consistencyLevel = consistencyLevel;
-                return this;
-            }
-
+        return new AbstractThriftMutationBatchImpl(config.getClock(), config.getDefaultWriteConsistencyLevel(), config.getRetryPolicy().duplicate()) {
             @Override
             public OperationResult<Void> execute() throws ConnectionException {
+                WriteAheadLog wal = getWriteAheadLog();
                 WriteAheadEntry walEntry = null;
                 if (wal != null) {
                     walEntry = wal.createEntry();
@@ -113,24 +93,24 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                 try {
                     OperationResult<Void> result = executeOperation(
                             new AbstractKeyspaceOperationImpl<Void>(
-                                    tracerFactory.newTracer(CassandraOperationType.BATCH_MUTATE), pinnedHost,
+                                    tracerFactory.newTracer(CassandraOperationType.BATCH_MUTATE), getPinnedHost(),
                                     getKeyspaceName()) {
                                 @Override
                                 public Void internalExecute(Client client) throws Exception {
                                     client.batch_mutate(getMutationMap(),
-                                            ThriftConverter.ToThriftConsistencyLevel(consistencyLevel));
+                                            ThriftConverter.ToThriftConsistencyLevel(getConsistencyLevel()));
                                     discardMutations();
                                     return null;
                                 }
 
                                 @Override
-                                public BigInteger getToken() {
+                                public ByteBuffer getRowKey() {
                                     if (getMutationMap().size() == 1)
-                                        return partitioner.getToken(getMutationMap().keySet().iterator().next()).token;
+                                        return getMutationMap().keySet().iterator().next();
                                     else
                                         return null;
                                 }
-                            }, retry);
+                            }, getRetryPolicy());
 
                     if (walEntry != null) {
                         wal.removeEntry(walEntry);
@@ -139,6 +119,9 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                 }
                 catch (ConnectionException exception) {
                     throw exception;
+                }
+                catch (Exception exception) {
+                    throw ThriftConverter.ToConnectionPoolException(exception);
                 }
             }
 
@@ -150,18 +133,6 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                         return execute();
                     }
                 });
-            }
-
-            @Override
-            public MutationBatch withRetryPolicy(RetryPolicy retry) {
-                this.retry = retry;
-                return this;
-            }
-
-            @Override
-            public MutationBatch usingWriteAheadLog(WriteAheadLog manager) {
-                this.wal = manager;
-                return this;
             }
         };
     }
@@ -242,7 +213,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                     }
                 }, getConfig().getRetryPolicy().duplicate()).getResult();
     }
-
+    
     public <K, C> ColumnFamilyQuery<K, C> prepareQuery(ColumnFamily<K, C> cf) {
         return new ThriftColumnFamilyQueryImpl<K, C>(executor, tracerFactory, this, connectionPool, cf,
                 config.getDefaultReadConsistencyLevel(), config.getRetryPolicy());
@@ -280,9 +251,9 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                     }
 
                                     @Override
-                                    public BigInteger getToken() {
-                                        return partitioner.getToken(columnFamily.getKeySerializer()
-                                                .toByteBuffer(rowKey)).token;
+                                    public ByteBuffer getRowKey() {
+                                        return columnFamily.getKeySerializer()
+                                                .toByteBuffer(rowKey);
                                     }
                                 }, retry);
                     }
@@ -318,9 +289,8 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                     }
 
                                     @Override
-                                    public BigInteger getToken() {
-                                        return partitioner.getToken(columnFamily.getKeySerializer()
-                                                .toByteBuffer(rowKey)).token;
+                                    public ByteBuffer getRowKey() {
+                                        return columnFamily.getKeySerializer().toByteBuffer(rowKey);
                                     }
                                 }, retry);
                     }
@@ -360,9 +330,8 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                     }
 
                                     @Override
-                                    public BigInteger getToken() {
-                                        return partitioner.getToken(columnFamily.getKeySerializer()
-                                                .toByteBuffer(rowKey)).token;
+                                    public ByteBuffer getRowKey() {
+                                        return columnFamily.getKeySerializer().toByteBuffer(rowKey);
                                     }
                                 }, retry);
                     }
@@ -397,9 +366,8 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                     }
 
                                     @Override
-                                    public BigInteger getToken() {
-                                        return partitioner.getToken(columnFamily.getKeySerializer()
-                                                .toByteBuffer(rowKey)).token;
+                                    public ByteBuffer getRowKey() {
+                                        return columnFamily.getKeySerializer().toByteBuffer(rowKey);
                                     }
                                 }, retry);
                     }
@@ -494,5 +462,4 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                             }
                         }, config.getRetryPolicy().duplicate()).getResult();
     }
-
 }

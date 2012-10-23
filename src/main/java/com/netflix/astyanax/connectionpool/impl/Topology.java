@@ -1,8 +1,7 @@
 package com.netflix.astyanax.connectionpool.impl;
 
-import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.util.Collection;
-import java.util.Map;
 
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
 
@@ -13,10 +12,10 @@ public interface Topology<CL> {
      * @param ring
      * @return
      */
-    boolean setPools(Map<BigInteger, Collection<HostConnectionPool<CL>>> ring);
+    boolean setPools(Collection<HostConnectionPool<CL>> ring);
 
     /**
-     * Add a pool without knowing it's token. This pool will be added to the all
+     * Add a pool without knowing its token. This pool will be added to the all
      * pools partition only
      * 
      * @param pool
@@ -50,19 +49,28 @@ public interface Topology<CL> {
     void refresh();
 
     /**
-     * Search for the partition that owns this token
+     * Get the partition best suited to handle a row key
      * 
      * @param token
      * @return
      */
-    HostConnectionPoolPartition<CL> getPartition(BigInteger token);
+    TokenHostConnectionPoolPartition<CL> getPartition(ByteBuffer rowkey);
+    
+    /**
+     * TODO 
+     * 
+     * Get the partition best suited for handling a set of row keys
+     * @param tokens
+     * @return
+     */
+    // HostConnectionPoolPartition<CL> getPartition(Collection<ByteBuffer> tokens);
 
     /**
      * Return a partition that represents all hosts in the ring
      * 
      * @return
      */
-    HostConnectionPoolPartition<CL> getAllPools();
+    TokenHostConnectionPoolPartition<CL> getAllPools();
 
     /**
      * Get total number of tokens in the topology

@@ -17,10 +17,12 @@ package com.netflix.astyanax.connectionpool;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 /**
@@ -31,18 +33,22 @@ import com.google.common.collect.Sets;
  * @author elandau
  *
  */
-public class Host {
-
-    private final String host;
-    private final String ipAddress;
-    private final int port;
-    private final String name;
-    private final String url;
-    private String id;
-    private Set<String> alternateIpAddress = Sets.newHashSet();
+public class Host implements Comparable<Host> {
 
     public static final Host NO_HOST = new Host();
-    public static Pattern ipPattern = Pattern
+    public static final String UKNOWN_RACK = "";
+    
+    private final String host;
+    private final String ipAddress;
+    private final int    port;
+    private final String name;
+    private final String url;
+    private String       rack = UKNOWN_RACK;
+    private String       id;
+    private Set<String> alternateIpAddress = Sets.newHashSet();
+    private List<TokenRange> ranges = Lists.newArrayList();
+
+    public static Pattern IP_ADDR_PATTERN = Pattern
             .compile("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$");
 
     /**
@@ -53,7 +59,7 @@ public class Host {
         this.ipAddress = "0.0.0.0";
         this.port = 0;
         this.name = String.format("%s(%s):%d", this.host, this.ipAddress, this.port);
-        this.url = String.format("%s:%d", this.host, this.port);
+        this.url  = String.format("%s:%d", this.host, this.port);
     }
 
     /**
@@ -68,29 +74,28 @@ public class Host {
         String tempHost = parseHostFromHostAndPort(hostAndPort);
         this.port = parsePortFromHostAndPort(hostAndPort, defaultPort);
 
-        Matcher match = ipPattern.matcher(tempHost);
+        Matcher match = IP_ADDR_PATTERN.matcher(tempHost);
         String workHost;
         String workIpAddress;
         if (match.matches()) {
-            workHost = tempHost;
+            workHost      = tempHost;
             workIpAddress = tempHost;
         }
         else {
             try {
                 InetAddress address = InetAddress.getByName(tempHost);
-                workHost = address.getHostName();
-                workIpAddress = address.getHostAddress();
+                workHost            = address.getHostName();
+                workIpAddress       = address.getHostAddress();
             }
             catch (UnknownHostException e) {
-                workHost = tempHost;
+                workHost      = tempHost;
                 workIpAddress = tempHost;
             }
         }
-        this.host = workHost;
+        this.host      = workHost;
         this.ipAddress = workIpAddress;
-
-        this.name = String.format("%s(%s):%d", tempHost, this.ipAddress, this.port);
-        this.url = String.format("%s:%d", this.host, this.port);
+        this.name      = String.format("%s(%s):%d", tempHost, this.ipAddress, this.port);
+        this.url       = String.format("%s:%d", this.host, this.port);
     }
 
     /**
@@ -168,5 +173,32 @@ public class Host {
     public Host setId(String id) {
         this.id = id;
         return this;
+    }
+    
+    public Host setRack(String rack) {
+        this.rack = rack;
+        return this;
+    }
+    
+    public String getRack() {
+        return rack;
+    }
+ 
+    public Host setTokenRanges(List<TokenRange> ranges) {
+        this.ranges = ranges;
+        return this;
+    }
+    
+    public List<TokenRange> getTokenRanges() {
+        return this.ranges;
+    }
+
+    @Override
+    public int compareTo(Host other) {
+        int comp = this.ipAddress.compareTo(other.ipAddress);
+        if (comp == 0) {
+            comp = this.port - other.port;
+        }
+        return comp;
     }
 }

@@ -19,14 +19,33 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.cassandra.thrift.CfDef;
 import org.apache.cassandra.thrift.KsDef;
+import org.apache.cassandra.thrift.KsDef._Fields;
+import org.apache.thrift.meta_data.FieldMetaData;
 
+import com.google.common.collect.Lists;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
+import com.netflix.astyanax.ddl.FieldMetadata;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
+import com.netflix.astyanax.thrift.ThriftTypes;
 
 public class ThriftKeyspaceDefinitionImpl implements KeyspaceDefinition {
+    private final static List<FieldMetadata> fieldsMetadata = Lists.newArrayList();
+    private final static List<String> fieldNames = Lists.newArrayList();
+    
+    {
+        for (Entry<_Fields, FieldMetaData> field : KsDef.metaDataMap.entrySet()) {
+            fieldsMetadata.add(new FieldMetadata(
+                        field.getKey().name(), 
+                        ThriftTypes.values()[field.getValue().valueMetaData.type].name(),
+                        field.getValue().valueMetaData.isContainer()));
+            fieldNames.add(field.getValue().fieldName);
+        }
+    }
+    
     protected KsDef ks_def;
 
     public ThriftKeyspaceDefinitionImpl() {
@@ -115,6 +134,27 @@ public class ThriftKeyspaceDefinitionImpl implements KeyspaceDefinition {
             }
         }
         return null;
+    }
+    
+    @Override
+    public List<String> getFieldNames() {
+        return fieldNames;
+    }
+    
+    @Override
+    public Object getFieldValue(String name) {
+        return ks_def.getFieldValue(_Fields.valueOf(name));
+    }
+    
+    @Override
+    public KeyspaceDefinition setFieldValue(String name, Object value) {
+        ks_def.setFieldValue(_Fields.valueOf(name), value);
+        return this;
+    }
+
+    @Override
+    public List<FieldMetadata> getFieldsMetadata() {
+        return fieldsMetadata;
     }
 
 }

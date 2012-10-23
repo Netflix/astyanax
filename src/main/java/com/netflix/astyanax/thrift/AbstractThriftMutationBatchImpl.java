@@ -37,7 +37,11 @@ import org.apache.thrift.transport.TIOStreamTransport;
 import com.netflix.astyanax.Clock;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.WriteAheadLog;
+import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.model.ColumnFamily;
+import com.netflix.astyanax.model.ConsistencyLevel;
+import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.serializers.ByteBufferOutputStream;
 
 /**
@@ -52,13 +56,19 @@ import com.netflix.astyanax.serializers.ByteBufferOutputStream;
 public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
 
     protected long timestamp;
+    private ConsistencyLevel consistencyLevel;
     private Clock clock;
+    private Host pinnedHost;
+    private RetryPolicy retry;
+    private WriteAheadLog wal;
 
     private Map<ByteBuffer, Map<String, List<Mutation>>> mutationMap = Maps.newLinkedHashMap();
 
-    public AbstractThriftMutationBatchImpl(Clock clock) {
+    public AbstractThriftMutationBatchImpl(Clock clock, ConsistencyLevel consistencyLevel, RetryPolicy retry) {
         this.clock = clock;
         this.timestamp = clock.getCurrentTime();
+        this.consistencyLevel = consistencyLevel;
+        this.retry = retry;
     }
 
     @Override
@@ -238,9 +248,64 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
         this.timestamp = timestamp;
         return this;
     }
+    
+    @Override
+    public MutationBatch withTimestamp(long timestamp) {
+        this.clock = null;
+        this.timestamp = timestamp;
+        return this;
+    }
 
+    @Override
     public MutationBatch lockCurrentTimestamp() {
         this.timestamp = this.clock.getCurrentTime();
         return this;
     }
+    
+    @Override
+    public MutationBatch setConsistencyLevel(ConsistencyLevel consistencyLevel) {
+        this.consistencyLevel = consistencyLevel;
+        return this;
+    }
+    
+    @Override
+    public MutationBatch withConsistencyLevel(ConsistencyLevel consistencyLevel) {
+        this.consistencyLevel = consistencyLevel;
+        return this;
+    }
+
+    public ConsistencyLevel getConsistencyLevel() {
+        return this.consistencyLevel;
+    }
+
+    @Override
+    public MutationBatch pinToHost(Host host) {
+        this.pinnedHost = host;
+        return this;
+    }
+    
+    @Override
+    public MutationBatch withRetryPolicy(RetryPolicy retry) {
+        this.retry = retry;
+        return this;
+    }
+
+    @Override
+    public MutationBatch usingWriteAheadLog(WriteAheadLog manager) {
+        this.wal = manager;
+        return this;
+    }
+
+    public Host getPinnedHost() {
+        return this.pinnedHost;
+    }
+
+    public RetryPolicy getRetryPolicy() {
+        return this.retry;
+    }
+    
+    public WriteAheadLog getWriteAheadLog() {
+        return this.wal;
+    }
+
 }

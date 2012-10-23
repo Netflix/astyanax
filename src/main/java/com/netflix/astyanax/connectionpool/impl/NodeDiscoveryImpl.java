@@ -15,10 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.impl;
 
-import java.math.BigInteger;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -47,17 +44,17 @@ public class NodeDiscoveryImpl implements NodeDiscovery {
             .newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setDaemon(true).build());
     private final int interval;
     private final String name;
-    private final Supplier<Map<BigInteger, List<Host>>> tokenRangeSupplier;
+    private final Supplier<List<Host>> hostSupplier;
     private final AtomicReference<DateTime> lastUpdateTime = new AtomicReference<DateTime>();
     private final AtomicReference<Exception> lastException = new AtomicReference<Exception>();
     private final AtomicLong refreshCounter = new AtomicLong();
     private final AtomicLong errorCounter = new AtomicLong();
 
-    public NodeDiscoveryImpl(String name, int interval, Supplier<Map<BigInteger, List<Host>>> tokenRangeSupplier,
+    public NodeDiscoveryImpl(String name, int interval, Supplier<List<Host>> hostSupplier,
             ConnectionPool<?> connectionPool) {
         this.connectionPool = connectionPool;
         this.interval = interval;
-        this.tokenRangeSupplier = tokenRangeSupplier;
+        this.hostSupplier = hostSupplier;
         this.name = name;
     }
 
@@ -87,7 +84,7 @@ public class NodeDiscoveryImpl implements NodeDiscovery {
 
     private void update() {
         try {
-            connectionPool.setHosts(tokenRangeSupplier.get());
+            connectionPool.setHosts(hostSupplier.get());
             refreshCounter.incrementAndGet();
             lastUpdateTime.set(new DateTime());
         }
@@ -119,28 +116,8 @@ public class NodeDiscoveryImpl implements NodeDiscovery {
 
     @Override
     public String getRawHostList() {
-        StringBuilder sb = new StringBuilder();
-        Map<BigInteger, List<Host>> hosts;
         try {
-            hosts = tokenRangeSupplier.get();
-            boolean first = true;
-            for (Entry<BigInteger, List<Host>> token : hosts.entrySet()) {
-                if (!first)
-                    sb.append(",");
-                else
-                    first = false;
-                sb.append(token).append(":[");
-                boolean firstHost = true;
-                for (Host host : token.getValue()) {
-                    if (!firstHost)
-                        sb.append(",");
-                    else
-                        firstHost = false;
-                    sb.append(host.getHostName());
-                }
-                sb.append("]");
-            }
-            return sb.toString();
+            return hostSupplier.get().toString();
         }
         catch (Exception e) {
             return e.getMessage();

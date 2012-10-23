@@ -28,7 +28,7 @@ public class TokenGenerator {
     public static String initialToken(int size, int position, BigInteger minInitialToken, BigInteger maxInitialToken ) {
         BigInteger decValue = minInitialToken;
         if (position != 0)
-            decValue = maxInitialToken.divide(new BigInteger("" + size)).multiply(new BigInteger("" + position));
+            decValue = maxInitialToken.multiply(new BigInteger("" + position)).divide(new BigInteger("" + size));
         return decValue.toString();
     }
 

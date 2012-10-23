@@ -32,11 +32,6 @@ public class EmptyLatencyScoreStrategyImpl implements LatencyScoreStrategy {
             }
 
             @Override
-            public double getMean() {
-                return 0;
-            }
-
-            @Override
             public void update() {
             }
         };
@@ -70,6 +65,31 @@ public class EmptyLatencyScoreStrategyImpl implements LatencyScoreStrategy {
     }
 
     public String toString() {
-        return "Empty[]";
+        return "EmptyLatencyScoreStrategy[]";
+    }
+
+    @Override
+    public int getUpdateInterval() {
+        return 0;
+    }
+
+    @Override
+    public int getResetInterval() {
+        return 0;
+    }
+
+    @Override
+    public double getScoreThreshold() {
+        return 10.0;
+    }
+
+    @Override
+    public int getBlockedThreshold() {
+        return 100;
+    }
+
+    @Override
+    public double getKeepRatio() {
+        return 1.0;
     }
 }

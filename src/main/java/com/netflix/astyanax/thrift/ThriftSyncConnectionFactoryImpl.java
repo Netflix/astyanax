@@ -49,6 +49,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -119,8 +120,9 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
                         long now = System.nanoTime();
                         latency = now - startTime;
                         lastException = ThriftConverter.ToConnectionPoolException(e).setLatency(latency);
-                        if (e instanceof IsTimeoutException)
-                            pool.addLatencySample(latency, now);
+                        if (e instanceof IsTimeoutException) {
+                            pool.addLatencySample(TimeUnit.NANOSECONDS.convert(cpConfig.getSocketTimeout(), TimeUnit.MILLISECONDS), now);
+                        }
                         tracer.failure(lastException);
                         throw lastException;
                     }
@@ -141,8 +143,9 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
                     long now = System.nanoTime();
                     latency = now - startTime;
                     lastException = ThriftConverter.ToConnectionPoolException(e).setLatency(latency);
-                    if (e instanceof IsTimeoutException)
-                        pool.addLatencySample(latency, now);
+                    if (e instanceof IsTimeoutException) {
+                        pool.addLatencySample(TimeUnit.NANOSECONDS.convert(cpConfig.getSocketTimeout(), TimeUnit.MILLISECONDS), now);
+                    }
                     throw lastException;
                 }
             }
@@ -176,6 +179,7 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
                     }
                 }
                 catch (Exception e) {
+                    pool.addLatencySample(TimeUnit.NANOSECONDS.convert(cpConfig.getSocketTimeout(), TimeUnit.MILLISECONDS), System.nanoTime());
                     closeClient();
                     ConnectionException ce = ThriftConverter.ToConnectionPoolException(e).setHost(getHost())
                             .setLatency(System.currentTimeMillis() - startTime);
@@ -184,6 +188,7 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
                 }
                 catch (Throwable t) {
                     LOG.error("Error creating connection", t);
+                    pool.addLatencySample(TimeUnit.NANOSECONDS.convert(cpConfig.getSocketTimeout(), TimeUnit.MILLISECONDS), System.nanoTime());
                     closeClient();
                     ConnectionException ce = ThriftConverter.ToConnectionPoolException(new RuntimeException("Error openning connection", t)).setHost(getHost())
                             .setLatency(System.currentTimeMillis() - startTime);
@@ -203,6 +208,7 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
                             callback.success(This);
                         }
                         catch (Exception e) {
+                            pool.addLatencySample(TimeUnit.NANOSECONDS.convert(cpConfig.getSocketTimeout(), TimeUnit.MILLISECONDS), System.nanoTime());
                             callback.failure(This, ThriftConverter.ToConnectionPoolException(e));
                         }
                     }

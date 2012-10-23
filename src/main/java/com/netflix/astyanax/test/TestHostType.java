@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -191,7 +192,27 @@ public enum TestHostType {
         public <R> OperationResult<R> execute(
                 HostConnectionPool<TestClient> pool, Operation<TestClient, R> op)
                 throws ConnectionException {
+            think(2000);
             throw new TimeoutException("SocketTimeException");
+        }
+
+        @Override
+        public void open(long timeout) throws ConnectionException {
+        }
+    },
+    ALTERNATING_SOCKET_TIMEOUT_200 {
+        private AtomicLong counter = new AtomicLong(0);
+        @Override
+        public <R> OperationResult<R> execute(
+                HostConnectionPool<TestClient> pool, Operation<TestClient, R> op)
+                throws ConnectionException {
+            if (counter.incrementAndGet() / 200 % 2 == 1) {
+                think(200);
+                throw new TimeoutException("SocketTimeException");
+            }
+            else {
+                return new OperationResultImpl<R>(pool.getHost(), op.execute(null), think(0));
+            }
         }
 
         @Override
@@ -375,7 +396,36 @@ public enum TestHostType {
 
         @Override
         public void close() {
-            LOG.info("Closing");
+//            LOG.info("Closing");
+            think(15000);
+        }
+    },
+    
+    SWAP_EVERY_200 {
+        private AtomicInteger counter = new AtomicInteger(0);
+
+        @Override
+        public <R> OperationResult<R> execute(
+                HostConnectionPool<TestClient> pool, Operation<TestClient, R> op)
+                throws ConnectionException {
+            if ((counter.incrementAndGet() / 20) % 2 == 0) {
+                think(100);
+            }
+            else {
+                think(1);
+            }
+            
+            return new OperationResultImpl<R>(pool.getHost(), op.execute(null),
+                    0);
+        }
+
+        @Override
+        public void open(long timeout) throws ConnectionException {
+        }
+
+        @Override
+        public void close() {
+//            LOG.info("Closing");
             think(15000);
         }
     },

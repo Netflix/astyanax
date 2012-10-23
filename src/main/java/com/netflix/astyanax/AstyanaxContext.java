@@ -20,6 +20,7 @@ import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
 import com.netflix.astyanax.connectionpool.impl.NodeDiscoveryImpl;
 import com.netflix.astyanax.connectionpool.impl.BagOfConnectionsConnectionPoolImpl;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
+import com.netflix.astyanax.connectionpool.impl.OldHostSupplierAdapter;
 import com.netflix.astyanax.connectionpool.impl.RoundRobinConnectionPoolImpl;
 import com.netflix.astyanax.connectionpool.impl.TokenAwareConnectionPoolImpl;
 import com.netflix.astyanax.impl.FilteringHostSupplier;
@@ -52,7 +53,7 @@ public class AstyanaxContext<Entity> {
         protected String clusterName;
         protected String keyspaceName;
         protected KeyspaceTracerFactory tracerFactory = EmptyKeyspaceTracerFactory.getInstance();
-        protected Supplier<Map<BigInteger, List<Host>>> hostSupplier;
+        protected Supplier<List<Host>> hostSupplier;
         protected ConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
 
         public Builder forCluster(String clusterName) {
@@ -75,8 +76,8 @@ public class AstyanaxContext<Entity> {
             return this;
         }
 
-        public Builder withHostSupplier(Supplier<Map<BigInteger, List<Host>>> tokenRangeSupplier) {
-            this.hostSupplier = tokenRangeSupplier;
+        public Builder withHostSupplier(Supplier<List<Host>> supplier) {
+            this.hostSupplier = supplier;
             return this;
         }
 
@@ -137,7 +138,7 @@ public class AstyanaxContext<Entity> {
 
             final Keyspace keyspace = factory.createKeyspace(keyspaceName, cp, asConfig, tracerFactory);
 
-            Supplier<Map<BigInteger, List<Host>>> supplier = null;
+            Supplier<List<Host>> supplier = null;
 
             switch (getNodeDiscoveryType()) {
             case DISCOVERY_SERVICE:

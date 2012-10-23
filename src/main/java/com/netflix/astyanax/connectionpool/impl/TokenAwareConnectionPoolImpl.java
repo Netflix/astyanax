@@ -15,7 +15,6 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.impl;
 
-import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
@@ -55,23 +54,29 @@ public class TokenAwareConnectionPoolImpl<CL> extends AbstractHostPartitionConne
 
     @SuppressWarnings("unchecked")
     public <R> ExecuteWithFailover<CL, R> newExecuteWithFailover(Operation<CL, R> op) throws ConnectionException {
-        List<HostConnectionPool<CL>> pools;
-        boolean isSorted = false;
-
-        if (op.getPinnedHost() != null) {
-            HostConnectionPool<CL> pool = hosts.get(op.getPinnedHost());
-            if (pool == null) {
-                throw new NoAvailableHostsException("Host " + op.getPinnedHost() + " not active");
+        try {
+            List<HostConnectionPool<CL>> pools;
+            boolean isSorted = false;
+    
+            if (op.getPinnedHost() != null) {
+                HostConnectionPool<CL> pool = hosts.get(op.getPinnedHost());
+                if (pool == null) {
+                    throw new NoAvailableHostsException("Host " + op.getPinnedHost() + " not active");
+                }
+                pools = Arrays.<HostConnectionPool<CL>> asList(pool);
             }
-            pools = Arrays.<HostConnectionPool<CL>> asList(pool);
+            else {
+                TokenHostConnectionPoolPartition<CL> partition = topology.getPartition(op.getRowKey());
+                pools = partition.getPools();
+                isSorted = partition.isSorted();
+            }
+    
+            return new RoundRobinExecuteWithFailover<CL, R>(config, monitor, pools, isSorted ? 0
+                    : roundRobinCounter.incrementAndGet());
         }
-        else {
-            HostConnectionPoolPartition<CL> partition = topology.getPartition(op.getToken());
-            pools = partition.getPools();
-            isSorted = partition.isSorted();
+        catch (ConnectionException e) {
+            monitor.incOperationFailure(e.getHost(), e);
+            throw e;
         }
-
-        return new RoundRobinExecuteWithFailover<CL, R>(config, monitor, pools, isSorted ? 0
-                : roundRobinCounter.incrementAndGet());
     }
 }

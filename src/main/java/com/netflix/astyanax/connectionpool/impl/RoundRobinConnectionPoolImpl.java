@@ -40,16 +40,21 @@ public class RoundRobinConnectionPoolImpl<CL> extends AbstractHostPartitionConne
 
     @SuppressWarnings("unchecked")
     public <R> ExecuteWithFailover<CL, R> newExecuteWithFailover(Operation<CL, R> operation) throws ConnectionException {
-        if (operation.getPinnedHost() != null) {
-            HostConnectionPool<CL> pool = hosts.get(operation.getPinnedHost());
-            if (pool == null) {
-                this.monitor.incNoHosts();
-                throw new NoAvailableHostsException("Host " + operation.getPinnedHost() + " not active");
+        try {
+            if (operation.getPinnedHost() != null) {
+                HostConnectionPool<CL> pool = hosts.get(operation.getPinnedHost());
+                if (pool == null) {
+                    throw new NoAvailableHostsException("Host " + operation.getPinnedHost() + " not active");
+                }
+                return new RoundRobinExecuteWithFailover<CL, R>(config, monitor,
+                        Arrays.<HostConnectionPool<CL>> asList(pool), 0);
             }
-            return new RoundRobinExecuteWithFailover<CL, R>(config, monitor,
-                    Arrays.<HostConnectionPool<CL>> asList(pool), 0);
+            return new RoundRobinExecuteWithFailover<CL, R>(config, monitor, topology.getAllPools().getPools(),
+                    roundRobinCounter.incrementAndGet());
         }
-        return new RoundRobinExecuteWithFailover<CL, R>(config, monitor, topology.getAllPools().getPools(),
-                roundRobinCounter.incrementAndGet());
+        catch (ConnectionException e) {
+            monitor.incOperationFailure(e.getHost(), e);
+            throw e;
+        }
     }
 }

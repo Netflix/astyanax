@@ -120,7 +120,7 @@ public class ThriftCounterColumnImpl<C> implements Column<C> {
 
     @Override
     public int getTtl() {
-        throw new UnsupportedOperationException("CounterColumn \'" + this.name + "\' has no ttl");
+        return 0;
     }
 
     @Override

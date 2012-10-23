@@ -21,6 +21,9 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import com.google.common.collect.Lists;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Cluster;
 import com.netflix.astyanax.ColumnListMutation;
@@ -30,14 +33,21 @@ import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.RowCallback;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.SerializerPackage;
+import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
 import com.netflix.astyanax.connectionpool.OperationResult;
+import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
+import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
+import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
+import com.netflix.astyanax.ddl.FieldMetadata;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
+import com.netflix.astyanax.impl.FilteringHostSupplier;
+import com.netflix.astyanax.impl.RingDescribeHostSupplier;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
@@ -163,11 +173,15 @@ public class ThrifeKeyspaceImplTest {
         if (TEST_INIT_KEYSPACE) {
             AstyanaxContext<Cluster> clusterContext = new AstyanaxContext.Builder()
                     .forCluster(TEST_CLUSTER_NAME)
-                    .withAstyanaxConfiguration(new AstyanaxConfigurationImpl())
+                    .withAstyanaxConfiguration(
+                            new AstyanaxConfigurationImpl()
+                            )
                     .withConnectionPoolConfiguration(
-                            new ConnectionPoolConfigurationImpl(
-                                    TEST_CLUSTER_NAME).setMaxConnsPerHost(1)
-                                    .setSeeds(SEEDS))
+                            new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME)
+                                .setMaxConnsPerHost(2)
+                                .setInitConnsPerHost(2)
+                                .setSeeds(SEEDS)
+                            )
                     .withConnectionPoolMonitor(
                             new CountingConnectionPoolMonitor())
                     .buildCluster(ThriftFamilyFactory.getInstance());
@@ -318,13 +332,16 @@ public class ThrifeKeyspaceImplTest {
                 .forKeyspace(TEST_KEYSPACE_NAME)
                 .withAstyanaxConfiguration(
                         new AstyanaxConfigurationImpl()
-                                .setDiscoveryType(NodeDiscoveryType.NONE))
+                                .setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
+                                .setConnectionPoolType(ConnectionPoolType.TOKEN_AWARE))
                 .withConnectionPoolConfiguration(
                         new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME
                                 + "_" + TEST_KEYSPACE_NAME)
                                 .setSocketTimeout(30000)
                                 .setMaxTimeoutWhenExhausted(2000)
-                                .setMaxConnsPerHost(1).setSeeds(SEEDS))
+                                .setMaxConnsPerHost(10)
+                                .setInitConnsPerHost(10)
+                                .setSeeds(SEEDS))
                 .withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
                 .buildKeyspace(ThriftFamilyFactory.getInstance());
 
@@ -395,6 +412,53 @@ public class ThrifeKeyspaceImplTest {
         }
     }
 
+    @Test
+    public void getKeyspaceDefinition() throws Exception {
+        KeyspaceDefinition def = keyspaceContext.getEntity().describeKeyspace();
+        List<String> fieldNames = def.getFieldNames();
+        LOG.info("Getting field names");
+        for (String field : fieldNames) {
+            LOG.info(field);
+        }
+        LOG.info(fieldNames.toString());
+        
+        System.out.println(fieldNames.toString());
+        
+        for (FieldMetadata field : def.getFieldsMetadata()) {
+            System.out.println(field.getName() + " " + field.getType());
+            System.out.println(field.getName() + " = " + def.getFieldValue(field.getName()));
+        }
+        
+        for (ColumnFamilyDefinition cfDef : def.getColumnFamilyList()) {
+            for (FieldMetadata field : cfDef.getFieldsMetadata()) {
+                System.out.println(field.getName() + " " + field.getType());
+                System.out.println(field.getName() + " = " + cfDef.getFieldValue(field.getName()));
+            }
+        }
+    }
+    
+    @Test
+    public void testDescribeRing() throws Exception {
+        List<TokenRange> ring = keyspaceContext.getEntity().describeRing();
+        LOG.info(ring.toString());
+        
+        RingDescribeHostSupplier ringSupplier = new RingDescribeHostSupplier(keyspaceContext.getEntity(), 9160);
+        List<Host> hosts = ringSupplier.get();
+        Assert.assertEquals(1, hosts.get(0).getTokenRanges().size());
+        LOG.info(hosts.toString());
+        
+        Supplier<List<Host>> sourceSupplier1 = Suppliers.ofInstance((List<Host>)Lists.newArrayList(new Host("127.0.0.1", 9160)));
+        Supplier<List<Host>> sourceSupplier2 = Suppliers.ofInstance((List<Host>)Lists.newArrayList(new Host("127.0.0.2", 9160)));
+        
+        hosts = new FilteringHostSupplier(ringSupplier, sourceSupplier1).get();
+        LOG.info(hosts.toString());
+        Assert.assertEquals(1, hosts.size());
+        Assert.assertEquals(1, hosts.get(0).getTokenRanges().size());
+        hosts = new FilteringHostSupplier(ringSupplier, sourceSupplier2).get();
+        LOG.info(hosts.toString());
+        Assert.assertEquals(0, hosts.size());
+    }
+    
     @Test
     public void paginateColumns() {
         String column = "";
@@ -1039,8 +1103,8 @@ public class ThrifeKeyspaceImplTest {
             Assert.assertFalse(iter2.hasNext());
 
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
-            Assert.fail();
+            LOG.error(e.getMessage(), e);
+            Assert.fail(e.getMessage());
         }
     }
 

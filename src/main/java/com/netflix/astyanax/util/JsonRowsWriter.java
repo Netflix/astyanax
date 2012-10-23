@@ -29,7 +29,7 @@ public class JsonRowsWriter implements RowsWriter {
     }
 
     enum Field {
-        ROW_KEY, COUNT, NAMES, ROWS, COLUMN, TIMESTAMP, VALUE,
+        ROW_KEY, COUNT, NAMES, ROWS, COLUMN, TIMESTAMP, VALUE, TTL
     }
 
     private Map<Field, String> fieldNames = Maps.newHashMap();
@@ -58,13 +58,14 @@ public class JsonRowsWriter implements RowsWriter {
         this.out = out;
         this.serializers = serializers;
 
-        fieldNames.put(Field.NAMES, "names");
-        fieldNames.put(Field.ROWS, "rows");
-        fieldNames.put(Field.COUNT, "count");
-        fieldNames.put(Field.ROW_KEY, "_key");
-        fieldNames.put(Field.COLUMN, "column");
+        fieldNames.put(Field.NAMES,     "names");
+        fieldNames.put(Field.ROWS,      "rows");
+        fieldNames.put(Field.COUNT,     "count");
+        fieldNames.put(Field.ROW_KEY,   "_key");
+        fieldNames.put(Field.COLUMN,    "column");
         fieldNames.put(Field.TIMESTAMP, "timestamp");
-        fieldNames.put(Field.VALUE, "value");
+        fieldNames.put(Field.VALUE,     "value");
+        fieldNames.put(Field.TTL,       "ttl");
     }
 
     public JsonRowsWriter setRowsName(String fieldName) {
@@ -135,7 +136,7 @@ public class JsonRowsWriter implements RowsWriter {
 
     public JsonRowsWriter setColumnsAsRows(boolean columnsAsRows) {
         this.columnsAsRows = columnsAsRows;
-        setFixedColumnNames("column", "value", "timestamp");
+        setFixedColumnNames("column", "value", "timestamp", "ttl");
         return this;
     }
 
@@ -340,13 +341,24 @@ public class JsonRowsWriter implements RowsWriter {
                     timestampString = "none";
                 }
 
+                int ttl;
+                try {
+                    ttl = column.getTtl();
+                }
+                catch (Exception e) {
+                    ttl = 0;
+                }
+                
                 columnCount++;
                 out.append(jsonifyString(this.fieldNames.get(Field.COLUMN))).append(":")
                         .append(jsonifyString(columnString)).append(",")
                         .append(jsonifyString(this.fieldNames.get(Field.VALUE))).append(":")
                         .append(jsonifyString(valueString)).append(",")
                         .append(jsonifyString(this.fieldNames.get(Field.TIMESTAMP))).append(":")
-                        .append(jsonifyString(timestampString)).append("}");
+                        .append(jsonifyString(timestampString)).append(",")
+                        .append(jsonifyString(this.fieldNames.get(Field.TTL))).append(":")
+                        .append(jsonifyString(Integer.toString(ttl))).append("}")
+                        ;
             }
             catch (Exception e) {
                 if (!ignoreExceptions) {

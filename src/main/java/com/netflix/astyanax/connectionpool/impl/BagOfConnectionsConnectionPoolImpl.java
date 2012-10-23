@@ -14,11 +14,11 @@ import com.netflix.astyanax.connectionpool.ExecuteWithFailover;
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.connectionpool.exceptions.InterruptedOperationException;
 import com.netflix.astyanax.connectionpool.exceptions.IsDeadConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.IsTimeoutException;
 import com.netflix.astyanax.connectionpool.exceptions.NoAvailableHostsException;
-import com.netflix.astyanax.connectionpool.exceptions.OperationException;
-import com.netflix.astyanax.connectionpool.exceptions.TimeoutException;
+import com.netflix.astyanax.connectionpool.exceptions.PoolTimeoutException;
 
 /**
  * Connection pool which puts all connections in a single queue. The load
@@ -39,7 +39,7 @@ public class BagOfConnectionsConnectionPoolImpl<CL> extends AbstractHostPartitio
         super(config, factory, monitor);
     }
 
-    private <R> Connection<CL> borrowConnection(Operation<CL, R> op) throws ConnectionException, OperationException {
+    private <R> Connection<CL> borrowConnection(Operation<CL, R> op) throws ConnectionException {
         long startTime = System.currentTimeMillis();
 
         // Try to get an open connection from the bag
@@ -58,14 +58,13 @@ public class BagOfConnectionsConnectionPoolImpl<CL> extends AbstractHostPartitio
                 try {
                     connection = idleConnections.poll(config.getMaxTimeoutWhenExhausted(), TimeUnit.MILLISECONDS);
                     if (connection == null) {
-                        this.monitor.incPoolExhaustedTimeout();
-                        throw new TimeoutException("Timed out waiting for connection from bag");
+                        throw new PoolTimeoutException("Timed out waiting for connection from bag");
                     }
                     return connection;
                 }
                 catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    throw new TimeoutException("Interrupted waiting to borrow a connection");
+                    throw new InterruptedOperationException("Interrupted waiting to borrow a connection");
                 }
             }
             // Try to create a new one
@@ -88,11 +87,9 @@ public class BagOfConnectionsConnectionPoolImpl<CL> extends AbstractHostPartitio
                             // Ignore
                         }
                     }
-                    monitor.incNoHosts();
                     throw new NoAvailableHostsException("Too many errors trying to open a connection");
                 }
                 else {
-                    monitor.incNoHosts();
                     throw new NoAvailableHostsException("No hosts to borrow from");
                 }
             }
@@ -110,7 +107,7 @@ public class BagOfConnectionsConnectionPoolImpl<CL> extends AbstractHostPartitio
 
     protected boolean returnConnection(Connection<CL> connection) {
         if (connection != null) {
-            if (connection.getHostConnectionPool().isShutdown()
+            if (connection.getHostConnectionPool().isReconnecting()
                     || connection.getOperationCount() > config.getMaxOperationsPerConnection()) {
                 closeConnection(connection);
             }
@@ -173,11 +170,11 @@ public class BagOfConnectionsConnectionPoolImpl<CL> extends AbstractHostPartitio
             BagOfConnectionsConnectionPoolImpl.this.returnConnection(connection);
             connection = null;
         }
-
     }
 
     @Override
     public <R> ExecuteWithFailover<CL, R> newExecuteWithFailover(Operation<CL, R> op) throws ConnectionException {
         return new BagExecuteWithFailover<R>(config);
     }
+
 }

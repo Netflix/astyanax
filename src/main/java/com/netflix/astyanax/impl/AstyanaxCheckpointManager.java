@@ -30,7 +30,6 @@ public class AstyanaxCheckpointManager implements CheckpointManager {
 	
     @SuppressWarnings("rawtypes")
     private final static Comparator tokenComparator = new Comparator() {
-        @SuppressWarnings("unchecked")
         @Override
         public int compare(Object arg0, Object arg1) {
         	return new BigInteger((String)arg0).compareTo(new BigInteger((String)arg1));

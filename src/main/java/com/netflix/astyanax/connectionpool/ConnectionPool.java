@@ -15,9 +15,8 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool;
 
-import java.math.BigInteger;
 import java.util.List;
-import java.util.Map;
+import java.util.Collection;
 
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
@@ -73,11 +72,16 @@ public interface ConnectionPool<CL> {
     List<HostConnectionPool<CL>> getActivePools();
 
     /**
-     * Sets the complete set of hosts keyed by token.
-     * 
-     * @param ring
+     * Get all pools
+     * @return
      */
-    void setHosts(Map<BigInteger, List<Host>> ring);
+    List<HostConnectionPool<CL>> getPools();
+    
+    /**
+     * Set the complete set of hosts in the ring
+     * @param hosts
+     */
+    void setHosts(Collection<Host> hosts);
 
     /**
      * Return an immutable connection pool for this host

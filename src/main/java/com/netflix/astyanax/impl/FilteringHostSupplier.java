@@ -1,11 +1,10 @@
 package com.netflix.astyanax.impl;
 
-import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
-import com.google.common.base.Function;
+import javax.annotation.Nullable;
+
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
@@ -20,21 +19,23 @@ import com.netflix.astyanax.connectionpool.Host;
  * @author elandau
  * 
  */
-public class FilteringHostSupplier implements Supplier<Map<BigInteger, List<Host>>> {
+public class FilteringHostSupplier implements Supplier<List<Host>> {
 
-    private final Supplier<Map<BigInteger, List<Host>>> sourceSupplier;
-    private final Supplier<Map<BigInteger, List<Host>>> filterSupplier;
+    private final Supplier<List<Host>> sourceSupplier;
+    private final Supplier<List<Host>> filterSupplier;
 
-    public FilteringHostSupplier(Supplier<Map<BigInteger, List<Host>>> sourceSupplier,
-            Supplier<Map<BigInteger, List<Host>>> filterSupplier) {
+    public FilteringHostSupplier(Supplier<List<Host>> sourceSupplier,
+            Supplier<List<Host>> filterSupplier) {
         this.sourceSupplier = sourceSupplier;
         this.filterSupplier = filterSupplier;
     }
 
     @Override
-    public Map<BigInteger, List<Host>> get() {
-        Map<BigInteger, List<Host>> filterList = Maps.newHashMap();
-        Map<BigInteger, List<Host>> sourceList;
+    public List<Host> get() {
+        // Get a list of hosts from two sources and use the first to filter
+        // out hosts from the second
+        List<Host> filterList = Lists.newArrayList();
+        List<Host> sourceList;
         try {
             filterList = filterSupplier.get();
             sourceList = sourceSupplier.get();
@@ -45,34 +46,22 @@ public class FilteringHostSupplier implements Supplier<Map<BigInteger, List<Host
             throw e;
         }
 
+        // Generate a lookup of all alternate IP addresses for the hosts in the
+        // filter list
         final Map<String, Host> lookup = Maps.newHashMap();
-        for (Entry<BigInteger, List<Host>> token : filterList.entrySet()) {
-            for (Host host : token.getValue()) {
-                lookup.put(host.getIpAddress(), host);
-                for (String addr : host.getAlternateIpAddresses()) {
-                    lookup.put(addr, host);
-                }
+        for (Host host : filterList) {
+            lookup.put(host.getIpAddress(), host);
+            for (String addr : host.getAlternateIpAddresses()) {
+                lookup.put(addr, host);
             }
         }
 
-        Map<BigInteger, List<Host>> response = Maps.newHashMap();
-        for (Entry<BigInteger, List<Host>> token : sourceList.entrySet()) {
-            response.put(
-                    token.getKey(),
-                    Lists.newArrayList(Collections2.transform(
-                            Collections2.filter(token.getValue(), new Predicate<Host>() {
-                                @Override
-                                public boolean apply(Host host) {
-                                    return lookup.containsKey(host.getIpAddress());
-                                }
-                            }), new Function<Host, Host>() {
-                                @Override
-                                public Host apply(Host host) {
-                                    return lookup.get(host.getIpAddress());
-                                }
-                            })));
-        }
-        return response;
+        return Lists.newArrayList(Collections2.filter(sourceList, new Predicate<Host>() {
+            @Override
+            public boolean apply(@Nullable Host host) {
+                return lookup.containsKey(host.getIpAddress());
+            }
+        }));
     }
 
 }

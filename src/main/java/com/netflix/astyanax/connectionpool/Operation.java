@@ -15,7 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool;
 
-import java.math.BigInteger;
+import java.nio.ByteBuffer;
 
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
@@ -46,8 +46,8 @@ public interface Operation<CL, R> {
      * 
      * @return
      */
-    BigInteger getToken();
-
+    ByteBuffer getRowKey();
+    
     /**
      * Return keyspace for this operation. Return null if using the current
      * keyspace, or a keyspace is not needed for the operation.

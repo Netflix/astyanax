@@ -219,7 +219,8 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
      */
     @Override
     public void acquire() throws Exception {
-        Preconditions.checkArgument(TimeUnit.SECONDS.convert(timeout, timeoutUnits) < ttl, "Timeout " + timeout + " must be less than TTL " + ttl);
+        
+        Preconditions.checkArgument(ttl == null || TimeUnit.SECONDS.convert(timeout, timeoutUnits) < ttl, "Timeout " + timeout + " must be less than TTL " + ttl);
         
         RetryPolicy retry = backoffPolicy.duplicate();
         retryCount = 0;

@@ -6,10 +6,11 @@ import com.google.common.base.Supplier;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
+import com.netflix.astyanax.consistency.ConsistencyLevelPolicy;
+import com.netflix.astyanax.consistency.LQuorumLQuorumConsistencyLevelPolicy;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.serializers.StringSerializer;
 
 /**
@@ -26,7 +27,7 @@ public class RowUniquenessConstraint<K, C> implements UniquenessConstraint {
     private final ColumnFamily<K, C> columnFamily;
     private final Keyspace keyspace;
     private Integer ttl = null;
-    private ConsistencyLevel consistencyLevel = ConsistencyLevel.CL_LOCAL_QUORUM;
+    private ConsistencyLevelPolicy consistencyLevelPolicy = LQuorumLQuorumConsistencyLevelPolicy.get();
     private final C uniqueColumn;
     private final K key;
     private ByteBuffer data = null;
@@ -44,8 +45,8 @@ public class RowUniquenessConstraint<K, C> implements UniquenessConstraint {
         return this;
     }
 
-    public RowUniquenessConstraint<K, C> withConsistencyLevel(ConsistencyLevel consistencyLevel) {
-        this.consistencyLevel = consistencyLevel;
+    public RowUniquenessConstraint<K, C> withConsistencyLevelPolicy(ConsistencyLevelPolicy consistencyLevelPolicy) {
+        this.consistencyLevelPolicy = consistencyLevelPolicy;
         return this;
     }
     
@@ -73,7 +74,7 @@ public class RowUniquenessConstraint<K, C> implements UniquenessConstraint {
     public void acquireAndMutate(MutationBatch mutation) throws NotUniqueException, Exception {
         try {
             // Phase 1: Write a unique column
-            MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+            MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevelPolicy(consistencyLevelPolicy);
             if (data == null) {
                 m.withRow(columnFamily, key).putEmptyColumn(uniqueColumn, ttl);
             }
@@ -83,7 +84,7 @@ public class RowUniquenessConstraint<K, C> implements UniquenessConstraint {
             m.execute();
 
             // Phase 2: Read back all columns. There should be only 1
-            ColumnList<C> result = keyspace.prepareQuery(columnFamily).setConsistencyLevel(consistencyLevel)
+            ColumnList<C> result = keyspace.prepareQuery(columnFamily).setConsistencyLevelPolicy(consistencyLevelPolicy)
                     .getKey(key).execute().getResult();
 
             if (result.size() != 1) {
@@ -91,7 +92,7 @@ public class RowUniquenessConstraint<K, C> implements UniquenessConstraint {
             }
 
             // Phase 3: Persist the uniqueness with 
-            m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+            m = keyspace.prepareMutationBatch().setConsistencyLevelPolicy(consistencyLevelPolicy);
             if (mutation != null) {
                 m.mergeShallow(mutation);
             }
@@ -112,7 +113,7 @@ public class RowUniquenessConstraint<K, C> implements UniquenessConstraint {
 
     @Override
     public void release() throws Exception {
-        MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+        MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevelPolicy(consistencyLevelPolicy);
         m.withRow(columnFamily, key).deleteColumn(uniqueColumn);
         m.execute();
     }
@@ -126,7 +127,7 @@ public class RowUniquenessConstraint<K, C> implements UniquenessConstraint {
     public ByteBuffer readData() throws Exception {
         ColumnList<C> result = keyspace
                 .prepareQuery(columnFamily)
-                    .setConsistencyLevel(consistencyLevel)
+                    .setConsistencyLevelPolicy(consistencyLevelPolicy)
                     .getKey(key)
                 .execute()
                     .getResult();

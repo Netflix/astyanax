@@ -18,7 +18,7 @@ package com.netflix.astyanax.query;
 import java.util.Collection;
 
 import com.netflix.astyanax.connectionpool.Host;
-import com.netflix.astyanax.model.ConsistencyLevel;
+import com.netflix.astyanax.consistency.ConsistencyLevelPolicy;
 import com.netflix.astyanax.retry.RetryPolicy;
 
 /**
@@ -32,17 +32,17 @@ import com.netflix.astyanax.retry.RetryPolicy;
  */
 public interface ColumnFamilyQuery<K, C> {
     /**
-     * Set the consistency level for this operations.
+     * Set the consistency level policy for this operations.
      * 
-     * @param consistencyLevel
+     * @param consistencyLevelPolicy
      * @return
      */
-    ColumnFamilyQuery<K, C> setConsistencyLevel(ConsistencyLevel consistencyLevel);
+    ColumnFamilyQuery<K, C> setConsistencyLevelPolicy(ConsistencyLevelPolicy consistencyLevelPolicy);
 
     /**
      * Set the retry policy to use instead of the default
      * 
-     * @param consistencyLevel
+     * @param retry
      * @return
      */
     ColumnFamilyQuery<K, C> withRetryPolicy(RetryPolicy retry);
@@ -119,7 +119,6 @@ public interface ColumnFamilyQuery<K, C> {
     /**
      * Search for keys matching the provided index clause
      * 
-     * @param indexClause
      * @return
      */
     IndexQuery<K, C> searchWithIndex();

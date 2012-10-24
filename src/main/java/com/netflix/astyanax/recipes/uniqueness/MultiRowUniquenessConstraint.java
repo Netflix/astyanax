@@ -6,8 +6,9 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.consistency.ConsistencyLevelPolicy;
+import com.netflix.astyanax.consistency.LQuorumLQuorumConsistencyLevelPolicy;
 import com.netflix.astyanax.model.ColumnFamily;
-import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.recipes.locks.BusyLockException;
 import com.netflix.astyanax.recipes.locks.ColumnPrefixDistributedRowLock;
 import com.netflix.astyanax.recipes.locks.StaleLockException;
@@ -30,7 +31,7 @@ public class MultiRowUniquenessConstraint implements UniquenessConstraint {
 
     private final List<ColumnPrefixDistributedRowLock<String>> locks = Lists.newArrayList();
     private Integer ttl = null;
-    private ConsistencyLevel consistencyLevel = ConsistencyLevel.CL_LOCAL_QUORUM;
+    private ConsistencyLevelPolicy consistencyLevelPolicy = LQuorumLQuorumConsistencyLevelPolicy.get();
     private String lockColumn;
     private String prefix = ColumnPrefixDistributedRowLock.DEFAULT_LOCK_PREFIX;
 
@@ -75,13 +76,13 @@ public class MultiRowUniquenessConstraint implements UniquenessConstraint {
     }
 
     /**
-     * Consistency level used
+     * Consistency level policy used
      * 
-     * @param consistencyLevel
+     * @param consistencyLevelPolicy
      * @return
      */
-    public MultiRowUniquenessConstraint withConsistencyLevel(ConsistencyLevel consistencyLevel) {
-        this.consistencyLevel = consistencyLevel;
+    public MultiRowUniquenessConstraint withConsistencyLevelPolicy(ConsistencyLevelPolicy consistencyLevelPolicy) {
+        this.consistencyLevelPolicy = consistencyLevelPolicy;
         return this;
     }
 
@@ -117,9 +118,9 @@ public class MultiRowUniquenessConstraint implements UniquenessConstraint {
 
         // Insert lock check column for all rows in a single batch mutation
         try {
-            MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+            MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevelPolicy(consistencyLevelPolicy);
             for (ColumnPrefixDistributedRowLock<String> lock : locks) {
-                lock.withConsistencyLevel(consistencyLevel)
+                lock.withConsistencyLevelPolicy(consistencyLevelPolicy)
                     .withColumnPrefix(prefix)
                     .withLockId(lockColumn)
                     .fillLockMutation(m, now, ttl);

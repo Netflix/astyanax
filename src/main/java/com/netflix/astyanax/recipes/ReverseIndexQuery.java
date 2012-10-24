@@ -16,15 +16,9 @@ import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.model.Column;
-import com.netflix.astyanax.model.ColumnFamily;
-import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.model.ColumnSlice;
-import com.netflix.astyanax.model.CompositeParser;
-import com.netflix.astyanax.model.Composites;
-import com.netflix.astyanax.model.ConsistencyLevel;
-import com.netflix.astyanax.model.Row;
-import com.netflix.astyanax.model.Rows;
+import com.netflix.astyanax.consistency.ConsistencyLevelPolicy;
+import com.netflix.astyanax.consistency.OneOneConsistencyLevelPolicy;
+import com.netflix.astyanax.model.*;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.retry.RunOnce;
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
@@ -77,7 +71,7 @@ public class ReverseIndexQuery<K, C, V> {
     private final AtomicLong pendingTasks = new AtomicLong();
     private Function<Row<K, C>, Void> callback;
     private IndexEntryCallback<K, V> indexCallback;
-    private ConsistencyLevel consistencyLevel = ConsistencyLevel.CL_ONE;
+    private ConsistencyLevelPolicy consistencyLevelPolicy = OneOneConsistencyLevelPolicy.get();
     private RetryPolicy retry = RunOnce.get();
     private Collection<C> columnSlice;
     private CountDownLatch latch = new CountDownLatch(1);
@@ -126,8 +120,8 @@ public class ReverseIndexQuery<K, C, V> {
         return this;
     }
 
-    public ReverseIndexQuery<K, C, V> withConsistencyLevel(ConsistencyLevel consistencyLevel) {
-        this.consistencyLevel = consistencyLevel;
+    public ReverseIndexQuery<K, C, V> withConsistencyLevelPolicy(ConsistencyLevelPolicy consistencyLevelPolicy) {
+        this.consistencyLevelPolicy = consistencyLevelPolicy;
         return this;
     }
 
@@ -228,7 +222,7 @@ public class ReverseIndexQuery<K, C, V> {
                 // Read the index shards
                 OperationResult<Rows<ByteBuffer, ByteBuffer>> result = null;
                 try {
-                    result = ks.prepareQuery(cfIndex).setConsistencyLevel(consistencyLevel).withRetryPolicy(retry)
+                    result = ks.prepareQuery(cfIndex).setConsistencyLevelPolicy(consistencyLevelPolicy).withRetryPolicy(retry)
                             .getKeySlice(keys).withColumnRange(range.setLimit(columnLimit).build()).execute();
                 }
                 catch (ConnectionException e) {
@@ -298,7 +292,7 @@ public class ReverseIndexQuery<K, C, V> {
 
                     // Read the index shards
                     try {
-                        result = ks.prepareQuery(cfIndex).setConsistencyLevel(consistencyLevel).withRetryPolicy(retry)
+                        result = ks.prepareQuery(cfIndex).setConsistencyLevelPolicy(consistencyLevelPolicy).withRetryPolicy(retry)
                                 .getKey(shard).withColumnRange(range.setLimit(pageSize).build()).execute().getResult();
                     }
                     catch (ConnectionException e) {
@@ -342,7 +336,7 @@ public class ReverseIndexQuery<K, C, V> {
             protected void internalRun() {
                 try {
                     OperationResult<Rows<K, C>> result = ks.prepareQuery(cfData).withRetryPolicy(retry)
-                            .setConsistencyLevel(consistencyLevel).getKeySlice(keys)
+                            .setConsistencyLevelPolicy(consistencyLevelPolicy).getKeySlice(keys)
                             .withColumnSlice(new ColumnSlice<C>(columnSlice)).execute();
 
                     for (Row<K, C> row : result.getResult()) {

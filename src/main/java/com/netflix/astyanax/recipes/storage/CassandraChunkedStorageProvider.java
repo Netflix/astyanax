@@ -8,6 +8,7 @@ import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
+import com.netflix.astyanax.consistency.OneOneConsistencyLevelPolicy;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ConsistencyLevel;
@@ -86,7 +87,7 @@ public class CassandraChunkedStorageProvider implements ChunkedStorageProvider {
 
     @Override
     public ByteBuffer readChunk(String objectName, int chunkId) throws Exception {
-        return keyspace.prepareQuery(cf).setConsistencyLevel(ConsistencyLevel.CL_ONE).withRetryPolicy(retryPolicy)
+        return keyspace.prepareQuery(cf).setConsistencyLevelPolicy(OneOneConsistencyLevelPolicy.get()).withRetryPolicy(retryPolicy)
                 .getKey(getRowKey(objectName, chunkId)).getColumn(getColumnName(Columns.DATA)).execute().getResult()
                 .getByteBufferValue();
     }

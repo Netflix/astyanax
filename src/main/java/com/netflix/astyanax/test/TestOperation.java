@@ -21,6 +21,8 @@ import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
+import com.netflix.astyanax.consistency.ConsistencyLevelPolicy;
+import com.netflix.astyanax.consistency.OneOneConsistencyLevelPolicy;
 
 public class TestOperation implements Operation<TestClient, String> {
     @Override
@@ -42,5 +44,19 @@ public class TestOperation implements Operation<TestClient, String> {
     @Override
     public Host getPinnedHost() {
         return null;
+    }
+
+    /**
+     * Gets the consistency level policy of this operation.
+     *
+     * @return an object that keeps consistency levels for read and write operations
+     */
+    @Override
+    public ConsistencyLevelPolicy getConsistencyLevelPolicy() {
+        return OneOneConsistencyLevelPolicy.get();
+    }
+
+    @Override
+    public void setConsistencyLevelPolicy(ConsistencyLevelPolicy consistencyLevelPolicy) {
     }
 }

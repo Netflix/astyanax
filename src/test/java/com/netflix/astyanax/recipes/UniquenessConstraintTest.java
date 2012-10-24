@@ -3,6 +3,7 @@ package com.netflix.astyanax.recipes;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.netflix.astyanax.consistency.OneOneConsistencyLevelPolicy;
 import junit.framework.Assert;
 
 import org.junit.AfterClass;
@@ -22,7 +23,6 @@ import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.ColumnFamily;
-import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
@@ -111,7 +111,7 @@ public class UniquenessConstraintTest {
                 keyspace, CF_DATA)
                 .setTtl(2)
                 .setPrefix("unique_")
-                .setConsistencyLevel(ConsistencyLevel.CL_ONE)
+                .setConsistencyLevelPolicy(OneOneConsistencyLevelPolicy.get())
                 .setMonitor(
                         new UniquenessConstraintViolationMonitor<Long, String>() {
                             @Override

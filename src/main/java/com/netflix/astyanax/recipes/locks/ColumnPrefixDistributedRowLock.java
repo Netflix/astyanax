@@ -11,12 +11,9 @@ import com.google.common.collect.Sets;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
-import com.netflix.astyanax.model.Column;
-import com.netflix.astyanax.model.ColumnFamily;
-import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.model.ColumnMap;
-import com.netflix.astyanax.model.ConsistencyLevel;
-import com.netflix.astyanax.model.OrderedColumnMap;
+import com.netflix.astyanax.consistency.ConsistencyLevelPolicy;
+import com.netflix.astyanax.consistency.LQuorumLQuorumConsistencyLevelPolicy;
+import com.netflix.astyanax.model.*;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.retry.RunOnce;
 import com.netflix.astyanax.util.RangeBuilder;
@@ -98,7 +95,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
     private long             timeout          = LOCK_TIMEOUT;                   // Timeout after which the lock expires.  Units defined by timeoutUnits.
     private TimeUnit         timeoutUnits     = DEFAULT_OPERATION_TIMEOUT_UNITS;
     private String           prefix           = DEFAULT_LOCK_PREFIX;            // Prefix to identify the lock columns
-    private ConsistencyLevel consistencyLevel = ConsistencyLevel.CL_LOCAL_QUORUM;
+    private ConsistencyLevelPolicy consistencyLevelPolicy = LQuorumLQuorumConsistencyLevelPolicy.get();
     private boolean          failOnStaleLock  = false;           
     private String           lockColumn       = null;
     private String           lockId           = null;
@@ -123,11 +120,11 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
      * region. For multi region the consistency level should be CL_LOCAL_QUORUM.
      * CL_EACH_QUORUM can be used but will Incur substantial latency.
      * 
-     * @param consistencyLevel
+     * @param consistencyLevelPolicy
      * @return
      */
-    public ColumnPrefixDistributedRowLock<K> withConsistencyLevel(ConsistencyLevel consistencyLevel) {
-        this.consistencyLevel = consistencyLevel;
+    public ColumnPrefixDistributedRowLock<K> withConsistencyLevelPolicy(ConsistencyLevelPolicy consistencyLevelPolicy) {
+        this.consistencyLevelPolicy = consistencyLevelPolicy;
         return this;
     }
 
@@ -228,7 +225,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
             try {
                 long curTimeMicros = getCurrentTimeMicros();
                 
-                MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+                MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevelPolicy(consistencyLevelPolicy);
                 fillLockMutation(m, curTimeMicros, ttl);
                 m.execute();
                 
@@ -295,7 +292,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
     @Override
     public void release() throws Exception {
         if (!locksToDelete.isEmpty() || lockColumn != null) {
-            MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+            MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevelPolicy(consistencyLevelPolicy);
             fillReleaseMutation(m, false);
             m.execute();
         }
@@ -321,7 +318,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
             }
         }
         
-        m.setConsistencyLevel(consistencyLevel);
+        m.setConsistencyLevelPolicy(consistencyLevelPolicy);
         fillReleaseMutation(m, false);
         m.execute();
         
@@ -352,7 +349,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
             columns = new OrderedColumnMap<String>();
             ColumnList<String> lockResult = keyspace
                 .prepareQuery(columnFamily)
-                    .setConsistencyLevel(consistencyLevel)
+                    .setConsistencyLevelPolicy(consistencyLevelPolicy)
                     .getKey(key)
                 .execute()
                     .getResult();
@@ -368,7 +365,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
         else {
             ColumnList<String> lockResult = keyspace
                 .prepareQuery(columnFamily)
-                    .setConsistencyLevel(consistencyLevel)
+                    .setConsistencyLevelPolicy(consistencyLevelPolicy)
                     .getKey(key)
                     .withColumnRange(new RangeBuilder().setStart(prefix + "\u0000").setEnd(prefix + "\uFFFF").build())
                 .execute()
@@ -417,7 +414,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
     public Map<String, Long> releaseLocks(boolean force) throws Exception {
         Map<String, Long> locksToDelete = readLockColumns();
 
-        MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+        MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevelPolicy(consistencyLevelPolicy);
         ColumnListMutation<String> row = m.withRow(columnFamily, key);
         long now = getCurrentTimeMicros();
         for (Entry<String, Long> c : locksToDelete.entrySet()) {
@@ -497,8 +494,8 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
         return keyspace;
     }
 
-    public ConsistencyLevel getConsistencyLevel() {
-        return consistencyLevel;
+    public ConsistencyLevelPolicy getConsistencyLevelPolicy() {
+        return consistencyLevelPolicy;
     }
 
     public String getLockColumn() {

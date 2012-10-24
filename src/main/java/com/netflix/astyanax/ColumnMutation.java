@@ -15,15 +15,15 @@
  ******************************************************************************/
 package com.netflix.astyanax;
 
+import com.netflix.astyanax.consistency.ConsistencyLevelPolicy;
+import com.netflix.astyanax.retry.RetryPolicy;
+
 import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.UUID;
 
-import com.netflix.astyanax.model.ConsistencyLevel;
-import com.netflix.astyanax.retry.RetryPolicy;
-
 public interface ColumnMutation {
-    ColumnMutation setConsistencyLevel(ConsistencyLevel consistencyLevel);
+    ColumnMutation setConsistencyLevelPolicy(ConsistencyLevelPolicy consistencyLevelPolicy);
 
     ColumnMutation withRetryPolicy(RetryPolicy retry);
 

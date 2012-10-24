@@ -16,8 +16,11 @@
 package com.netflix.astyanax.ddl;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+
+import com.netflix.astyanax.util.StringUtils;
 
 public interface ColumnFamilyDefinition {
 
@@ -143,7 +146,7 @@ public interface ColumnFamilyDefinition {
 
     void clearColumnDefinitionList();
 
-    List<String> getFieldNames();
+    Collection<String> getFieldNames();
 
     Object getFieldValue(String name);
 
@@ -157,6 +160,8 @@ public interface ColumnFamilyDefinition {
      * Get metadata for all fields
      * @return
      */
-    List<FieldMetadata> getFieldsMetadata();
+    Collection<FieldMetadata> getFieldsMetadata();
+    
+    public void setFields(Map<String, Object> options);
 
 }

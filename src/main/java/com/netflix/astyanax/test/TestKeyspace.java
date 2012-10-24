@@ -16,6 +16,7 @@
 package com.netflix.astyanax.test;
 
 import java.util.List;
+import java.util.Map;
 
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.ColumnMutation;
@@ -28,6 +29,7 @@ import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
+import com.netflix.astyanax.ddl.SchemaChangeResponse;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
@@ -138,6 +140,50 @@ public class TestKeyspace implements Keyspace {
 
     @Override
     public String describePartitioner() throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResponse> dropColumnFamily(String columnFamilyName) throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public <K, C> OperationResult<SchemaChangeResponse> dropColumnFamily(ColumnFamily<K, C> columnFamily) throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResponse> dropKeyspace() throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public <K, C> OperationResult<SchemaChangeResponse> createColumnFamily(ColumnFamily<K, C> columnFamily, Map<String, Object> options)
+            throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public <K, C> OperationResult<SchemaChangeResponse> updateColumnFamily(ColumnFamily<K, C> columnFamily, Map<String, Object> options)
+            throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResponse> createKeyspace(Map<String, Object> options) throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResponse> updateKeyspace(Map<String, Object> options) throws ConnectionException {
         // TODO Auto-generated method stub
         return null;
     }

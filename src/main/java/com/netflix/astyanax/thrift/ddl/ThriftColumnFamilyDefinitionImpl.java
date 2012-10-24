@@ -17,6 +17,7 @@ package com.netflix.astyanax.thrift.ddl;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -27,22 +28,24 @@ import org.apache.cassandra.thrift.ColumnDef;
 import org.apache.thrift.meta_data.FieldMetaData;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.FieldMetadata;
 import com.netflix.astyanax.thrift.ThriftTypes;
+import com.netflix.astyanax.util.StringUtils;
 
 public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
-    private final static List<FieldMetadata> fieldsMetadata = Lists.newArrayList();
-    private final static List<String> fieldNames = Lists.newArrayList();
+    private final static Map<String, FieldMetadata> fieldsMetadata = Maps.newHashMap();
     
     {
         for (Entry<_Fields, FieldMetaData> field : CfDef.metaDataMap.entrySet()) {
-            fieldsMetadata.add(new FieldMetadata(
+            fieldsMetadata.put(
+                    field.getValue().fieldName, 
+                    new FieldMetadata(
                         field.getKey().name(), 
                         ThriftTypes.values()[field.getValue().valueMetaData.type].name(),
                         field.getValue().valueMetaData.isContainer()));
-            fieldNames.add(field.getValue().fieldName);
         }
     }
     
@@ -320,8 +323,8 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
     }
 
     @Override
-    public List<String> getFieldNames() {
-        return fieldNames;
+    public Collection<String> getFieldNames() {
+        return fieldsMetadata.keySet();
     }
     
     @Override
@@ -341,8 +344,8 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
     }
 
     @Override
-    public List<FieldMetadata> getFieldsMetadata() {
-        return fieldsMetadata;
+    public Collection<FieldMetadata> getFieldsMetadata() {
+        return fieldsMetadata.values();
     }
 
     @Override
@@ -435,5 +438,27 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
     @Override
     public Integer getGcGraceSeconds() {
         return cfDef.getGc_grace_seconds();
+    }
+
+    @Override
+    public void setFields(Map<String, Object> options) {
+        for (Entry<String, FieldMetadata> field : fieldsMetadata.entrySet()) {
+            String fieldName = field.getKey();
+            if (options.containsKey(fieldName)) {
+                if (fieldName.equals("column_metadata")) {
+                    Map<String, Object> columns = (Map<String, Object>) options.get("column_metadata");
+                    for (Entry<String, Object> column : columns.entrySet()) {
+                        ThriftColumnDefinitionImpl columnDef = new ThriftColumnDefinitionImpl();
+                        columnDef.setName(column.getKey().toString());
+                        columnDef.setFields((Map<String, Object>) column.getValue());
+                        
+                        this.addColumnDefinition(columnDef);
+                    }
+                }
+                else {
+                    setFieldValue(field.getValue().getName(), options.get(fieldName));
+                }
+            }
+        }
     }
 }

@@ -16,8 +16,8 @@
 package com.netflix.astyanax.thrift.ddl;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -26,25 +26,25 @@ import org.apache.cassandra.thrift.IndexType;
 import org.apache.cassandra.thrift.ColumnDef._Fields;
 import org.apache.thrift.meta_data.FieldMetaData;
 
-import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.FieldMetadata;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.thrift.ThriftTypes;
 
 public class ThriftColumnDefinitionImpl implements ColumnDefinition {
-    private final static List<FieldMetadata> fieldsMetadata = Lists.newArrayList();
-    private final static List<String> fieldNames = Lists.newArrayList();
+    private final static Map<String, FieldMetadata> fieldsMetadata = Maps.newHashMap();
     
     private final ColumnDef columnDef;
 
-    {
+    static {
         for (Entry<_Fields, FieldMetaData> field : ColumnDef.metaDataMap.entrySet()) {
-            fieldsMetadata.add(new FieldMetadata(
+            fieldsMetadata.put(
+                    field.getValue().fieldName,
+                    new FieldMetadata(
                         field.getKey().name(), 
                         ThriftTypes.values()[field.getValue().valueMetaData.type].name(),
                         field.getValue().valueMetaData.isContainer()));
-            fieldNames.add(field.getValue().fieldName);
         }
     }
     
@@ -158,8 +158,8 @@ public class ThriftColumnDefinitionImpl implements ColumnDefinition {
     }
     
     @Override
-    public List<String> getFieldNames() {
-        return fieldNames;
+    public Collection<String> getFieldNames() {
+        return this.fieldsMetadata.keySet();
     }
     
     @Override
@@ -174,8 +174,24 @@ public class ThriftColumnDefinitionImpl implements ColumnDefinition {
     }
 
     @Override
-    public List<FieldMetadata> getFieldsMetadata() {
-        return fieldsMetadata;
+    public Collection<FieldMetadata> getFieldsMetadata() {
+        return fieldsMetadata.values();
     }
 
+    @Override
+    public ColumnDefinition setFields(Map<String, Object> options) {
+        for (Entry<String, FieldMetadata> field : fieldsMetadata.entrySet()) {
+            String fieldName = field.getKey();
+            if (options.containsKey(fieldName)) {
+                if ("index_type".equals(fieldName)) {
+                    setFieldValue(field.getValue().getName(), IndexType.valueOf(options.get(fieldName).toString()));
+                }
+                else {
+                    setFieldValue(field.getValue().getName(), options.get(fieldName));
+                }
+            }
+        }
+        
+        return this;
+    }
 }

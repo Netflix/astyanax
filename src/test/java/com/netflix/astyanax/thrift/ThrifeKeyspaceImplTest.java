@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Cluster;
@@ -85,8 +86,7 @@ import com.netflix.astyanax.util.TimeUUIDUtils;
 
 public class ThrifeKeyspaceImplTest {
 
-    private static Logger LOG = LoggerFactory
-            .getLogger(ThrifeKeyspaceImplTest.class);
+    private static Logger LOG = LoggerFactory.getLogger(ThrifeKeyspaceImplTest.class);
 
     private static Keyspace keyspace;
     private static AstyanaxContext<Keyspace> keyspaceContext;
@@ -94,7 +94,6 @@ public class ThrifeKeyspaceImplTest {
 
     private static String TEST_CLUSTER_NAME = "cass_sandbox";
     private static String TEST_KEYSPACE_NAME = "AstyanaxUnitTests";
-    private static boolean TEST_INIT_KEYSPACE = true;
 
     private static ColumnFamily<Long, String> CF_USERS = ColumnFamily
             .newColumnFamily("users", LongSerializer.get(),
@@ -170,150 +169,6 @@ public class ThrifeKeyspaceImplTest {
         
         Thread.sleep(CASSANDRA_WAIT_TIME);
         
-        if (TEST_INIT_KEYSPACE) {
-            AstyanaxContext<Cluster> clusterContext = new AstyanaxContext.Builder()
-                    .forCluster(TEST_CLUSTER_NAME)
-                    .withAstyanaxConfiguration(
-                            new AstyanaxConfigurationImpl()
-                            )
-                    .withConnectionPoolConfiguration(
-                            new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME)
-                                .setMaxConnsPerHost(2)
-                                .setInitConnsPerHost(2)
-                                .setSeeds(SEEDS)
-                            )
-                    .withConnectionPoolMonitor(
-                            new CountingConnectionPoolMonitor())
-                    .buildCluster(ThriftFamilyFactory.getInstance());
-
-            clusterContext.start();
-            Cluster cluster = clusterContext.getEntity();
-            try {
-                cluster.dropKeyspace(TEST_KEYSPACE_NAME);
-                Thread.sleep(2000);
-            } catch (ConnectionException e) {
-                System.out.println(e.getMessage());
-            }
-
-            Map<String, String> stratOptions = new HashMap<String, String>();
-            stratOptions.put("replication_factor", "1");
-
-            try {
-                KeyspaceDefinition ksDef = cluster.makeKeyspaceDefinition();
-
-                ksDef.setName(TEST_KEYSPACE_NAME)
-                        .setStrategyOptions(stratOptions)
-                        .setStrategyClass("SimpleStrategy")
-                        .addColumnFamily(
-                                cluster.makeColumnFamilyDefinition()
-                                        .setName(CF_STANDARD1.getName())
-                                        .setComparatorType("UTF8Type")
-                                        .setKeyValidationClass("UTF8Type")
-                                        .addColumnDefinition(
-                                                cluster.makeColumnDefinition()
-                                                        .setName("Index1")
-                                                        .setValidationClass(
-                                                                "UTF8Type")
-                                                        .setKeysIndex("Index1"))
-                                        .addColumnDefinition(
-                                                cluster.makeColumnDefinition()
-                                                        .setName("Index2")
-                                                        .setValidationClass(
-                                                                "UTF8Type")
-                                                        .setKeysIndex("Index2")))
-                        .addColumnFamily(
-                                cluster.makeColumnFamilyDefinition()
-                                        .setName(CF_STANDARD2.getName())
-                                        .setComparatorType("UTF8Type")
-                                        .setKeyValidationClass("UTF8Type"))
-                        .addColumnFamily(
-                                cluster.makeColumnFamilyDefinition()
-                                        .setName(CF_LONGCOLUMN.getName())
-                                        .setComparatorType("LongType")
-                                        .setKeyValidationClass("UTF8Type"))
-                        .addColumnFamily(
-                                cluster.makeColumnFamilyDefinition()
-                                        .setName(CF_COUNTER1.getName())
-                                        .setDefaultValidationClass(
-                                                "CounterColumnType")
-                                        .setKeyValidationClass("UTF8Type")
-                                        .setComparatorType("UTF8Type"))
-                        .addColumnFamily(
-                                cluster.makeColumnFamilyDefinition()
-                                        .setName(CF_CLICK_STREAM.getName())
-                                        .setComparatorType(
-                                                "CompositeType(AsciiType, TimeUUIDType)")
-                                        .setDefaultValidationClass("AsciiType")
-                                        .setKeyValidationClass("UTF8Type"))
-                        .addColumnFamily(
-                                cluster.makeColumnFamilyDefinition()
-                                        .setName(CF_COMPOSITE_CSV.getName())
-                                        .setComparatorType(
-                                                "CompositeType(UTF8Type, LongType)")
-                                        .setDefaultValidationClass("UTF8Type")
-                                        .setKeyValidationClass("UTF8Type"))
-                        .addColumnFamily(
-                                cluster.makeColumnFamilyDefinition()
-                                        .setName(CF_COMPOSITE.getName())
-                                        .setComparatorType(
-                                                "CompositeType(AsciiType, IntegerType(reversed=true), IntegerType, BytesType, UTF8Type)")
-                                        .setDefaultValidationClass("AsciiType")
-                                        .setKeyValidationClass("UTF8Type"))
-                        .addColumnFamily(
-                                cluster.makeColumnFamilyDefinition()
-                                        .setName(CF_COMPOSITE_KEY.getName())
-                                        .setComparatorType("UTF8Type"))
-                        .addColumnFamily(
-                                cluster.makeColumnFamilyDefinition()
-                                        .setName(CF_TIME_UUID.getName())
-                                        .setComparatorType("TimeUUIDType)")
-                                        .setKeyValidationClass("UTF8Type"))
-                        .addColumnFamily(
-                                cluster.makeColumnFamilyDefinition()
-                                        .setName(CF_USER_UNIQUE_UUID.getName())
-                                        .setComparatorType("TimeUUIDType)")
-                                        .setKeyValidationClass("UTF8Type"))
-                        .addColumnFamily(
-                                cluster.makeColumnFamilyDefinition()
-                                        .setName(CF_EMAIL_UNIQUE_UUID.getName())
-                                        .setComparatorType("TimeUUIDType)")
-                                        .setKeyValidationClass("UTF8Type"))
-                        .addColumnFamily(
-                                cluster.makeColumnFamilyDefinition()
-                                        .setName(CF_USERS.getName())
-                                        .setComparatorType("UTF8Type")
-                                        .setKeyValidationClass("LongType")
-                                        .setDefaultValidationClass("UTF8Type")
-                                        .addColumnDefinition(
-                                                cluster.makeColumnDefinition()
-                                                        .setName("firstname")
-                                                        .setValidationClass(
-                                                                "UTF8Type")
-                                                        .setKeysIndex(
-                                                                "firstname"))
-                                        .addColumnDefinition(
-                                                cluster.makeColumnDefinition()
-                                                        .setName("lastname")
-                                                        .setValidationClass(
-                                                                "UTF8Type")
-                                                        .setKeysIndex(
-                                                                "lastname"))
-                                        .addColumnDefinition(
-                                                cluster.makeColumnDefinition()
-                                                        .setName("age")
-                                                        .setValidationClass(
-                                                                "LongType")
-                                                        .setKeysIndex("age")));
-                cluster.addKeyspace(ksDef);
-
-                Thread.sleep(CASSANDRA_WAIT_TIME);
-            } catch (ConnectionException e) {
-                System.out.println(e.getMessage());
-            } finally {
-                clusterContext.shutdown();
-            }
-        }
-
         createKeyspace();
     }
 
@@ -346,10 +201,84 @@ public class ThrifeKeyspaceImplTest {
                 .buildKeyspace(ThriftFamilyFactory.getInstance());
 
         keyspaceContext.start();
-
+        
+        keyspace = keyspaceContext.getEntity();
+        
+        try {
+            keyspace.dropKeyspace();
+        }
+        catch (Exception e) {
+            
+        }
+        
+        keyspace.createKeyspace(ImmutableMap.<String, Object>builder()
+                .put("strategy_options", ImmutableMap.<String, Object>builder()
+                        .put("replication_factor", "1")
+                        .build())
+                .put("strategy_class",     "SimpleStrategy")
+                .build()
+                );
+        
+        keyspace.createColumnFamily(CF_STANDARD1, ImmutableMap.<String, Object>builder()
+                .put("column_metadata", ImmutableMap.<String, Object>builder()
+                        .put("Index1", ImmutableMap.<String, Object>builder()
+                                .put("validation_class", "UTF8Type")
+                                .put("index_name",       "Index1")
+                                .put("index_type",       "KEYS")
+                                .build())
+                        .put("Index2", ImmutableMap.<String, Object>builder()
+                                .put("validation_class", "UTF8Type")
+                                .put("index_name",       "Index2")
+                                .put("index_type",       "KEYS")
+                                .build())
+                         .build())
+                     .build());
+        
+        keyspace.createColumnFamily(CF_STANDARD2, null);
+        keyspace.createColumnFamily(CF_LONGCOLUMN, null);
+        keyspace.createColumnFamily(CF_COUNTER1, ImmutableMap.<String, Object>builder()
+                .put("default_validation_class", "CounterColumnType")
+                .build());
+        keyspace.createColumnFamily(CF_CLICK_STREAM, ImmutableMap.<String, Object>builder()
+                .put("comparator_type", "CompositeType(UTF8Type, TimeUUIDType)")
+                .build());
+        keyspace.createColumnFamily(CF_COMPOSITE_CSV, ImmutableMap.<String, Object>builder()
+                .put("default_validation_class", "UTF8Type")
+                .put("key_validation_class",     "UTF8Type")
+                .put("comparator_type",          "CompositeType(UTF8Type, LongType)")
+                .build());
+        keyspace.createColumnFamily(CF_COMPOSITE, ImmutableMap.<String, Object>builder()
+                .put("comparator_type", "CompositeType(AsciiType, IntegerType(reversed=true), IntegerType, BytesType, UTF8Type)")
+                .build());
+        keyspace.createColumnFamily(CF_COMPOSITE_KEY, ImmutableMap.<String, Object>builder()
+                .put("key_validation_class", "BytesType")
+                .build());
+        keyspace.createColumnFamily(CF_TIME_UUID,         null);
+        keyspace.createColumnFamily(CF_USER_UNIQUE_UUID,  null);
+        keyspace.createColumnFamily(CF_EMAIL_UNIQUE_UUID, null);
+        keyspace.createColumnFamily(CF_USERS, ImmutableMap.<String, Object>builder()
+                .put("default_validation_class", "UTF8Type")
+                .put("column_metadata", ImmutableMap.<String, Object>builder()
+                        .put("firstname",  ImmutableMap.<String, Object>builder()
+                                .put("validation_class", "UTF8Type")
+                                .put("index_name",       "firstname")
+                                .put("index_type",       "KEYS")
+                                .build())
+                        .put("lastname", ImmutableMap.<String, Object>builder()
+                                .put("validation_class", "UTF8Type")
+                                .put("index_name",       "lastname")
+                                .put("index_type",       "KEYS")
+                                .build())
+                        .put("age", ImmutableMap.<String, Object>builder()
+                                .put("validation_class", "LongType")
+                                .put("index_name",       "age")
+                                .put("index_type",       "KEYS")
+                                .build())
+                        .build())
+                     .build());
+        
         KeyspaceDefinition ki = keyspaceContext.getEntity().describeKeyspace();
         System.out.println("Describe Keyspace: " + ki.getName());
-        keyspace = keyspaceContext.getEntity();
 
         try {
             //
@@ -415,7 +344,7 @@ public class ThrifeKeyspaceImplTest {
     @Test
     public void getKeyspaceDefinition() throws Exception {
         KeyspaceDefinition def = keyspaceContext.getEntity().describeKeyspace();
-        List<String> fieldNames = def.getFieldNames();
+        Collection<String> fieldNames = def.getFieldNames();
         LOG.info("Getting field names");
         for (String field : fieldNames) {
             LOG.info(field);
@@ -425,14 +354,13 @@ public class ThrifeKeyspaceImplTest {
         System.out.println(fieldNames.toString());
         
         for (FieldMetadata field : def.getFieldsMetadata()) {
-            System.out.println(field.getName() + " " + field.getType());
-            System.out.println(field.getName() + " = " + def.getFieldValue(field.getName()));
+            System.out.println(field.getName() + " = " + def.getFieldValue(field.getName()) + " (" + field.getType() + ")");
         }
         
         for (ColumnFamilyDefinition cfDef : def.getColumnFamilyList()) {
+            LOG.info("----------" );
             for (FieldMetadata field : cfDef.getFieldsMetadata()) {
-                System.out.println(field.getName() + " " + field.getType());
-                System.out.println(field.getName() + " = " + cfDef.getFieldValue(field.getName()));
+                LOG.info(field.getName() + " = " + cfDef.getFieldValue(field.getName()) + " (" + field.getType() + ")");
             }
         }
     }
@@ -696,7 +624,7 @@ public class ThrifeKeyspaceImplTest {
 
                         @Override
                         public boolean failure(ConnectionException e) {
-                            LOG.error(e.getMessage());
+                            LOG.error(e.getMessage(), e);
                             return false;
                         }
                     });
@@ -991,7 +919,7 @@ public class ThrifeKeyspaceImplTest {
         try {
             m.execute();
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
 
@@ -1019,7 +947,7 @@ public class ThrifeKeyspaceImplTest {
             Assert.assertEquals(10, result2.getResult().size());
 
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
 
@@ -1129,7 +1057,7 @@ public class ThrifeKeyspaceImplTest {
         try {
             m.execute();
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
 
@@ -1211,7 +1139,7 @@ public class ThrifeKeyspaceImplTest {
             // column.getLongValue());
             // }
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
     }
@@ -1235,7 +1163,7 @@ public class ThrifeKeyspaceImplTest {
         try {
             m.execute();
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
 
@@ -1244,7 +1172,7 @@ public class ThrifeKeyspaceImplTest {
                     .getKey(key).execute().getResult();
             Assert.assertFalse(row.isEmpty());
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
 
@@ -1271,7 +1199,7 @@ public class ThrifeKeyspaceImplTest {
         try {
             m.execute();
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
 
@@ -1283,7 +1211,7 @@ public class ThrifeKeyspaceImplTest {
                 LOG.info("COLUMN: " + col.getName().toString());
             }
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
 
@@ -1294,7 +1222,7 @@ public class ThrifeKeyspaceImplTest {
                     .execute().getResult();
             LOG.info("Got single column: " + column.getName().toString());
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
 
@@ -1358,11 +1286,11 @@ public class ThrifeKeyspaceImplTest {
                     + result.getResult().size());
 
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             e.printStackTrace();
             Assert.fail();
         } catch (Exception e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             e.printStackTrace();
             Assert.fail();
         }
@@ -1391,11 +1319,11 @@ public class ThrifeKeyspaceImplTest {
                     + result.getResult().size());
 
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             e.printStackTrace();
             Assert.fail();
         } catch (Exception e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             e.printStackTrace();
             Assert.fail();
         }
@@ -1431,11 +1359,11 @@ public class ThrifeKeyspaceImplTest {
 
         } catch (ConnectionException e) {
             e.printStackTrace();
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         } catch (Exception e) {
             e.printStackTrace();
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
     }
@@ -1458,7 +1386,7 @@ public class ThrifeKeyspaceImplTest {
         try {
             m.execute();
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
 
@@ -1472,7 +1400,7 @@ public class ThrifeKeyspaceImplTest {
         try {
             m.execute();
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
 
@@ -1493,7 +1421,7 @@ public class ThrifeKeyspaceImplTest {
         try {
             m.execute();
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
 
@@ -1513,7 +1441,7 @@ public class ThrifeKeyspaceImplTest {
              * rowKey) .deleteColumn(counterName); m.execute();
              */
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
 
@@ -1543,7 +1471,7 @@ public class ThrifeKeyspaceImplTest {
              * LOG.info("KEY***: " + row.getKey()); }
              */
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
     }
@@ -1560,7 +1488,7 @@ public class ThrifeKeyspaceImplTest {
             long count = result.getResult().getRows().getRowByIndex(0).getColumns().getColumnByName("count").getLongValue();
             LOG.info("CQL Count: " + count);
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
     }
@@ -1753,7 +1681,7 @@ public class ThrifeKeyspaceImplTest {
                                 .getResult().size());
             }
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
     }
@@ -1767,19 +1695,19 @@ public class ThrifeKeyspaceImplTest {
             result.get(1000, TimeUnit.MILLISECONDS);
 
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             e.printStackTrace();
             Assert.fail();
         } catch (InterruptedException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             e.printStackTrace();
             Assert.fail();
         } catch (ExecutionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             e.printStackTrace();
             Assert.fail();
         } catch (TimeoutException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             e.printStackTrace();
             Assert.fail();
         }
@@ -1869,7 +1797,7 @@ public class ThrifeKeyspaceImplTest {
             // }
             // }
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
 
@@ -1938,7 +1866,7 @@ public class ThrifeKeyspaceImplTest {
         try {
             m.execute();
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
 
@@ -1970,7 +1898,7 @@ public class ThrifeKeyspaceImplTest {
         try {
             m.execute();
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
 
@@ -2089,10 +2017,10 @@ public class ThrifeKeyspaceImplTest {
                 writer.write(record);
             }
         } catch (IOException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         } finally {
             reader.shutdown();
@@ -2133,10 +2061,10 @@ public class ThrifeKeyspaceImplTest {
                     .setRowsAsArray(true).setColumnsAsRows(true).write(rows);
 
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         } catch (Exception e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
     }
@@ -2175,10 +2103,10 @@ public class ThrifeKeyspaceImplTest {
                 writer.write(record);
             }
         } catch (IOException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         } finally {
             reader.shutdown();
@@ -2192,10 +2120,10 @@ public class ThrifeKeyspaceImplTest {
                     keyspace.getSerializerPackage(CF_USERS.getName(), false))
                     .setRowsAsArray(false).write(rows);
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         } catch (Exception e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
     }
@@ -2219,10 +2147,10 @@ public class ThrifeKeyspaceImplTest {
                 writer.write(record);
             }
         } catch (IOException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         } finally {
             reader.shutdown();
@@ -2260,10 +2188,10 @@ public class ThrifeKeyspaceImplTest {
                     .write(rows);
 
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         } catch (Exception e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
     }
@@ -2322,7 +2250,7 @@ public class ThrifeKeyspaceImplTest {
         try {
             m.execute();
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
 
@@ -2333,7 +2261,7 @@ public class ThrifeKeyspaceImplTest {
             Column<String> c = result.getResult().getColumnByName("Column1");
             Assert.assertEquals("Value1", c.getStringValue());
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
 
@@ -2344,7 +2272,7 @@ public class ThrifeKeyspaceImplTest {
             Column<String> c = result.getResult().getColumnByName("Column1");
             Assert.assertEquals("Value2", c.getStringValue());
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
         }
 
@@ -2389,7 +2317,7 @@ public class ThrifeKeyspaceImplTest {
             m.execute();
             return true;
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
             return false;
         }
@@ -2406,7 +2334,7 @@ public class ThrifeKeyspaceImplTest {
             LOG.info(e.getMessage());
             return null;
         } catch (ConnectionException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             Assert.fail();
             return null;
         }

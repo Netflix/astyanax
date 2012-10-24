@@ -16,6 +16,7 @@
 package com.netflix.astyanax.thrift.ddl;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,22 +28,24 @@ import org.apache.cassandra.thrift.KsDef._Fields;
 import org.apache.thrift.meta_data.FieldMetaData;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.FieldMetadata;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.thrift.ThriftTypes;
+import com.netflix.astyanax.util.StringUtils;
 
 public class ThriftKeyspaceDefinitionImpl implements KeyspaceDefinition {
-    private final static List<FieldMetadata> fieldsMetadata = Lists.newArrayList();
-    private final static List<String> fieldNames = Lists.newArrayList();
+    private final static Map<String, FieldMetadata> fieldsMetadata = Maps.newHashMap();
     
     {
         for (Entry<_Fields, FieldMetaData> field : KsDef.metaDataMap.entrySet()) {
-            fieldsMetadata.add(new FieldMetadata(
+            fieldsMetadata.put(
+                    field.getValue().fieldName,
+                    new FieldMetadata(
                         field.getKey().name(), 
                         ThriftTypes.values()[field.getValue().valueMetaData.type].name(),
                         field.getValue().valueMetaData.isContainer()));
-            fieldNames.add(field.getValue().fieldName);
         }
     }
     
@@ -137,8 +140,8 @@ public class ThriftKeyspaceDefinitionImpl implements KeyspaceDefinition {
     }
     
     @Override
-    public List<String> getFieldNames() {
-        return fieldNames;
+    public Collection<String> getFieldNames() {
+        return fieldsMetadata.keySet();
     }
     
     @Override
@@ -153,8 +156,17 @@ public class ThriftKeyspaceDefinitionImpl implements KeyspaceDefinition {
     }
 
     @Override
-    public List<FieldMetadata> getFieldsMetadata() {
-        return fieldsMetadata;
+    public Collection<FieldMetadata> getFieldsMetadata() {
+        return fieldsMetadata.values();
     }
 
+    @Override
+    public void setFields(Map<String, Object> options) {
+        for (Entry<String, FieldMetadata> field : fieldsMetadata.entrySet()) {
+            String fieldName = field.getKey();
+            if (options.containsKey(fieldName)) {
+                setFieldValue(field.getValue().getName(), options.get(fieldName));
+            }
+        }
+    }
 }

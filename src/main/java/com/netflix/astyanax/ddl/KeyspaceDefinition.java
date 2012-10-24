@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax.ddl;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -40,7 +41,7 @@ public interface KeyspaceDefinition {
 
     ColumnFamilyDefinition getColumnFamily(String columnFamily);
 
-    List<String> getFieldNames();
+    Collection<String> getFieldNames();
 
     Object getFieldValue(String name);
 
@@ -50,6 +51,7 @@ public interface KeyspaceDefinition {
      * Get metadata for all fields
      * @return
      */
-    List<FieldMetadata> getFieldsMetadata();
+    Collection<FieldMetadata> getFieldsMetadata();
 
+    void setFields(Map<String, Object> options);
 }

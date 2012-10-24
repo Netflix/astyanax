@@ -18,11 +18,13 @@ package com.netflix.astyanax;
 import java.util.List;
 import java.util.Map;
 
+import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
+import com.netflix.astyanax.ddl.SchemaChangeResponse;
 
 /**
  * Interface for cluster operations. Use the Keyspace interface to perform
@@ -184,4 +186,50 @@ public interface Cluster {
      * @return
      */
     AstyanaxConfiguration getConfig();
+    
+    /**
+     * Create a column family in this keyspace
+     * 
+     * @param columnFamily
+     * @param options
+     * @return
+     */
+    <K, C>  OperationResult<SchemaChangeResponse> createColumnFamily(Map<String, Object> options) throws ConnectionException ;
+    
+    /**
+     * Update the column family in cassandra
+     * 
+     * @param columnFamily
+     * @param options
+     * @return
+     */
+    <K, C>  OperationResult<SchemaChangeResponse> updateColumnFamily(Map<String, Object> options) throws ConnectionException ;
+    
+    /**
+     * Drop a column family from this keyspace
+     * @param columnFamilyName
+     * @return
+     */
+    OperationResult<SchemaChangeResponse> dropColumnFamily(String keyspaceName, String columnFamilyName, Boolean alwaysFalse) throws ConnectionException ;
+    
+    /**
+     * Create the keyspace in cassandra.  This call will only create the keyspace and not 
+     * any column families.  Once the keyspace has been created then call createColumnFamily
+     * for each CF you want to create.
+     */
+    OperationResult<SchemaChangeResponse> createKeyspace(Map<String, Object> options) throws ConnectionException ;
+    
+    /**
+     * Update the keyspace in cassandra.
+     * @param options
+     * @return
+     */
+    OperationResult<SchemaChangeResponse> updateKeyspace(Map<String, Object> options) throws ConnectionException ;
+    
+    /**
+     * Drop this keyspace from cassandra
+     * @return
+     */
+    OperationResult<SchemaChangeResponse> dropKeyspace(String keyspaceName, Boolean alwaysFalse) throws ConnectionException ;
+    
 }

@@ -53,4 +53,9 @@ public final class DateSerializer extends AbstractSerializer<Date> {
         return toByteBuffer(new Date(fromByteBuffer(byteBuffer).getTime() + 1));
     }
 
+    @Override
+    public ComparatorType getComparatorType() {
+        return ComparatorType.DATETYPE;
+    }
+
 }

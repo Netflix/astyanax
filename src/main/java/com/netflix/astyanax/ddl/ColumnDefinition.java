@@ -16,6 +16,7 @@
 package com.netflix.astyanax.ddl;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -158,13 +159,13 @@ public interface ColumnDefinition {
      * Return list of valid field names
      * @return
      */
-    List<String> getFieldNames();
+    Collection<String> getFieldNames();
     
     /**
      * Get metadata for all fields
      * @return
      */
-    List<FieldMetadata> getFieldsMetadata();
+    Collection<FieldMetadata> getFieldsMetadata();
 
     /**
      * Return a field value by name
@@ -181,4 +182,6 @@ public interface ColumnDefinition {
      * @return
      */
     ColumnDefinition setFieldValue(String name, Object value);
+    
+    ColumnDefinition setFields(Map<String, Object> fields);
 }

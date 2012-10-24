@@ -74,9 +74,10 @@ public class ColumnarRecordWriter implements RecordWriter {
         // Build row mutation for all columns
         ColumnListMutation<ByteBuffer> rowMutation = mutation.withRow(cf, rowKey);
         while (iter.hasNext()) {
+            Pair<String, String> pair = iter.next();
             try {
-                Pair<String, String> pair = iter.next();
-                rowMutation.putColumn(this.serializers.columnAsByteBuffer(pair.left),
+                rowMutation.putColumn(
+                        this.serializers.columnAsByteBuffer(pair.left),
                         this.serializers.valueAsByteBuffer(pair.left, pair.right), null);
             }
             catch (Exception e) {

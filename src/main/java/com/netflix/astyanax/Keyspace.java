@@ -16,6 +16,7 @@
 package com.netflix.astyanax;
 
 import java.util.List;
+import java.util.Map;
 
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.OperationResult;
@@ -23,6 +24,7 @@ import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
+import com.netflix.astyanax.ddl.SchemaChangeResponse;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
@@ -192,4 +194,55 @@ public interface Keyspace {
      */
     OperationResult<Void> testOperation(Operation<?, ?> operation, RetryPolicy retry) throws ConnectionException;
 
+    /**
+     * Create a column family in this keyspace
+     * 
+     * @param columnFamily
+     * @param options
+     * @return
+     */
+    <K, C>  OperationResult<SchemaChangeResponse> createColumnFamily(ColumnFamily<K, C> columnFamily, Map<String, Object> options) throws ConnectionException ;
+    
+    /**
+     * Update the column family in cassandra
+     * 
+     * @param columnFamily
+     * @param options
+     * @return
+     */
+    <K, C>  OperationResult<SchemaChangeResponse> updateColumnFamily(ColumnFamily<K, C> columnFamily, Map<String, Object> options) throws ConnectionException ;
+    
+    /**
+     * Drop a column family from this keyspace
+     * @param columnFamilyName
+     * @return
+     */
+    OperationResult<SchemaChangeResponse> dropColumnFamily(String columnFamilyName) throws ConnectionException ;
+    
+    /**
+     * Drop a column family from this keyspace 
+     * @param columnFamily
+     * @return
+     */
+    <K, C>  OperationResult<SchemaChangeResponse> dropColumnFamily(ColumnFamily<K, C> columnFamily) throws ConnectionException ;
+    
+    /**
+     * Create the keyspace in cassandra.  This call will only create the keyspace and not 
+     * any column families.  Once the keyspace has been created then call createColumnFamily
+     * for each CF you want to create.
+     */
+    OperationResult<SchemaChangeResponse> createKeyspace(Map<String, Object> options) throws ConnectionException ;
+    
+    /**
+     * Update the keyspace in cassandra.
+     * @param options
+     * @return
+     */
+    OperationResult<SchemaChangeResponse> updateKeyspace(Map<String, Object> options) throws ConnectionException ;
+    
+    /**
+     * Drop this keyspace from cassandra
+     * @return
+     */
+    OperationResult<SchemaChangeResponse> dropKeyspace() throws ConnectionException ;
 }

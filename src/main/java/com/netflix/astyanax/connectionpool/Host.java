@@ -184,12 +184,12 @@ public class Host implements Comparable<Host> {
         return rack;
     }
  
-    public Host setTokenRanges(List<TokenRange> ranges) {
+    public synchronized Host setTokenRanges(List<TokenRange> ranges) {
         this.ranges = ranges;
         return this;
     }
     
-    public List<TokenRange> getTokenRanges() {
+    public synchronized List<TokenRange> getTokenRanges() {
         return this.ranges;
     }
 

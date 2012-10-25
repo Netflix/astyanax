@@ -8,6 +8,7 @@ import java.util.List;
 import org.apache.cassandra.dht.RandomPartitioner;
 
 import com.google.common.collect.Lists;
+import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.impl.TokenRangeImpl;
 
@@ -61,6 +62,10 @@ public class BigInteger127Partitioner implements Partitioner {
     @Override
     public String getTokenForKey(ByteBuffer key) {
         return partitioner.getToken(key).toString();
+    }
+    
+    public <T> String getTokenForKey(T key, Serializer<T> serializer) {
+        return partitioner.getToken(serializer.toByteBuffer(key)).toString();
     }
 
     @Override

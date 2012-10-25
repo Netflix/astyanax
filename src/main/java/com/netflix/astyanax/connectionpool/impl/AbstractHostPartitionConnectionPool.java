@@ -16,7 +16,6 @@
 package com.netflix.astyanax.connectionpool.impl;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -24,13 +23,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.Map.Entry;
 
-import javax.annotation.Nullable;
-
 import org.cliffc.high_scale_lib.NonBlockingHashMap;
-import org.mortbay.log.Log;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;

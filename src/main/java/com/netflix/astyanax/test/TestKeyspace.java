@@ -29,7 +29,7 @@ import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
-import com.netflix.astyanax.ddl.SchemaChangeResponse;
+import com.netflix.astyanax.ddl.SchemaChangeResult;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
@@ -145,45 +145,45 @@ public class TestKeyspace implements Keyspace {
     }
 
     @Override
-    public OperationResult<SchemaChangeResponse> dropColumnFamily(String columnFamilyName) throws ConnectionException {
+    public OperationResult<SchemaChangeResult> dropColumnFamily(String columnFamilyName) throws ConnectionException {
         // TODO Auto-generated method stub
         return null;
     }
 
     @Override
-    public <K, C> OperationResult<SchemaChangeResponse> dropColumnFamily(ColumnFamily<K, C> columnFamily) throws ConnectionException {
+    public <K, C> OperationResult<SchemaChangeResult> dropColumnFamily(ColumnFamily<K, C> columnFamily) throws ConnectionException {
         // TODO Auto-generated method stub
         return null;
     }
 
     @Override
-    public OperationResult<SchemaChangeResponse> dropKeyspace() throws ConnectionException {
+    public OperationResult<SchemaChangeResult> dropKeyspace() throws ConnectionException {
         // TODO Auto-generated method stub
         return null;
     }
 
     @Override
-    public <K, C> OperationResult<SchemaChangeResponse> createColumnFamily(ColumnFamily<K, C> columnFamily, Map<String, Object> options)
+    public <K, C> OperationResult<SchemaChangeResult> createColumnFamily(ColumnFamily<K, C> columnFamily, Map<String, Object> options)
             throws ConnectionException {
         // TODO Auto-generated method stub
         return null;
     }
 
     @Override
-    public <K, C> OperationResult<SchemaChangeResponse> updateColumnFamily(ColumnFamily<K, C> columnFamily, Map<String, Object> options)
+    public <K, C> OperationResult<SchemaChangeResult> updateColumnFamily(ColumnFamily<K, C> columnFamily, Map<String, Object> options)
             throws ConnectionException {
         // TODO Auto-generated method stub
         return null;
     }
 
     @Override
-    public OperationResult<SchemaChangeResponse> createKeyspace(Map<String, Object> options) throws ConnectionException {
+    public OperationResult<SchemaChangeResult> createKeyspace(Map<String, Object> options) throws ConnectionException {
         // TODO Auto-generated method stub
         return null;
     }
 
     @Override
-    public OperationResult<SchemaChangeResponse> updateKeyspace(Map<String, Object> options) throws ConnectionException {
+    public OperationResult<SchemaChangeResult> updateKeyspace(Map<String, Object> options) throws ConnectionException {
         // TODO Auto-generated method stub
         return null;
     }

@@ -24,7 +24,7 @@ import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
-import com.netflix.astyanax.ddl.SchemaChangeResponse;
+import com.netflix.astyanax.ddl.SchemaChangeResult;
 
 /**
  * Interface for cluster operations. Use the Keyspace interface to perform
@@ -91,7 +91,7 @@ public interface Cluster {
      * @throws OperationException
      * @throws ConnectionException
      */
-    String dropColumnFamily(String keyspaceName, String columnFamilyName) throws ConnectionException;
+    OperationResult<SchemaChangeResult> dropColumnFamily(String keyspaceName, String columnFamilyName) throws ConnectionException;
 
     /**
      * Add a column family to an existing keyspace
@@ -101,7 +101,7 @@ public interface Cluster {
      * @return
      * @throws ConnectionException
      */
-    String addColumnFamily(ColumnFamilyDefinition def) throws ConnectionException;
+    OperationResult<SchemaChangeResult> addColumnFamily(ColumnFamilyDefinition def) throws ConnectionException;
 
     /**
      * Update an existing column family
@@ -111,7 +111,7 @@ public interface Cluster {
      * @return
      * @throws ConnectionException
      */
-    String updateColumnFamily(ColumnFamilyDefinition def) throws ConnectionException;
+    OperationResult<SchemaChangeResult> updateColumnFamily(ColumnFamilyDefinition def) throws ConnectionException;
 
     /**
      * Prepare a keyspace definition. Call execute() on the returned object to
@@ -159,7 +159,7 @@ public interface Cluster {
      * @throws OperationException
      * @throws ConnectionException
      */
-    String dropKeyspace(String keyspaceName) throws ConnectionException;
+    OperationResult<SchemaChangeResult> dropKeyspace(String keyspaceName) throws ConnectionException;
 
     /**
      * Add a new keyspace to the cluster. The keyspace object may include column
@@ -169,7 +169,7 @@ public interface Cluster {
      * @param def
      * @return
      */
-    String addKeyspace(KeyspaceDefinition def) throws ConnectionException;
+    OperationResult<SchemaChangeResult> addKeyspace(KeyspaceDefinition def) throws ConnectionException;
 
     /**
      * Update a new keyspace in the cluster. The keyspace object may include
@@ -178,7 +178,7 @@ public interface Cluster {
      * 
      * @param def
      */
-    String updateKeyspace(KeyspaceDefinition def) throws ConnectionException;
+    OperationResult<SchemaChangeResult> updateKeyspace(KeyspaceDefinition def) throws ConnectionException;
 
     /**
      * Configuration object for this Cluster
@@ -194,7 +194,7 @@ public interface Cluster {
      * @param options
      * @return
      */
-    <K, C>  OperationResult<SchemaChangeResponse> createColumnFamily(Map<String, Object> options) throws ConnectionException ;
+    <K, C>  OperationResult<SchemaChangeResult> createColumnFamily(Map<String, Object> options) throws ConnectionException ;
     
     /**
      * Update the column family in cassandra
@@ -203,33 +203,20 @@ public interface Cluster {
      * @param options
      * @return
      */
-    <K, C>  OperationResult<SchemaChangeResponse> updateColumnFamily(Map<String, Object> options) throws ConnectionException ;
-    
-    /**
-     * Drop a column family from this keyspace
-     * @param columnFamilyName
-     * @return
-     */
-    OperationResult<SchemaChangeResponse> dropColumnFamily(String keyspaceName, String columnFamilyName, Boolean alwaysFalse) throws ConnectionException ;
+    <K, C>  OperationResult<SchemaChangeResult> updateColumnFamily(Map<String, Object> options) throws ConnectionException ;
     
     /**
      * Create the keyspace in cassandra.  This call will only create the keyspace and not 
      * any column families.  Once the keyspace has been created then call createColumnFamily
      * for each CF you want to create.
      */
-    OperationResult<SchemaChangeResponse> createKeyspace(Map<String, Object> options) throws ConnectionException ;
+    OperationResult<SchemaChangeResult> createKeyspace(Map<String, Object> options) throws ConnectionException ;
     
     /**
      * Update the keyspace in cassandra.
      * @param options
      * @return
      */
-    OperationResult<SchemaChangeResponse> updateKeyspace(Map<String, Object> options) throws ConnectionException ;
-    
-    /**
-     * Drop this keyspace from cassandra
-     * @return
-     */
-    OperationResult<SchemaChangeResponse> dropKeyspace(String keyspaceName, Boolean alwaysFalse) throws ConnectionException ;
+    OperationResult<SchemaChangeResult> updateKeyspace(Map<String, Object> options) throws ConnectionException ;
     
 }

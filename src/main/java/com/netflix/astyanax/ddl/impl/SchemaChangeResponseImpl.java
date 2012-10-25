@@ -1,8 +1,8 @@
 package com.netflix.astyanax.ddl.impl;
 
-import com.netflix.astyanax.ddl.SchemaChangeResponse;
+import com.netflix.astyanax.ddl.SchemaChangeResult;
 
-public class SchemaChangeResponseImpl implements SchemaChangeResponse {
+public class SchemaChangeResponseImpl implements SchemaChangeResult {
     private String schemaId;
     
     @Override

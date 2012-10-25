@@ -263,6 +263,7 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
 
     @Override
     public boolean closeConnection(Connection<CL> connection) {
+        returnedCount.incrementAndGet();
         monitor.incConnectionReturned(host);
         internalCloseConnection(connection);
         return true;

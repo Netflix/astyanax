@@ -70,7 +70,7 @@ public class Stress {
         config = new ConnectionPoolConfigurationImpl(TestConstants.CLUSTER_NAME
                 + "_" + TestConstants.KEYSPACE_NAME);
 //        config.setMaxConns(100);
-        config.setMaxFailoverCount(3);
+        config.setMaxFailoverCount(-1);
         config.setMaxTimeoutWhenExhausted(1000);
         config.setMaxConnsPerHost(25);
         config.setInitConnsPerHost(0);
@@ -95,8 +95,8 @@ public class Stress {
                 new Host("127.0.0.7",  TestHostType.GOOD_FAST.ordinal()),
                 new Host("127.0.0.8",  TestHostType.GOOD_FAST.ordinal()),
                 new Host("127.0.0.9",  TestHostType.GOOD_SLOW.ordinal()),
-//                new Host("127.0.0.8",  TestHostType.SWAP_EVERY_200.ordinal()),
-//                new Host("127.0.0.10", TestHostType.ALTERNATING_SOCKET_TIMEOUT_200.ordinal()),
+                new Host("127.0.0.8",  TestHostType.SWAP_EVERY_200.ordinal()),
+                new Host("127.0.0.10", TestHostType.ALTERNATING_SOCKET_TIMEOUT_200.ordinal()),
                 new Host("127.0.0.11", TestHostType.ALTERNATING_SOCKET_TIMEOUT_200.ordinal()),
                 new Host("127.0.0.0",  TestHostType.GOOD_FAST.ordinal())
                 );
@@ -136,51 +136,51 @@ public class Stress {
                     think(10, 30); 
                 }
             })
-//            .withProbability(0.10, new Function<TestDriver, Void>() {
+//            .withProbability(0.0001, new Function<TestDriver, Void>() {
 //                public Void apply(@Nullable TestDriver arg0) {
 //                    if (timeoutsEnabled.get()) {
-//                        think(11000, 0);
+//                        think(1100, 0);
 //                        throw new RuntimeException(new TimeoutException("TimeoutException"));
 //                    }
 //                    return null;
 //                }
 //            })
-//        .withProbability(0.001, new Function<TestDriver, Void>() {
-//            public Void apply(@Nullable TestDriver arg0) {
-//                throw new RuntimeException(new UnknownException(new Exception("UnknownExceptionDescription")));
-//            }
-//        })
-//        .withProbability(0.001, new Function<TestDriver, Void>() {
-//            public Void apply(@Nullable TestDriver arg0) {
-//                think(1000, 0);
-//                throw new RuntimeException(new OperationTimeoutException("OperationTimeoutException"));
-//            }
-//        })
-//        .withProbability(0.001, new Function<TestDriver, Void>() {
-//            public Void apply(@Nullable TestDriver arg0) {
-//                throw new RuntimeException(new HostDownException("HostDownException"));
-//            }
-//        })
-//        .withProbability(0.001, new Function<TestDriver, Void>() {
-//            public Void apply(@Nullable TestDriver arg0) {
-//                throw new RuntimeException(new ConnectionAbortedException("ConnectionAbortedException"));
-//            }
-//        })
-//        .withProbability(0.001, new Function<TestDriver, Void>() {
-//            public Void apply(@Nullable TestDriver arg0) {
-//                throw new RuntimeException(new BadRequestException("BadRequestException"));
-//            }
-//        })
-//        .withProbability(0.001, new Function<TestDriver, Void>() {
-//            public Void apply(@Nullable TestDriver arg0) {
-//                throw new RuntimeException(new TokenRangeOfflineException("TokenRangeOfflineException"));
-//            }
-//        })
-//        .withProbability(0.001, new Function<TestDriver, Void>() {
-//            public Void apply(@Nullable TestDriver arg0) {
-//                throw new RuntimeException(new TransportException("TransportException"));
-//            }
-//        })
+//            .withProbability(0.0001, new Function<TestDriver, Void>() {
+//                public Void apply(@Nullable TestDriver arg0) {
+//                    throw new RuntimeException(new UnknownException(new Exception("UnknownExceptionDescription")));
+//                }
+//            })
+//            .withProbability(0.0001, new Function<TestDriver, Void>() {
+//                public Void apply(@Nullable TestDriver arg0) {
+//                    think(1000, 0);
+//                    throw new RuntimeException(new OperationTimeoutException("OperationTimeoutException"));
+//                }
+//            })
+//            .withProbability(0.0001, new Function<TestDriver, Void>() {
+//                public Void apply(@Nullable TestDriver arg0) {
+//                    throw new RuntimeException(new HostDownException("HostDownException"));
+//                }
+//            })
+//            .withProbability(0.0001, new Function<TestDriver, Void>() {
+//                public Void apply(@Nullable TestDriver arg0) {
+//                    throw new RuntimeException(new ConnectionAbortedException("ConnectionAbortedException"));
+//                }
+//            })
+//            .withProbability(0.0001, new Function<TestDriver, Void>() {
+//                public Void apply(@Nullable TestDriver arg0) {
+//                    throw new RuntimeException(new BadRequestException("BadRequestException"));
+//                }
+//            })
+//            .withProbability(0.0001, new Function<TestDriver, Void>() {
+//                public Void apply(@Nullable TestDriver arg0) {
+//                    throw new RuntimeException(new TokenRangeOfflineException("TokenRangeOfflineException"));
+//                }
+//            })
+//            .withProbability(0.0001, new Function<TestDriver, Void>() {
+//                public Void apply(@Nullable TestDriver arg0) {
+//                    throw new RuntimeException(new TransportException("TransportException"));
+//                }
+//            })
         .build();
         
         final List<HostConnectionPool<TestClient>> hostPools = Lists.newArrayList(pool.getActivePools());
@@ -188,7 +188,8 @@ public class Stress {
         final TestDriver driver = new TestDriver.Builder()
             .withIterationCount(0)
             .withThreadCount(200)
-            .withCallsPerSecondSupplier(Suppliers.ofInstance(2000))
+//            .withFutures(100,  TimeUnit.MILLISECONDS)
+            .withCallsPerSecondSupplier(Suppliers.ofInstance(200))
 //            .withFutures(100, TimeUnit.MILLISECONDS)
             .withCallback(new Function<TestDriver, Void>() {
                 public Void apply(final @Nullable TestDriver driver) {
@@ -240,10 +241,11 @@ public class Stress {
                     lastOperationCount.set(driver.getOperationCount());
                     
                     System.out.println("" + driver.getRuntime() + "," + sampler.getScore() + "," + (lastOperationCount.get() - opCount));
-//                    System.out.println(monitor.toString());
-//                    for (HostConnectionPool<TestClient> host : pool.getPools()) {
-//                        System.out.println("   " + host.toString());
-//                    }
+                    System.out.println(monitor.toString());
+                    System.out.println(monitor.toString());
+                    for (HostConnectionPool<TestClient> host : pool.getPools()) {
+                        System.out.println("   " + host.toString());
+                    }
                     return null;
                 }
             })

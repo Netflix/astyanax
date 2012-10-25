@@ -1,5 +1,5 @@
 package com.netflix.astyanax.ddl;
 
-public interface SchemaChangeResponse {
+public interface SchemaChangeResult {
     String getSchemaId();
 }

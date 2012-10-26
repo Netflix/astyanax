@@ -57,6 +57,7 @@ public class FixedRetryBackoffStrategy implements RetryBackoffStrategy {
 
             @Override
             public void suspend() {
+                isSuspended = true;
             }
         };
     }

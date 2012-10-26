@@ -12,6 +12,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.netflix.astyanax.consistency.OneOneConsistencyLevelPolicy;
+import com.netflix.astyanax.consistency.QuorumQuorumConsistencyLevelPolicy;
 import junit.framework.Assert;
 
 import org.apache.cassandra.utils.Pair;
@@ -475,13 +477,13 @@ public class ThrifeKeyspaceImplTest {
     public void testMultiRowUniqueness() {
         DedicatedMultiRowUniquenessConstraint<UUID> constraint = new DedicatedMultiRowUniquenessConstraint<UUID>
                   (keyspace, TimeUUIDUtils.getUniqueTimeUUIDinMicros())
-                  .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                  .withConsistencyLevelPolicy(OneOneConsistencyLevelPolicy.get())
                   .withRow(CF_USER_UNIQUE_UUID, "user1")
                   .withRow(CF_EMAIL_UNIQUE_UUID, "user1@domain.com");
         
         DedicatedMultiRowUniquenessConstraint<UUID> constraint2 = new DedicatedMultiRowUniquenessConstraint<UUID>
                   (keyspace, TimeUUIDUtils.getUniqueTimeUUIDinMicros())
-                  .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                  .withConsistencyLevelPolicy(OneOneConsistencyLevelPolicy.get())
                   .withRow(CF_USER_UNIQUE_UUID, "user1")
                   .withRow(CF_EMAIL_UNIQUE_UUID, "user1@domain.com");
         
@@ -1148,7 +1150,7 @@ public class ThrifeKeyspaceImplTest {
     public void testChangeConsistencyLevel() {
         try {
             keyspace.prepareQuery(CF_STANDARD1)
-                    .setConsistencyLevel(ConsistencyLevel.CL_ONE).getKey("A")
+                    .setConsistencyLevelPolicy(OneOneConsistencyLevelPolicy.get()).getKey("A")
                     .execute();
         } catch (ConnectionException e) {
             Assert.fail(e.getMessage());
@@ -1905,7 +1907,7 @@ public class ThrifeKeyspaceImplTest {
         // Verify count
         try {
             int count = keyspace.prepareQuery(CF_STANDARD1)
-                    .setConsistencyLevel(ConsistencyLevel.CL_QUORUM)
+                    .setConsistencyLevelPolicy(QuorumQuorumConsistencyLevelPolicy.get())
                     .getKey(rowKey).getCount().execute().getResult();
             Assert.assertEquals(nColumns, count);
         } catch (ConnectionException e) {
@@ -1913,8 +1915,8 @@ public class ThrifeKeyspaceImplTest {
         }
 
         // Delete half of the columns
-        m = keyspace.prepareMutationBatch().setConsistencyLevel(
-                ConsistencyLevel.CL_QUORUM);
+        m = keyspace.prepareMutationBatch().setConsistencyLevelPolicy(
+                QuorumQuorumConsistencyLevelPolicy.get());
         rm = m.withRow(CF_STANDARD1, rowKey);
 
         for (int i = 0; i < nColumns / 2; i++) {
@@ -1941,8 +1943,8 @@ public class ThrifeKeyspaceImplTest {
         }
 
         // Delete all of the columns
-        m = keyspace.prepareMutationBatch().setConsistencyLevel(
-                ConsistencyLevel.CL_QUORUM);
+        m = keyspace.prepareMutationBatch().setConsistencyLevelPolicy(
+                QuorumQuorumConsistencyLevelPolicy.get());
         rm = m.withRow(CF_STANDARD1, rowKey);
 
         for (int i = 0; i < nColumns; i++) {
@@ -1973,7 +1975,7 @@ public class ThrifeKeyspaceImplTest {
     private <K, C> int getRowColumnCount(ColumnFamily<K, C> cf, K rowKey)
             throws ConnectionException {
         int count = keyspace.prepareQuery(cf)
-                .setConsistencyLevel(ConsistencyLevel.CL_QUORUM).getKey(rowKey)
+                .setConsistencyLevelPolicy(QuorumQuorumConsistencyLevelPolicy.get()).getKey(rowKey)
                 .getCount().execute().getResult();
 
         return count;
@@ -1982,7 +1984,7 @@ public class ThrifeKeyspaceImplTest {
     private <K, C> int getRowColumnCountWithPagination(ColumnFamily<K, C> cf,
             K rowKey, int pageSize) throws ConnectionException {
         RowQuery<K, C> query = keyspace.prepareQuery(cf)
-                .setConsistencyLevel(ConsistencyLevel.CL_QUORUM).getKey(rowKey)
+                .setConsistencyLevelPolicy(QuorumQuorumConsistencyLevelPolicy.get()).getKey(rowKey)
                 .withColumnRange(new RangeBuilder().setLimit(pageSize).build())
                 .autoPaginate(true);
 

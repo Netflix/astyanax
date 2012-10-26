@@ -23,19 +23,23 @@ import com.netflix.astyanax.CassandraOperationTracer;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.consistency.ConsistencyLevelPolicy;
 
 public abstract class AbstractOperationImpl<R> implements Operation<Cassandra.Client, R> {
     private final CassandraOperationTracer tracer;
     private final Host pinnedHost;
+    protected ConsistencyLevelPolicy consistencyLevelPolicy;
 
-    public AbstractOperationImpl(CassandraOperationTracer tracer, Host host) {
+    public AbstractOperationImpl(CassandraOperationTracer tracer, Host host, ConsistencyLevelPolicy consistencyLevelPolicy) {
         this.tracer = tracer;
         this.pinnedHost = host;
+        this.consistencyLevelPolicy = consistencyLevelPolicy;
     }
 
-    public AbstractOperationImpl(CassandraOperationTracer tracer) {
+    public AbstractOperationImpl(CassandraOperationTracer tracer, ConsistencyLevelPolicy consistencyLevelPolicy) {
         this.tracer = tracer;
         this.pinnedHost = null;
+        this.consistencyLevelPolicy = consistencyLevelPolicy;
     }
 
     @Override
@@ -66,6 +70,25 @@ public abstract class AbstractOperationImpl<R> implements Operation<Cassandra.Cl
     @Override
     public Host getPinnedHost() {
         return pinnedHost;
+    }
+
+    /**
+     * Gets the consistency level policy of this operation.
+     *
+     * @return an object that keeps consistency levels for read and write operations
+     */
+    public ConsistencyLevelPolicy getConsistencyLevelPolicy() {
+        return consistencyLevelPolicy;
+    }
+
+    /**
+     * Set consistency level policy for this operation.
+     *
+     * @param consistencyLevelPolicy object that keeps consistency levels for read and write operations
+     */
+    @Override
+    public void setConsistencyLevelPolicy(ConsistencyLevelPolicy consistencyLevelPolicy) {
+        this.consistencyLevelPolicy = consistencyLevelPolicy;
     }
 
     protected abstract R internalExecute(Cassandra.Client client) throws Exception;

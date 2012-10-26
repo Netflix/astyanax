@@ -8,10 +8,11 @@ import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
+import com.netflix.astyanax.consistency.ConsistencyLevelPolicy;
+import com.netflix.astyanax.consistency.LQuorumLQuorumConsistencyLevelPolicy;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.recipes.locks.BusyLockException;
 import com.netflix.astyanax.recipes.locks.StaleLockException;
 
@@ -27,7 +28,7 @@ public class DedicatedMultiRowUniquenessConstraint<C> implements UniquenessConst
     private final Keyspace keyspace;
 
     private Integer ttl = null;
-    private ConsistencyLevel consistencyLevel = ConsistencyLevel.CL_LOCAL_QUORUM;
+    private ConsistencyLevelPolicy consistencyLevelPolicy = LQuorumLQuorumConsistencyLevelPolicy.get();
     private final C uniqueColumnName;
     
     private class Row<K> {
@@ -50,7 +51,7 @@ public class DedicatedMultiRowUniquenessConstraint<C> implements UniquenessConst
         
         void verifyLock() throws Exception {
             // Phase 2: Read back all columns. There should be only 1
-            ColumnList<C> result = keyspace.prepareQuery(columnFamily).setConsistencyLevel(consistencyLevel)
+            ColumnList<C> result = keyspace.prepareQuery(columnFamily).setConsistencyLevelPolicy(consistencyLevelPolicy)
                     .getKey(row).execute().getResult();
 
             if (result.size() != 1) {
@@ -103,11 +104,11 @@ public class DedicatedMultiRowUniquenessConstraint<C> implements UniquenessConst
     /**
      * Consistency level used
      * 
-     * @param consistencyLevel
+     * @param consistencyLevelPolicy
      * @return
      */
-    public DedicatedMultiRowUniquenessConstraint<C> withConsistencyLevel(ConsistencyLevel consistencyLevel) {
-        this.consistencyLevel = consistencyLevel;
+    public DedicatedMultiRowUniquenessConstraint<C> withConsistencyLevelPolicy(ConsistencyLevelPolicy consistencyLevelPolicy) {
+        this.consistencyLevelPolicy = consistencyLevelPolicy;
         return this;
     }
 
@@ -136,7 +137,7 @@ public class DedicatedMultiRowUniquenessConstraint<C> implements UniquenessConst
     public void acquireAndMutate(MutationBatch other) throws NotUniqueException, Exception {
         // Insert lock check column for all rows in a single batch mutation
         try {
-            MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+            MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevelPolicy(consistencyLevelPolicy);
             for (Row<?> lock : locks) {
                 lock.fillMutation(m, ttl);
             }

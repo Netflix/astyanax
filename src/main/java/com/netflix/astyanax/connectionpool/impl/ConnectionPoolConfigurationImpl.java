@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright 2011 Netflix
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,12 +20,7 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.netflix.astyanax.AuthenticationCredentials;
-import com.netflix.astyanax.connectionpool.BadHostDetector;
-import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
-import com.netflix.astyanax.connectionpool.Host;
-import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
-import com.netflix.astyanax.connectionpool.OperationFilterFactory;
-import com.netflix.astyanax.connectionpool.RetryBackoffStrategy;
+import com.netflix.astyanax.connectionpool.*;
 import com.netflix.astyanax.partitioner.BigInteger127Partitioner;
 import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.shallows.EmptyBadHostDetectorImpl;
@@ -100,6 +95,8 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     private AuthenticationCredentials credentials         = null;
     private OperationFilterFactory filterFactory          = EmptyOperationFilterFactory.getInstance();
     private Partitioner partitioner                       = DEFAULT_PARTITIONER;
+
+    private HostDownConsistencyHandler hostDownConsistencyHandler = new DefaultHostDownConsistencyHandler();
 
     public ConnectionPoolConfigurationImpl(String name) {
         this.name = name;
@@ -507,6 +504,21 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     public ConnectionPoolConfigurationImpl setMinHostInPoolRatio(float ratio) {
         this.minHostInPoolRatio = ratio;
         return this;
+    }
+    
+    public ConnectionPoolConfigurationImpl setHostDownConsistencyLevelHandler(HostDownConsistencyHandler hostDownConsistencyHandler) {
+        this.hostDownConsistencyHandler = hostDownConsistencyHandler;
+        return this;
+    }
+
+    /**
+     * The current consistency level handler
+     *
+     * @return the current instance of {@link HostDownConsistencyHandler}
+     */
+    @Override
+    public HostDownConsistencyHandler getHostDownConsistencyHandler() {
+        return hostDownConsistencyHandler;
     }
 
 }

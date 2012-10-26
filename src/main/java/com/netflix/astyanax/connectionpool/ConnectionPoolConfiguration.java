@@ -269,4 +269,11 @@ public interface ConnectionPoolConfiguration {
      * @return
      */
     Partitioner getPartitioner();
+
+    /**
+     * The current consistency level handler
+     *
+     * @return the current instance of {@link HostDownConsistencyHandler}
+     */
+    HostDownConsistencyHandler getHostDownConsistencyHandler();
 }

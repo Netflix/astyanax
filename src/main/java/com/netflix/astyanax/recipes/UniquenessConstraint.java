@@ -4,9 +4,10 @@ import com.google.common.base.Supplier;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.consistency.ConsistencyLevelPolicy;
+import com.netflix.astyanax.consistency.QuorumQuorumConsistencyLevelPolicy;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.model.ConsistencyLevel;
 
 @Deprecated
 public class UniquenessConstraint<K, C> {
@@ -14,7 +15,7 @@ public class UniquenessConstraint<K, C> {
     private final Keyspace keyspace;
     private final Supplier<C> uniqueColumnSupplier;
     private Integer ttl;
-    private ConsistencyLevel consistencyLevel = ConsistencyLevel.CL_QUORUM;
+    private ConsistencyLevelPolicy consistencyLevelPolicy = QuorumQuorumConsistencyLevelPolicy.get();
     private UniquenessConstraintViolationMonitor<K, C> monitor;
 
     public UniquenessConstraint(Keyspace keyspace, ColumnFamily<K, C> columnFamily, Supplier<C> uniqueColumnSupplier) {
@@ -37,12 +38,12 @@ public class UniquenessConstraint<K, C> {
         C unique = uniqueColumnSupplier.get();
 
         // Phase 1: Write a unique column
-        MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+        MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevelPolicy(consistencyLevelPolicy);
         m.withRow(columnFamily, key).putEmptyColumn(unique, ttl);
         m.execute();
 
         // Phase 2: Read back all columns. There should be only 1
-        ColumnList<C> result = keyspace.prepareQuery(columnFamily).setConsistencyLevel(consistencyLevel).getKey(key)
+        ColumnList<C> result = keyspace.prepareQuery(columnFamily).setConsistencyLevelPolicy(consistencyLevelPolicy).getKey(key)
                 .execute().getResult();
 
         if (result.size() == 1) {
@@ -53,7 +54,7 @@ public class UniquenessConstraint<K, C> {
             this.monitor.onViolation(key, unique);
 
         // Rollback
-        m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+        m = keyspace.prepareMutationBatch().setConsistencyLevelPolicy(consistencyLevelPolicy);
         m.withRow(columnFamily, key).deleteColumn(unique);
         m.execute();
         return null;

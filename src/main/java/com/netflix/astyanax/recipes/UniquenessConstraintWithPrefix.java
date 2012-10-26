@@ -4,9 +4,10 @@ import com.google.common.base.Supplier;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.consistency.ConsistencyLevelPolicy;
+import com.netflix.astyanax.consistency.QuorumQuorumConsistencyLevelPolicy;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.util.RangeBuilder;
 
 @Deprecated
@@ -16,7 +17,7 @@ public class UniquenessConstraintWithPrefix<K> {
     private String prefix;
     private Supplier<String> uniqueColumnSupplier = UUIDStringSupplier.getInstance();
     private Integer ttl;
-    private ConsistencyLevel consistencyLevel = ConsistencyLevel.CL_QUORUM;
+    private ConsistencyLevelPolicy consistencyLevelPolicy = QuorumQuorumConsistencyLevelPolicy.get();
     private UniquenessConstraintViolationMonitor<K, String> monitor;
 
     public UniquenessConstraintWithPrefix(Keyspace keyspace, ColumnFamily<K, String> columnFamily) {
@@ -44,8 +45,8 @@ public class UniquenessConstraintWithPrefix<K> {
         return this;
     }
 
-    public UniquenessConstraintWithPrefix<K> setConsistencyLevel(ConsistencyLevel consistencyLevel) {
-        this.consistencyLevel = consistencyLevel;
+    public UniquenessConstraintWithPrefix<K> setConsistencyLevelPolicy(ConsistencyLevelPolicy consistencyLevelPolicy) {
+        this.consistencyLevelPolicy = consistencyLevelPolicy;
         return this;
     }
 
@@ -53,13 +54,13 @@ public class UniquenessConstraintWithPrefix<K> {
         String unique = uniqueColumnSupplier.get();
 
         // Phase 1: Write a unique column
-        MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+        MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevelPolicy(consistencyLevelPolicy);
         m.withRow(columnFamily, key).putEmptyColumn(prefix + unique, ttl);
 
         m.execute();
 
         // Phase 2: Read back all columns. There should be only 1
-        ColumnList<String> result = keyspace.prepareQuery(columnFamily).setConsistencyLevel(consistencyLevel)
+        ColumnList<String> result = keyspace.prepareQuery(columnFamily).setConsistencyLevelPolicy(consistencyLevelPolicy)
                 .getKey(key)
                 .withColumnRange(new RangeBuilder().setStart(prefix + "\u0000").setEnd(prefix + "\uFFFF").build())
                 .execute().getResult();
@@ -72,7 +73,7 @@ public class UniquenessConstraintWithPrefix<K> {
             this.monitor.onViolation(key, prefix + unique);
 
         // Rollback
-        m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+        m = keyspace.prepareMutationBatch().setConsistencyLevelPolicy(consistencyLevelPolicy);
         m.withRow(columnFamily, key).deleteColumn(prefix + unique);
         m.execute().getResult();
 

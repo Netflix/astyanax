@@ -9,14 +9,14 @@ import com.netflix.astyanax.Clock;
 import com.netflix.astyanax.clock.MicrosecondsSyncClock;
 import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
-import com.netflix.astyanax.model.ConsistencyLevel;
+import com.netflix.astyanax.consistency.ConsistencyLevelPolicy;
+import com.netflix.astyanax.consistency.OneOneConsistencyLevelPolicy;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.retry.RunOnce;
 import com.netflix.astyanax.util.StringUtils;
 
 public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
-    private ConsistencyLevel defaultReadConsistencyLevel = ConsistencyLevel.CL_ONE;
-    private ConsistencyLevel defaultWriteConsistencyLevel = ConsistencyLevel.CL_ONE;
+    private ConsistencyLevelPolicy defaultConsistencyLevelPolicy = OneOneConsistencyLevelPolicy.get();
     private Clock clock = new MicrosecondsSyncClock();
     private RetryPolicy retryPolicy = RunOnce.get();
     private ExecutorService asyncExecutor = Executors.newFixedThreadPool(5, 
@@ -39,26 +39,6 @@ public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
     @Override
     public ConnectionPoolType getConnectionPoolType() {
         return this.connectionPoolType;
-    }
-
-    @Override
-    public ConsistencyLevel getDefaultReadConsistencyLevel() {
-        return this.defaultReadConsistencyLevel;
-    }
-
-    public AstyanaxConfigurationImpl setDefaultReadConsistencyLevel(ConsistencyLevel cl) {
-        this.defaultReadConsistencyLevel = cl;
-        return this;
-    }
-
-    @Override
-    public ConsistencyLevel getDefaultWriteConsistencyLevel() {
-        return this.defaultWriteConsistencyLevel;
-    }
-
-    public AstyanaxConfigurationImpl setDefaultWriteConsistencyLevel(ConsistencyLevel cl) {
-        this.defaultWriteConsistencyLevel = cl;
-        return this;
     }
 
     @Override
@@ -89,6 +69,16 @@ public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
 
     public AstyanaxConfigurationImpl setRetryPolicy(RetryPolicy retryPolicy) {
         this.retryPolicy = retryPolicy;
+        return this;
+    }
+
+    @Override
+    public ConsistencyLevelPolicy getDefaultConsistencyLevelPolicy() {
+        return defaultConsistencyLevelPolicy;
+    }
+
+    public AstyanaxConfigurationImpl setDefaultConsistencyLevelPolicy(ConsistencyLevelPolicy defaultConsistencyLevelPolicy) {
+        this.defaultConsistencyLevelPolicy = defaultConsistencyLevelPolicy;
         return this;
     }
 

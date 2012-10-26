@@ -27,6 +27,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Maps.EntryTransformer;
 
+import com.netflix.astyanax.consistency.ConsistencyLevelPolicy;
 import org.apache.cassandra.thrift.Cassandra.batch_mutate_args;
 import org.apache.cassandra.thrift.Mutation;
 import org.apache.cassandra.thrift.TBinaryProtocol;
@@ -40,7 +41,6 @@ import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.WriteAheadLog;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.model.ColumnFamily;
-import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.serializers.ByteBufferOutputStream;
 
@@ -56,7 +56,7 @@ import com.netflix.astyanax.serializers.ByteBufferOutputStream;
 public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
 
     protected long timestamp;
-    private ConsistencyLevel consistencyLevel;
+    private ConsistencyLevelPolicy consistencyLevelPolicy;
     private Clock clock;
     private Host pinnedHost;
     private RetryPolicy retry;
@@ -64,10 +64,10 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
 
     private Map<ByteBuffer, Map<String, List<Mutation>>> mutationMap = Maps.newLinkedHashMap();
 
-    public AbstractThriftMutationBatchImpl(Clock clock, ConsistencyLevel consistencyLevel, RetryPolicy retry) {
+    public AbstractThriftMutationBatchImpl(Clock clock, ConsistencyLevelPolicy consistencyLevelPolicy, RetryPolicy retry) {
         this.clock = clock;
         this.timestamp = clock.getCurrentTime();
-        this.consistencyLevel = consistencyLevel;
+        this.consistencyLevelPolicy = consistencyLevelPolicy;
         this.retry = retry;
     }
 
@@ -263,19 +263,19 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
     }
     
     @Override
-    public MutationBatch setConsistencyLevel(ConsistencyLevel consistencyLevel) {
-        this.consistencyLevel = consistencyLevel;
+    public MutationBatch setConsistencyLevelPolicy(ConsistencyLevelPolicy consistencyLevelPolicy) {
+        this.consistencyLevelPolicy = consistencyLevelPolicy;
         return this;
     }
     
     @Override
-    public MutationBatch withConsistencyLevel(ConsistencyLevel consistencyLevel) {
-        this.consistencyLevel = consistencyLevel;
+    public MutationBatch withConsistencyLevelPolicy(ConsistencyLevelPolicy consistencyLevelPolicy) {
+        this.consistencyLevelPolicy = consistencyLevelPolicy;
         return this;
     }
 
-    public ConsistencyLevel getConsistencyLevel() {
-        return this.consistencyLevel;
+    public ConsistencyLevelPolicy getConsistencyLevelPolicy() {
+        return this.consistencyLevelPolicy;
     }
 
     @Override

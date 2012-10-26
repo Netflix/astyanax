@@ -21,8 +21,8 @@ import java.util.Map;
 import java.util.Set;
 
 import com.netflix.astyanax.connectionpool.Host;
+import com.netflix.astyanax.consistency.ConsistencyLevelPolicy;
 import com.netflix.astyanax.model.ColumnFamily;
-import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
 
 /**
@@ -142,20 +142,20 @@ public interface MutationBatch extends Execution<Void> {
     MutationBatch pinToHost(Host host);
 
     /**
-     * Set the consistency level for this mutation (same as withConsistencyLevel)
+     * Set the consistency level policy for this mutation (same as withConsistencyLevelPolicy)
      * 
-     * @param consistencyLevel
+     * @param consistencyLevelPolicy
      */
-    MutationBatch setConsistencyLevel(ConsistencyLevel consistencyLevel);
-    
+    MutationBatch setConsistencyLevelPolicy(ConsistencyLevelPolicy consistencyLevelPolicy);
+
     /**
-     * Set the consistency level for this mutation (same as setConsistencyLevel)
+     * Set the consistency level policy for this mutation (same as setConsistencyLevelPolicy)
      * 
-     * @param consistencyLevel
+     * @param consistencyLevelPolicy
      * @return
      */
-    MutationBatch withConsistencyLevel(ConsistencyLevel consistencyLevel);
-
+    MutationBatch withConsistencyLevelPolicy(ConsistencyLevelPolicy consistencyLevelPolicy);
+    
     /**
      * Set the retry policy to use instead of the one specified in the
      * configuration

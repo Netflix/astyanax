@@ -19,7 +19,7 @@ import java.util.concurrent.ExecutorService;
 
 import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
-import com.netflix.astyanax.model.ConsistencyLevel;
+import com.netflix.astyanax.consistency.ConsistencyLevelPolicy;
 import com.netflix.astyanax.retry.RetryPolicy;
 
 /**
@@ -37,23 +37,17 @@ public interface AstyanaxConfiguration {
     RetryPolicy getRetryPolicy();
 
     /**
-     * Default consistency level used when reading from the cluster. This value
-     * can be overwritten on the Query operations (returned by
-     * Keyspace.prepareXXQuery) by calling Query.setConsistencyLevel().
+     * Default consistency level policy used when reading or writing from the cluster.
+     * This value can be overwritten: <br/>
+     * <p>on Query operations (returned by
+     * Keyspace.prepareXXQuery) by calling Query.setConsistencyLevelPolicy()</p>
+     * <p>on MutationBatch operation (returned by Keyspace.prepareMutationBatch) by calling
+     * MutationBatch.setConsistencyLevelPolicy().</p>
+     * <p>on operation by calling Operation.setConsistencyLevelPolicy()</p>
      * 
-     * @return
+     * @return the current value of the default  consistency level policy
      */
-    ConsistencyLevel getDefaultReadConsistencyLevel();
-
-    /**
-     * Default consistency level used when reading from the cluster. This value
-     * can be overwritten on MutationBatch operation (returned by
-     * Keyspace.prepareMutationBatch) by calling
-     * MutationBatch.setConsistencyLevel().
-     * 
-     * @return
-     */
-    ConsistencyLevel getDefaultWriteConsistencyLevel();
+    ConsistencyLevelPolicy getDefaultConsistencyLevelPolicy();
 
     /**
      * Return clock to use when setting timestamps for column insertion and

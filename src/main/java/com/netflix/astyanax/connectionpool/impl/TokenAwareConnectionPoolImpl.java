@@ -20,12 +20,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.netflix.astyanax.connectionpool.ConnectionFactory;
-import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
-import com.netflix.astyanax.connectionpool.ConnectionPoolMonitor;
-import com.netflix.astyanax.connectionpool.ExecuteWithFailover;
-import com.netflix.astyanax.connectionpool.HostConnectionPool;
-import com.netflix.astyanax.connectionpool.Operation;
+import com.netflix.astyanax.connectionpool.*;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.NoAvailableHostsException;
 
@@ -44,12 +39,14 @@ import com.netflix.astyanax.connectionpool.exceptions.NoAvailableHostsException;
  * @param <CL>
  */
 public class TokenAwareConnectionPoolImpl<CL> extends AbstractHostPartitionConnectionPool<CL> {
-
     private AtomicInteger roundRobinCounter = new AtomicInteger(new Random().nextInt(997));
+
+    private HostDownConsistencyHandler hostDownConsistencyHandler;
 
     public TokenAwareConnectionPoolImpl(ConnectionPoolConfiguration configuration, ConnectionFactory<CL> factory,
             ConnectionPoolMonitor monitor) {
         super(configuration, factory, monitor);
+        hostDownConsistencyHandler = configuration.getHostDownConsistencyHandler();
     }
 
     @SuppressWarnings("unchecked")
@@ -69,6 +66,8 @@ public class TokenAwareConnectionPoolImpl<CL> extends AbstractHostPartitionConne
                 TokenHostConnectionPoolPartition<CL> partition = topology.getPartition(op.getRowKey());
                 pools = partition.getPools();
                 isSorted = partition.isSorted();
+
+                hostDownConsistencyHandler.handle(op, partition);
             }
     
             return new RoundRobinExecuteWithFailover<CL, R>(config, monitor, pools, isSorted ? 0

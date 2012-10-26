@@ -29,7 +29,7 @@ import com.netflix.astyanax.connectionpool.exceptions.OperationException;
  * @param <C>
  * @param <R>
  */
-public interface Operation<CL, R> {
+public interface Operation<CL, R> extends ConsistencyLevelPolicyHolder {
     /**
      * Execute the operation on the client object and return the results
      * 
@@ -60,8 +60,7 @@ public interface Operation<CL, R> {
      * Return the host to run on or null to select a host using the load
      * blancer. Failover is disabled for this scenario.
      * 
-     * @param host
-     * @return
+     * @return host
      */
     Host getPinnedHost();
 }

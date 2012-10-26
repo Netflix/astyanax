@@ -5,8 +5,8 @@ import java.util.Map.Entry;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
+import com.netflix.astyanax.consistency.ConsistencyLevelPolicy;
 import com.netflix.astyanax.model.ColumnFamily;
-import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.recipes.locks.ColumnPrefixDistributedRowLock;
 
 /**
@@ -30,8 +30,8 @@ public class ColumnPrefixUniquenessConstraint<K> implements UniquenessConstraint
         return this;
     }
 
-    public ColumnPrefixUniquenessConstraint<K> withConsistencyLevel(ConsistencyLevel consistencyLevel) {
-        lock.withConsistencyLevel(consistencyLevel);
+    public ColumnPrefixUniquenessConstraint<K> withConsistencyLevelPolicy(ConsistencyLevelPolicy consistencyLevelPolicy) {
+        lock.withConsistencyLevelPolicy(consistencyLevelPolicy);
         return this;
     }
 
@@ -85,7 +85,7 @@ public class ColumnPrefixUniquenessConstraint<K> implements UniquenessConstraint
         m.lockCurrentTimestamp();
         lock.fillReleaseMutation(m, true);
         lock.fillLockMutation(m, null, null);
-        m.setConsistencyLevel(lock.getConsistencyLevel())
+        m.setConsistencyLevelPolicy(lock.getConsistencyLevelPolicy())
             .execute();
     }
     

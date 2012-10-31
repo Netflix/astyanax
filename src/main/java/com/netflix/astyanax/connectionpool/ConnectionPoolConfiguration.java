@@ -114,6 +114,13 @@ public interface ConnectionPoolConfiguration {
     List<Host> getSeedHosts();
 
     /**
+     * Return local datacenter name.
+     * 
+     * @return
+     */
+    public String getLocalDatacenter();
+
+    /**
      * Socket read/write timeout
      * 
      * @return

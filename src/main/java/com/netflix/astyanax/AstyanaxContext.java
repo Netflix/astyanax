@@ -147,15 +147,15 @@ public class AstyanaxContext<Entity> {
                 break;
 
             case RING_DESCRIBE:
-                supplier = new RingDescribeHostSupplier(keyspace, cpConfig.getPort());
+                supplier = new RingDescribeHostSupplier(keyspace, cpConfig.getPort(), cpConfig.getLocalDatacenter());
                 break;
 
             case TOKEN_AWARE:
                 if (hostSupplier == null) {
-                    supplier = new RingDescribeHostSupplier(keyspace, cpConfig.getPort());
+                    supplier = new RingDescribeHostSupplier(keyspace, cpConfig.getPort(), cpConfig.getLocalDatacenter());
                 }
                 else {
-                    supplier = new FilteringHostSupplier(new RingDescribeHostSupplier(keyspace, cpConfig.getPort()),
+                    supplier = new FilteringHostSupplier(new RingDescribeHostSupplier(keyspace, cpConfig.getPort(), cpConfig.getLocalDatacenter()),
                             hostSupplier);
                 }
                 break;

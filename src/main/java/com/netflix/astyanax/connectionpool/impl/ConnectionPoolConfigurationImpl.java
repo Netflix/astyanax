@@ -101,6 +101,8 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     private OperationFilterFactory filterFactory          = EmptyOperationFilterFactory.getInstance();
     private Partitioner partitioner                       = DEFAULT_PARTITIONER;
 
+    private String localDatacenter = null;
+    
     public ConnectionPoolConfigurationImpl(String name) {
         this.name = name;
         this.badHostDetector = new BadHostDetectorImpl(this);
@@ -160,6 +162,20 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
 
     public ConnectionPoolConfigurationImpl setSeeds(String seeds) {
         this.seeds = seeds;
+        return this;
+    }
+
+    /**
+     * Returns local datacenter name
+     *
+     * @return
+     */
+    public String getLocalDatacenter() {
+        return localDatacenter;
+    }
+
+    public ConnectionPoolConfigurationImpl setLocalDatacenter(String localDatacenter) {
+        this.localDatacenter = localDatacenter;
         return this;
     }
 

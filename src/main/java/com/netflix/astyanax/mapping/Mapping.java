@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 @SuppressWarnings({ "SuspiciousMethodCalls" })
 public class Mapping<T> {
-    private final ImmutableMap<String, Field> fields;
+    private final ImmutableMap<String, FieldMapping> fields;
     private final String idFieldName;
     private final Class<T> clazz;
 
@@ -83,7 +83,8 @@ public class Mapping<T> {
         this.clazz = clazz;
 
         String localKeyFieldName = null;
-        ImmutableMap.Builder<String, Field> builder = ImmutableMap.builder();
+        ImmutableMap.Builder<String, FieldMapping> builder = ImmutableMap
+                .builder();
 
         AtomicBoolean isKey = new AtomicBoolean();
         Set<String> usedNames = Sets.newHashSet();
@@ -131,13 +132,13 @@ public class Mapping<T> {
      */
     public <V> V getColumnValue(T instance, String columnName,
             Class<V> valueClass) {
-        Field field = fields.get(columnName);
-        if (field == null) {
+        FieldMapping fieldMapping = fields.get(columnName);
+        if (fieldMapping == null) {
             throw new IllegalArgumentException("Column not found: "
                     + columnName);
         }
         try {
-            return valueClass.cast(field.get(instance));
+            return valueClass.cast(fieldMapping.getField().get(instance));
         } catch (IllegalAccessException e) {
             throw new RuntimeException(e); // should never get here
         }
@@ -169,13 +170,13 @@ public class Mapping<T> {
      *            class)
      */
     public <V> void setColumnValue(T instance, String columnName, V value) {
-        Field field = fields.get(columnName);
-        if (field == null) {
+        FieldMapping fieldMapping = fields.get(columnName);
+        if (fieldMapping == null) {
             throw new IllegalArgumentException("Column not found: "
                     + columnName);
         }
         try {
-            field.set(instance, value);
+            fieldMapping.getField().set(instance, value);
         } catch (IllegalAccessException e) {
             throw new RuntimeException(e); // should never get here
         }
@@ -192,8 +193,10 @@ public class Mapping<T> {
      */
     public void fillMutation(T instance, ColumnListMutation<String> mutation) {
         for (String fieldName : getNames()) {
+            FieldMapping fieldMapping = fields.get(fieldName);
             Coercions.setColumnMutationFromField(instance,
-                    fields.get(fieldName), fieldName, mutation);
+                    fieldMapping.getField(), fieldName, mutation,
+                    fieldMapping.getTtl());
         }
     }
 
@@ -225,10 +228,11 @@ public class Mapping<T> {
      */
     public T initInstance(T instance, ColumnList<String> columns) {
         for (com.netflix.astyanax.model.Column<String> column : columns) {
-            Field field = fields.get(column.getName());
-            if (field != null) { // otherwise it may be a column that was
-                                 // removed, etc.
-                Coercions.setFieldFromColumn(instance, field, column);
+            FieldMapping fieldMapping = fields.get(column.getName());
+            if (fieldMapping != null) { // otherwise it may be a column that was
+                                        // removed, etc.
+                Coercions.setFieldFromColumn(instance, fieldMapping.getField(),
+                        column);
             }
         }
         return instance;
@@ -267,13 +271,13 @@ public class Mapping<T> {
     }
 
     Class<?> getIdFieldClass() {
-        return fields.get(idFieldName).getType();
+        return fields.get(idFieldName).getField().getType();
     }
 
     private <ID extends Annotation, COLUMN extends Annotation> String mapField(
             Field field, AnnotationSet<ID, COLUMN> annotationSet,
-            ImmutableMap.Builder<String, Field> builder, Set<String> usedNames,
-            AtomicBoolean isKey) {
+            ImmutableMap.Builder<String, FieldMapping> builder,
+            Set<String> usedNames, AtomicBoolean isKey) {
         String mappingName = null;
 
         ID idAnnotation = field.getAnnotation(annotationSet.getIdAnnotation());
@@ -293,8 +297,13 @@ public class Mapping<T> {
             isKey.set(false);
         }
 
+        int ttl = -1;
         if ((columnAnnotation != null)) {
             mappingName = annotationSet.getColumnName(field, columnAnnotation);
+            if (annotationSet instanceof AnnotationSet2) {
+                ttl = ((AnnotationSet2<ID, COLUMN>) annotationSet)
+                        .getColumnTtl(field, columnAnnotation);
+            }
         }
 
         if (mappingName != null) {
@@ -304,7 +313,12 @@ public class Mapping<T> {
             usedNames.add(mappingName.toLowerCase());
 
             field.setAccessible(true);
-            builder.put(mappingName, field);
+            FieldMapping fieldMapping = new FieldMapping();
+            fieldMapping.setField(field);
+            if (ttl > -1) {
+                fieldMapping.setTtl(ttl);
+            }
+            builder.put(mappingName, fieldMapping);
         }
 
         return mappingName;

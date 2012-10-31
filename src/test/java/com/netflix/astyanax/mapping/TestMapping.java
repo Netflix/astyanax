@@ -1,9 +1,22 @@
 package com.netflix.astyanax.mapping;
 
-import junit.framework.Assert;
 import org.junit.Test;
 
+import com.netflix.astyanax.ColumnListMutation;
+import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.model.ColumnPath;
+
+import java.nio.ByteBuffer;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+import junit.framework.Assert;
+
+@SuppressWarnings("deprecation")
 public class TestMapping {
+
     @Test
     public void testKeyspaceAnnotations() {
         FakeKeyspaceBean override = new FakeKeyspaceBean();
@@ -77,4 +90,226 @@ public class TestMapping {
 
         Assert.assertSame(keyspaceBeanMapping1, keyspaceBeanMapping2);
     }
+
+    @Test
+    public void testTtlMapping() {
+        TtlTestBean testBean = new TtlTestBean();
+        testBean.setId("1");
+        testBean.setDefaultTtl("defaultval");
+        testBean.setZeroTtl("zeroval");
+        testBean.setSixtyTtl("sixtyval");
+
+        Mapping<TtlTestBean> mapping = Mapping.make(TtlTestBean.class);
+
+        ColumnListMutationImplementation mutation = new ColumnListMutationImplementation();
+        mapping.fillMutation(testBean, mutation);
+        Assert.assertEquals(null, mutation.getTtls().get("defaultval"));
+        Assert.assertEquals(new Integer(0), mutation.getTtls().get("zeroval"));
+        Assert.assertEquals(new Integer(60), mutation.getTtls().get("sixtyval"));
+    }
+
+    @Test
+    public void testTtlMappingWithDefaultExpiry() {
+        TtlTestBean testBean = new TtlTestBean();
+        testBean.setId("1");
+        testBean.setDefaultTtl("defaultval");
+        testBean.setZeroTtl("zeroval");
+        testBean.setSixtyTtl("sixtyval");
+
+        Mapping<TtlTestBean> mapping = Mapping.make(TtlTestBean.class,
+                new DefaultAnnotationSet(new Integer(33)));
+
+        ColumnListMutationImplementation mutation = new ColumnListMutationImplementation();
+        mapping.fillMutation(testBean, mutation);
+        Assert.assertEquals(new Integer(33),
+                mutation.getTtls().get("defaultval"));
+        Assert.assertEquals(new Integer(0), mutation.getTtls().get("zeroval"));
+        Assert.assertEquals(new Integer(60), mutation.getTtls().get("sixtyval"));
+    }
+
+    private final class ColumnListMutationImplementation implements
+            ColumnListMutation<String> {
+        final Map<String, Integer> ttls = new HashMap<String, Integer>();
+
+        public Map<String, Integer> getTtls() {
+            return ttls;
+        }
+
+        @Override
+        public <V> ColumnListMutation<String> putColumn(String columnName,
+                V value, Serializer<V> valueSerializer, Integer ttl) {
+            rememberTtl(value, ttl);
+            return this;
+        }
+
+        private <V> void rememberTtl(V value, Integer ttl) {
+            ttls.put(value.toString(), ttl);
+        }
+
+        @SuppressWarnings("deprecation")
+        @Override
+        public <SC> ColumnListMutation<SC> withSuperColumn(
+                ColumnPath<SC> superColumnPath) {
+            return null;
+        }
+
+        @Override
+        public ColumnListMutation<String> putColumn(String columnName,
+                String value, Integer ttl) {
+            rememberTtl(value, ttl);
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> putColumn(String columnName,
+                String value) {
+            rememberTtl(value, null);
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> putColumn(String columnName,
+                byte[] value, Integer ttl) {
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> putColumn(String columnName,
+                byte[] value) {
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> putColumn(String columnName,
+                int value, Integer ttl) {
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> putColumn(String columnName, int value) {
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> putColumn(String columnName,
+                long value, Integer ttl) {
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> putColumn(String columnName,
+                long value) {
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> putColumn(String columnName,
+                boolean value, Integer ttl) {
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> putColumn(String columnName,
+                boolean value) {
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> putColumn(String columnName,
+                ByteBuffer value, Integer ttl) {
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> putColumn(String columnName,
+                ByteBuffer value) {
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> putColumn(String columnName,
+                Date value, Integer ttl) {
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> putColumn(String columnName,
+                Date value) {
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> putColumn(String columnName,
+                float value, Integer ttl) {
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> putColumn(String columnName,
+                float value) {
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> putColumn(String columnName,
+                double value, Integer ttl) {
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> putColumn(String columnName,
+                double value) {
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> putColumn(String columnName,
+                UUID value, Integer ttl) {
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> putColumn(String columnName,
+                UUID value) {
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> putEmptyColumn(String columnName,
+                Integer ttl) {
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> putEmptyColumn(String columnName) {
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> incrementCounterColumn(
+                String columnName, long amount) {
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> deleteColumn(String columnName) {
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> setTimestamp(long timestamp) {
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> delete() {
+            return this;
+        }
+
+        @Override
+        public ColumnListMutation<String> setDefaultTtl(Integer ttl) {
+            return this;
+        }
+    }
+
 }

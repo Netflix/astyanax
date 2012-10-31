@@ -17,7 +17,6 @@ package com.netflix.astyanax.ddl;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 
 /**

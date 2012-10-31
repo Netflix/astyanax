@@ -27,13 +27,11 @@ import org.apache.cassandra.thrift.CfDef._Fields;
 import org.apache.cassandra.thrift.ColumnDef;
 import org.apache.thrift.meta_data.FieldMetaData;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.FieldMetadata;
 import com.netflix.astyanax.thrift.ThriftTypes;
-import com.netflix.astyanax.util.StringUtils;
 
 public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
     private final static Map<String, FieldMetadata> fieldsMetadata = Maps.newHashMap();

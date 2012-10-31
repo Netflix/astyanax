@@ -70,9 +70,14 @@ public class TokenAwareConnectionPoolImpl<CL> extends AbstractHostPartitionConne
                 pools = partition.getPools();
                 isSorted = partition.isSorted();
             }
+            
+            int index = roundRobinCounter.incrementAndGet();
+            if (index > Integer.MAX_VALUE/2) {
+                roundRobinCounter.set(0);
+                index = 0;
+            }
     
-            return new RoundRobinExecuteWithFailover<CL, R>(config, monitor, pools, isSorted ? 0
-                    : roundRobinCounter.incrementAndGet());
+            return new RoundRobinExecuteWithFailover<CL, R>(config, monitor, pools, isSorted ? 0 : index);
         }
         catch (ConnectionException e) {
             monitor.incOperationFailure(e.getHost(), e);

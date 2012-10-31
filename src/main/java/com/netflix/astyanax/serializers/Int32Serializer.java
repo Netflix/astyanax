@@ -3,16 +3,12 @@ package com.netflix.astyanax.serializers;
 import java.nio.ByteBuffer;
 
 /**
- * Converts bytes to Integer (32 bit) and vice versa.
- * 
- * It is important not to confuse IntegerSerializer with IntegerType in cassandra.
- * IntegerSerializer serializes 32 bit integers while IntegerType comparator in cassandra
- * is a BigInteger.
- * 
- * @author Bozhidar Bozhanov
- * 
+ * Same as IntegerSerializer but more explicitly linked with Int32Type cmparator 
+ * in cassandra.  
+ * @author elandau
+ *
  */
-public final class IntegerSerializer extends AbstractSerializer<Integer> {
+public class Int32Serializer extends AbstractSerializer<Integer> {
 
     private static final IntegerSerializer instance = new IntegerSerializer();
 

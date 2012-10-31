@@ -96,8 +96,7 @@ public interface Cluster {
     /**
      * Add a column family to an existing keyspace
      * 
-     * @param def
-     *            - Created by calling prepareColumnFamilyDefinition();
+     * @param def - Created by calling makeColumnFamilyDefinition();
      * @return
      * @throws ConnectionException
      */
@@ -106,8 +105,7 @@ public interface Cluster {
     /**
      * Update an existing column family
      * 
-     * @param def
-     *            - Created by calling prepareColumnFamilyDefinition();
+     * @param def - Created by calling makeColumnFamilyDefinition();
      * @return
      * @throws ConnectionException
      */
@@ -118,7 +116,7 @@ public interface Cluster {
      * create the keyspace.
      * 
      * Not that column families can be added the keyspace definition here
-     * instead of calling prepareColumnFamilyDefinition separately.
+     * instead of calling makeColumnFamilyDefinition separately.
      * 
      * @return
      */
@@ -164,7 +162,7 @@ public interface Cluster {
     /**
      * Add a new keyspace to the cluster. The keyspace object may include column
      * families as well. Create a KeyspaceDefinition object by calling
-     * prepareKeyspaceDefinition().
+     * makeKeyspaceDefinition().
      * 
      * @param def
      * @return
@@ -174,7 +172,7 @@ public interface Cluster {
     /**
      * Update a new keyspace in the cluster. The keyspace object may include
      * column families as well. Create a KeyspaceDefinition object by calling
-     * prepareKeyspaceDefinition().
+     * makeKeyspaceDefinition().
      * 
      * @param def
      */

@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.Operation;
+import com.netflix.astyanax.connectionpool.OperationPreprocessor;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 
 public class AbstractOperationFilter<R, CL> implements Operation<R, CL>{
@@ -32,6 +33,10 @@ public class AbstractOperationFilter<R, CL> implements Operation<R, CL>{
     @Override
     public Host getPinnedHost() {
         return next.getPinnedHost();
+    }
+
+    @Override
+    public void preprocess(OperationPreprocessor preprocessor) {
     }
 
 }

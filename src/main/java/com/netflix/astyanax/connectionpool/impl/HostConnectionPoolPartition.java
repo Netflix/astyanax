@@ -94,6 +94,10 @@ public class HostConnectionPoolPartition<CL> {
     public List<HostConnectionPool<CL>> getPools() {
         return activePools.get();
     }
+
+    public Set<HostConnectionPool<CL>> getAllPools() {
+        return this.pools;
+    }
     
     /**
      * If true the the hosts are sorted by order of priority where the 

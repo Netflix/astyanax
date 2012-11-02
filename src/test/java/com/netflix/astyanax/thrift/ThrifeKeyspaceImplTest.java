@@ -367,9 +367,11 @@ public class ThrifeKeyspaceImplTest {
     
     @Test
     public void testDescribeRing() throws Exception {
+        // [TokenRangeImpl [startToken=0, endToken=0, endpoints=[127.0.0.1]]]
         List<TokenRange> ring = keyspaceContext.getEntity().describeRing();
         LOG.info(ring.toString());
         
+        // 127.0.0.1
         RingDescribeHostSupplier ringSupplier = new RingDescribeHostSupplier(keyspaceContext.getEntity(), 9160);
         List<Host> hosts = ringSupplier.get();
         Assert.assertEquals(1, hosts.get(0).getTokenRanges().size());
@@ -378,8 +380,15 @@ public class ThrifeKeyspaceImplTest {
         Supplier<List<Host>> sourceSupplier1 = Suppliers.ofInstance((List<Host>)Lists.newArrayList(new Host("127.0.0.1", 9160)));
         Supplier<List<Host>> sourceSupplier2 = Suppliers.ofInstance((List<Host>)Lists.newArrayList(new Host("127.0.0.2", 9160)));
         
+        // 127.0.0.1
+        LOG.info(sourceSupplier1.get().toString());
+        
+        // 127.0.0.2
+        LOG.info(sourceSupplier2.get().toString());
+        
         hosts = new FilteringHostSupplier(ringSupplier, sourceSupplier1).get();
         LOG.info(hosts.toString());
+        
         Assert.assertEquals(1, hosts.size());
         Assert.assertEquals(1, hosts.get(0).getTokenRanges().size());
         hosts = new FilteringHostSupplier(ringSupplier, sourceSupplier2).get();

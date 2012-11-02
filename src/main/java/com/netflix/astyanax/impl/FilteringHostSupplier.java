@@ -75,13 +75,21 @@ public class FilteringHostSupplier implements Supplier<List<Host>> {
         return Lists.newArrayList(Collections2.filter(sourceList, new Predicate<Host>() {
             @Override
             public boolean apply(@Nullable Host host) {
-                for (String addr : host.getAlternateIpAddresses()) {
-                    Host foundHost = lookup.get(addr);
-                    if (foundHost != null) {
-                        host.setTokenRanges(foundHost.getTokenRanges());
-                        return true;
+                Host foundHost = lookup.get(host.getHostName());
+                if (foundHost == null) {
+                    for (String addr : host.getAlternateIpAddresses()) {
+                        foundHost = lookup.get(addr);
+                        if (foundHost != null) {
+                            break;
+                        }
                     }
                 }
+                
+                if (foundHost != null) {
+                    host.setTokenRanges(foundHost.getTokenRanges());
+                    return true;
+                }
+                
                 return false;
             }
         }));

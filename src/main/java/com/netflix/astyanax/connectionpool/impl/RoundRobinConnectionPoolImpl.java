@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class RoundRobinConnectionPoolImpl<CL> extends AbstractHostPartitionConnectionPool<CL> {
 
     private final AtomicInteger roundRobinCounter = new AtomicInteger(new Random().nextInt(997));
+    private static final int MAX_RR_COUNTER = Integer.MAX_VALUE/2;
 
     public RoundRobinConnectionPoolImpl(ConnectionPoolConfiguration config, ConnectionFactory<CL> factory,
             ConnectionPoolMonitor monitor) {
@@ -51,9 +52,8 @@ public class RoundRobinConnectionPoolImpl<CL> extends AbstractHostPartitionConne
             }
             
             int index = roundRobinCounter.incrementAndGet();
-            if (index > Integer.MAX_VALUE/2) {
+            if (index > MAX_RR_COUNTER) {
                 roundRobinCounter.set(0);
-                index = 0;
             }
             
             return new RoundRobinExecuteWithFailover<CL, R>(config, monitor, topology.getAllPools().getPools(), index);

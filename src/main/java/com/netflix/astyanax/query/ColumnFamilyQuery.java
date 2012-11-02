@@ -62,6 +62,14 @@ public interface ColumnFamilyQuery<K, C> {
      * @return
      */
     RowQuery<K, C> getKey(K rowKey);
+    
+    /**
+     * Query a single row
+     * 
+     * @param rowKey
+     * @return
+     */
+    RowQuery<K, C> getRow(K rowKey);
 
     /**
      * Query a range of keys. startKey and endKey cannot not be used with the
@@ -76,6 +84,20 @@ public interface ColumnFamilyQuery<K, C> {
      * @return
      */
     RowSliceQuery<K, C> getKeyRange(K startKey, K endKey, String startToken, String endToken, int count);
+    
+    /**
+     * Query a range of rows. startKey and endKey cannot not be used with the
+     * RandomPartitioner.
+     * 
+     * @param startKey
+     * @param endKey
+     * @param startToken
+     * @param endToken
+     * @param count
+     *            Max number of keys to return
+     * @return
+     */
+    RowSliceQuery<K, C> getRowRange(K startKey, K endKey, String startToken, String endToken, int count);
 
     /**
      * Query a non-contiguous set of keys.
@@ -84,6 +106,14 @@ public interface ColumnFamilyQuery<K, C> {
      * @return
      */
     RowSliceQuery<K, C> getKeySlice(K... keys);
+    
+    /**
+     * Query a non-contiguous set of rows.
+     * 
+     * @param keys
+     * @return
+     */
+    RowSliceQuery<K, C> getRowSlice(K... keys);
 
     /**
      * Query a non-contiguous set of keys.
@@ -94,6 +124,14 @@ public interface ColumnFamilyQuery<K, C> {
     RowSliceQuery<K, C> getKeySlice(Collection<K> keys);
 
     /**
+     * Query a non-contiguous set of rows.
+     * 
+     * @param keys
+     * @return
+     */
+    RowSliceQuery<K, C> getRowSlice(Collection<K> keys);
+    
+    /**
      * Query a non-contiguous set of keys.
      * 
      * @param keys
@@ -101,6 +139,14 @@ public interface ColumnFamilyQuery<K, C> {
      */
     RowSliceQuery<K, C> getKeySlice(Iterable<K> keys);
 
+    /**
+     * Query a non-contiguous set of rows.
+     * 
+     * @param keys
+     * @return
+     */
+    RowSliceQuery<K, C> getRowSlice(Iterable<K> keys);
+    
     /**
      * Query to get an iterator to all rows in the column family
      * 

@@ -20,6 +20,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -28,7 +31,8 @@ import com.netflix.astyanax.connectionpool.exceptions.NoAvailableHostsException;
 import com.netflix.astyanax.impl.AckingQueue;
 
 public class MutationBatchExecutorWithQueue {
-
+    private static final Logger LOG = LoggerFactory.getLogger(MutationBatchExecutorWithQueue.class);
+    
     private ExecutorService executor;
     private Predicate<Exception> retryablePredicate = Predicates.alwaysFalse();
     private long waitOnNoHosts = 1000;
@@ -70,6 +74,7 @@ public class MutationBatchExecutorWithQueue {
                                 return;
                             }
                             catch (Exception e) {
+                                LOG.error(e.getMessage(), e);
                                 failureCount.incrementAndGet();
                                 if (e instanceof NoAvailableHostsException) {
                                     try {

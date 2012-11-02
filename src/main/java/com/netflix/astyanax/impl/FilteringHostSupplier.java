@@ -39,8 +39,9 @@ public class FilteringHostSupplier implements Supplier<List<Host>> {
     private final Supplier<List<Host>> sourceSupplier;
     private final Supplier<List<Host>> filterSupplier;
 
-    public FilteringHostSupplier(Supplier<List<Host>> sourceSupplier,
-            Supplier<List<Host>> filterSupplier) {
+    public FilteringHostSupplier(
+            Supplier<List<Host>> filterSupplier,    // This is a ring describe
+            Supplier<List<Host>> sourceSupplier) {
         this.sourceSupplier = sourceSupplier;
         this.filterSupplier = filterSupplier;
     }
@@ -74,7 +75,14 @@ public class FilteringHostSupplier implements Supplier<List<Host>> {
         return Lists.newArrayList(Collections2.filter(sourceList, new Predicate<Host>() {
             @Override
             public boolean apply(@Nullable Host host) {
-                return lookup.containsKey(host.getIpAddress());
+                for (String addr : host.getAlternateIpAddresses()) {
+                    Host foundHost = lookup.get(addr);
+                    if (foundHost != null) {
+                        host.setTokenRanges(foundHost.getTokenRanges());
+                        return true;
+                    }
+                }
+                return false;
             }
         }));
     }

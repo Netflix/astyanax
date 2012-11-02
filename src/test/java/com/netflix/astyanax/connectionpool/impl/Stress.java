@@ -94,10 +94,10 @@ public class Stress {
                 new Host("127.0.0.6",  TestHostType.GOOD_FAST.ordinal()),
                 new Host("127.0.0.7",  TestHostType.GOOD_FAST.ordinal()),
                 new Host("127.0.0.8",  TestHostType.GOOD_FAST.ordinal()),
-                new Host("127.0.0.9",  TestHostType.GOOD_SLOW.ordinal()),
-                new Host("127.0.0.8",  TestHostType.SWAP_EVERY_200.ordinal()),
-                new Host("127.0.0.10", TestHostType.ALTERNATING_SOCKET_TIMEOUT_200.ordinal()),
-                new Host("127.0.0.11", TestHostType.ALTERNATING_SOCKET_TIMEOUT_200.ordinal()),
+//                new Host("127.0.0.9",  TestHostType.GOOD_SLOW.ordinal()),
+//                new Host("127.0.0.8",  TestHostType.SWAP_EVERY_200.ordinal()),
+//                new Host("127.0.0.10", TestHostType.ALTERNATING_SOCKET_TIMEOUT_200.ordinal()),
+//                new Host("127.0.0.11", TestHostType.ALTERNATING_SOCKET_TIMEOUT_200.ordinal()),
                 new Host("127.0.0.0",  TestHostType.GOOD_FAST.ordinal())
                 );
         
@@ -161,11 +161,11 @@ public class Stress {
 //                    throw new RuntimeException(new HostDownException("HostDownException"));
 //                }
 //            })
-//            .withProbability(0.0001, new Function<TestDriver, Void>() {
-//                public Void apply(@Nullable TestDriver arg0) {
-//                    throw new RuntimeException(new ConnectionAbortedException("ConnectionAbortedException"));
-//                }
-//            })
+            .withProbability(0.01, new Function<TestDriver, Void>() {
+                public Void apply(@Nullable TestDriver arg0) {
+                    throw new RuntimeException(new ConnectionAbortedException("ConnectionAbortedException"));
+                }
+            })
 //            .withProbability(0.0001, new Function<TestDriver, Void>() {
 //                public Void apply(@Nullable TestDriver arg0) {
 //                    throw new RuntimeException(new BadRequestException("BadRequestException"));

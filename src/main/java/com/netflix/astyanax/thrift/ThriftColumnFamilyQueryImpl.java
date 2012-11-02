@@ -882,4 +882,29 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
         this.retry = retry;
         return this;
     }
+
+    @Override
+    public RowQuery<K, C> getRow(K rowKey) {
+        return getKey(rowKey);
+    }
+
+    @Override
+    public RowSliceQuery<K, C> getRowRange(K startKey, K endKey, String startToken, String endToken, int count) {
+        return getKeyRange(startKey, endKey, startToken, endToken, count);
+    }
+
+    @Override
+    public RowSliceQuery<K, C> getRowSlice(K... keys) {
+        return getKeySlice(keys);
+    }
+
+    @Override
+    public RowSliceQuery<K, C> getRowSlice(Collection<K> keys) {
+        return getKeySlice(keys);
+    }
+
+    @Override
+    public RowSliceQuery<K, C> getRowSlice(Iterable<K> keys) {
+        return getRowSlice(keys);
+    }
 }

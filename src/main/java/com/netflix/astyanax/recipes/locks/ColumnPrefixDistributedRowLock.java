@@ -220,6 +220,11 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
         return this;
     }
     
+    public ColumnPrefixDistributedRowLock<K> withTtl(Integer ttl, TimeUnit units) {
+        this.ttl = (int) TimeUnit.SECONDS.convert(ttl,  units);
+        return this;
+    }
+    
     public ColumnPrefixDistributedRowLock<K> withBackoff(RetryPolicy policy) {
         this.backoffPolicy  = policy;
         return this;

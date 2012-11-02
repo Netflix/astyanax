@@ -19,6 +19,7 @@ import java.nio.ByteBuffer;
 
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.Operation;
+import com.netflix.astyanax.connectionpool.OperationPreprocessor;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 
@@ -42,5 +43,14 @@ public class TestOperation implements Operation<TestClient, String> {
     @Override
     public Host getPinnedHost() {
         return null;
+    }
+
+    /**
+     * Performs some actions before the command execution
+     *
+     * @param preprocessor the object that exposes some available actions to perform
+     */
+    @Override
+    public void preprocess(OperationPreprocessor preprocessor) {
     }
 }

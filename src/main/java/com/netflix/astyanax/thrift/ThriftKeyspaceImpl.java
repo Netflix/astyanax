@@ -97,13 +97,13 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                 }
                 try {
                     OperationResult<Void> result = executeOperation(
-                            new AbstractKeyspaceOperationImpl<Void>(
+                            new AbstractWriteOperationImpl<Void>(
                                     tracerFactory.newTracer(CassandraOperationType.BATCH_MUTATE), getPinnedHost(),
-                                    getKeyspaceName()) {
+                                    getKeyspaceName(), getConsistencyLevel()) {
                                 @Override
                                 public Void internalExecute(Client client) throws Exception {
                                     client.batch_mutate(getMutationMap(),
-                                            ThriftConverter.ToThriftConsistencyLevel(getConsistencyLevel()));
+                                            ThriftConverter.ToThriftConsistencyLevel(getWriteConsistencyLevel()));
                                     discardMutations();
                                     return null;
                                 }
@@ -244,14 +244,14 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                     @Override
                     public OperationResult<Void> execute() throws ConnectionException {
                         return executeOperation(
-                                new AbstractKeyspaceOperationImpl<Void>(
+                                new AbstractWriteOperationImpl<Void>(
                                         tracerFactory.newTracer(CassandraOperationType.COUNTER_MUTATE),
-                                        getKeyspaceName()) {
+                                        getKeyspaceName(), writeConsistencyLevel) {
                                     @Override
                                     public Void internalExecute(Client client) throws Exception {
                                         client.add(key, ThriftConverter.getColumnParent(columnFamily, null),
                                                 new CounterColumn().setValue(amount).setName(column),
-                                                ThriftConverter.ToThriftConsistencyLevel(writeConsistencyLevel));
+                                                ThriftConverter.ToThriftConsistencyLevel(getWriteConsistencyLevel()));
                                         return null;
                                     }
 
@@ -281,15 +281,15 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                     @Override
                     public OperationResult<Void> execute() throws ConnectionException {
                         return executeOperation(
-                                new AbstractKeyspaceOperationImpl<Void>(
+                                new AbstractWriteOperationImpl<Void>(
                                         tracerFactory.newTracer(CassandraOperationType.COLUMN_DELETE),
-                                        getKeyspaceName()) {
+                                        getKeyspaceName(), writeConsistencyLevel) {
                                     @Override
                                     public Void internalExecute(Client client) throws Exception {
                                         client.remove(key, new org.apache.cassandra.thrift.ColumnPath()
                                                 .setColumn_family(columnFamily.getName()).setColumn(column), config
                                                 .getClock().getCurrentTime(), ThriftConverter
-                                                .ToThriftConsistencyLevel(writeConsistencyLevel));
+                                                .ToThriftConsistencyLevel(getWriteConsistencyLevel()));
                                         return null;
                                     }
 
@@ -318,9 +318,9 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                     @Override
                     public OperationResult<Void> execute() throws ConnectionException {
                         return executeOperation(
-                                new AbstractKeyspaceOperationImpl<Void>(
+                                new AbstractWriteOperationImpl<Void>(
                                         tracerFactory.newTracer(CassandraOperationType.COLUMN_INSERT),
-                                        getKeyspaceName()) {
+                                        getKeyspaceName(), writeConsistencyLevel) {
                                     @Override
                                     public Void internalExecute(Client client) throws Exception {
                                         org.apache.cassandra.thrift.Column c = new org.apache.cassandra.thrift.Column();
@@ -330,7 +330,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                         }
 
                                         client.insert(key, ThriftConverter.getColumnParent(columnFamily, null), c,
-                                                ThriftConverter.ToThriftConsistencyLevel(writeConsistencyLevel));
+                                                ThriftConverter.ToThriftConsistencyLevel(getWriteConsistencyLevel()));
                                         return null;
                                     }
 
@@ -359,14 +359,14 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                     @Override
                     public OperationResult<Void> execute() throws ConnectionException {
                         return executeOperation(
-                                new AbstractKeyspaceOperationImpl<Void>(
+                                new AbstractWriteOperationImpl<Void>(
                                         tracerFactory.newTracer(CassandraOperationType.COLUMN_DELETE),
-                                        getKeyspaceName()) {
+                                        getKeyspaceName(), writeConsistencyLevel) {
                                     @Override
                                     public Void internalExecute(Client client) throws Exception {
                                         client.remove_counter(key, new org.apache.cassandra.thrift.ColumnPath()
                                                 .setColumn_family(columnFamily.getName()).setColumn(column),
-                                                ThriftConverter.ToThriftConsistencyLevel(writeConsistencyLevel));
+                                                ThriftConverter.ToThriftConsistencyLevel(getWriteConsistencyLevel()));
                                         return null;
                                     }
 

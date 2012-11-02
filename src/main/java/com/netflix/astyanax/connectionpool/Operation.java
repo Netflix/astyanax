@@ -60,8 +60,14 @@ public interface Operation<CL, R> {
      * Return the host to run on or null to select a host using the load
      * blancer. Failover is disabled for this scenario.
      * 
-     * @param host
-     * @return
+     * @return host
      */
     Host getPinnedHost();
+
+    /**
+     * Performs some actions before the command execution
+     * 
+     * @param preprocessor the object that exposes some available actions to perform
+     */
+    void preprocess(OperationPreprocessor preprocessor);
 }

@@ -17,6 +17,7 @@ package com.netflix.astyanax.thrift;
 
 import java.nio.ByteBuffer;
 
+import com.netflix.astyanax.connectionpool.OperationPreprocessor;
 import org.apache.cassandra.thrift.Cassandra;
 
 import com.netflix.astyanax.CassandraOperationTracer;
@@ -69,4 +70,8 @@ public abstract class AbstractOperationImpl<R> implements Operation<Cassandra.Cl
     }
 
     protected abstract R internalExecute(Cassandra.Client client) throws Exception;
+
+    @Override
+    public void preprocess(OperationPreprocessor preprocessor) {
+    }
 }

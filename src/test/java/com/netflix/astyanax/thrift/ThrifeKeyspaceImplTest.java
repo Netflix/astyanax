@@ -99,6 +99,11 @@ public class ThrifeKeyspaceImplTest {
     private static String TEST_CLUSTER_NAME = "cass_sandbox";
     private static String TEST_KEYSPACE_NAME = "AstyanaxUnitTests";
 
+    private static ColumnFamily<String, String> CF_USER_INFO = ColumnFamily.newColumnFamily(
+            "Standard1", // Column Family Name
+            StringSerializer.get(), // Key Serializer
+            StringSerializer.get()); // Column Serializer
+
     private static ColumnFamily<Long, String> CF_USERS = ColumnFamily
             .newColumnFamily("users", LongSerializer.get(),
                     StringSerializer.get());
@@ -127,10 +132,12 @@ public class ThrifeKeyspaceImplTest {
             .newColumnFamily("NotDefined", StringSerializer.get(),
                     StringSerializer.get());
 
+    public static AnnotatedCompositeSerializer<MockCompositeType> M_SERIALIZER = new AnnotatedCompositeSerializer<MockCompositeType>(
+            MockCompositeType.class);
+    
     public static ColumnFamily<String, MockCompositeType> CF_COMPOSITE = ColumnFamily
             .newColumnFamily("CompositeColumn", StringSerializer.get(),
-                    new AnnotatedCompositeSerializer<MockCompositeType>(
-                            MockCompositeType.class));
+                    M_SERIALIZER);
 
     public static ColumnFamily<ByteBuffer, ByteBuffer> CF_COMPOSITE_CSV = ColumnFamily
             .newColumnFamily("CompositeCsv", ByteBufferSerializer.get(),
@@ -138,8 +145,7 @@ public class ThrifeKeyspaceImplTest {
 
     public static ColumnFamily<MockCompositeType, String> CF_COMPOSITE_KEY = ColumnFamily
             .newColumnFamily("CompositeKey",
-                    new AnnotatedCompositeSerializer<MockCompositeType>(
-                            MockCompositeType.class), StringSerializer.get());
+                    M_SERIALIZER, StringSerializer.get());
 
     public static ColumnFamily<String, UUID> CF_TIME_UUID = ColumnFamily
             .newColumnFamily("TimeUUID1", StringSerializer.get(),
@@ -339,6 +345,15 @@ public class ThrifeKeyspaceImplTest {
             }
             cfmLong.putEmptyColumn(Long.MAX_VALUE, null);
             result = m.execute();
+
+            m.withRow(CF_USER_INFO, "acct1234")
+            .putColumn("firstname", "john", null)
+            .putColumn("lastname", "smith", null)
+            .putColumn("address", "555 Elm St", null)
+            .putColumn("age", 30, null);
+
+            m.execute();
+
         } catch (Exception e) {
             System.out.println(e.getMessage());
             Assert.fail();
@@ -442,18 +457,7 @@ public class ThrifeKeyspaceImplTest {
         context.start();
         Keyspace keyspace = context.getEntity();
 
-        ColumnFamily<String, String> CF_USER_INFO = new ColumnFamily<String, String>(
-                "Standard1", // Column Family Name
-                StringSerializer.get(), // Key Serializer
-                StringSerializer.get()); // Column Serializer
-
         MutationBatch m = keyspace.prepareMutationBatch();
-
-        m.withRow(CF_USER_INFO, "acct1234")
-                .putColumn("firstname", "john", null)
-                .putColumn("lastname", "smith", null)
-                .putColumn("address", "555 Elm St", null)
-                .putColumn("age", 30, null);
 
         // m.withRow(CF_USER_STATS, "acct1234")
         // .incrementCounterColumn("loginCount", 1);
@@ -634,7 +638,7 @@ public class ThrifeKeyspaceImplTest {
                 .call();
         
         Assert.assertTrue(result);
-        Assert.assertEquals(27, counter.get());
+        Assert.assertEquals(28, counter.get());
     }
 
 
@@ -1220,16 +1224,20 @@ public class ThrifeKeyspaceImplTest {
         MutationBatch m = keyspace.prepareMutationBatch();
         ColumnListMutation<MockCompositeType> mRow = m.withRow(CF_COMPOSITE,
                 rowKey);
+        int columnCount = 0;
         for (char part1 = 'a'; part1 <= 'b'; part1++) {
-            for (int part2 = 0; part2 < 1; part2++) {
+            for (int part2 = 0; part2 < 10; part2++) {
                 for (int part3 = 10; part3 < 11; part3++) {
                     bool = !bool;
+                    columnCount++;
                     mRow.putEmptyColumn(
                             new MockCompositeType(Character.toString(part1),
                                     part2, part3, bool, "UTF"), null);
                 }
             }
         }
+        LOG.info("Created " + columnCount + " columns");
+        
         try {
             m.execute();
         } catch (ConnectionException e) {
@@ -1241,6 +1249,7 @@ public class ThrifeKeyspaceImplTest {
         try {
             result = keyspace.prepareQuery(CF_COMPOSITE).getKey(rowKey)
                     .execute();
+            Assert.assertEquals(columnCount,  result.getResult().size());
             for (Column<MockCompositeType> col : result.getResult()) {
                 LOG.info("COLUMN: " + col.getName().toString());
             }
@@ -1260,6 +1269,27 @@ public class ThrifeKeyspaceImplTest {
             Assert.fail();
         }
 
+        LOG.info("Range builder");
+        try {
+            result = keyspace
+                    .prepareQuery(CF_COMPOSITE)
+                    .getKey(rowKey)
+                    .withColumnRange(
+                            M_SERIALIZER
+                                    .buildRange()
+                                    .withPrefix("a")
+                                    .greaterThanEquals(1)
+                                    .lessThanEquals(1)
+                                    .build()).execute();
+            for (Column<MockCompositeType> col : result.getResult()) {
+                LOG.info("COLUMN: " + col.getName().toString());
+            }
+        } catch (ConnectionException e) {
+            LOG.error(e.getMessage(), e);
+            Assert.fail();
+        }
+
+        
         /*
          * Composite c = new Composite(); c.addComponent("String1",
          * StringSerializer.get()) .addComponent(123, IntegerSerializer.get());

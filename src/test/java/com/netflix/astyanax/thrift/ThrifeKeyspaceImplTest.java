@@ -12,6 +12,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
+import javax.annotation.Nullable;
+
 import junit.framework.Assert;
 
 import org.apache.cassandra.utils.Pair;
@@ -21,6 +23,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
@@ -61,6 +64,7 @@ import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.query.IndexQuery;
 import com.netflix.astyanax.query.PreparedIndexExpression;
 import com.netflix.astyanax.query.RowQuery;
+import com.netflix.astyanax.recipes.reader.AllRowsReader;
 import com.netflix.astyanax.recipes.uniqueness.DedicatedMultiRowUniquenessConstraint;
 import com.netflix.astyanax.recipes.uniqueness.NotUniqueException;
 import com.netflix.astyanax.retry.ExponentialBackoff;
@@ -612,6 +616,27 @@ public class ThrifeKeyspaceImplTest {
             Assert.fail();
         }
     }
+    
+    @Test
+    public void testAllRowsReader() throws Exception {
+        final AtomicLong counter = new AtomicLong(0);
+        
+        boolean result = new AllRowsReader.Builder<String, String>(keyspace, CF_STANDARD1)
+                .forEachRow(new Function<Row<String, String>, Boolean>() {
+                    @Override
+                    public Boolean apply(@Nullable Row<String, String> row) {
+                        counter.incrementAndGet();
+                        LOG.info("Got a row: " + row.getKey().toString());
+                        return true;
+                    }
+                })
+                .build()
+                .call();
+        
+        Assert.assertTrue(result);
+        Assert.assertEquals(27, counter.get());
+    }
+
 
     @Test
     public void getAllWithCallback() {

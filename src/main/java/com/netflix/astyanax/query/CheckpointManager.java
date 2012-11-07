@@ -26,7 +26,7 @@ public interface CheckpointManager {
 	void trackCheckpoint(String startToken, String checkpointToken) throws Exception;
 	
 	/**
-	 * Get the next checkpoint after the specified token 
+	 * Get the next checkpoint after the specified token.  Will return null if no checkpoint was set.
 	 * 
 	 * @param start
 	 * @param end

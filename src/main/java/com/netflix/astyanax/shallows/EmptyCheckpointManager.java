@@ -36,7 +36,7 @@ public class EmptyCheckpointManager implements CheckpointManager {
 	 */
 	@Override
 	public String getCheckpoint(String startToken) {
-		return startToken;
+		return null;
 	}
 
 	@Override

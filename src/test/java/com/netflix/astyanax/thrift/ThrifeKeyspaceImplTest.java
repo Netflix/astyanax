@@ -641,6 +641,26 @@ public class ThrifeKeyspaceImplTest {
         Assert.assertEquals(28, counter.get());
     }
 
+    @Test
+    public void testAllRowsReaderConcurrency() throws Exception {
+        final AtomicLong counter = new AtomicLong(0);
+        
+        boolean result = new AllRowsReader.Builder<String, String>(keyspace, CF_STANDARD1)
+                .withConcurrencyLevel(4)
+                .forEachRow(new Function<Row<String, String>, Boolean>() {
+                    @Override
+                    public Boolean apply(@Nullable Row<String, String> row) {
+                        counter.incrementAndGet();
+                        LOG.info("Got a row: " + row.getKey().toString());
+                        return true;
+                    }
+                })
+                .build()
+                .call();
+        
+        Assert.assertTrue(result);
+        Assert.assertEquals(28, counter.get());
+    }
 
     @Test
     public void getAllWithCallback() {

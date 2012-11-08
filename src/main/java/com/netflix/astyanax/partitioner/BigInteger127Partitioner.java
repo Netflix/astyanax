@@ -41,6 +41,9 @@ public class BigInteger127Partitioner implements Partitioner {
 
     @Override
     public List<TokenRange> splitTokenRange(String first, String last, int count) {
+        if (first.equals(last)) {
+            last = getTokenMinusOne(last);
+        }
         List<TokenRange> tokens = Lists.newArrayList();
         for (int i = 0; i < count; i++) {
             String startToken = getTokenMinusOne(getSegmentToken(count, i, new BigInteger(first), new BigInteger(last)));

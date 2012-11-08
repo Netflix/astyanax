@@ -20,6 +20,7 @@ import com.netflix.astyanax.model.Column;
 
 import java.lang.reflect.Field;
 import java.util.Date;
+import java.util.UUID;
 
 class Coercions {
     @SuppressWarnings("unchecked")
@@ -52,6 +53,8 @@ class Coercions {
             objValue = column.getStringValue();
         } else if (field.getType() == byte[].class) {
             objValue = column.getByteArrayValue();
+        } else if (field.getType() == UUID.class) {
+            objValue = column.getUUIDValue();
         } else if (field.getType().isEnum()) {
             objValue = Enum.valueOf((Class<? extends Enum>)field.getType(), column.getStringValue());
         } else {
@@ -99,6 +102,8 @@ class Coercions {
                     mutation.putColumn(columnName, (String) objValue, null);
                 } else if(objValue.getClass() == byte[].class) {
                     mutation.putColumn(columnName, (byte[]) objValue, null);
+                } else if (objValue.getClass() == UUID.class) {
+                    mutation.putColumn(columnName, (UUID) objValue, null);
                 } else if (objValue.getClass().isEnum()) {
                     mutation.putColumn(columnName, objValue.toString(), null);
                 } else {

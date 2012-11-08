@@ -482,12 +482,14 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                 if (options != null)
                                     internalOptions.putAll(options);
                                 
-                                internalOptions.put("name",                 columnFamily.getName());
-                                internalOptions.put("keyspace",             getKeyspaceName());
+                                internalOptions.put("name", columnFamily.getName());
+                                internalOptions.put("keyspace", getKeyspaceName());
                                 if (!internalOptions.containsKey("comparator_type"))
-                                    internalOptions.put("comparator_type",      columnFamily.getColumnSerializer().getComparatorType().getTypeName());
+                                    internalOptions.put("comparator_type", columnFamily.getColumnSerializer().getComparatorType().getTypeName());
                                 if (!internalOptions.containsKey("key_validation_class"))
                                     internalOptions.put("key_validation_class", columnFamily.getKeySerializer().getComparatorType().getTypeName());
+                                if (columnFamily.getDefaultValueSerializer() != null && !internalOptions.containsKey("default_validation_class"))
+                                    internalOptions.put("default_validation_class", columnFamily.getDefaultValueSerializer().getComparatorType().getTypeName());
                                 
                                 def.setFields(internalOptions);
                                 

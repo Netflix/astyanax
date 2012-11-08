@@ -389,7 +389,6 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                                             break;
                                         }
                                     }
-                                    LOG.info("Skipping : " + rowsToSkip);
 
                                     if (rowsToSkip == localPageSize) {
                                         localPageSize++;

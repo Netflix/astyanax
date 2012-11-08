@@ -7,6 +7,7 @@ import java.io.StringReader;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -639,6 +640,50 @@ public class ThrifeKeyspaceImplTest {
         
         Assert.assertTrue(result);
         Assert.assertEquals(28, counter.get());
+    }
+    
+    @Test
+    public void testAllRowsReaderWithCancel() throws Exception {
+        final AtomicLong counter = new AtomicLong(0);
+        
+        AllRowsReader<String, String> reader = new AllRowsReader.Builder<String, String>(keyspace, CF_STANDARD1)
+                .withPageSize(3)
+                .forEachRow(new Function<Row<String, String>, Boolean>() {
+                    @Override
+                    public Boolean apply(@Nullable Row<String, String> row) {
+                        try {
+                            Thread.sleep(200);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            throw new RuntimeException(e);
+                        }
+                        counter.incrementAndGet();
+                        LOG.info("Got a row: " + row.getKey().toString());
+                        return true;
+                    }
+                })
+                .build();
+        
+        
+        Future<Boolean> future = Executors.newSingleThreadExecutor().submit(reader);        
+        
+        Thread.sleep(1000);
+        
+        reader.cancel();
+        
+        try {
+            boolean result = future.get();
+            Assert.assertEquals(false, result);
+            Assert.fail();
+        }
+        catch (Exception e) {
+            LOG.info("Failed to execute", e);
+        }
+        LOG.info("Before: " + counter.get());
+        Assert.assertNotSame(28, counter.get());
+        Thread.sleep(2000);
+        LOG.info("After: " + counter.get());
+        Assert.assertNotSame(28, counter.get());
     }
 
     @Test

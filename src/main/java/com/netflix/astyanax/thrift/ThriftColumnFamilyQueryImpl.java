@@ -736,7 +736,11 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                         
                         try {
                             Pair<String, String> pair = Pair.create(checkpointManager.getCheckpoint(start.toString()), end.toString());
-                            if (!pair.left.equals(pair.right)) {
+                            if (pair.left == null) {
+                                pair = Pair.create(start.toString(), end.toString());
+                                ranges.add(pair);
+                            }
+                            else if (!pair.left.equals(pair.right)) {
                                 ranges.add(pair);
                             }
                         } catch (Exception e) {

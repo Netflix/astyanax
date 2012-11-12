@@ -92,11 +92,31 @@ public class SerializerPackageImpl implements SerializerPackage {
     }
 
     public SerializerPackageImpl setKeyType(String keyType) throws UnknownComparatorException {
-        ComparatorType type = ComparatorType.getByClassName(keyType);
-        if (type == null)
-            throw new UnknownComparatorException(keyType);
+        String comparatorType = StringUtils.substringBefore(keyType, "(");
+        ComparatorType type = ComparatorType.getByClassName(comparatorType);
 
-        this.keySerializer = type.getSerializer();
+        if (type == null) {
+            throw new UnknownComparatorException(keyType);
+        }
+
+        if (type == ComparatorType.COMPOSITETYPE) {
+            try {
+                this.keySerializer = new SpecificCompositeSerializer((CompositeType) TypeParser.parse(keyType));
+                return this;
+            }
+            catch (ConfigurationException e) {
+                // Ignore and simply use the default serializer
+            }
+            throw new UnknownComparatorException(keyType);
+        }
+        else if (type == ComparatorType.DYNAMICCOMPOSITETYPE) {
+            // TODO
+            throw new UnknownComparatorException(keyType);
+        }
+        else {
+            this.keySerializer = type.getSerializer();
+        }
+
         return this;
     }
 

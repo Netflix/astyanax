@@ -42,6 +42,7 @@ public interface ColumnListMutation<C> {
      * @return
      */
     <V> ColumnListMutation<C> putColumn(C columnName, V value, Serializer<V> valueSerializer, Integer ttl);
+    <V> ColumnListMutation<C> putColumnIfNotNull(C columnName, V value, Serializer<V> valueSerializer, Integer ttl);
 
     /**
      * @deprecated Super columns are being phased out. Use composite columns
@@ -51,33 +52,53 @@ public interface ColumnListMutation<C> {
 
     ColumnListMutation<C> putColumn(C columnName, String value, Integer ttl);
     ColumnListMutation<C> putColumn(C columnName, String value);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, String value, Integer ttl);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, String value);
 
     ColumnListMutation<C> putColumn(C columnName, byte[] value, Integer ttl);
     ColumnListMutation<C> putColumn(C columnName, byte[] value);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, byte[] value, Integer ttl);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, byte[] value);
 
     ColumnListMutation<C> putColumn(C columnName, int value, Integer ttl);
     ColumnListMutation<C> putColumn(C columnName, int value);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, Integer value, Integer ttl);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, Integer value);
 
     ColumnListMutation<C> putColumn(C columnName, long value, Integer ttl);
     ColumnListMutation<C> putColumn(C columnName, long value);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, Long value, Integer ttl);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, Long value);
 
     ColumnListMutation<C> putColumn(C columnName, boolean value, Integer ttl);
     ColumnListMutation<C> putColumn(C columnName, boolean value);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, Boolean value, Integer ttl);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, Boolean value);
 
     ColumnListMutation<C> putColumn(C columnName, ByteBuffer value, Integer ttl);
     ColumnListMutation<C> putColumn(C columnName, ByteBuffer value);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, ByteBuffer value, Integer ttl);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, ByteBuffer value);
 
     ColumnListMutation<C> putColumn(C columnName, Date value, Integer ttl);
     ColumnListMutation<C> putColumn(C columnName, Date value);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, Date value, Integer ttl);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, Date value);
 
     ColumnListMutation<C> putColumn(C columnName, float value, Integer ttl);
     ColumnListMutation<C> putColumn(C columnName, float value);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, Float value, Integer ttl);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, Float value);
 
     ColumnListMutation<C> putColumn(C columnName, double value, Integer ttl);
     ColumnListMutation<C> putColumn(C columnName, double value);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, Double value, Integer ttl);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, Double value);
 
     ColumnListMutation<C> putColumn(C columnName, UUID value, Integer ttl);
     ColumnListMutation<C> putColumn(C columnName, UUID value);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, UUID value, Integer ttl);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, UUID value);
 
     ColumnListMutation<C> putEmptyColumn(C columnName, Integer ttl);
     ColumnListMutation<C> putEmptyColumn(C columnName);

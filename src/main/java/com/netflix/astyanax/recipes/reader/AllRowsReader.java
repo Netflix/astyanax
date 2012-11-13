@@ -337,7 +337,7 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                     
                     int localPageSize = pageSize;
                     int rowsToSkip = 0;
-                    while (!Thread.currentThread().isInterrupted()) {
+                    while (!cancelling.get()) {
                         RowSliceQuery<K, C> query = keyspace
                             .prepareQuery(columnFamily).getKeyRange(null, null, currentToken, endToken, localPageSize);
                         
@@ -348,6 +348,8 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                         if (!rows.isEmpty()) {
                             // Iterate through all the rows and notify the callback function
                             for (Row<K,C> row : rows) {
+                                if (cancelling.get())
+                                    break;
                                 try {
                                     // When repeating the last row, rows to skip will be > 0 
                                     // We skip the rows that were repeated from the previous query

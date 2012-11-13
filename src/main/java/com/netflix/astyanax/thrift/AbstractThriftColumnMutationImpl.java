@@ -23,6 +23,7 @@ import com.netflix.astyanax.Clock;
 import com.netflix.astyanax.ColumnMutation;
 import com.netflix.astyanax.Execution;
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.clock.ConstantClock;
 import com.netflix.astyanax.serializers.BooleanSerializer;
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
 import com.netflix.astyanax.serializers.BytesArraySerializer;
@@ -37,14 +38,20 @@ public abstract class AbstractThriftColumnMutationImpl implements ColumnMutation
 
     protected final ByteBuffer key;
     protected final ByteBuffer column;
-    protected final Clock clock;
-
+    protected Clock      clock;
+    
     public AbstractThriftColumnMutationImpl(ByteBuffer key, ByteBuffer column, Clock clock) {
         this.key = key;
         this.column = column;
         this.clock = clock;
     }
 
+    @Override
+    public ColumnMutation withTimestamp(long timestamp) {
+        this.clock = new ConstantClock(timestamp);
+        return this;
+    }
+    
     @Override
     public Execution<Void> putValue(String value, Integer ttl) {
         return insertValue(StringSerializer.get().toByteBuffer(value), ttl);

@@ -55,20 +55,20 @@ import com.netflix.astyanax.serializers.ByteBufferOutputStream;
  */
 public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
 
-    protected long timestamp;
-    private ConsistencyLevel consistencyLevel;
-    private Clock clock;
-    private Host pinnedHost;
-    private RetryPolicy retry;
-    private WriteAheadLog wal;
+    protected long              timestamp;
+    private ConsistencyLevel    consistencyLevel;
+    private Clock               clock;
+    private Host                pinnedHost;
+    private RetryPolicy         retry;
+    private WriteAheadLog       wal;
 
     private Map<ByteBuffer, Map<String, List<Mutation>>> mutationMap = Maps.newLinkedHashMap();
 
     public AbstractThriftMutationBatchImpl(Clock clock, ConsistencyLevel consistencyLevel, RetryPolicy retry) {
-        this.clock = clock;
-        this.timestamp = clock.getCurrentTime();
+        this.clock            = clock;
+        this.timestamp        = clock.getCurrentTime();
         this.consistencyLevel = consistencyLevel;
-        this.retry = retry;
+        this.retry            = retry;
     }
 
     @Override
@@ -137,9 +137,9 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
             throw new Exception("Mutation is empty");
         }
 
-        ByteBufferOutputStream out = new ByteBufferOutputStream();
-        TIOStreamTransport transport = new TIOStreamTransport(out);
-        batch_mutate_args args = new batch_mutate_args();
+        ByteBufferOutputStream out       = new ByteBufferOutputStream();
+        TIOStreamTransport     transport = new TIOStreamTransport(out);
+        batch_mutate_args      args      = new batch_mutate_args();
         args.setMutation_map(mutationMap);
 
         try {

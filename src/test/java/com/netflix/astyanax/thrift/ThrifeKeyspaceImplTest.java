@@ -93,11 +93,11 @@ public class ThrifeKeyspaceImplTest {
 
     private static Logger LOG = LoggerFactory.getLogger(ThrifeKeyspaceImplTest.class);
 
-    private static Keyspace keyspace;
+    private static Keyspace                  keyspace;
     private static AstyanaxContext<Keyspace> keyspaceContext;
-    private static EmbeddedCassandra cassandra;
+    private static EmbeddedCassandra         cassandra;
 
-    private static String TEST_CLUSTER_NAME = "cass_sandbox";
+    private static String TEST_CLUSTER_NAME  = "cass_sandbox";
     private static String TEST_KEYSPACE_NAME = "AstyanaxUnitTests";
 
     private static ColumnFamily<String, String> CF_USER_INFO = ColumnFamily.newColumnFamily(
@@ -789,8 +789,8 @@ public class ThrifeKeyspaceImplTest {
         } catch (ConnectionException e) {
             Assert.fail();
         }
-    }
-
+    }    
+    
     @Test
     public void testSingleOps() {
         String key = "SingleOpsTest";
@@ -934,6 +934,25 @@ public class ThrifeKeyspaceImplTest {
             } catch (ConnectionException e) {
                 Assert.fail();
             }
+        } catch (ConnectionException e) {
+            Assert.fail();
+        }
+        
+        // Set a long value
+        try {
+            String column = "TimestampColumn";
+            long value = Long.MAX_VALUE / 4;
+
+            // Set
+            keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
+                    .withTimestamp(100)
+                    .putValue(value, null)
+                    .execute();
+
+            // Read
+            Column<String> c = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
+                    .getColumn(column).execute().getResult();
+            Assert.assertEquals(100,  c.getTimestamp());
         } catch (ConnectionException e) {
             Assert.fail();
         }

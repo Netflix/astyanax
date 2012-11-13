@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax.recipes.locks;
 
+import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -34,6 +35,8 @@ import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.model.OrderedColumnMap;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.retry.RunOnce;
+import com.netflix.astyanax.serializers.ByteBufferSerializer;
+import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.util.RangeBuilder;
 import com.netflix.astyanax.util.TimeUUIDUtils;
 
@@ -102,13 +105,13 @@ import com.netflix.astyanax.util.TimeUUIDUtils;
  * @param <K>
  */
 public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
-    public static final int LOCK_TIMEOUT = 60;
+    public static final int      LOCK_TIMEOUT                    = 60;
     public static final TimeUnit DEFAULT_OPERATION_TIMEOUT_UNITS = TimeUnit.MINUTES;
-    public static final String DEFAULT_LOCK_PREFIX = "_LOCK_";
+    public static final String   DEFAULT_LOCK_PREFIX             = "_LOCK_";
 
     private final ColumnFamily<K, String> columnFamily; // The column family for data and lock
-    private final Keyspace keyspace;                    // The keyspace
-    private final K key;                                // Key being locked
+    private final Keyspace   keyspace;                  // The keyspace
+    private final K          key;                       // Key being locked
 
     private long             timeout          = LOCK_TIMEOUT;                   // Timeout after which the lock expires.  Units defined by timeoutUnits.
     private TimeUnit         timeoutUnits     = DEFAULT_OPERATION_TIMEOUT_UNITS;
@@ -126,10 +129,10 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
     private int              retryCount       = 0;
 
     public ColumnPrefixDistributedRowLock(Keyspace keyspace, ColumnFamily<K, String> columnFamily, K key) {
-        this.keyspace = keyspace;
+        this.keyspace     = keyspace;
         this.columnFamily = columnFamily;
-        this.key = key;
-        this.lockId = TimeUUIDUtils.getUniqueTimeUUIDinMicros().toString();
+        this.key          = key;
+        this.lockId       = TimeUUIDUtils.getUniqueTimeUUIDinMicros().toString();
     }
 
     /**
@@ -201,7 +204,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
      * @return
      */
     public ColumnPrefixDistributedRowLock<K> expireLockAfter(long timeout, TimeUnit unit) {
-        this.timeout = timeout;
+        this.timeout      = timeout;
         this.timeoutUnits = unit;
         return this;
     }
@@ -379,7 +382,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
     
             for (Column<String> c : lockResult) {
                 if (c.getName().startsWith(prefix))
-                    result.put(c.getName(), c.getLongValue());
+                    result.put(c.getName(), readTimeoutValue(c));
                 else 
                     columns.add(c);
             }
@@ -395,7 +398,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
                     .getResult();
 
             for (Column<String> c : lockResult) {
-                result.put(c.getName(), c.getLongValue());
+                result.put(c.getName(), readTimeoutValue(c));
             }
 
         }
@@ -476,14 +479,44 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
         else {
             lockColumn = prefix + lockId;
         }
-        if (time != null) {
-            m.withRow(columnFamily, key).putColumn(lockColumn,
-                    time + TimeUnit.MICROSECONDS.convert(timeout, timeoutUnits), ttl);
+        
+        Long timeoutValue 
+              = (time == null)
+              ? new Long(0)
+              : time + TimeUnit.MICROSECONDS.convert(timeout, timeoutUnits);
+              
+        m.withRow(columnFamily, key).putColumn(lockColumn, generateTimeoutValue(timeoutValue), ttl);
+        return lockColumn;
+    }
+    
+    /**
+     * Generate the expire time value to put in the column value.
+     * @param timeout
+     * @return
+     */
+    private ByteBuffer generateTimeoutValue(long timeout) {
+        if (columnFamily.getDefaultValueSerializer() == ByteBufferSerializer.get() ||
+            columnFamily.getDefaultValueSerializer() == LongSerializer.get()) {
+            return LongSerializer.get().toByteBuffer(timeout);
         }
         else {
-            m.withRow(columnFamily, key).putColumn(lockColumn, new Long(0), ttl);
+            return columnFamily.getDefaultValueSerializer().fromString(Long.toString(timeout));
         }
-        return lockColumn;
+    }
+    
+    /**
+     * Read the expiration time from the column value
+     * @param column
+     * @return
+     */
+    public long readTimeoutValue(Column<?> column) {
+        if (columnFamily.getDefaultValueSerializer() == ByteBufferSerializer.get() ||
+            columnFamily.getDefaultValueSerializer() == LongSerializer.get()) {
+            return column.getLongValue();
+        }
+        else {
+            return Long.parseLong(column.getStringValue());
+        }
     }
 
     /**

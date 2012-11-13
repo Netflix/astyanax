@@ -64,19 +64,19 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
     private final ConnectionPool<Cassandra.Client> connectionPool;
     private final AstyanaxConfiguration config;
-    private final String ksName;
-    private final ExecutorService executor;
+    private final String                ksName;
+    private final ExecutorService       executor;
     private final KeyspaceTracerFactory tracerFactory;
     private final Cache<String, Object> cache;
 
     public ThriftKeyspaceImpl(String ksName, ConnectionPool<Cassandra.Client> pool, AstyanaxConfiguration config,
             final KeyspaceTracerFactory tracerFactory) {
         this.connectionPool = pool;
-        this.config = config;
-        this.ksName = ksName;
-        this.executor = config.getAsyncExecutor();
-        this.tracerFactory = tracerFactory;
-        this.cache = CacheBuilder.newBuilder().expireAfterWrite(10, TimeUnit.MINUTES).build();
+        this.config         = config;
+        this.ksName         = ksName;
+        this.executor       = config.getAsyncExecutor();
+        this.tracerFactory  = tracerFactory;
+        this.cache          = CacheBuilder.newBuilder().expireAfterWrite(10, TimeUnit.MINUTES).build();
     }
 
     @Override

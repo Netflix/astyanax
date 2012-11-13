@@ -39,19 +39,19 @@ import com.netflix.astyanax.serializers.StringSerializer;
  */
 public class RowUniquenessConstraint<K, C> implements UniquenessConstraint {
     private final ColumnFamily<K, C> columnFamily;
-    private final Keyspace keyspace;
-    private Integer ttl = null;
+    private final Keyspace   keyspace;
+    private final C          uniqueColumn;
+    private final K          key;
     private ConsistencyLevel consistencyLevel = ConsistencyLevel.CL_LOCAL_QUORUM;
-    private final C uniqueColumn;
-    private final K key;
-    private ByteBuffer data = null;
+    private ByteBuffer       data             = null;
+    private Integer          ttl              = null;
 
     public RowUniquenessConstraint(Keyspace keyspace, ColumnFamily<K, C> columnFamily, K key,
             Supplier<C> uniqueColumnSupplier) {
-        this.keyspace = keyspace;
+        this.keyspace     = keyspace;
         this.columnFamily = columnFamily;
         this.uniqueColumn = uniqueColumnSupplier.get();
-        this.key = key;
+        this.key          = key;
     }
 
     public RowUniquenessConstraint<K, C> withTtl(Integer ttl) {

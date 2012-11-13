@@ -26,6 +26,8 @@ public interface ColumnMutation {
     ColumnMutation setConsistencyLevel(ConsistencyLevel consistencyLevel);
 
     ColumnMutation withRetryPolicy(RetryPolicy retry);
+    
+    ColumnMutation withTimestamp(long timestamp);
 
     Execution<Void> putValue(String value, Integer ttl);
 

@@ -19,6 +19,7 @@ import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.model.ColumnFamily;
@@ -194,7 +195,7 @@ public interface MutationBatch extends Execution<Void> {
      * Set the timestamp for all subsequent operations on this mutation
      * (same as withTimestamp)
      * 
-     * @param timestamp
+     * @param timestamp in microseconds
      * @return
      */
     MutationBatch setTimestamp(long timestamp);
@@ -202,7 +203,7 @@ public interface MutationBatch extends Execution<Void> {
     /**
      * Set the timestamp for all subsequent operations on this mutation.
      * 
-     * @param timestamp
+     * @param timestamp in microsecond
      * @return
      */
     MutationBatch withTimestamp(long timestamp);

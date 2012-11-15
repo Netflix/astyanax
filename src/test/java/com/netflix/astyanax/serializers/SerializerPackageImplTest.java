@@ -22,4 +22,32 @@ public class SerializerPackageImplTest {
         String str = serializers.columnAsString(buffer);
         Assert.assertEquals(input, str);
     }
+
+    @Test
+    public void testSetCompositeKeyType()
+    {
+        SerializerPackageImpl serializers = new SerializerPackageImpl();
+
+        try {
+            serializers.setKeyType( "CompositeType(UTF8Type, LongType)" );
+        }
+        catch ( UnknownComparatorException e ) {
+            e.printStackTrace();
+            Assert.fail();
+        }
+    }
+
+    @Test
+    public void testSetStandardKeyType()
+    {
+        SerializerPackageImpl serializers = new SerializerPackageImpl();
+
+        try {
+            serializers.setKeyType( "LongType" );
+        }
+        catch ( UnknownComparatorException e ) {
+            e.printStackTrace();
+            Assert.fail();
+        }
+    }
 }

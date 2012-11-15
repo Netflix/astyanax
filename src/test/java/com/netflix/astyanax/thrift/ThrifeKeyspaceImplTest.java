@@ -372,10 +372,11 @@ public class ThrifeKeyspaceImplTest {
             result = m.execute();
 
             m.withRow(CF_USER_INFO, "acct1234")
-            .putColumn("firstname", "john", null)
-            .putColumn("lastname", "smith", null)
-            .putColumn("address", "555 Elm St", null)
-            .putColumn("age", 30, null);
+                .putColumn("firstname", "john", null)
+                .putColumn("lastname", "smith", null)
+                .putColumn("address", "555 Elm St", null)
+                .putColumn("age", 30, null)
+                .putEmptyColumn("empty");
 
             m.execute();
 
@@ -385,6 +386,18 @@ public class ThrifeKeyspaceImplTest {
         }
     }
 
+    @Test
+    public void testHasValue() throws Exception {
+        ColumnList<String> response = keyspace.prepareQuery(CF_USER_INFO).getRow("acct1234").execute().getResult();
+        Assert.assertEquals("firstname", response.getColumnByName("firstname").getName());
+        Assert.assertEquals("firstname", response.getColumnByName("firstname").getName());
+        Assert.assertEquals("john", response.getColumnByName("firstname").getStringValue());
+        Assert.assertEquals("john", response.getColumnByName("firstname").getStringValue());
+        Assert.assertEquals(true,  response.getColumnByName("firstname").hasValue());
+        Assert.assertEquals(false, response.getColumnByName("empty").hasValue());
+        
+    }
+    
     @Test
     public void getKeyspaceDefinition() throws Exception {
         KeyspaceDefinition def = keyspaceContext.getEntity().describeKeyspace();

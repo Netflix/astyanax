@@ -41,6 +41,25 @@ public final class LongSerializer extends AbstractSerializer<Long> {
     }
 
     @Override
+    public Long fromBytes(byte[] bytes) {
+        if (bytes == null || bytes.length > 8) {
+            return null;
+        }
+        else if (bytes.length < 8) {
+            byte[] newBytes = new byte[8];
+
+            for (int i = bytes.length - 1; i >= 0; i--) {
+                newBytes[i + 8 - bytes.length] = bytes[i];
+            }
+            bytes = newBytes;
+        }
+
+        ByteBuffer bb = ByteBuffer.allocate(8).put(bytes, 0, 8);
+        bb.rewind();
+        return bb.getLong();
+    }
+
+    @Override
     public ComparatorType getComparatorType() {
         return ComparatorType.LONGTYPE;
     }

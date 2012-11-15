@@ -1196,6 +1196,22 @@ public class ThrifeKeyspaceImplTest {
     }
 
     @Test
+    public void testMutationBatchMultipleWithRow() throws Exception {
+        MutationBatch mb = keyspace.prepareMutationBatch();
+        
+        Long key = 9L;
+        
+        mb.withRow(CF_USERS, key).delete();
+        mb.withRow(CF_USERS, key).putEmptyColumn("test", null);
+        
+        mb.execute();
+        
+        ColumnList<String> result = keyspace.prepareQuery(CF_USERS).getRow(key).execute().getResult();
+        
+        Assert.assertEquals(1, result.size());
+    }
+    
+    @Test
     public void testClickStream() {
         MutationBatch m = keyspace.prepareMutationBatch();
         String userId = "UserId";
@@ -1648,7 +1664,7 @@ public class ThrifeKeyspaceImplTest {
                     .prepareQuery(CF_STANDARD1)
                     .withCql("SELECT * FROM Standard1;").execute();
             Assert.assertTrue(result.getResult().hasRows());
-            Assert.assertEquals(28, result.getResult().getRows().size());
+            Assert.assertEquals(30, result.getResult().getRows().size());
             Assert.assertFalse(result.getResult().hasNumber());
             
             Row<String, String> row;

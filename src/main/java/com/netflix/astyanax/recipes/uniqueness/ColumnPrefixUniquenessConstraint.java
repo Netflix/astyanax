@@ -17,6 +17,7 @@ package com.netflix.astyanax.recipes.uniqueness;
 
 import java.util.Map.Entry;
 
+import com.google.common.base.Function;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
@@ -90,11 +91,15 @@ public class ColumnPrefixUniquenessConstraint<K> implements UniquenessConstraint
     
     @Override
     public void acquire() throws NotUniqueException, Exception {
-        acquireAndMutate(lock.getKeyspace().prepareMutationBatch());
+        acquireAndApplyMutation(null);
     }
 
 
+    /**
+     * @deprecated  Use acquireAndExecuteMutation instead to avoid timestamp issues
+     */
     @Override
+    @Deprecated
     public void acquireAndMutate(MutationBatch m) throws NotUniqueException, Exception {
         lock.acquire();
         m.lockCurrentTimestamp();
@@ -104,6 +109,18 @@ public class ColumnPrefixUniquenessConstraint<K> implements UniquenessConstraint
             .execute();
     }
     
+    @Override
+    public void acquireAndApplyMutation(Function<MutationBatch, Boolean> callback) throws NotUniqueException, Exception {
+        lock.acquire();
+        
+        MutationBatch mb = lock.getKeyspace().prepareMutationBatch();
+        if (callback != null)
+            callback.apply(mb);
+        lock.fillReleaseMutation(mb,  true);
+        lock.fillLockMutation(mb, null, null);
+        mb.setConsistencyLevel(lock.getConsistencyLevel())
+            .execute();
+    }
     
     @Override
     public void release() throws Exception {

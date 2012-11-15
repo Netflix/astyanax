@@ -99,11 +99,12 @@ public abstract class AbstractSerializer<T> implements Serializer<T> {
     }
 
     public List<ByteBuffer> toBytesList(Iterable<T> list) {
-        List<ByteBuffer> bytesList = new ArrayList<ByteBuffer>(Iterables.size(list));
-        for (T s : list) {
-            bytesList.add(toByteBuffer(s));
-        }
-        return bytesList;
+        return Lists.newArrayList(Iterables.transform(list, new Function<T, ByteBuffer>() {
+            @Override
+            public ByteBuffer apply(@Nullable T s) {
+                return toByteBuffer(s);
+            }
+        }));
     }
 
     public List<T> fromBytesList(List<ByteBuffer> list) {

@@ -66,11 +66,15 @@ import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.query.IndexQuery;
 import com.netflix.astyanax.query.PreparedIndexExpression;
 import com.netflix.astyanax.query.RowQuery;
+import com.netflix.astyanax.recipes.UUIDStringSupplier;
 import com.netflix.astyanax.recipes.locks.ColumnPrefixDistributedRowLock;
 import com.netflix.astyanax.recipes.locks.StaleLockException;
 import com.netflix.astyanax.recipes.reader.AllRowsReader;
+import com.netflix.astyanax.recipes.uniqueness.ColumnPrefixUniquenessConstraint;
 import com.netflix.astyanax.recipes.uniqueness.DedicatedMultiRowUniquenessConstraint;
+import com.netflix.astyanax.recipes.uniqueness.MultiRowUniquenessConstraint;
 import com.netflix.astyanax.recipes.uniqueness.NotUniqueException;
+import com.netflix.astyanax.recipes.uniqueness.RowUniquenessConstraint;
 import com.netflix.astyanax.retry.ExponentialBackoff;
 import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
@@ -109,60 +113,92 @@ public class ThrifeKeyspaceImplTest {
             StringSerializer.get()); // Column Serializer
 
     private static ColumnFamily<Long, String> CF_USERS = ColumnFamily
-            .newColumnFamily("users", LongSerializer.get(),
+            .newColumnFamily(
+                    "users", 
+                    LongSerializer.get(),
                     StringSerializer.get());
 
     public static ColumnFamily<String, String> CF_STANDARD1 = ColumnFamily
-            .newColumnFamily("Standard1", StringSerializer.get(),
+            .newColumnFamily(
+                    "Standard1", 
+                    StringSerializer.get(),
                     StringSerializer.get());
 
     public static ColumnFamily<String, Long> CF_LONGCOLUMN = ColumnFamily
-            .newColumnFamily("LongColumn1", StringSerializer.get(),
+            .newColumnFamily(
+                    "LongColumn1", 
+                    StringSerializer.get(),
                     LongSerializer.get());
 
     public static ColumnFamily<String, String> CF_STANDARD2 = ColumnFamily
-            .newColumnFamily("Standard2", StringSerializer.get(),
+            .newColumnFamily(
+                    "Standard2", 
+                    StringSerializer.get(),
                     StringSerializer.get());
 
     public static ColumnFamily<String, String> CF_COUNTER1 = ColumnFamily
-            .newColumnFamily("Counter1", StringSerializer.get(),
+            .newColumnFamily(
+                    "Counter1", 
+                    StringSerializer.get(),
                     StringSerializer.get());
 
     public static ColumnFamily<String, String> CF_NOT_DEFINED = ColumnFamily
-            .newColumnFamily("NotDefined", StringSerializer.get(),
+            .newColumnFamily(
+                    "NotDefined", 
+                    StringSerializer.get(),
                     StringSerializer.get());
 
     public static ColumnFamily<String, String> CF_EMPTY = ColumnFamily
-            .newColumnFamily("NotDefined", StringSerializer.get(),
+            .newColumnFamily(
+                    "NotDefined", 
+                    StringSerializer.get(),
                     StringSerializer.get());
 
     public static AnnotatedCompositeSerializer<MockCompositeType> M_SERIALIZER = new AnnotatedCompositeSerializer<MockCompositeType>(
             MockCompositeType.class);
     
     public static ColumnFamily<String, MockCompositeType> CF_COMPOSITE = ColumnFamily
-            .newColumnFamily("CompositeColumn", StringSerializer.get(),
+            .newColumnFamily(
+                    "CompositeColumn", 
+                    StringSerializer.get(),
                     M_SERIALIZER);
 
     public static ColumnFamily<ByteBuffer, ByteBuffer> CF_COMPOSITE_CSV = ColumnFamily
-            .newColumnFamily("CompositeCsv", ByteBufferSerializer.get(),
+            .newColumnFamily(
+                    "CompositeCsv", 
+                    ByteBufferSerializer.get(),
                     ByteBufferSerializer.get());
 
     public static ColumnFamily<MockCompositeType, String> CF_COMPOSITE_KEY = ColumnFamily
-            .newColumnFamily("CompositeKey",
-                    M_SERIALIZER, StringSerializer.get());
+            .newColumnFamily(
+                    "CompositeKey",
+                    M_SERIALIZER, 
+                    StringSerializer.get());
 
     public static ColumnFamily<String, UUID> CF_TIME_UUID = ColumnFamily
-            .newColumnFamily("TimeUUID1", StringSerializer.get(),
+            .newColumnFamily(
+                    "TimeUUID1", 
+                    StringSerializer.get(),
                     TimeUUIDSerializer.get());
 
     public static ColumnFamily<String, UUID> CF_USER_UNIQUE_UUID = ColumnFamily
-            .newColumnFamily("UserUniqueUUID", StringSerializer.get(),
+            .newColumnFamily(
+                    "UserUniqueUUID", 
+                    StringSerializer.get(),
                     TimeUUIDSerializer.get());
     
     public static ColumnFamily<String, UUID> CF_EMAIL_UNIQUE_UUID = ColumnFamily
-            .newColumnFamily("EmailUniqueUUID", StringSerializer.get(),
+            .newColumnFamily(
+                    "EmailUniqueUUID", 
+                    StringSerializer.get(),
                     TimeUUIDSerializer.get());
     
+    private static ColumnFamily<String, String> UNIQUE_CF = ColumnFamily
+            .newColumnFamily(
+                    "UniqueCf", 
+                    StringSerializer.get(), 
+                    StringSerializer.get());
+
     public static AnnotatedCompositeSerializer<SessionEvent> SE_SERIALIZER = new AnnotatedCompositeSerializer<SessionEvent>(
             SessionEvent.class);
 
@@ -310,8 +346,9 @@ public class ThrifeKeyspaceImplTest {
                 .put("key_validation_class",     "UTF8Type")
                 .put("comparator_type",          "UTF8Type")
                 .build());
-        ;
 
+        keyspace.createColumnFamily(UNIQUE_CF, null);
+        
         KeyspaceDefinition ki = keyspaceContext.getEntity().describeKeyspace();
         System.out.println("Describe Keyspace: " + ki.getName());
 
@@ -2744,6 +2781,234 @@ public class ThrifeKeyspaceImplTest {
         finally {
             lock1.release();
         }
+    }
+    
+    @Test
+    public void testMultiLock() {
+        MultiRowUniquenessConstraint unique = new MultiRowUniquenessConstraint(keyspace)
+            .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+            .withTtl(60)
+            .withLockId("abc")
+            .withColumnPrefix("prefix_")
+            .withRow(UNIQUE_CF, "testMultiLock_A")
+            .withRow(UNIQUE_CF, "testMultiLock_B");
+        
+        ColumnPrefixUniquenessConstraint<String> singleUnique 
+            = new ColumnPrefixUniquenessConstraint<String>(keyspace, UNIQUE_CF, "testMultiLock_A")
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                .withPrefix("prefix_");
+        try {
+            unique.acquire();
+            String uniqueColumn = singleUnique.readUniqueColumn();
+            Assert.assertEquals("abc", uniqueColumn);
+            LOG.info("UniqueColumn: " + uniqueColumn);
+        }
+        catch (Exception e) {
+            Assert.fail(e.getMessage());
+        }
+        
+        MultiRowUniquenessConstraint unique2 = new MultiRowUniquenessConstraint(keyspace)
+            .withTtl(60)
+            .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+            .withColumnPrefix("prefix_")
+            .withRow(UNIQUE_CF, "testMultiLock_B");
+        try {
+            unique2.acquire();
+            Assert.fail();
+        }
+        catch (Exception e) {
+            LOG.info(e.getMessage());
+        }
+        
+        try {
+            Assert.assertEquals("abc", singleUnique.readUniqueColumn());
+            unique.release();
+        }
+        catch (Exception e) {
+            LOG.error(e.getMessage());
+            Assert.fail();
+        }
+        
+        try {
+            unique2.acquire();
+        }
+        catch (Exception e) {
+            LOG.error(e.getMessage());
+            Assert.fail();
+        }
+        
+        try {
+            unique2.release();
+        } catch (Exception e) {
+            LOG.error(e.getMessage());
+            Assert.fail();
+        }
+    }
+    
+    @Test
+    public void testRowUniquenessConstraint() throws Exception {
+        RowUniquenessConstraint<String, String> unique = new RowUniquenessConstraint<String, String>
+                (keyspace, UNIQUE_CF, "testRowUniquenessConstraint", UUIDStringSupplier.getInstance())
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                ;
+        RowUniquenessConstraint<String, String> unique2 = new RowUniquenessConstraint<String, String>
+                (keyspace, UNIQUE_CF, "testRowUniquenessConstraint", UUIDStringSupplier.getInstance())
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                ;
+        
+        try {
+            unique.withData("abc").acquire();
+            try {
+                unique2.acquire();
+                Assert.fail();
+            }
+            catch (Exception e) {
+                LOG.info(e.getMessage());
+            }
+            
+            String data = unique.readDataAsString();
+            Assert.assertNotNull(data);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            Assert.fail(e.getMessage());
+            LOG.error(e.getMessage());
+        }
+        finally {
+            unique.release();
+        }
+        
+        try {
+            String data = unique.readDataAsString();
+            Assert.fail();
+        }
+        catch (Exception e) {
+            LOG.info("", e);
+        }
+    }
+
+    @Test
+    public void testPrefixUniquenessConstraint() throws Exception {
+        ColumnPrefixUniquenessConstraint<String> unique = new ColumnPrefixUniquenessConstraint<String>(
+                keyspace, UNIQUE_CF, "testPrefixUniquenessConstraint")
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                ;
+        ColumnPrefixUniquenessConstraint<String> unique2 = new ColumnPrefixUniquenessConstraint<String>(
+                keyspace, UNIQUE_CF, "testPrefixUniquenessConstraint")
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                ;
+        
+        try {
+            unique.acquire();
+            String column = unique.readUniqueColumn();
+            LOG.info("Unique Column: " + column);
+            
+            try {
+                unique2.acquire();
+                Assert.fail();
+            }
+            catch (Exception e) {
+                
+            }
+        }
+        catch (Exception e) {
+            Assert.fail(e.getMessage());
+            LOG.error(e.getMessage());
+        }
+        finally {
+            unique.release();
+        }
+
+        try {
+            String column = unique.readUniqueColumn();
+            LOG.info(column);
+            Assert.fail();
+        }
+        catch (Exception e) {
+            
+        }
+    }
+
+    @Test
+    public void testPrefixUniquenessConstraintWithColumn() throws Exception {
+        ColumnPrefixUniquenessConstraint<String> unique = new ColumnPrefixUniquenessConstraint<String>(
+                keyspace, UNIQUE_CF, "testPrefixUniquenessConstraintWithColumn")
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                .withUniqueId("abc");
+        ColumnPrefixUniquenessConstraint<String> unique2 = new ColumnPrefixUniquenessConstraint<String>(
+                keyspace, UNIQUE_CF, "testPrefixUniquenessConstraintWithColumn")
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                .withUniqueId("def");
+        
+        try {
+            unique.acquire();
+            
+            String column = unique.readUniqueColumn();
+            LOG.info("Unique Column: " + column);
+            Assert.assertEquals("abc", column);
+            
+            try {
+                unique2.acquire();
+                Assert.fail();
+            }
+            catch (Exception e) {
+                
+            }
+            
+            column = unique.readUniqueColumn();
+            LOG.info("Unique Column: " + column);
+            Assert.assertEquals("abc", column);
+            
+        }
+        catch (Exception e) {
+            Assert.fail(e.getMessage());
+            LOG.error(e.getMessage());
+        }
+        finally {
+            unique.release();
+        }
+    }
+    
+    @Test 
+    public void testAcquireAndMutate() throws Exception {
+        final String row        = "testAcquireAndMutate";
+        final String dataColumn = "data";
+        final String value      = "test";
+        
+        ColumnPrefixUniquenessConstraint<String> unique = new ColumnPrefixUniquenessConstraint<String>(
+                keyspace, UNIQUE_CF, row)
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                .withUniqueId("def");
+        
+        try {
+            unique.acquireAndApplyMutation(new Function<MutationBatch, Boolean>() {
+                @Override
+                public Boolean apply(@Nullable MutationBatch m) {
+                    m.withRow(UNIQUE_CF, row)
+                        .putColumn(dataColumn, value, null);
+                    return true;
+                }
+            });
+            String column = unique.readUniqueColumn();
+            Assert.assertNotNull(column);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            LOG.error("", e);
+            Assert.fail();
+        }
+        finally {
+        }
+        
+        ColumnList<String> columns = keyspace.prepareQuery(UNIQUE_CF).getKey(row).execute().getResult();
+        Assert.assertEquals(2, columns.size());
+        Assert.assertEquals(value, columns.getStringValue(dataColumn, null));
+        
+        unique.release();
+        
+        columns = keyspace.prepareQuery(UNIQUE_CF).getKey(row).execute().getResult();
+        Assert.assertEquals(1, columns.size());
+        Assert.assertEquals(value, columns.getStringValue(dataColumn, null));
     }
 
     private boolean deleteColumn(ColumnFamily<String, String> cf,

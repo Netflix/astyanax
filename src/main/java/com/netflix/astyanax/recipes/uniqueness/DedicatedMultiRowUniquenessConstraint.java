@@ -17,6 +17,9 @@ package com.netflix.astyanax.recipes.uniqueness;
 
 import java.util.List;
 
+import javax.annotation.Nullable;
+
+import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.Keyspace;
@@ -144,11 +147,28 @@ public class DedicatedMultiRowUniquenessConstraint<C> implements UniquenessConst
 
     @Override
     public void acquire() throws NotUniqueException, Exception {
-        acquireAndMutate(null);
+        acquireAndApplyMutation(null);
+    }
+    
+    /**
+     * @deprecated  Use acquireAndExecuteMutation instead to avoid timestamp issues
+     */
+    @Override
+    @Deprecated
+    public void acquireAndMutate(final MutationBatch other) throws NotUniqueException, Exception {
+        acquireAndApplyMutation(new Function<MutationBatch, Boolean>() {
+            @Override
+            public Boolean apply(@Nullable MutationBatch input) {
+                if (other != null) {
+                    input.mergeShallow(other);
+                }
+                return true;
+            }
+        });
     }
     
     @Override
-    public void acquireAndMutate(MutationBatch other) throws NotUniqueException, Exception {
+    public void acquireAndApplyMutation(Function<MutationBatch, Boolean> callback) throws NotUniqueException, Exception {
         // Insert lock check column for all rows in a single batch mutation
         try {
             MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
@@ -167,9 +187,9 @@ public class DedicatedMultiRowUniquenessConstraint<C> implements UniquenessConst
                 lock.fillMutation(m, null);
             }
             
-            if (other != null) {
-                m.mergeShallow(other);
-            }
+            if (callback != null)
+                callback.apply(m);
+            
             m.execute();
         }
         catch (BusyLockException e) {
@@ -185,6 +205,7 @@ public class DedicatedMultiRowUniquenessConstraint<C> implements UniquenessConst
             throw e;
         }
     }
+
 
     @Override
     public void release() throws Exception {
@@ -229,4 +250,5 @@ public class DedicatedMultiRowUniquenessConstraint<C> implements UniquenessConst
         
         return foundColumn;
     }
+
 }

@@ -18,6 +18,9 @@ package com.netflix.astyanax.recipes.uniqueness;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Nullable;
+
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
@@ -123,11 +126,11 @@ public class MultiRowUniquenessConstraint implements UniquenessConstraint {
 
     @Override
     public void acquire() throws NotUniqueException, Exception {
-        acquireAndMutate(null);
+        acquireAndApplyMutation(null);
     }
     
     @Override
-    public void acquireAndMutate(MutationBatch mutation) throws NotUniqueException, Exception {
+    public void acquireAndApplyMutation(Function<MutationBatch, Boolean> callback) throws NotUniqueException, Exception {
         long now = TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS);
 
         // Insert lock check column for all rows in a single batch mutation
@@ -151,9 +154,10 @@ public class MultiRowUniquenessConstraint implements UniquenessConstraint {
             for (ColumnPrefixDistributedRowLock<String> lock : locks) {
                 lock.fillLockMutation(m, null, null);
             }
-            if (mutation != null) {
-                m.mergeShallow(mutation);
-            }
+            
+            if (callback != null)
+                callback.apply(m);
+            
             m.execute();
         }
         catch (BusyLockException e) {
@@ -167,7 +171,19 @@ public class MultiRowUniquenessConstraint implements UniquenessConstraint {
         catch (Exception e) {
             release();
             throw e;
-        }
+        }    }
+    
+    @Override
+    @Deprecated
+    public void acquireAndMutate(final MutationBatch mutation) throws NotUniqueException, Exception {
+        acquireAndApplyMutation(new Function<MutationBatch, Boolean>() {
+            @Override
+            public Boolean apply(@Nullable MutationBatch input) {
+                if (mutation != null)
+                    input.mergeShallow(mutation);
+                return true;
+            }
+        });
     }
 
     @Override
@@ -178,4 +194,5 @@ public class MultiRowUniquenessConstraint implements UniquenessConstraint {
         }
         m.execute();
     }
+
 }

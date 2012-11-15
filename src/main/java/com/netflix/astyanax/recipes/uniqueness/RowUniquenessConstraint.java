@@ -17,6 +17,9 @@ package com.netflix.astyanax.recipes.uniqueness;
 
 import java.nio.ByteBuffer;
 
+import javax.annotation.Nullable;
+
+import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
@@ -81,11 +84,27 @@ public class RowUniquenessConstraint<K, C> implements UniquenessConstraint {
     
     @Override
     public void acquire() throws NotUniqueException, Exception {
-        acquireAndMutate(null);
+        acquireAndApplyMutation(null);
+    }
+    
+    /**
+     * @deprecated  Use acquireAndExecuteMutation instead to avoid timestamp issues
+     */
+    @Override
+    @Deprecated
+    public void acquireAndMutate(final MutationBatch mutation) throws NotUniqueException, Exception {
+        acquireAndApplyMutation(new Function<MutationBatch, Boolean>() {
+            @Override
+            public Boolean apply(@Nullable MutationBatch input) {
+                if (mutation != null)
+                    input.mergeShallow(mutation);
+                return true;
+            }
+        });
     }
     
     @Override
-    public void acquireAndMutate(MutationBatch mutation) throws NotUniqueException, Exception {
+    public void acquireAndApplyMutation(Function<MutationBatch, Boolean> callback) throws NotUniqueException, Exception {
         try {
             // Phase 1: Write a unique column
             MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
@@ -107,9 +126,8 @@ public class RowUniquenessConstraint<K, C> implements UniquenessConstraint {
 
             // Phase 3: Persist the uniqueness with 
             m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
-            if (mutation != null) {
-                m.mergeShallow(mutation);
-            }
+            if (callback != null)
+                callback.apply(m);
             
             if (data == null) {
                 m.withRow(columnFamily, key).putEmptyColumn(uniqueColumn, null);
@@ -122,8 +140,7 @@ public class RowUniquenessConstraint<K, C> implements UniquenessConstraint {
         catch (Exception e) {
             release();
             throw e;
-        }
-    }
+        }    }
 
     @Override
     public void release() throws Exception {
@@ -167,5 +184,4 @@ public class RowUniquenessConstraint<K, C> implements UniquenessConstraint {
     public String readDataAsString() throws Exception {
         return StringSerializer.get().fromByteBuffer(readData());
     }
-    
 }

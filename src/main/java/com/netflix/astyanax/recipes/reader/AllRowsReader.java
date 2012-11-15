@@ -68,6 +68,7 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
     private final   ExecutorService     executor;
     private final   CheckpointManager   checkpointManager;
     private final   Function<Row<K,C>, Boolean> rowFunction;
+    private final   Function<Rows<K, C>, Boolean> rowsFunction;
     private final   boolean             repeatLastToken;
     private final   ColumnSlice<C>      columnSlice;
     private final   String              startToken;
@@ -86,7 +87,8 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
         private Integer             concurrencyLevel;   // Default to null will force ring describe
         private ExecutorService     executor;
         private CheckpointManager   checkpointManager = new EmptyCheckpointManager();
-        private Function<Row<K,C>, Boolean> rowFunction;
+        private Function<Row<K,C>, Boolean>   rowFunction;
+        private Function<Rows<K, C>, Boolean> rowsFunction;
         private boolean             repeatLastToken = true;
         private ColumnSlice<C>      columnSlice;
         private String              startToken;
@@ -261,6 +263,11 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
             return this;
         }
         
+        public Builder<K, C> forEachPage(Function<Rows<K, C>, Boolean> rowsFunction) {
+            this.rowsFunction = rowsFunction;
+            return this;
+        }
+        
         public AllRowsReader<K,C> build() {
             return new AllRowsReader<K,C>(keyspace, 
                     columnFamily, 
@@ -268,6 +275,7 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                     executor,
                     checkpointManager, 
                     rowFunction, 
+                    rowsFunction, 
                     columnSlice, 
                     startToken, 
                     endToken, 
@@ -283,6 +291,7 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
             ExecutorService executor,
             CheckpointManager checkpointManager, 
             Function<Row<K, C>, Boolean> rowFunction, 
+            Function<Rows<K, C>, Boolean> rowsFunction, 
             ColumnSlice<C> columnSlice,
             String startToken, 
             String endToken, 
@@ -291,18 +300,19 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
             boolean repeatLastToken,
             Partitioner partitioner) {
         super();
-        this.keyspace = keyspace;
-        this.columnFamily = columnFamily;
-        this.concurrencyLevel = concurrencyLevel;
-        this.executor = executor;
-        this.checkpointManager = checkpointManager;
-        this.rowFunction = rowFunction;
-        this.columnSlice = columnSlice;
-        this.startToken = startToken;
-        this.endToken = endToken;
-        this.pageSize = pageSize;
-        this.repeatLastToken = repeatLastToken;
-        this.partitioner = partitioner;
+        this.keyspace           = keyspace;
+        this.columnFamily       = columnFamily;
+        this.concurrencyLevel   = concurrencyLevel;
+        this.executor           = executor;
+        this.checkpointManager  = checkpointManager;
+        this.rowFunction        = rowFunction;
+        this.rowsFunction       = rowsFunction;
+        this.columnSlice        = columnSlice;
+        this.startToken         = startToken;
+        this.endToken           = endToken;
+        this.pageSize           = pageSize;
+        this.repeatLastToken    = repeatLastToken;
+        this.partitioner        = partitioner;
         
         // Flag explicitly set
         if (includeEmptyRows != null) 
@@ -346,31 +356,36 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                         
                         Rows<K, C> rows = query.execute().getResult();
                         if (!rows.isEmpty()) {
-                            // Iterate through all the rows and notify the callback function
-                            for (Row<K,C> row : rows) {
-                                if (cancelling.get())
-                                    break;
-                                try {
-                                    // When repeating the last row, rows to skip will be > 0 
-                                    // We skip the rows that were repeated from the previous query
-                                    if (rowsToSkip > 0) {
-                                        rowsToSkip--;
-                                        continue;
-                                    }
-                                    if (!includeEmptyRows && (row.getColumns() == null || row.getColumns().isEmpty()))
-                                        continue;
-                                    if (!rowFunction.apply(row)) {
-                                        cancel();
-                                        return false;
-                                    }
+                            try {
+                                if (rowsFunction != null) {
+                                    rowsFunction.apply(rows);
                                 }
-                                catch (Throwable t) {
-                                    t.printStackTrace();
-                                    cancel();
-                                    throw new RuntimeException("Error processing row", t);
+                                else {
+                                    // Iterate through all the rows and notify the callback function
+                                    for (Row<K,C> row : rows) {
+                                        if (cancelling.get())
+                                            break;
+                                        // When repeating the last row, rows to skip will be > 0 
+                                        // We skip the rows that were repeated from the previous query
+                                        if (rowsToSkip > 0) {
+                                            rowsToSkip--;
+                                            continue;
+                                        }
+                                        if (!includeEmptyRows && (row.getColumns() == null || row.getColumns().isEmpty()))
+                                            continue;
+                                        if (!rowFunction.apply(row)) {
+                                            cancel();
+                                            return false;
+                                        }
+                                    }
                                 }
                             }
-                            
+                            catch (Throwable t) {
+                                t.printStackTrace();
+                                cancel();
+                                throw new RuntimeException("Error processing row", t);
+                            }
+                                
                             // Get the next block
                             if (rows.size() == localPageSize) {
                                 Row<K, C> lastRow = rows.getRowByIndex(rows.size() - 1);

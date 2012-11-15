@@ -1635,13 +1635,27 @@ public class ThrifeKeyspaceImplTest {
                     .prepareQuery(CF_STANDARD1)
                     .withCql("SELECT * FROM Standard1;").execute();
             Assert.assertTrue(result.getResult().hasRows());
-            Assert.assertTrue(result.getResult().getRows().size() > 0);
+            Assert.assertEquals(28, result.getResult().getRows().size());
             Assert.assertFalse(result.getResult().hasNumber());
-
-            /*
-             * for (Row<String, String> row : result.getResult()) {
-             * LOG.info("KEY***: " + row.getKey()); }
-             */
+            
+            Row<String, String> row;
+            
+            row = result.getResult().getRows().getRow("A");
+            Assert.assertEquals("A", row.getKey());
+            
+            row = result.getResult().getRows().getRow("B");
+            Assert.assertEquals("B", row.getKey());
+            
+            row = result.getResult().getRows().getRow("NonExistent");
+            Assert.assertNull(row);
+            
+            row = result.getResult().getRows().getRowByIndex(10);
+            Assert.assertEquals("I", row.getKey());
+            
+            for (Row<String, String> row1 : result.getResult().getRows()) {
+              LOG.info("KEY***: " + row1.getKey()); 
+            }
+            
         } catch (ConnectionException e) {
             LOG.error(e.getMessage(), e);
             Assert.fail();
@@ -1901,7 +1915,21 @@ public class ThrifeKeyspaceImplTest {
                     .getKeySlice(keys.toArray(new String[keys.size()]))
                     .execute();
 
-            Assert.assertTrue(result.getResult().size() > 0);
+            Assert.assertEquals(26,  result.getResult().size());
+            
+            Row<String, String> row;
+            
+            row = result.getResult().getRow("A");
+            Assert.assertEquals("A", row.getKey());
+            
+            row = result.getResult().getRow("B");
+            Assert.assertEquals("B", row.getKey());
+            
+            row = result.getResult().getRow("NonExistent");
+            Assert.assertNull(row);
+            
+            row = result.getResult().getRowByIndex(10);
+            Assert.assertEquals("M", row.getKey());
             /*
              * LOG.info("Get " + result.getResult().size() + " keys"); for
              * (Row<String, String> row : result.getResult()) {

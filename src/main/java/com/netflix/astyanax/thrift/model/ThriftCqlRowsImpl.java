@@ -16,73 +16,47 @@
 package com.netflix.astyanax.thrift.model;
 
 import java.nio.ByteBuffer;
-import java.util.HashMap;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 import org.apache.cassandra.thrift.CqlRow;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 
 public class ThriftCqlRowsImpl<K, C> implements Rows<K, C> {
-    private final List<CqlRow> rows;
-    private Map<K, ThriftRowImpl<K, C>> lookup;
-    private final Serializer<K> keySer;
-    private final Serializer<C> colSer;
+    private List<Row<K, C>>   rows;
+    private Map<K, Row<K, C>> lookup;
 
     public ThriftCqlRowsImpl(List<CqlRow> rows, Serializer<K> keySer, Serializer<C> colSer) {
-        this.rows = rows;
-        this.keySer = keySer;
-        this.colSer = colSer;
+        this.rows = Lists.newArrayListWithCapacity(rows.size());
+        for (CqlRow row : rows) {
+            this.rows.add(new ThriftRowImpl<K, C>(
+                    keySer.fromBytes(row.getKey()), 
+                    ByteBuffer.wrap(row.getKey()),
+                    new ThriftColumnListImpl<C>(row.getColumns(), colSer)));
+        }
     }
 
     @Override
     public Iterator<Row<K, C>> iterator() {
-        class IteratorImpl implements Iterator<Row<K, C>> {
-            Iterator<CqlRow> base;
-
-            public IteratorImpl(Iterator<CqlRow> base) {
-                this.base = base;
-            }
-
-            @Override
-            public boolean hasNext() {
-                return base.hasNext();
-            }
-
-            @Override
-            public Row<K, C> next() {
-                CqlRow row = base.next();
-                return new ThriftRowImpl<K, C>(keySer.fromBytes(row.getKey()), ByteBuffer.wrap(row.getKey()),
-                        new ThriftColumnListImpl<C>(row.getColumns(), colSer));
-            }
-
-            @Override
-            public void remove() {
-                throw new UnsupportedOperationException("Iterator is immutable");
-            }
-
-        }
-        return new IteratorImpl(rows.iterator());
+        return rows.iterator();
     }
 
     @Override
     public Row<K, C> getRow(K key) {
-        if (lookup == null) {
-            lookup = new HashMap<K, ThriftRowImpl<K, C>>(rows.size());
-            for (CqlRow row : rows) {
-                lookup.put(keySer.fromBytes(row.getKey()), new ThriftRowImpl<K, C>(key, ByteBuffer.wrap(row.getKey()),
-                        new ThriftColumnListImpl<C>(row.getColumns(), colSer)));
-            }
-        }
-
-        // TODO: Shouldn't this throw a not found exception, if not found
+        lazyBuildLookup();
         return lookup.get(key);
     }
-
+    
     @Override
     public int size() {
         return this.rows.size();
@@ -95,9 +69,26 @@ public class ThriftCqlRowsImpl<K, C> implements Rows<K, C> {
 
     @Override
     public Row<K, C> getRowByIndex(int i) {
-        CqlRow row = rows.get(i);
-        return new ThriftRowImpl<K, C>(keySer.fromBytes(row.getKey()), ByteBuffer.wrap(row.getKey()),
-                new ThriftColumnListImpl<C>(row.getColumns(), colSer));
+        return rows.get(i);
+    }
+
+    @Override
+    public Collection<K> getKeys() {
+        return Lists.transform(rows, new Function<Row<K,C>, K>() {
+            @Override
+            public K apply(@Nullable Row<K, C> input) {
+                return input.getKey();
+            }
+        });
+    }
+    
+    private void lazyBuildLookup() {
+        if (lookup == null) {
+            this.lookup = Maps.newHashMap();
+            for (Row<K,C> row : rows) {
+                this.lookup.put(row.getKey(),  row);
+            }
+        }
     }
 
 }

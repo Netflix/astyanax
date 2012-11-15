@@ -17,6 +17,7 @@ package com.netflix.astyanax.thrift;
 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
@@ -163,6 +164,11 @@ public class ThriftAllRowsImpl<K, C> implements Rows<K, C> {
 
     @Override
     public Row<K, C> getRowByIndex(int i) {
+        throw new IllegalStateException();
+    }
+
+    @Override
+    public Collection<K> getKeys() {
         throw new IllegalStateException();
     }
 }

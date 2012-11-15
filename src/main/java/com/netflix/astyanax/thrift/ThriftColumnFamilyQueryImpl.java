@@ -217,7 +217,10 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                     // that will later be dropped
                                     if (firstPage) {
                                         firstPage = false;
-                                        predicate.getSlice_range().setCount(predicate.getSlice_range().getCount() + 1);
+                                        // 106 - avoid wraparounds when using ThriftUtils.RANGE_ALL
+                                        if(! (predicate.getSlice_range().getCount() == Integer.MAX_VALUE))  {
+                                            predicate.getSlice_range().setCount(predicate.getSlice_range().getCount() + 1);
+                                        }
                                     }
                                     else {
                                         if (!columnList.isEmpty())

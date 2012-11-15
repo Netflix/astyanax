@@ -226,17 +226,10 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
     @Override
     public <K, C> ColumnMutation prepareColumnMutation(final ColumnFamily<K, C> columnFamily, final K rowKey, C column) {
-        return new AbstractThriftColumnMutationImpl(columnFamily.getKeySerializer().toByteBuffer(rowKey), columnFamily
-                .getColumnSerializer().toByteBuffer(column), config.getClock()) {
-
-            private RetryPolicy retry = config.getRetryPolicy().duplicate();
-            private ConsistencyLevel writeConsistencyLevel = config.getDefaultWriteConsistencyLevel();
-
-            @Override
-            public ColumnMutation setConsistencyLevel(ConsistencyLevel consistencyLevel) {
-                writeConsistencyLevel = consistencyLevel;
-                return this;
-            }
+        return new AbstractThriftColumnMutationImpl(
+                columnFamily.getKeySerializer().toByteBuffer(rowKey), 
+                columnFamily.getColumnSerializer().toByteBuffer(column), 
+                config) {
 
             @Override
             public Execution<Void> incrementCounterColumn(final long amount) {
@@ -387,12 +380,6 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                         });
                     }
                 };
-            }
-
-            @Override
-            public ColumnMutation withRetryPolicy(RetryPolicy retry) {
-                this.retry = retry;
-                return this;
             }
         };
     }

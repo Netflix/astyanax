@@ -19,6 +19,7 @@ import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.UUID;
 
+import com.google.common.base.Preconditions;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.serializers.BooleanSerializer;
@@ -55,6 +56,7 @@ public class RangeBuilder {
     }
 
     public RangeBuilder setLimit(int count) {
+        Preconditions.checkArgument(count >= 0, "Invalid count in RangeBuilder : " + count);
         this.limit = count;
         return this;
     }

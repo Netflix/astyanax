@@ -10,7 +10,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
+import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.netflix.astyanax.Serializer;
 
 /**
@@ -78,11 +82,12 @@ public abstract class AbstractSerializer<T> implements Serializer<T> {
     }
 
     public List<ByteBuffer> toBytesList(List<T> list) {
-        List<ByteBuffer> bytesList = new ArrayList<ByteBuffer>(list.size());
-        for (T s : list) {
-            bytesList.add(toByteBuffer(s));
-        }
-        return bytesList;
+        return Lists.transform(list, new Function<T, ByteBuffer>() {
+            @Override
+            public ByteBuffer apply(@Nullable T s) {
+                return toByteBuffer(s);
+            }
+        });
     }
 
     public List<ByteBuffer> toBytesList(Collection<T> list) {

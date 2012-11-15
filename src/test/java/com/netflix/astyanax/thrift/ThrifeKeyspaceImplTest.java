@@ -6,6 +6,7 @@ import java.io.Serializable;
 import java.io.StringReader;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -1967,6 +1968,19 @@ public class ThrifeKeyspaceImplTest {
             // System.out.println("  Column: " + column.getName());
             // }
             // }
+            
+            OperationResult<Map<String, Integer>> counts = keyspace
+                .prepareQuery(CF_STANDARD1)
+                .getKeySlice(keys.toArray(new String[keys.size()]))
+                .getColumnCounts()
+                .execute();
+                        
+            Assert.assertEquals(26, counts.getResult().size());
+            
+            for (Entry<String, Integer> count : counts.getResult().entrySet()) {
+                Assert.assertEquals(new Integer(28), count.getValue());
+            }
+            
         } catch (ConnectionException e) {
             LOG.error(e.getMessage(), e);
             Assert.fail();
@@ -1974,7 +1988,7 @@ public class ThrifeKeyspaceImplTest {
 
         LOG.info("Starting testGetAllKeysPath...");
     }
-
+    
     @Test
     public void testDeleteMultipleKeys() {
         LOG.info("Starting testDeleteMultipleKeys...");

@@ -15,6 +15,8 @@
  ******************************************************************************/
 package com.netflix.astyanax.thrift;
 
+import java.nio.ByteBuffer;
+
 import com.netflix.astyanax.CassandraOperationTracer;
 import com.netflix.astyanax.connectionpool.Host;
 
@@ -35,4 +37,10 @@ public abstract class AbstractKeyspaceOperationImpl<R> extends AbstractOperation
     public String getKeyspace() {
         return this.keyspaceName;
     }
+    
+    @Override
+    public ByteBuffer getRowKey() {
+        return null;
+    }
+
 }

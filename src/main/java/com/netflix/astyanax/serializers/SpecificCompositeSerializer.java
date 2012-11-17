@@ -1,14 +1,29 @@
 package com.netflix.astyanax.serializers;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
+import org.apache.cassandra.db.marshal.AbstractType;
 import org.apache.cassandra.db.marshal.CompositeType;
 
 public class SpecificCompositeSerializer extends CompositeSerializer {
     private final CompositeType type;
+    private List<String> comparators;
 
     public SpecificCompositeSerializer(CompositeType type) {
         this.type = type;
+        if ( type != null ) {
+            comparators = new ArrayList<String>( type.types.size() );
+            for ( AbstractType compType : type.types ) {
+                String typeName = compType.toString();
+                if ( typeName.startsWith( "org.apache.cassandra.db.marshal." ) ) {
+                    typeName = typeName.substring( "org.apache.cassandra.db.marshal.".length() );
+                }
+                comparators.add( typeName );
+            }
+        }
     }
 
     @Override
@@ -21,4 +36,8 @@ public class SpecificCompositeSerializer extends CompositeSerializer {
         return type.getString(byteBuffer);
     }
 
+    @Override
+    public List<String> getComparators() {
+        return comparators;
+    }
 }

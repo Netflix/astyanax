@@ -3,6 +3,7 @@ package com.netflix.astyanax.serializers;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 
+import com.netflix.astyanax.model.Composite;
 import junit.framework.Assert;
 
 import org.apache.cassandra.config.ConfigurationException;
@@ -363,6 +364,25 @@ public class SerializersTest {
         } catch (ConfigurationException e) {
             Assert.fail();
             LOG.error(e.getMessage());
+        }
+    }
+
+    @Test
+    public void testDeserializeOfSepecificSerializer()
+    {
+        try {
+            Composite composite1 = new Composite( "abc", 123L );
+            CompositeSerializer serializer = new SpecificCompositeSerializer(
+                ( CompositeType )TypeParser.parse( "CompositeType(UTF8Type,LongType)" ) );
+            ByteBuffer byteBuffer = serializer.toByteBuffer( composite1 );
+            Composite composite2 = serializer.fromByteBuffer( byteBuffer );
+
+            Assert.assertEquals( composite1.getComponent( 0 ).getValue(), composite2.getComponent( 0 ).getValue() );
+            Assert.assertEquals( composite1.getComponent( 1 ).getValue(), composite2.getComponent( 1 ).getValue() );
+        }
+        catch ( ConfigurationException e ) {
+            e.printStackTrace();
+            Assert.fail();
         }
     }
 }

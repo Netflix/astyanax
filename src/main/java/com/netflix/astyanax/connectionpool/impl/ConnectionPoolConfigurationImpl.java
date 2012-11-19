@@ -16,9 +16,11 @@
 package com.netflix.astyanax.connectionpool.impl;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+
 import com.netflix.astyanax.AuthenticationCredentials;
 import com.netflix.astyanax.connectionpool.BadHostDetector;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
@@ -64,6 +66,8 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     public static final int DEFAULT_BLOCKED_THREAD_THRESHOLD = 10;
     public static final BadHostDetector DEFAULT_BAD_HOST_DETECTOR = EmptyBadHostDetectorImpl.getInstance();
     public static final Partitioner DEFAULT_PARTITIONER = BigInteger127Partitioner.get();
+    public static final String DEFAULT_SSL_PROTOCOL = "TLS";
+    public static final List<String> DEFAULT_SSL_CIPHER_SUITES = Arrays.asList("TLS_RSA_WITH_AES_128_CBC_SHA", "TLS_RSA_WITH_AES_256_CBC_SHA");
     
     private final String name;
 
@@ -92,6 +96,8 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     private int maxTimeoutWhenExhausted          = DEFAULT_MAX_TIME_WHEN_EXHAUSTED;
     private float minHostInPoolRatio             = DEFAULT_MIN_HOST_IN_POOL_RATIO;
     private int blockedThreadThreshold           = DEFAULT_BLOCKED_THREAD_THRESHOLD;
+    private String sslProtocol                   = DEFAULT_SSL_PROTOCOL;
+    private List<String> sslCipherSuites         = DEFAULT_SSL_CIPHER_SUITES;
 
     private String seeds = null;
     private RetryBackoffStrategy hostRetryBackoffStrategy = null;
@@ -100,9 +106,12 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     private AuthenticationCredentials credentials         = null;
     private OperationFilterFactory filterFactory          = EmptyOperationFilterFactory.getInstance();
     private Partitioner partitioner                       = DEFAULT_PARTITIONER;
+    private String sslTruststore;
+    private String sslTruststorePassword;
 
     private String localDatacenter = null;
-    
+    private boolean useSsl = false;
+
     public ConnectionPoolConfigurationImpl(String name) {
         this.name = name;
         this.badHostDetector = new BadHostDetectorImpl(this);
@@ -499,7 +508,7 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     public Partitioner getPartitioner() {
         return this.partitioner;
     }
-    
+
     public ConnectionPoolConfigurationImpl setPartitioner(Partitioner partitioner) {
         this.partitioner = partitioner;
         return this;
@@ -525,4 +534,48 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
         return this;
     }
 
+    public boolean isUsingSsl() {
+        return useSsl;
+    }
+
+    public ConnectionPoolConfigurationImpl setUsingSsl(boolean useSsl) {
+        this.useSsl = useSsl;
+        return this;
+    }
+
+    public String getSslProtocol() {
+        return sslProtocol;
+    }
+
+    public ConnectionPoolConfigurationImpl setSslProtocol(String sslProtocol) {
+        this.sslProtocol = sslProtocol;
+        return this;
+    }
+
+    public List<String> getSslCipherSuites() {
+        return sslCipherSuites;
+    }
+
+    public ConnectionPoolConfigurationImpl setSslCipherSuites(List<String> sslCipherSuites) {
+        this.sslCipherSuites = sslCipherSuites;
+        return this;
+    }
+
+    public String getSslTruststore() {
+        return sslTruststore;
+    }
+
+    public ConnectionPoolConfigurationImpl setSslTruststore(String truststore) {
+        this.sslTruststore = truststore;
+        return this;
+    }
+
+    public String getSslTruststorePassword() {
+        return sslTruststorePassword;
+    }
+
+    public ConnectionPoolConfigurationImpl setSslTruststorePassword(String passwd) {
+        this.sslTruststorePassword = passwd;
+        return this;
+    }
 }

@@ -41,8 +41,11 @@ import org.apache.cassandra.thrift.AuthenticationRequest;
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.TBinaryProtocol;
 import org.apache.thrift.transport.TFramedTransport;
+import org.apache.thrift.transport.TSSLTransportFactory;
+import org.apache.thrift.transport.TSSLTransportFactory.TSSLTransportParameters;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransportException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -158,14 +161,23 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
 
                 long startTime = System.currentTimeMillis();
                 try {
-                    socket = new TSocket(getHost().getIpAddress(), getHost().getPort(), cpConfig.getConnectTimeout());
+                    if(cpConfig.isUsingSsl()) {
+                        TSSLTransportParameters params = new TSSLTransportParameters(cpConfig.getSslProtocol(), cpConfig.getSslCipherSuites().toArray(new String[0]));
+                        params.setTrustStore(cpConfig.getSslTruststore(), cpConfig.getSslTruststorePassword());
+                        //thrift's SSL implementation does not allow you set the socket connect timeout, only read timeout
+                        socket = TSSLTransportFactory.getClientSocket(getHost().getIpAddress(), getHost().getPort(), cpConfig.getSocketTimeout(), params);
+                    } else {
+                        socket = new TSocket(getHost().getIpAddress(), getHost().getPort(), cpConfig.getConnectTimeout());
+                    }
+
                     socket.getSocket().setTcpNoDelay(true);
                     socket.getSocket().setKeepAlive(true);
                     socket.getSocket().setSoLinger(false, 0);
 
                     setTimeout(cpConfig.getSocketTimeout());
                     transport = new TFramedTransport(socket);
-                    transport.open();
+                    if(!transport.isOpen())
+                        transport.open();
 
                     cassandraClient = new Cassandra.Client(new TBinaryProtocol(transport));
                     monitor.incConnectionCreated(getHost());

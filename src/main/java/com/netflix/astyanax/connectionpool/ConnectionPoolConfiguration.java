@@ -276,4 +276,32 @@ public interface ConnectionPoolConfiguration {
      * @return
      */
     Partitioner getPartitioner();
+
+    // ssl values
+
+    /**
+     * Declares if connections should be made using SSL.
+     */
+    boolean isUsingSsl();
+
+    /**
+     * SSL protocol (typically, TLS)
+     */
+    String getSslProtocol();
+
+    /**
+     * The SSL ciphers to use. Common examples, often default, are
+     * TLS_RSA_WITH_AES_128_CBC_SHA and TLS_RSA_WITH_AES_256_CBC_SHA
+     */
+    List<String> getSslCipherSuites();
+
+    /**
+     * path to SSL truststore
+     */
+    String getSslTruststore();
+
+    /**
+     * password to SSL truststore
+     */
+    String getSslTruststorePassword();
 }

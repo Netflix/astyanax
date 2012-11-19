@@ -128,7 +128,8 @@ public abstract class AbstractIndexQueryImpl<K, C> implements IndexQuery<K, C> {
         indexClause.setStart_key(byteBuffer);
         if (firstPage) {
             firstPage = false;
-            indexClause.setCount(indexClause.getCount() + 1);
+            if (indexClause.getCount() != Integer.MAX_VALUE)
+                indexClause.setCount(indexClause.getCount() + 1);
         }
     }
 

@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax.recipes.uniqueness;
 
+import com.google.common.base.Function;
 import com.netflix.astyanax.MutationBatch;
 
 public interface UniquenessConstraint {
@@ -37,10 +38,22 @@ public interface UniquenessConstraint {
 
     /**
      * Acquire the uniqueness constraint and apply the final mutation if the 
-     * row if found to be unique
+     * row is found to be unique
      * @param mutation
      * @throws NotUniqueException
      * @throws Exception
+     * 
+     * @deprecated This method doesn't actually work because the MutationBatch timestamp being behind
      */
+    @Deprecated
     void acquireAndMutate(MutationBatch mutation) throws NotUniqueException, Exception;
+
+    /**
+     * Acquire the uniqueness constraint and call the mutate callback to fill a mutation.
+     * 
+     * @param callback
+     * @throws NotUniqueException
+     * @throws Exception
+     */
+    void acquireAndApplyMutation(Function<MutationBatch, Boolean> callback) throws NotUniqueException, Exception;
 }

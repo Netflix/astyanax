@@ -144,4 +144,16 @@ public class TestHostConnectionPool implements HostConnectionPool<TestClient> {
         return 0;
     }
 
+    @Override
+    public boolean isActive() {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
+    @Override
+    public boolean isShutdown() {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
 }

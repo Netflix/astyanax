@@ -49,6 +49,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.KeyspaceTracerFactory;
@@ -73,6 +74,7 @@ import com.netflix.astyanax.query.ColumnQuery;
 import com.netflix.astyanax.query.CqlQuery;
 import com.netflix.astyanax.query.IndexQuery;
 import com.netflix.astyanax.query.RowQuery;
+import com.netflix.astyanax.query.RowSliceColumnCountQuery;
 import com.netflix.astyanax.query.RowSliceQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.serializers.StringSerializer;
@@ -217,7 +219,8 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                     // that will later be dropped
                                     if (firstPage) {
                                         firstPage = false;
-                                        predicate.getSlice_range().setCount(predicate.getSlice_range().getCount() + 1);
+                                        if (predicate.getSlice_range().getCount() != Integer.MAX_VALUE)
+                                            predicate.getSlice_range().setCount(predicate.getSlice_range().getCount() + 1);
                                     }
                                     else {
                                         if (!columnList.isEmpty())
@@ -432,6 +435,11 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                     }
                 });
             }
+
+            @Override
+            public RowSliceColumnCountQuery<K> getColumnCounts() {
+                throw new RuntimeException("Not supported yet");
+            }
         };
     }
     
@@ -458,13 +466,6 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                             columnFamily.getColumnSerializer());
                                 }
                             }
-
-                            @Override
-                            public ByteBuffer getRowKey() {
-                                // / return
-                                // partitioner.getToken(columnFamily.getKeySerializer().toByteBuffer(keys.iterator().next())).token;
-                                return null;
-                            }
                         }, retry);
             }
 
@@ -476,6 +477,44 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                         return execute();
                     }
                 });
+            }
+
+            @Override
+            public RowSliceColumnCountQuery<K> getColumnCounts() {
+                return new RowSliceColumnCountQuery<K>() {
+                    @Override
+                    public OperationResult<Map<K, Integer>> execute() throws ConnectionException {
+                        return connectionPool.executeWithFailover(
+                                new AbstractKeyspaceOperationImpl<Map<K, Integer>>(tracerFactory.newTracer(
+                                        CassandraOperationType.GET_ROWS_SLICE, columnFamily), pinnedHost, keyspace
+                                        .getKeyspaceName()) {
+                                    @Override
+                                    public Map<K, Integer> internalExecute(Client client) throws Exception {
+                                        Map<ByteBuffer, Integer> cfmap = client.multiget_count(
+                                                columnFamily.getKeySerializer().toBytesList(keys), 
+                                                new ColumnParent().setColumn_family(columnFamily.getName()), 
+                                                predicate, 
+                                                ThriftConverter.ToThriftConsistencyLevel(consistencyLevel));
+                                        if (cfmap == null || cfmap.isEmpty()) {
+                                            return Maps.newHashMap();
+                                        }
+                                        else {
+                                            return columnFamily.getKeySerializer().fromBytesMap(cfmap);
+                                        }
+                                    }
+                                }, retry);
+                    }
+
+                    @Override
+                    public Future<OperationResult<Map<K, Integer>>> executeAsync() throws ConnectionException {
+                        return executor.submit(new Callable<OperationResult<Map<K, Integer>>>() {
+                            @Override
+                            public OperationResult<Map<K, Integer>> call() throws Exception {
+                                return execute();
+                            }
+                        });
+                    }
+                };
             }
         };
     }
@@ -526,6 +565,50 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                         return execute();
                     }
                 });
+            }
+
+            @Override
+            public RowSliceColumnCountQuery<K> getColumnCounts() {
+                return new RowSliceColumnCountQuery<K>() {
+                    @Override
+                    public OperationResult<Map<K, Integer>> execute() throws ConnectionException {
+                        return connectionPool.executeWithFailover(
+                                new AbstractKeyspaceOperationImpl<Map<K, Integer>>(tracerFactory.newTracer(
+                                        CassandraOperationType.GET_ROWS_SLICE, columnFamily), pinnedHost, keyspace
+                                        .getKeyspaceName()) {
+                                    @Override
+                                    public Map<K, Integer> internalExecute(Client client) throws Exception {
+                                        Map<ByteBuffer, Integer> cfmap = client.multiget_count(columnFamily
+                                                .getKeySerializer().toBytesList(keys), new ColumnParent()
+                                                .setColumn_family(columnFamily.getName()), predicate, ThriftConverter
+                                                .ToThriftConsistencyLevel(consistencyLevel));
+                                        if (cfmap == null || cfmap.isEmpty()) {
+                                            return Maps.newHashMap();
+                                        }
+                                        else {
+                                            return columnFamily.getKeySerializer().fromBytesMap(cfmap);
+                                        }
+                                    }
+
+                                    @Override
+                                    public ByteBuffer getRowKey() {
+                                        // / return
+                                        // partitioner.getToken(columnFamily.getKeySerializer().toByteBuffer(keys.iterator().next())).token;
+                                        return null;
+                                    }
+                                }, retry);
+                    }
+
+                    @Override
+                    public Future<OperationResult<Map<K, Integer>>> executeAsync() throws ConnectionException {
+                        return executor.submit(new Callable<OperationResult<Map<K, Integer>>>() {
+                            @Override
+                            public OperationResult<Map<K, Integer>> call() throws Exception {
+                                return execute();
+                            }
+                        });
+                    }
+                };
             }
         };
     }

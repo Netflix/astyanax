@@ -187,4 +187,10 @@ public class TestKeyspace implements Keyspace {
         // TODO Auto-generated method stub
         return null;
     }
+
+    @Override
+    public <K, C> OperationResult<SchemaChangeResult> createColumnFamily(Map<String, Object> options) throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
 }

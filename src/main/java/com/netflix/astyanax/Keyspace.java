@@ -204,6 +204,14 @@ public interface Keyspace {
     <K, C>  OperationResult<SchemaChangeResult> createColumnFamily(ColumnFamily<K, C> columnFamily, Map<String, Object> options) throws ConnectionException ;
     
     /**
+     * Create a column family from the provied options
+     * @param options
+     * @return
+     * @throws ConnectionException
+     */
+    <K, C>  OperationResult<SchemaChangeResult> createColumnFamily(Map<String, Object> options) throws ConnectionException ;
+    
+    /**
      * Update the column family in cassandra
      * 
      * @param columnFamily

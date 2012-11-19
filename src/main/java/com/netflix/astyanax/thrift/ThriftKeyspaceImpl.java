@@ -226,17 +226,10 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
     @Override
     public <K, C> ColumnMutation prepareColumnMutation(final ColumnFamily<K, C> columnFamily, final K rowKey, C column) {
-        return new AbstractThriftColumnMutationImpl(columnFamily.getKeySerializer().toByteBuffer(rowKey), columnFamily
-                .getColumnSerializer().toByteBuffer(column), config.getClock()) {
-
-            private RetryPolicy retry = config.getRetryPolicy().duplicate();
-            private ConsistencyLevel writeConsistencyLevel = config.getDefaultWriteConsistencyLevel();
-
-            @Override
-            public ColumnMutation setConsistencyLevel(ConsistencyLevel consistencyLevel) {
-                writeConsistencyLevel = consistencyLevel;
-                return this;
-            }
+        return new AbstractThriftColumnMutationImpl(
+                columnFamily.getKeySerializer().toByteBuffer(rowKey), 
+                columnFamily.getColumnSerializer().toByteBuffer(column), 
+                config) {
 
             @Override
             public Execution<Void> incrementCounterColumn(final long amount) {
@@ -388,12 +381,6 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                     }
                 };
             }
-
-            @Override
-            public ColumnMutation withRetryPolicy(RetryPolicy retry) {
-                this.retry = retry;
-                return this;
-            }
         };
     }
 
@@ -468,6 +455,30 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                         }, config.getRetryPolicy().duplicate()).getResult();
     }
 
+    @Override
+    public <K, C> OperationResult<SchemaChangeResult> createColumnFamily(final Map<String, Object> options) throws ConnectionException {
+        return connectionPool
+                .executeWithFailover(
+                        new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
+                                tracerFactory.newTracer(CassandraOperationType.ADD_COLUMN_FAMILY), getKeyspaceName()) {
+                            @Override
+                            public SchemaChangeResult internalExecute(Client client) throws Exception {
+                                ThriftColumnFamilyDefinitionImpl def = new ThriftColumnFamilyDefinitionImpl();
+                                
+                                Map<String, Object> internalOptions = Maps.newHashMap();
+                                if (options != null)
+                                    internalOptions.putAll(options);
+                                
+                                internalOptions.put("keyspace", getKeyspaceName());
+                                
+                                def.setFields(internalOptions);
+                                
+                                return new SchemaChangeResponseImpl()
+                                    .setSchemaId(client.system_add_column_family(def.getThriftColumnFamilyDefinition()));
+                            }
+                        }, RunOnce.get());
+    }
+    
     @Override
     public <K, C> OperationResult<SchemaChangeResult> createColumnFamily(final ColumnFamily<K, C> columnFamily, final Map<String, Object> options) throws ConnectionException {
         return connectionPool
@@ -613,4 +624,5 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                             }
                         }, RunOnce.get());
     }
+
 }

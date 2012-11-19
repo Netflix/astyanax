@@ -53,6 +53,14 @@ public class EmbeddedCassandra {
         this(createTempDir(), "TestCluster", DEFAULT_PORT, DEFAULT_STORAGE_PORT);
     }
     
+    public EmbeddedCassandra(String dataDir) throws IOException {
+        this(new File(dataDir), "TestCluster", DEFAULT_PORT, DEFAULT_STORAGE_PORT);
+    }
+    
+    public EmbeddedCassandra(File dataDir) throws IOException {
+        this(dataDir, "TestCluster", DEFAULT_PORT, DEFAULT_STORAGE_PORT);
+    }
+    
     private static File createTempDir() {
         File tempDir = Files.createTempDir();
         tempDir.deleteOnExit();
@@ -77,7 +85,7 @@ public class EmbeddedCassandra {
         Files.write(newFile, configFile, Charset.defaultCharset());
         
         LOG.info("Cassandra config file: " + configFile.getPath());
-        System.setProperty("cassandra.config", "file://" + configFile.getPath());
+        System.setProperty("cassandra.config", "file:" + configFile.getPath());
 
         try {
             cassandra = new CassandraDaemon();

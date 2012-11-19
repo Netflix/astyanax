@@ -299,6 +299,8 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
             listener.onHostDown(this);
             monitor .onHostDown(getHost(), reason);
 
+            retryContext.begin();
+            
             try {
                 executor.schedule(new Runnable() {
                     @Override
@@ -311,9 +313,10 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
                             // Created a new connection successfully.
                             try {
                                 retryContext.success();
-                                isReconnecting.set(false);
-                                monitor .onHostReactivated(host, SimpleHostConnectionPool.this);
-                                listener.onHostUp(SimpleHostConnectionPool.this);
+                                if (isReconnecting.compareAndSet(true, false)) {
+                                    monitor .onHostReactivated(host, SimpleHostConnectionPool.this);
+                                    listener.onHostUp(SimpleHostConnectionPool.this);
+                                }
                             }
                             catch (Throwable t) {
                                 t.printStackTrace();
@@ -439,8 +442,8 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
         return false;
     }
 
-//    @Override
-    private boolean isShutdown() {
+    @Override
+    public boolean isShutdown() {
         return isShutdown.get();
     }
 
@@ -549,5 +552,10 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
                 .append(",pending=").append(getPendingConnectionCount())
                 .append(",score="  ).append(getScore()/1000000)
                 .append("]").toString();
+    }
+
+    @Override
+    public boolean isActive() {
+        return !this.isShutdown.get();
     }
 }

@@ -155,6 +155,11 @@ public interface Column<C> {
      * @return TTL in seconds or 0 if no ttl was set
      */
     int getTtl();
-    
+ 
+    /**
+     * Determine whether the column has a value. 
+     * 
+     * @return  True if column has a value or false if value is null or an empty byte array.
+     */
     boolean hasValue();
 }

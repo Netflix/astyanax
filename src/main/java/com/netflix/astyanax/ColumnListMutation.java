@@ -110,7 +110,7 @@ public interface ColumnListMutation<C> {
     /**
      * The the timestamp for all subsequent column operation in this ColumnListMutation
      * This timestamp does not affect the current timestamp for the entire MutationBatch
-     * @param timestamp
+     * @param timestamp New timestamp in microseconds
      * @return
      */
     ColumnListMutation<C> setTimestamp(long timestamp);
@@ -129,7 +129,7 @@ public interface ColumnListMutation<C> {
      * Set the default TTL to use when null is specified to a column insert. The
      * default TTL is null, which means no TTL.
      * 
-     * @param ttl
+     * @param ttl  Timeout value in seconds
      * @return
      */
     ColumnListMutation<C> setDefaultTtl(Integer ttl);

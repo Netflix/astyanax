@@ -120,12 +120,23 @@ public interface HostConnectionPool<CL> {
     int getBusyConnectionCount();
 
     /**
-     * Determine if pool is shut down.
-     * 
+     * Return true if the pool is marked as down and is trying to reconnect
      * @return
      */
     boolean isReconnecting();
 
+    /**
+     * Return true if the pool is active.
+     * @return
+     */
+    boolean isActive();
+    
+    /**
+     * Return true if the has been shut down and is no longer accepting traffic.
+     * @return
+     */
+    boolean isShutdown();
+    
     /**
      * Return implementation specific score to be used by weighted pool
      * selection algorithms

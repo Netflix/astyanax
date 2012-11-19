@@ -185,7 +185,7 @@ public class ThriftClusterImpl implements Cluster {
         if (keyspace == null) {
             synchronized (this) {
                 Keyspace newKeyspace = new ThriftKeyspaceImpl(ksName, this.connectionPool, this.config, tracerFactory);
-                keyspace = keyspaces.put(ksName, newKeyspace);
+                keyspace = keyspaces.putIfAbsent(ksName, newKeyspace);
                 if (keyspace == null) {
                     keyspace = newKeyspace;
                 }

@@ -63,7 +63,61 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
     private WriteAheadLog       wal;
 
     private Map<ByteBuffer, Map<String, List<Mutation>>> mutationMap = Maps.newLinkedHashMap();
+    private Map<KeyAndColumnFamily, ColumnListMutation<?>> rowLookup = Maps.newHashMap();
+    
+    private static class KeyAndColumnFamily {
+        private final String      columnFamily;
+        private final ByteBuffer  key;
+        
+        public KeyAndColumnFamily(String columnFamily, ByteBuffer key) {
+            this.columnFamily = columnFamily;
+            this.key = key;
+        }
+        
+        public int compareTo(Object obj) {
+            if (obj instanceof KeyAndColumnFamily) {
+                KeyAndColumnFamily other = (KeyAndColumnFamily)obj;
+                int result = columnFamily.compareTo(other.columnFamily);
+                if (result == 0) {
+                    result = key.compareTo(other.key);
+                }
+                return result;
+            }
+            return -1;
+        }
+        
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + ((columnFamily == null) ? 0 : columnFamily.hashCode());
+            result = prime * result + ((key == null) ? 0 : key.hashCode());
+            return result;
+        }
 
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            KeyAndColumnFamily other = (KeyAndColumnFamily) obj;
+            if (columnFamily == null) {
+                if (other.columnFamily != null)
+                    return false;
+            } else if (!columnFamily.equals(other.columnFamily))
+                return false;
+            if (key == null) {
+                if (other.key != null)
+                    return false;
+            } else if (!key.equals(other.key))
+                return false;
+            return true;
+        }
+    }
+    
     public AbstractThriftMutationBatchImpl(Clock clock, ConsistencyLevel consistencyLevel, RetryPolicy retry) {
         this.clock            = clock;
         this.timestamp        = clock.getCurrentTime();
@@ -76,13 +130,33 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
         if (clock != null && mutationMap.isEmpty())
             this.timestamp = clock.getCurrentTime();
 
-        return new ThriftColumnFamilyMutationImpl<C>(timestamp, getColumnFamilyMutationList(columnFamily, rowKey),
-                columnFamily.getColumnSerializer());
+        ByteBuffer bbKey = columnFamily.getKeySerializer().toByteBuffer(rowKey);
+        
+        KeyAndColumnFamily kacf = new KeyAndColumnFamily(columnFamily.getName(), bbKey);
+        ColumnListMutation<C> clm = (ColumnListMutation<C>) rowLookup.get(kacf);
+        if (clm == null) {
+            Map<String, List<Mutation>> innerMutationMap = mutationMap.get(bbKey);
+            if (innerMutationMap == null) {
+                innerMutationMap = Maps.newHashMap();
+                mutationMap.put(bbKey, innerMutationMap);
+            }
+    
+            List<Mutation> innerMutationList = innerMutationMap.get(columnFamily.getName());
+            if (innerMutationList == null) {
+                innerMutationList = Lists.newArrayList();
+                innerMutationMap.put(columnFamily.getName(), innerMutationList);
+            }
+            
+            clm = new ThriftColumnFamilyMutationImpl<C>(timestamp, innerMutationList, columnFamily.getColumnSerializer());
+            rowLookup.put(kacf, clm);
+        }
+        return clm;
     }
 
     @Override
     public void discardMutations() {
-        this.mutationMap = Maps.newHashMap();
+        this.mutationMap.clear();
+        this.rowLookup.clear();
     }
 
     @Override
@@ -178,27 +252,6 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
                         return value.keySet();
                     }
                 });
-    }
-
-    /**
-     * Get or add a column family mutation to this row
-     * 
-     * @param colFamily
-     * @return
-     */
-    private <K, C> List<Mutation> getColumnFamilyMutationList(ColumnFamily<K, C> colFamily, K key) {
-        Map<String, List<Mutation>> innerMutationMap = mutationMap.get(colFamily.getKeySerializer().toByteBuffer(key));
-        if (innerMutationMap == null) {
-            innerMutationMap = Maps.newHashMap();
-            mutationMap.put(colFamily.getKeySerializer().toByteBuffer(key), innerMutationMap);
-        }
-
-        List<Mutation> innerMutationList = innerMutationMap.get(colFamily.getName());
-        if (innerMutationList == null) {
-            innerMutationList = Lists.newArrayList();
-            innerMutationMap.put(colFamily.getName(), innerMutationList);
-        }
-        return innerMutationList;
     }
 
     public Map<ByteBuffer, Map<String, List<Mutation>>> getMutationMap() {

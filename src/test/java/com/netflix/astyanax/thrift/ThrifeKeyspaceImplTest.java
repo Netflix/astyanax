@@ -6,7 +6,9 @@ import java.io.Serializable;
 import java.io.StringReader;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -20,6 +22,7 @@ import junit.framework.Assert;
 import org.apache.cassandra.utils.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,9 +68,18 @@ import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.query.IndexQuery;
 import com.netflix.astyanax.query.PreparedIndexExpression;
 import com.netflix.astyanax.query.RowQuery;
+import com.netflix.astyanax.recipes.UUIDStringSupplier;
+import com.netflix.astyanax.recipes.locks.ColumnPrefixDistributedRowLock;
+import com.netflix.astyanax.recipes.locks.StaleLockException;
 import com.netflix.astyanax.recipes.reader.AllRowsReader;
+import com.netflix.astyanax.recipes.scheduler.TaskScheduler;
+import com.netflix.astyanax.recipes.scheduler.ShardedDistributedScheduler;
+import com.netflix.astyanax.recipes.scheduler.Task;
+import com.netflix.astyanax.recipes.uniqueness.ColumnPrefixUniquenessConstraint;
 import com.netflix.astyanax.recipes.uniqueness.DedicatedMultiRowUniquenessConstraint;
+import com.netflix.astyanax.recipes.uniqueness.MultiRowUniquenessConstraint;
 import com.netflix.astyanax.recipes.uniqueness.NotUniqueException;
+import com.netflix.astyanax.recipes.uniqueness.RowUniquenessConstraint;
 import com.netflix.astyanax.retry.ExponentialBackoff;
 import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
@@ -99,6 +111,7 @@ public class ThrifeKeyspaceImplTest {
 
     private static String TEST_CLUSTER_NAME  = "cass_sandbox";
     private static String TEST_KEYSPACE_NAME = "AstyanaxUnitTests";
+    private static String SCHEDULER_NAME_CF_NAME = "SchedulerQueue";
 
     private static ColumnFamily<String, String> CF_USER_INFO = ColumnFamily.newColumnFamily(
             "Standard1", // Column Family Name
@@ -106,60 +119,92 @@ public class ThrifeKeyspaceImplTest {
             StringSerializer.get()); // Column Serializer
 
     private static ColumnFamily<Long, String> CF_USERS = ColumnFamily
-            .newColumnFamily("users", LongSerializer.get(),
+            .newColumnFamily(
+                    "users", 
+                    LongSerializer.get(),
                     StringSerializer.get());
 
     public static ColumnFamily<String, String> CF_STANDARD1 = ColumnFamily
-            .newColumnFamily("Standard1", StringSerializer.get(),
+            .newColumnFamily(
+                    "Standard1", 
+                    StringSerializer.get(),
                     StringSerializer.get());
 
     public static ColumnFamily<String, Long> CF_LONGCOLUMN = ColumnFamily
-            .newColumnFamily("LongColumn1", StringSerializer.get(),
+            .newColumnFamily(
+                    "LongColumn1", 
+                    StringSerializer.get(),
                     LongSerializer.get());
 
     public static ColumnFamily<String, String> CF_STANDARD2 = ColumnFamily
-            .newColumnFamily("Standard2", StringSerializer.get(),
+            .newColumnFamily(
+                    "Standard2", 
+                    StringSerializer.get(),
                     StringSerializer.get());
 
     public static ColumnFamily<String, String> CF_COUNTER1 = ColumnFamily
-            .newColumnFamily("Counter1", StringSerializer.get(),
+            .newColumnFamily(
+                    "Counter1", 
+                    StringSerializer.get(),
                     StringSerializer.get());
 
     public static ColumnFamily<String, String> CF_NOT_DEFINED = ColumnFamily
-            .newColumnFamily("NotDefined", StringSerializer.get(),
+            .newColumnFamily(
+                    "NotDefined", 
+                    StringSerializer.get(),
                     StringSerializer.get());
 
     public static ColumnFamily<String, String> CF_EMPTY = ColumnFamily
-            .newColumnFamily("NotDefined", StringSerializer.get(),
+            .newColumnFamily(
+                    "NotDefined", 
+                    StringSerializer.get(),
                     StringSerializer.get());
 
     public static AnnotatedCompositeSerializer<MockCompositeType> M_SERIALIZER = new AnnotatedCompositeSerializer<MockCompositeType>(
             MockCompositeType.class);
     
     public static ColumnFamily<String, MockCompositeType> CF_COMPOSITE = ColumnFamily
-            .newColumnFamily("CompositeColumn", StringSerializer.get(),
+            .newColumnFamily(
+                    "CompositeColumn", 
+                    StringSerializer.get(),
                     M_SERIALIZER);
 
     public static ColumnFamily<ByteBuffer, ByteBuffer> CF_COMPOSITE_CSV = ColumnFamily
-            .newColumnFamily("CompositeCsv", ByteBufferSerializer.get(),
+            .newColumnFamily(
+                    "CompositeCsv", 
+                    ByteBufferSerializer.get(),
                     ByteBufferSerializer.get());
 
     public static ColumnFamily<MockCompositeType, String> CF_COMPOSITE_KEY = ColumnFamily
-            .newColumnFamily("CompositeKey",
-                    M_SERIALIZER, StringSerializer.get());
+            .newColumnFamily(
+                    "CompositeKey",
+                    M_SERIALIZER, 
+                    StringSerializer.get());
 
     public static ColumnFamily<String, UUID> CF_TIME_UUID = ColumnFamily
-            .newColumnFamily("TimeUUID1", StringSerializer.get(),
+            .newColumnFamily(
+                    "TimeUUID1", 
+                    StringSerializer.get(),
                     TimeUUIDSerializer.get());
 
     public static ColumnFamily<String, UUID> CF_USER_UNIQUE_UUID = ColumnFamily
-            .newColumnFamily("UserUniqueUUID", StringSerializer.get(),
+            .newColumnFamily(
+                    "UserUniqueUUID", 
+                    StringSerializer.get(),
                     TimeUUIDSerializer.get());
     
     public static ColumnFamily<String, UUID> CF_EMAIL_UNIQUE_UUID = ColumnFamily
-            .newColumnFamily("EmailUniqueUUID", StringSerializer.get(),
+            .newColumnFamily(
+                    "EmailUniqueUUID", 
+                    StringSerializer.get(),
                     TimeUUIDSerializer.get());
     
+    private static ColumnFamily<String, String> UNIQUE_CF = ColumnFamily
+            .newColumnFamily(
+                    "UniqueCf", 
+                    StringSerializer.get(), 
+                    StringSerializer.get());
+
     public static AnnotatedCompositeSerializer<SessionEvent> SE_SERIALIZER = new AnnotatedCompositeSerializer<SessionEvent>(
             SessionEvent.class);
 
@@ -167,9 +212,17 @@ public class ThrifeKeyspaceImplTest {
             .newColumnFamily("ClickStream", StringSerializer.get(),
                     SE_SERIALIZER);
 
+    private static ColumnFamily<String, String> LOCK_CF_LONG   = 
+            ColumnFamily.newColumnFamily("LockCfLong", StringSerializer.get(), StringSerializer.get(), LongSerializer.get());
+    
+    private static ColumnFamily<String, String> LOCK_CF_STRING = 
+            ColumnFamily.newColumnFamily("LockCfString", StringSerializer.get(), StringSerializer.get(), StringSerializer.get());
+    
     private static final String SEEDS = "localhost:9160";
 
-    private static final long CASSANDRA_WAIT_TIME = 3000;
+    private static final long   CASSANDRA_WAIT_TIME = 3000;
+    private static final int    TTL                 = 20;
+    private static final int    TIMEOUT             = 10;
     
     @BeforeClass
     public static void setup() throws Exception {
@@ -288,6 +341,26 @@ public class ThrifeKeyspaceImplTest {
                         .build())
                      .build());
         
+        keyspace.createColumnFamily(LOCK_CF_LONG, ImmutableMap.<String, Object>builder()
+                .put("default_validation_class", "LongType")
+                .put("key_validation_class",     "UTF8Type")
+                .put("comparator_type",          "UTF8Type")
+                .build());
+        
+        keyspace.createColumnFamily(LOCK_CF_STRING, ImmutableMap.<String, Object>builder()
+                .put("default_validation_class", "UTF8Type")
+                .put("key_validation_class",     "UTF8Type")
+                .put("comparator_type",          "UTF8Type")
+                .build());
+        
+        keyspace.createColumnFamily(ImmutableMap.<String, Object>builder()
+                .put("name",                     SCHEDULER_NAME_CF_NAME)
+                .put("key_validation_class",     "UTF8Type")
+                .put("comparator_type",          "CompositeType(BytesType, TimeUUIDType, BytesType, UTF8Type)")
+                .build());
+
+        keyspace.createColumnFamily(UNIQUE_CF, null);
+        
         KeyspaceDefinition ki = keyspaceContext.getEntity().describeKeyspace();
         System.out.println("Describe Keyspace: " + ki.getName());
 
@@ -348,10 +421,11 @@ public class ThrifeKeyspaceImplTest {
             result = m.execute();
 
             m.withRow(CF_USER_INFO, "acct1234")
-            .putColumn("firstname", "john", null)
-            .putColumn("lastname", "smith", null)
-            .putColumn("address", "555 Elm St", null)
-            .putColumn("age", 30, null);
+                .putColumn("firstname", "john", null)
+                .putColumn("lastname", "smith", null)
+                .putColumn("address", "555 Elm St", null)
+                .putColumn("age", 30, null)
+                .putEmptyColumn("empty");
 
             m.execute();
 
@@ -361,6 +435,18 @@ public class ThrifeKeyspaceImplTest {
         }
     }
 
+    @Test
+    public void testHasValue() throws Exception {
+        ColumnList<String> response = keyspace.prepareQuery(CF_USER_INFO).getRow("acct1234").execute().getResult();
+        Assert.assertEquals("firstname", response.getColumnByName("firstname").getName());
+        Assert.assertEquals("firstname", response.getColumnByName("firstname").getName());
+        Assert.assertEquals("john", response.getColumnByName("firstname").getStringValue());
+        Assert.assertEquals("john", response.getColumnByName("firstname").getStringValue());
+        Assert.assertEquals(true,  response.getColumnByName("firstname").hasValue());
+        Assert.assertEquals(false, response.getColumnByName("empty").hasValue());
+        
+    }
+    
     @Test
     public void getKeyspaceDefinition() throws Exception {
         KeyspaceDefinition def = keyspaceContext.getEntity().describeKeyspace();
@@ -1159,6 +1245,22 @@ public class ThrifeKeyspaceImplTest {
     }
 
     @Test
+    public void testMutationBatchMultipleWithRow() throws Exception {
+        MutationBatch mb = keyspace.prepareMutationBatch();
+        
+        Long key = 9L;
+        
+        mb.withRow(CF_USERS, key).delete();
+        mb.withRow(CF_USERS, key).putEmptyColumn("test", null);
+        
+        mb.execute();
+        
+        ColumnList<String> result = keyspace.prepareQuery(CF_USERS).getRow(key).execute().getResult();
+        
+        Assert.assertEquals(1, result.size());
+    }
+    
+    @Test
     public void testClickStream() {
         MutationBatch m = keyspace.prepareMutationBatch();
         String userId = "UserId";
@@ -1611,13 +1713,27 @@ public class ThrifeKeyspaceImplTest {
                     .prepareQuery(CF_STANDARD1)
                     .withCql("SELECT * FROM Standard1;").execute();
             Assert.assertTrue(result.getResult().hasRows());
-            Assert.assertTrue(result.getResult().getRows().size() > 0);
+            Assert.assertEquals(30, result.getResult().getRows().size());
             Assert.assertFalse(result.getResult().hasNumber());
-
-            /*
-             * for (Row<String, String> row : result.getResult()) {
-             * LOG.info("KEY***: " + row.getKey()); }
-             */
+            
+            Row<String, String> row;
+            
+            row = result.getResult().getRows().getRow("A");
+            Assert.assertEquals("A", row.getKey());
+            
+            row = result.getResult().getRows().getRow("B");
+            Assert.assertEquals("B", row.getKey());
+            
+            row = result.getResult().getRows().getRow("NonExistent");
+            Assert.assertNull(row);
+            
+            row = result.getResult().getRows().getRowByIndex(10);
+            Assert.assertEquals("I", row.getKey());
+            
+            for (Row<String, String> row1 : result.getResult().getRows()) {
+              LOG.info("KEY***: " + row1.getKey()); 
+            }
+            
         } catch (ConnectionException e) {
             LOG.error(e.getMessage(), e);
             Assert.fail();
@@ -1877,7 +1993,21 @@ public class ThrifeKeyspaceImplTest {
                     .getKeySlice(keys.toArray(new String[keys.size()]))
                     .execute();
 
-            Assert.assertTrue(result.getResult().size() > 0);
+            Assert.assertEquals(26,  result.getResult().size());
+            
+            Row<String, String> row;
+            
+            row = result.getResult().getRow("A");
+            Assert.assertEquals("A", row.getKey());
+            
+            row = result.getResult().getRow("B");
+            Assert.assertEquals("B", row.getKey());
+            
+            row = result.getResult().getRow("NonExistent");
+            Assert.assertNull(row);
+            
+            row = result.getResult().getRowByIndex(10);
+            Assert.assertEquals("M", row.getKey());
             /*
              * LOG.info("Get " + result.getResult().size() + " keys"); for
              * (Row<String, String> row : result.getResult()) {
@@ -1944,6 +2074,19 @@ public class ThrifeKeyspaceImplTest {
             // System.out.println("  Column: " + column.getName());
             // }
             // }
+            
+            OperationResult<Map<String, Integer>> counts = keyspace
+                .prepareQuery(CF_STANDARD1)
+                .getKeySlice(keys.toArray(new String[keys.size()]))
+                .getColumnCounts()
+                .execute();
+                        
+            Assert.assertEquals(26, counts.getResult().size());
+            
+            for (Entry<String, Integer> count : counts.getResult().entrySet()) {
+                Assert.assertEquals(new Integer(28), count.getValue());
+            }
+            
         } catch (ConnectionException e) {
             LOG.error(e.getMessage(), e);
             Assert.fail();
@@ -1951,7 +2094,7 @@ public class ThrifeKeyspaceImplTest {
 
         LOG.info("Starting testGetAllKeysPath...");
     }
-
+    
     @Test
     public void testDeleteMultipleKeys() {
         LOG.info("Starting testDeleteMultipleKeys...");
@@ -2454,6 +2597,506 @@ public class ThrifeKeyspaceImplTest {
         } catch (ConnectionException e) {
             LOG.info(e.getMessage());
         }
+    }
+    
+    @Test
+    public void testTtl() throws Exception {
+        ColumnPrefixDistributedRowLock<String> lock = 
+            new ColumnPrefixDistributedRowLock<String>(keyspace, LOCK_CF_LONG, "testTtl")
+                .withTtl(2)
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                .expireLockAfter(1,  TimeUnit.SECONDS);
+        
+        try {
+            lock.acquire();
+            Assert.assertEquals(1, lock.readLockColumns().size());
+            Thread.sleep(3000);
+            Assert.assertEquals(0, lock.readLockColumns().size());
+        }
+        catch (Exception e) {
+            Assert.fail(e.getMessage());
+        }
+        finally {
+            lock.release();
+        }    
+        Assert.assertEquals(0, lock.readLockColumns().size());
+    }
+    
+    @Test
+    public void testTtlString() throws Exception {
+        ColumnPrefixDistributedRowLock<String> lock = 
+            new ColumnPrefixDistributedRowLock<String>(keyspace, LOCK_CF_STRING, "testTtl")
+                .withTtl(2)
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                .expireLockAfter(1,  TimeUnit.SECONDS);
+        
+        try {
+            lock.acquire();
+            Assert.assertEquals(1, lock.readLockColumns().size());
+            Thread.sleep(3000);
+            Assert.assertEquals(0, lock.readLockColumns().size());
+        }
+        catch (Exception e) {
+            Assert.fail(e.getMessage());
+        }
+        finally {
+            lock.release();
+        }    
+        Assert.assertEquals(0, lock.readLockColumns().size());
+    }
+    
+    @Test
+    public void testStaleLockWithFail() throws Exception {
+        ColumnPrefixDistributedRowLock<String> lock1 = 
+            new ColumnPrefixDistributedRowLock<String>(keyspace, LOCK_CF_LONG, "testStaleLock")
+                .withTtl(TTL)
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                .expireLockAfter(1, TimeUnit.SECONDS);
+        
+        ColumnPrefixDistributedRowLock<String> lock2 = 
+            new ColumnPrefixDistributedRowLock<String>(keyspace, LOCK_CF_LONG, "testStaleLock")
+                .withTtl(TTL)
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                .expireLockAfter(9,  TimeUnit.SECONDS);
+        
+        try {
+            lock1.acquire();
+            Thread.sleep(5000);
+            try {
+                lock2.acquire();
+            }
+            catch (Exception e) {
+                Assert.fail(e.getMessage());
+            }
+            finally {
+                lock2.release();
+            }
+        }
+        catch (Exception e) {
+            Assert.fail(e.getMessage());
+        }
+        finally {
+            lock1.release();
+        }
+    }
+    
+    @Test
+    public void testStaleLockWithFail_String() throws Exception {
+        ColumnPrefixDistributedRowLock<String> lock1 = 
+            new ColumnPrefixDistributedRowLock<String>(keyspace, LOCK_CF_STRING, "testStaleLock")
+                .withTtl(TTL)
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                .expireLockAfter(1, TimeUnit.SECONDS);
+        
+        ColumnPrefixDistributedRowLock<String> lock2 = 
+            new ColumnPrefixDistributedRowLock<String>(keyspace, LOCK_CF_STRING, "testStaleLock")
+                .withTtl(TTL)
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                .expireLockAfter(9,  TimeUnit.SECONDS);
+        
+        try {
+            lock1.acquire();
+            Thread.sleep(5000);
+            try {
+                lock2.acquire();
+            }
+            catch (Exception e) {
+                Assert.fail(e.getMessage());
+            }
+            finally {
+                lock2.release();
+            }
+        }
+        catch (Exception e) {
+            Assert.fail(e.getMessage());
+        }
+        finally {
+            lock1.release();
+        }
+    }
+    
+    @Test
+    public void testStaleLock() throws Exception {
+        ColumnPrefixDistributedRowLock<String> lock1 = 
+            new ColumnPrefixDistributedRowLock<String>(keyspace, LOCK_CF_LONG, "testStaleLock")
+                .withTtl(TTL)
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                .expireLockAfter(1, TimeUnit.SECONDS);
+        
+        ColumnPrefixDistributedRowLock<String> lock2 = 
+            new ColumnPrefixDistributedRowLock<String>(keyspace, LOCK_CF_LONG, "testStaleLock")
+                .failOnStaleLock(true)
+                .withTtl(TTL)
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                .expireLockAfter(9, TimeUnit.SECONDS);
+        
+        try {
+            lock1.acquire();
+            Thread.sleep(2000);
+            try {
+                lock2.acquire();
+                Assert.fail();
+            }
+            catch (StaleLockException e) {
+            }
+            catch (Exception e) {
+                Assert.fail(e.getMessage());
+            }
+            finally {
+                lock2.release();
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            Assert.fail(e.getMessage());
+        }
+        finally {
+            lock1.release();
+        }
+    }
+    
+    @Test
+    public void testStaleLock_String() throws Exception {
+        ColumnPrefixDistributedRowLock<String> lock1 = 
+            new ColumnPrefixDistributedRowLock<String>(keyspace, LOCK_CF_STRING, "testStaleLock")
+                .withTtl(TTL)
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                .expireLockAfter(1, TimeUnit.SECONDS);
+        
+        ColumnPrefixDistributedRowLock<String> lock2 = 
+            new ColumnPrefixDistributedRowLock<String>(keyspace, LOCK_CF_STRING, "testStaleLock")
+                .failOnStaleLock(true)
+                .withTtl(TTL)
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                .expireLockAfter(9, TimeUnit.SECONDS);
+        
+        try {
+            lock1.acquire();
+            Thread.sleep(2000);
+            try {
+                lock2.acquire();
+                Assert.fail();
+            }
+            catch (StaleLockException e) {
+            }
+            catch (Exception e) {
+                Assert.fail(e.getMessage());
+            }
+            finally {
+                lock2.release();
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            Assert.fail(e.getMessage());
+        }
+        finally {
+            lock1.release();
+        }
+    }
+    
+    @Test
+    public void testMultiLock() {
+        MultiRowUniquenessConstraint unique = new MultiRowUniquenessConstraint(keyspace)
+            .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+            .withTtl(60)
+            .withLockId("abc")
+            .withColumnPrefix("prefix_")
+            .withRow(UNIQUE_CF, "testMultiLock_A")
+            .withRow(UNIQUE_CF, "testMultiLock_B");
+        
+        ColumnPrefixUniquenessConstraint<String> singleUnique 
+            = new ColumnPrefixUniquenessConstraint<String>(keyspace, UNIQUE_CF, "testMultiLock_A")
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                .withPrefix("prefix_");
+        try {
+            unique.acquire();
+            String uniqueColumn = singleUnique.readUniqueColumn();
+            Assert.assertEquals("abc", uniqueColumn);
+            LOG.info("UniqueColumn: " + uniqueColumn);
+        }
+        catch (Exception e) {
+            Assert.fail(e.getMessage());
+        }
+        
+        MultiRowUniquenessConstraint unique2 = new MultiRowUniquenessConstraint(keyspace)
+            .withTtl(60)
+            .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+            .withColumnPrefix("prefix_")
+            .withRow(UNIQUE_CF, "testMultiLock_B");
+        try {
+            unique2.acquire();
+            Assert.fail();
+        }
+        catch (Exception e) {
+            LOG.info(e.getMessage());
+        }
+        
+        try {
+            Assert.assertEquals("abc", singleUnique.readUniqueColumn());
+            unique.release();
+        }
+        catch (Exception e) {
+            LOG.error(e.getMessage());
+            Assert.fail();
+        }
+        
+        try {
+            unique2.acquire();
+        }
+        catch (Exception e) {
+            LOG.error(e.getMessage());
+            Assert.fail();
+        }
+        
+        try {
+            unique2.release();
+        } catch (Exception e) {
+            LOG.error(e.getMessage());
+            Assert.fail();
+        }
+    }
+    
+    @Test
+    public void testRowUniquenessConstraint() throws Exception {
+        RowUniquenessConstraint<String, String> unique = new RowUniquenessConstraint<String, String>
+                (keyspace, UNIQUE_CF, "testRowUniquenessConstraint", UUIDStringSupplier.getInstance())
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                ;
+        RowUniquenessConstraint<String, String> unique2 = new RowUniquenessConstraint<String, String>
+                (keyspace, UNIQUE_CF, "testRowUniquenessConstraint", UUIDStringSupplier.getInstance())
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                ;
+        
+        try {
+            unique.withData("abc").acquire();
+            try {
+                unique2.acquire();
+                Assert.fail();
+            }
+            catch (Exception e) {
+                LOG.info(e.getMessage());
+            }
+            
+            String data = unique.readDataAsString();
+            Assert.assertNotNull(data);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            Assert.fail(e.getMessage());
+            LOG.error(e.getMessage());
+        }
+        finally {
+            unique.release();
+        }
+        
+        try {
+            String data = unique.readDataAsString();
+            Assert.fail();
+        }
+        catch (Exception e) {
+            LOG.info("", e);
+        }
+    }
+
+    @Test
+    public void testPrefixUniquenessConstraint() throws Exception {
+        ColumnPrefixUniquenessConstraint<String> unique = new ColumnPrefixUniquenessConstraint<String>(
+                keyspace, UNIQUE_CF, "testPrefixUniquenessConstraint")
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                ;
+        ColumnPrefixUniquenessConstraint<String> unique2 = new ColumnPrefixUniquenessConstraint<String>(
+                keyspace, UNIQUE_CF, "testPrefixUniquenessConstraint")
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                ;
+        
+        try {
+            unique.acquire();
+            String column = unique.readUniqueColumn();
+            LOG.info("Unique Column: " + column);
+            
+            try {
+                unique2.acquire();
+                Assert.fail();
+            }
+            catch (Exception e) {
+                
+            }
+        }
+        catch (Exception e) {
+            Assert.fail(e.getMessage());
+            LOG.error(e.getMessage());
+        }
+        finally {
+            unique.release();
+        }
+
+        try {
+            String column = unique.readUniqueColumn();
+            LOG.info(column);
+            Assert.fail();
+        }
+        catch (Exception e) {
+            
+        }
+    }
+
+    @Test
+    public void testPrefixUniquenessConstraintWithColumn() throws Exception {
+        ColumnPrefixUniquenessConstraint<String> unique = new ColumnPrefixUniquenessConstraint<String>(
+                keyspace, UNIQUE_CF, "testPrefixUniquenessConstraintWithColumn")
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                .withUniqueId("abc");
+        ColumnPrefixUniquenessConstraint<String> unique2 = new ColumnPrefixUniquenessConstraint<String>(
+                keyspace, UNIQUE_CF, "testPrefixUniquenessConstraintWithColumn")
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                .withUniqueId("def");
+        
+        try {
+            unique.acquire();
+            
+            String column = unique.readUniqueColumn();
+            LOG.info("Unique Column: " + column);
+            Assert.assertEquals("abc", column);
+            
+            try {
+                unique2.acquire();
+                Assert.fail();
+            }
+            catch (Exception e) {
+                
+            }
+            
+            column = unique.readUniqueColumn();
+            LOG.info("Unique Column: " + column);
+            Assert.assertEquals("abc", column);
+            
+        }
+        catch (Exception e) {
+            Assert.fail(e.getMessage());
+            LOG.error(e.getMessage());
+        }
+        finally {
+            unique.release();
+        }
+    }
+    
+    @Test 
+    public void testAcquireAndMutate() throws Exception {
+        final String row        = "testAcquireAndMutate";
+        final String dataColumn = "data";
+        final String value      = "test";
+        
+        ColumnPrefixUniquenessConstraint<String> unique = new ColumnPrefixUniquenessConstraint<String>(
+                keyspace, UNIQUE_CF, row)
+                .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                .withUniqueId("def");
+        
+        try {
+            unique.acquireAndApplyMutation(new Function<MutationBatch, Boolean>() {
+                @Override
+                public Boolean apply(@Nullable MutationBatch m) {
+                    m.withRow(UNIQUE_CF, row)
+                        .putColumn(dataColumn, value, null);
+                    return true;
+                }
+            });
+            String column = unique.readUniqueColumn();
+            Assert.assertNotNull(column);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            LOG.error("", e);
+            Assert.fail();
+        }
+        finally {
+        }
+        
+        ColumnList<String> columns = keyspace.prepareQuery(UNIQUE_CF).getKey(row).execute().getResult();
+        Assert.assertEquals(2, columns.size());
+        Assert.assertEquals(value, columns.getStringValue(dataColumn, null));
+        
+        unique.release();
+        
+        columns = keyspace.prepareQuery(UNIQUE_CF).getKey(row).execute().getResult();
+        Assert.assertEquals(1, columns.size());
+        Assert.assertEquals(value, columns.getStringValue(dataColumn, null));
+    }
+    
+    @Test
+    @Ignore
+    public void testScheduler() throws Exception {
+        ExecutorService executor = Executors.newFixedThreadPool(10);
+        
+        final AtomicLong counter = new AtomicLong(0);
+        final int max_count = 100;
+
+        final TaskScheduler producer = new ShardedDistributedScheduler.Builder()
+            .withColumnFamily(SCHEDULER_NAME_CF_NAME)
+            .withKeyspace(keyspace)
+            .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+            .withInstanceId(Integer.toString(11))
+            .build();
+        long tm = System.currentTimeMillis();
+        for (int i = 0; i < max_count; i++) {
+            Thread.sleep(new Random().nextInt(5));
+            producer.scheduleTask(new Task()
+                .setData("TEST_" + i)
+                .setNextTriggerTime(TimeUnit.MICROSECONDS.convert(tm + 1000 * (i-20), TimeUnit.MILLISECONDS)));
+        }
+        
+        for (int i = 0; i < 10; i++) {
+            final int schedulerId = i;
+            
+            Thread.sleep(new Random().nextInt(1000));
+            executor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    Thread.currentThread().setName("Consumer_" + schedulerId);
+                    final TaskScheduler scheduler = new ShardedDistributedScheduler.Builder()
+                        .withColumnFamily(SCHEDULER_NAME_CF_NAME)
+                        .withKeyspace(keyspace)
+                        .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                        .withInstanceId(Integer.toString(schedulerId))
+                        .build();
+                    
+                    while (true) {
+                        LOG.info("----");
+                        Collection<Task> tasks = null;
+                        try {
+                            tasks = scheduler.acquireTasks(4);
+                            for (Task task : tasks) {
+                                LOG.info("Scheduler: " + schedulerId + "  Task: " + task.getTaskId() + "  Data: " + task.getData());
+                            }
+                        } catch (Exception e) {
+                            // TODO Auto-generated catch block
+                            e.printStackTrace();
+                            Assert.fail();
+                        }
+                        finally {
+                            if (tasks != null) {
+                                try {
+                                    scheduler.ackTasks(tasks);
+                                } catch (Exception e) {
+                                    // TODO Auto-generated catch block
+                                    e.printStackTrace();
+                                    Assert.fail();
+                                }
+                            }
+                        }
+                        
+                        try {
+                            Thread.sleep(new Random().nextInt(250));
+                        } catch (InterruptedException e) {
+                            // TODO Auto-generated catch block
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            });
+        }
+        
+        executor.awaitTermination(100,  TimeUnit.SECONDS);
     }
 
     private boolean deleteColumn(ColumnFamily<String, String> cf,

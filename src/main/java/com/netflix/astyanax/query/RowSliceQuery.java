@@ -88,4 +88,10 @@ public interface RowSliceQuery<K, C> extends Execution<Rows<K, C>> {
      * @return
      */
     RowSliceQuery<K, C> withColumnRange(ByteBufferRange range);
+    
+    /**
+     * Get column counts for the slice or range
+     * @return
+     */
+    RowSliceColumnCountQuery<K> getColumnCounts();
 }

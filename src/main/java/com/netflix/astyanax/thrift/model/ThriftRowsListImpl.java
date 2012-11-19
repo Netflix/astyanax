@@ -16,67 +16,47 @@
 package com.netflix.astyanax.thrift.model;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 
 public class ThriftRowsListImpl<K, C> implements Rows<K, C> {
+    private List<Row<K, C>>   rows;
+    private Map<K, Row<K, C>> lookup;
 
-    private Map<ByteBuffer, List<ColumnOrSuperColumn>> rows;
-    private final Serializer<K> keySer;
-    private final Serializer<C> colSer;
+    public ThriftRowsListImpl(Map<ByteBuffer, List<ColumnOrSuperColumn>> rows, Serializer<K> keySer, Serializer<C> colSer) {
+        this.rows   = Lists.newArrayListWithCapacity(rows.size());
+        this.lookup = Maps.newLinkedHashMap();
+        
+        for (Entry<ByteBuffer, List<ColumnOrSuperColumn>> row : rows.entrySet()) {
+            Row<K,C> thriftRow = new ThriftRowImpl<K, C>(
+                    keySer.fromByteBuffer(row.getKey()), 
+                    row.getKey(),
+                    new ThriftColumnOrSuperColumnListImpl<C>(row.getValue(), colSer));
 
-    public ThriftRowsListImpl(Map<ByteBuffer, List<ColumnOrSuperColumn>> rows, Serializer<K> keySer,
-            Serializer<C> colSer) {
-        this.rows = rows;
-        this.keySer = keySer;
-        this.colSer = colSer;
+            this.rows.add(thriftRow);
+            lookup.put(thriftRow.getKey(), thriftRow);
+        }
     }
 
     @Override
     public Iterator<Row<K, C>> iterator() {
-        class IteratorImpl implements Iterator<Row<K, C>> {
-            Iterator<Map.Entry<ByteBuffer, List<ColumnOrSuperColumn>>> base;
-
-            public IteratorImpl(Iterator<Map.Entry<ByteBuffer, List<ColumnOrSuperColumn>>> base) {
-                this.base = base;
-            }
-
-            @Override
-            public boolean hasNext() {
-                return base.hasNext();
-            }
-
-            @Override
-            public Row<K, C> next() {
-                Map.Entry<ByteBuffer, List<ColumnOrSuperColumn>> row = base.next();
-                return new ThriftRowImpl<K, C>(keySer.fromByteBuffer(row.getKey().duplicate()), row.getKey(),
-                        new ThriftColumnOrSuperColumnListImpl<C>(row.getValue(), colSer));
-            }
-
-            @Override
-            public void remove() {
-                throw new UnsupportedOperationException("Iterator is immutable");
-            }
-
-        }
-        return new IteratorImpl(rows.entrySet().iterator());
+        return rows.iterator();
     }
 
     @Override
     public Row<K, C> getRow(K key) {
-        List<ColumnOrSuperColumn> columns = rows.get(keySer.toByteBuffer(key));
-        if (columns == null) {
-            return null;
-        }
-        return new ThriftRowImpl<K, C>(key, keySer.toByteBuffer(key), new ThriftColumnOrSuperColumnListImpl<C>(columns,
-                colSer));
+        return lookup.get(key);
     }
 
     @Override
@@ -91,7 +71,12 @@ public class ThriftRowsListImpl<K, C> implements Rows<K, C> {
 
     @Override
     public Row<K, C> getRowByIndex(int i) {
-        throw new UnsupportedOperationException("RowSlice response is not sorted");
+        return rows.get(i);
+    }
+
+    @Override
+    public Collection<K> getKeys() {
+        return lookup.keySet();
     }
 
 }

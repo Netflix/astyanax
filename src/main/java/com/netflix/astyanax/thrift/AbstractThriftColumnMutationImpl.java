@@ -19,11 +19,14 @@ import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.UUID;
 
+import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.Clock;
 import com.netflix.astyanax.ColumnMutation;
 import com.netflix.astyanax.Execution;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.clock.ConstantClock;
+import com.netflix.astyanax.model.ConsistencyLevel;
+import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.serializers.BooleanSerializer;
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
 import com.netflix.astyanax.serializers.BytesArraySerializer;
@@ -38,12 +41,29 @@ public abstract class AbstractThriftColumnMutationImpl implements ColumnMutation
 
     protected final ByteBuffer key;
     protected final ByteBuffer column;
-    protected Clock      clock;
-    
-    public AbstractThriftColumnMutationImpl(ByteBuffer key, ByteBuffer column, Clock clock) {
-        this.key = key;
+    protected Clock            clock;
+    protected RetryPolicy      retry;
+    protected ConsistencyLevel writeConsistencyLevel;
+
+
+    public AbstractThriftColumnMutationImpl(ByteBuffer key, ByteBuffer column, AstyanaxConfiguration config) {
+        this.key    = key;
         this.column = column;
-        this.clock = clock;
+        this.clock  = config.getClock();
+        this.retry  = config.getRetryPolicy().duplicate();
+        this.writeConsistencyLevel = config.getDefaultWriteConsistencyLevel();
+    }
+
+    @Override
+    public ColumnMutation withRetryPolicy(RetryPolicy retry) {
+        this.retry = retry;
+        return this;
+    }
+    
+    @Override
+    public ColumnMutation setConsistencyLevel(ConsistencyLevel consistencyLevel) {
+        writeConsistencyLevel = consistencyLevel;
+        return this;
     }
 
     @Override

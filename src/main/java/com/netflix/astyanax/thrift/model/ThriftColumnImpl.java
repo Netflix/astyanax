@@ -133,7 +133,7 @@ public class ThriftColumnImpl<C> implements Column<C> {
 
     @Override
     public boolean hasValue() {
-        return column.value != null && column.value.limit() != 0;
+        return column.value != null && column.value.remaining() != 0;
     }
 
 }

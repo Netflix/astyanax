@@ -456,6 +456,30 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     }
 
     @Override
+    public <K, C> OperationResult<SchemaChangeResult> createColumnFamily(final Map<String, Object> options) throws ConnectionException {
+        return connectionPool
+                .executeWithFailover(
+                        new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
+                                tracerFactory.newTracer(CassandraOperationType.ADD_COLUMN_FAMILY), getKeyspaceName()) {
+                            @Override
+                            public SchemaChangeResult internalExecute(Client client) throws Exception {
+                                ThriftColumnFamilyDefinitionImpl def = new ThriftColumnFamilyDefinitionImpl();
+                                
+                                Map<String, Object> internalOptions = Maps.newHashMap();
+                                if (options != null)
+                                    internalOptions.putAll(options);
+                                
+                                internalOptions.put("keyspace", getKeyspaceName());
+                                
+                                def.setFields(internalOptions);
+                                
+                                return new SchemaChangeResponseImpl()
+                                    .setSchemaId(client.system_add_column_family(def.getThriftColumnFamilyDefinition()));
+                            }
+                        }, RunOnce.get());
+    }
+    
+    @Override
     public <K, C> OperationResult<SchemaChangeResult> createColumnFamily(final ColumnFamily<K, C> columnFamily, final Map<String, Object> options) throws ConnectionException {
         return connectionPool
                 .executeWithFailover(
@@ -600,4 +624,5 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                             }
                         }, RunOnce.get());
     }
+
 }

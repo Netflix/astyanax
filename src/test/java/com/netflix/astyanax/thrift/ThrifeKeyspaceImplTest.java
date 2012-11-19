@@ -8,6 +8,7 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -21,6 +22,7 @@ import junit.framework.Assert;
 import org.apache.cassandra.utils.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,6 +72,9 @@ import com.netflix.astyanax.recipes.UUIDStringSupplier;
 import com.netflix.astyanax.recipes.locks.ColumnPrefixDistributedRowLock;
 import com.netflix.astyanax.recipes.locks.StaleLockException;
 import com.netflix.astyanax.recipes.reader.AllRowsReader;
+import com.netflix.astyanax.recipes.scheduler.TaskScheduler;
+import com.netflix.astyanax.recipes.scheduler.ShardedDistributedScheduler;
+import com.netflix.astyanax.recipes.scheduler.Task;
 import com.netflix.astyanax.recipes.uniqueness.ColumnPrefixUniquenessConstraint;
 import com.netflix.astyanax.recipes.uniqueness.DedicatedMultiRowUniquenessConstraint;
 import com.netflix.astyanax.recipes.uniqueness.MultiRowUniquenessConstraint;
@@ -106,6 +111,7 @@ public class ThrifeKeyspaceImplTest {
 
     private static String TEST_CLUSTER_NAME  = "cass_sandbox";
     private static String TEST_KEYSPACE_NAME = "AstyanaxUnitTests";
+    private static String SCHEDULER_NAME_CF_NAME = "SchedulerQueue";
 
     private static ColumnFamily<String, String> CF_USER_INFO = ColumnFamily.newColumnFamily(
             "Standard1", // Column Family Name
@@ -345,6 +351,12 @@ public class ThrifeKeyspaceImplTest {
                 .put("default_validation_class", "UTF8Type")
                 .put("key_validation_class",     "UTF8Type")
                 .put("comparator_type",          "UTF8Type")
+                .build());
+        
+        keyspace.createColumnFamily(ImmutableMap.<String, Object>builder()
+                .put("name",                     SCHEDULER_NAME_CF_NAME)
+                .put("key_validation_class",     "UTF8Type")
+                .put("comparator_type",          "CompositeType(BytesType, TimeUUIDType, BytesType, UTF8Type)")
                 .build());
 
         keyspace.createColumnFamily(UNIQUE_CF, null);
@@ -3009,6 +3021,82 @@ public class ThrifeKeyspaceImplTest {
         columns = keyspace.prepareQuery(UNIQUE_CF).getKey(row).execute().getResult();
         Assert.assertEquals(1, columns.size());
         Assert.assertEquals(value, columns.getStringValue(dataColumn, null));
+    }
+    
+    @Test
+    @Ignore
+    public void testScheduler() throws Exception {
+        ExecutorService executor = Executors.newFixedThreadPool(10);
+        
+        final AtomicLong counter = new AtomicLong(0);
+        final int max_count = 100;
+
+        final TaskScheduler producer = new ShardedDistributedScheduler.Builder()
+            .withColumnFamily(SCHEDULER_NAME_CF_NAME)
+            .withKeyspace(keyspace)
+            .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+            .withInstanceId(Integer.toString(11))
+            .build();
+        long tm = System.currentTimeMillis();
+        for (int i = 0; i < max_count; i++) {
+            Thread.sleep(new Random().nextInt(5));
+            producer.scheduleTask(new Task()
+                .setData("TEST_" + i)
+                .setNextTriggerTime(TimeUnit.MICROSECONDS.convert(tm + 1000 * (i-20), TimeUnit.MILLISECONDS)));
+        }
+        
+        for (int i = 0; i < 10; i++) {
+            final int schedulerId = i;
+            
+            Thread.sleep(new Random().nextInt(1000));
+            executor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    Thread.currentThread().setName("Consumer_" + schedulerId);
+                    final TaskScheduler scheduler = new ShardedDistributedScheduler.Builder()
+                        .withColumnFamily(SCHEDULER_NAME_CF_NAME)
+                        .withKeyspace(keyspace)
+                        .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                        .withInstanceId(Integer.toString(schedulerId))
+                        .build();
+                    
+                    while (true) {
+                        LOG.info("----");
+                        Collection<Task> tasks = null;
+                        try {
+                            tasks = scheduler.acquireTasks(4);
+                            for (Task task : tasks) {
+                                LOG.info("Scheduler: " + schedulerId + "  Task: " + task.getTaskId() + "  Data: " + task.getData());
+                            }
+                        } catch (Exception e) {
+                            // TODO Auto-generated catch block
+                            e.printStackTrace();
+                            Assert.fail();
+                        }
+                        finally {
+                            if (tasks != null) {
+                                try {
+                                    scheduler.ackTasks(tasks);
+                                } catch (Exception e) {
+                                    // TODO Auto-generated catch block
+                                    e.printStackTrace();
+                                    Assert.fail();
+                                }
+                            }
+                        }
+                        
+                        try {
+                            Thread.sleep(new Random().nextInt(250));
+                        } catch (InterruptedException e) {
+                            // TODO Auto-generated catch block
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            });
+        }
+        
+        executor.awaitTermination(100,  TimeUnit.SECONDS);
     }
 
     private boolean deleteColumn(ColumnFamily<String, String> cf,

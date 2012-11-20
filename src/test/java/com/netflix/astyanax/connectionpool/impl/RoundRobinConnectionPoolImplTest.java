@@ -33,6 +33,7 @@ import com.netflix.astyanax.test.TestOperation;
 
 import org.apache.log4j.Logger;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class RoundRobinConnectionPoolImplTest extends BaseConnectionPoolTest {

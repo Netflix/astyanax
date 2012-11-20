@@ -171,6 +171,7 @@ public class RoundRobinConnectionPoolImplTest extends BaseConnectionPoolTest {
     }
 
     @Test
+    @Ignore
     public void testAddingNewHost() {
         CountingConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
 

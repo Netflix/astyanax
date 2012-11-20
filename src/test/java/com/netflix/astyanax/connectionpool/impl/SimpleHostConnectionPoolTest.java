@@ -156,6 +156,36 @@ public class SimpleHostConnectionPoolTest {
     }
 
     @Test
+    public void testFailFirst() throws Exception {
+        Host host = new Host("127.0.0.1", TestHostType.CONNECT_FAIL_FIRST_TWO.ordinal());
+
+        ConnectionPoolConfigurationImpl config = createConfig();
+        config.setRetryBackoffStrategy(new FixedRetryBackoffStrategy(100, 100));
+        CountingConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
+        SimpleHostConnectionPool<TestClient> pool = new SimpleHostConnectionPool<TestClient>(
+                host, new TestConnectionFactory(config, monitor), monitor,
+                config, new NoOpListener());
+
+        try {
+            pool.primeConnections(2);
+            Assert.fail();
+        } catch (InterruptedException e) {
+            LOG.error(e.getMessage());
+        } catch (ConnectionException e) {
+            LOG.error(e.getMessage());
+        }
+        
+        Assert.assertEquals(0,    pool.getActiveConnectionCount());
+        Assert.assertEquals(true, pool.isReconnecting());
+        Assert.assertEquals(0,    pool.getIdleConnectionCount());
+
+        Thread.sleep(1000);
+        
+        Assert.assertEquals(1,     pool.getActiveConnectionCount());
+        Assert.assertEquals(false, pool.isReconnecting());
+    }
+
+    @Test
     public void testShutdown() {
         Host host = new Host("127.0.0.1", TestHostType.GOOD_FAST.ordinal());
 

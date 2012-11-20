@@ -319,17 +319,19 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
                                 }
                             }
                             catch (Throwable t) {
-                                t.printStackTrace();
+//                                t.printStackTrace();
                             }
                             return;
                         }
                         catch (Throwable t) {
                             // Ignore
-                            // t.printStackTrace();
+//                            t.printStackTrace();
                         }
                         
-                        if (!isShutdown())
-                            executor.schedule(this, retryContext.getNextDelay(), TimeUnit.MILLISECONDS);
+                        if (!isShutdown()) {
+                            long delay = retryContext.getNextDelay();
+                            executor.schedule(this, delay, TimeUnit.MILLISECONDS);
+                        }
                     }
                 }, retryContext.getNextDelay(), TimeUnit.MILLISECONDS);
             }
@@ -376,6 +378,9 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
         isReconnecting.set(true);
         isShutdown.set(true);
         discardIdleConnections();
+        
+        config.getLatencyScoreStrategy().removeInstance(this.latencyStrategy);
+        config.getBadHostDetector().removeInstance(this.badHostDetector);
     }
 
     /**

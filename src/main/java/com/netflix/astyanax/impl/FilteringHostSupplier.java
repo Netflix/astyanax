@@ -51,17 +51,17 @@ public class FilteringHostSupplier implements Supplier<List<Host>> {
         // Get a list of hosts from two sources and use the first to filter
         // out hosts from the second
         List<Host> filterList = Lists.newArrayList();
-        List<Host> sourceList;
+        List<Host> sourceList = Lists.newArrayList();
         try {
-            filterList = filterSupplier.get();
             sourceList = sourceSupplier.get();
+            filterList = filterSupplier.get();
         }
         catch (RuntimeException e) {
-            if (filterList != null)
-                return filterList;
+            if (sourceList != null)
+                return sourceList;
             throw e;
         }
-
+        
         // Generate a lookup of all alternate IP addresses for the hosts in the
         // filter list
         final Map<String, Host> lookup = Maps.newHashMap();

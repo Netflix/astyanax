@@ -149,24 +149,25 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
             existingHost.setTokenRanges(host.getTokenRanges());
             return true;
         }
-
-        HostConnectionPool<CL> pool = newHostConnectionPool(host, factory, config);
-        if (null == hosts.putIfAbsent(host, pool)) {
-            try {
-                monitor.onHostAdded(host, pool);
-                if (refresh) {
-                    topology.addPool(pool);
-                    rebuildPartitions();
-                }
-                pool.primeConnections(config.getInitConnsPerHost());
-            }
-            catch (Exception e) {
-                // Ignore, pool will have been marked down internally
-            }
-            return true;
-        }
         else {
-            return false;
+            HostConnectionPool<CL> pool = newHostConnectionPool(host, factory, config);
+            if (null == hosts.putIfAbsent(host, pool)) {
+                try {
+                    monitor.onHostAdded(host, pool);
+                    if (refresh) {
+                        topology.addPool(pool);
+                        rebuildPartitions();
+                    }
+                    pool.primeConnections(config.getInitConnsPerHost());
+                }
+                catch (Exception e) {
+                    // Ignore, pool will have been marked down internally
+                }
+                return true;
+            }
+            else {
+                return false;
+            }
         }
     }
 
@@ -216,6 +217,7 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
 
     @Override
     public synchronized void setHosts(Collection<Host> ring) {
+        
         // Temporary list of hosts to remove. Any host not in the new ring will
         // be removed
         Set<Host> hostsToRemove = Sets.newHashSet(hosts.keySet());
@@ -234,8 +236,10 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
             changed = true;
         }
 
-        if (changed) 
+        if (changed) {
             topology.setPools(hosts.values());
+            rebuildPartitions();
+        }
     }
     
     @Override

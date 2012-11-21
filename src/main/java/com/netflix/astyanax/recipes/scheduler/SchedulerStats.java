@@ -15,4 +15,6 @@ public interface SchedulerStats {
     void incSubmitTaskCount();
     
     void incFinishTaskCount();
+
+    void incInvalidTaskCount();
 }

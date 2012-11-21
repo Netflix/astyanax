@@ -1,6 +1,7 @@
 package com.netflix.astyanax.recipes.scheduler;
 
 import java.util.Collection;
+import java.util.UUID;
 
 import com.netflix.astyanax.recipes.locks.BusyLockException;
 
@@ -26,10 +27,12 @@ import com.netflix.astyanax.recipes.locks.BusyLockException;
 public interface TaskScheduler {
     /**
      * Schedule a job with the provided data
-     * @param data
-     * @throws Exception 
+     * @param task
+     * @return UUID assigned to this task.  This UUID 
+     * 
+     * @throws SchedulerException
      */
-    void scheduleTask(Task task) throws SchedulerException;
+    UUID scheduleTask(Task task) throws SchedulerException;
     
     /**
      * Acquire N items from the queue.  Each item must be released
@@ -67,4 +70,11 @@ public interface TaskScheduler {
      * @throws SchedulerException
      */
     void clearTasks() throws SchedulerException;
+    
+    /**
+     * Create the underlying storage for this scheduler
+     * 
+     * @throws SchedulerException
+     */
+    void createScheduler() throws SchedulerException;
 }

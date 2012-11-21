@@ -10,6 +10,7 @@ public class CountingSchedulerStats implements SchedulerStats {
     private AtomicLong expiredLockCount    = new AtomicLong();
     private AtomicLong releaseTaskCount    = new AtomicLong();
     private AtomicLong submitTaskCount     = new AtomicLong();
+    private AtomicLong invalidTaskCount    = new AtomicLong();
     
     @Override
     public void incEmptyPartitionCount() {
@@ -44,5 +45,10 @@ public class CountingSchedulerStats implements SchedulerStats {
     @Override
     public void incFinishTaskCount() {
         releaseTaskCount.incrementAndGet();
+    }
+
+    @Override
+    public void incInvalidTaskCount() {
+        invalidTaskCount.incrementAndGet();
     }
 }

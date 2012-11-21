@@ -10,12 +10,12 @@ public class SchedulerEntry {
         
     }
     
-    public SchedulerEntry(SchedulerEntryType type, UUID timestamp, SchedulerEntryState state, String instance) {
+    public SchedulerEntry(SchedulerEntryType type, short priority, UUID timestamp, SchedulerEntryState state) {
         super();
         this.type       = (short)type.ordinal();
+        this.priority   = 0;
         this.timestamp  = timestamp;
         this.state      = (short)state.ordinal();
-        this.instance   = instance;
     }
     
     /**
@@ -26,24 +26,21 @@ public class SchedulerEntry {
     @Component(ordinal=0)
     private Short type;
     
+    @Component(ordinal=1)
+    private Short priority;
+    
     /**
      * Time when item is to be processed
      */
-    @Component(ordinal=1)
+    @Component(ordinal=2)
     private UUID timestamp;
     
     /**
      * 
      */
-    @Component(ordinal=2)
+    @Component(ordinal=3)
     private Short state;
     
-    /**
-     * 
-     */
-    @Component(ordinal=3)
-    private String instance;
-
     public SchedulerEntryType getType() {
         return SchedulerEntryType.values()[type];
     }
@@ -56,10 +53,10 @@ public class SchedulerEntry {
         return SchedulerEntryState.values()[state];
     }
 
-    public String getInstance() {
-        return instance;
+    public short getPriority() {
+        return priority;
     }
-
+    
     public void setType(Short type) {
         this.type = type;
     }
@@ -72,8 +69,8 @@ public class SchedulerEntry {
         this.state = state;
     }
 
-    public void setInstance(String instance) {
-        this.instance = instance;
+    public void setPriorty(Short priority) {
+        this.priority = priority;
     }
 
     @Override
@@ -81,7 +78,6 @@ public class SchedulerEntry {
         return "SchedulerEntry [type=" + getType() 
                 + ", timestamp=" + TimeUUIDUtils.getMicrosTimeFromUUID(timestamp) 
                 + ", state="     + getState() 
-                + ", instance="  + instance
                 + "]";
     }
 }

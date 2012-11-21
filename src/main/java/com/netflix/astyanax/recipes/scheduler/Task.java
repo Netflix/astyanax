@@ -132,6 +132,8 @@ public class Task {
     }
 
     public Integer getTimeout() {
+        if (timeout == null)
+            return 0;
         return timeout;
     }
 

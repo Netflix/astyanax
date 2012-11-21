@@ -51,4 +51,16 @@ public class CountingSchedulerStats implements SchedulerStats {
     public void incInvalidTaskCount() {
         invalidTaskCount.incrementAndGet();
     }
+
+    @Override
+    public String toString() {
+        return "CountingSchedulerStats [empty=" + emptyPartitionCount.get() 
+                + ", cont="     + lockContentionCount.get()
+                + ", ok="       + eventProcessCount .get()
+                + ", redo="     + eventReprocessCount.get()
+                + ", exp="      + expiredLockCount .get()
+                + ", rel="      + releaseTaskCount .get()
+                + ", new="      + submitTaskCount .get()
+                + ", invalid="  + invalidTaskCount + "]";
+    }
 }

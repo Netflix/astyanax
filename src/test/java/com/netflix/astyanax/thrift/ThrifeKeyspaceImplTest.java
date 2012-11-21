@@ -7,6 +7,7 @@ import java.io.StringReader;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -32,6 +33,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Cluster;
 import com.netflix.astyanax.ColumnListMutation;
@@ -73,6 +75,7 @@ import com.netflix.astyanax.recipes.locks.ColumnPrefixDistributedRowLock;
 import com.netflix.astyanax.recipes.locks.StaleLockException;
 import com.netflix.astyanax.recipes.reader.AllRowsReader;
 import com.netflix.astyanax.recipes.scheduler.CountingSchedulerStats;
+import com.netflix.astyanax.recipes.scheduler.SchedulerException;
 import com.netflix.astyanax.recipes.scheduler.TaskScheduler;
 import com.netflix.astyanax.recipes.scheduler.ShardedDistributedScheduler;
 import com.netflix.astyanax.recipes.scheduler.Task;
@@ -3019,31 +3022,70 @@ public class ThrifeKeyspaceImplTest {
     }
     
     @Test
+    @Ignore
     public void testScheduler() throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(10);
         
         final AtomicLong counter = new AtomicLong(0);
-        final int max_count = 1000;
+        final int max_count = 200000;
 
         final CountingSchedulerStats stats = new CountingSchedulerStats();
         
+        final ConsistencyLevel cl = ConsistencyLevel.CL_ONE;
         final TaskScheduler producer = new ShardedDistributedScheduler.Builder()
             .withColumnFamily(SCHEDULER_NAME_CF_NAME)
             .withKeyspace(keyspace)
-            .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+            .withConsistencyLevel(cl)
             .withSchedulerStats(stats)
             .build();
         
         producer.createScheduler();
         
-        long tm = System.currentTimeMillis();
-        for (int i = 0; i < max_count; i++) {
-            Thread.sleep(new Random().nextInt(5));
-            producer.scheduleTask(new Task()
-                .setData("TEST_" + i)
-                .setNextTriggerTime(TimeUnit.SECONDS.convert(tm, TimeUnit.MILLISECONDS) + i)
-                .setTimeout(1000));
-        }
+        final ConcurrentMap<String, Boolean> lookup = Maps.newConcurrentMap();
+        
+        executor.submit(new Runnable() {
+            @Override
+            public void run() {
+                long tm = System.currentTimeMillis();
+                for (int i = 0; i < max_count; i++) {
+                    try {
+//                        Thread.sleep(10);
+                        producer.scheduleTask(new Task()
+                            .setData("TEST_" + i)
+//                            .setNextTriggerTime(TimeUnit.SECONDS.convert(tm, TimeUnit.MILLISECONDS))
+//                            .setTimeout(0)
+                            );
+                    } catch (Exception e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+        
+        executor.submit(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    long prevCount = 0;
+                    while (true) {
+                        Thread.sleep(1000);
+                        
+                        long newCount = counter.get();
+                        LOG.info("#### Count : " + (newCount - prevCount) + " of " + newCount);
+                        LOG.info("#### Existing : " + producer.getTaskCount());
+                        LOG.info(stats.toString());
+                        prevCount = newCount;
+                    }
+                } 
+                catch (InterruptedException e) {
+                } 
+                catch (SchedulerException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                } 
+            }
+        });
         
         for (int i = 0; i < 10; i++) {
             final int schedulerId = i;
@@ -3060,29 +3102,33 @@ public class ThrifeKeyspaceImplTest {
                     final TaskScheduler scheduler = new ShardedDistributedScheduler.Builder()
                         .withColumnFamily(SCHEDULER_NAME_CF_NAME)
                         .withKeyspace(keyspace)
-                        .withConsistencyLevel(ConsistencyLevel.CL_ONE)
+                        .withConsistencyLevel(cl)
                         .withSchedulerStats(stats)
                         .build();
                     
                     while (true) {
-                        LOG.info("----");
                         Collection<Task> tasks = null;
                         try {
-                            tasks = scheduler.acquireTasks(10);
-                            for (Task task : tasks) {
-                                counter.incrementAndGet();
-                                try {
-                                    LOG.info("Scheduler: " + schedulerId + "  Task: " + task.getToken() + "  Data: " + task.getData() + " " + counter.get());
-                                }
-                                finally {
-                                    scheduler.ackTask(task);
+                            tasks = scheduler.acquireTasks(200);
+                            try {
+                                for (Task task : tasks) {
+                                    counter.incrementAndGet();
+                                    
+                                    if (lookup.putIfAbsent(task.getData(), new Boolean(true)) != null) {
+                                        LOG.error( "**** DUPLICATE **** " + Thread.currentThread().getId() + " " + task.getData());
+//                                        LOG.info("Scheduler: " + schedulerId + "  Task: " + task.getToken() + "  Data: " + task.getData() + " " + counter.get());
+                                    }
                                 }
                             }
+                            finally {
+                                scheduler.ackTasks(tasks);
+                            }
+//                            Thread.sleep(500);
                         } catch (Exception e) {
-                            // TODO Auto-generated catch block
                             e.printStackTrace();
                             Assert.fail();
                         }
+                        
                         
 //                        try {
 //                            Thread.sleep(new Random().nextInt(250));
@@ -3095,7 +3141,7 @@ public class ThrifeKeyspaceImplTest {
             });
         }
         
-        executor.awaitTermination(100,  TimeUnit.SECONDS);
+        executor.awaitTermination(1000,  TimeUnit.SECONDS);
     }
 
     private boolean deleteColumn(ColumnFamily<String, String> cf,

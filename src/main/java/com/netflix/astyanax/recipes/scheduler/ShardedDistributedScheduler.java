@@ -15,11 +15,14 @@ import javax.annotation.Nullable;
 
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
@@ -85,18 +88,17 @@ import com.netflix.astyanax.util.TimeUUIDUtils;
  *
  */
 public class ShardedDistributedScheduler implements TaskScheduler {
-    
     public static final String           DEFAULT_COLUMN_FAMILY_NAME      = "Scheduler";
     public static final String           DEFAULT_QUEUE_NAME              = "Queue";
     public static final ConsistencyLevel DEFAULT_CONSISTENCY_LEVEL       = ConsistencyLevel.CL_LOCAL_QUORUM;
     public static final RetryPolicy      DEFAULT_RETRY_POLICY            = RunOnce.get();
-    public static final long             DEFAULT_VISIBILITY_TIMEOUT      = TimeUnit.SECONDS.convert(4,  TimeUnit.DAYS);
     public static final long             DEFAULT_LOCK_TIMEOUT            = TimeUnit.MICROSECONDS.convert(1,   TimeUnit.MINUTES);
     public static final long             DEFAULT_LOCK_TTL                = TimeUnit.MICROSECONDS.convert(10,  TimeUnit.MINUTES);
-    public static final long             DEFAULT_POLL_INTERVAL           = TimeUnit.MILLISECONDS.convert(50,  TimeUnit.MILLISECONDS);
-    public static final int              DEFAULT_SHARD_COUNT             = 10;
-    public static final long             DEFAULT_BUCKET_DURATION         = TimeUnit.MICROSECONDS.convert(120,  TimeUnit.SECONDS);
-    public static final int              DEFAULT_BUCKET_COUNT            = 10;
+    public static final long             DEFAULT_POLL_WAIT               = TimeUnit.MILLISECONDS.convert(50,  TimeUnit.MILLISECONDS);
+    public static final long             DEFAULT_VISIBILITY_TIMEOUT      = TimeUnit.SECONDS.convert(4,  TimeUnit.DAYS);
+    public static final int              DEFAULT_SHARD_COUNT             = 1;
+    public static final long             DEFAULT_BUCKET_DURATION         = TimeUnit.MICROSECONDS.convert(30,  TimeUnit.SECONDS);
+    public static final int              DEFAULT_BUCKET_COUNT            = 1;
     
     private final ObjectMapper mapper;
     
@@ -115,18 +117,18 @@ public class ShardedDistributedScheduler implements TaskScheduler {
         }
         
         public Builder withShardCount(int count) {
-            scheduler.shardCount = count;
+            scheduler.settings.setShardCount(count);
             return this;
         }
         
         public Builder withBuckets(int bucketCount, int bucketDuration, TimeUnit units) {
-            scheduler.partitionDuration = TimeUnit.MICROSECONDS.convert(bucketDuration,  units);
-            scheduler.partitionCount    = bucketCount;
+            scheduler.settings.setPartitionDuration(TimeUnit.MICROSECONDS.convert(bucketDuration,  units));
+            scheduler.settings.setPartitionCount(bucketCount);
             return this;
         }
         
         public Builder withVisibilityTimeout(Long timeout, TimeUnit units) {
-            scheduler.visibilityTimeout = TimeUnit.SECONDS.convert(timeout,  units);
+            scheduler.settings.setVisibilityTimeout(TimeUnit.SECONDS.convert(timeout,  units));
             return this;
         }
         
@@ -176,40 +178,108 @@ public class ShardedDistributedScheduler implements TaskScheduler {
         }
         
         public TaskScheduler build() {
-            Preconditions.checkArgument(
-                    scheduler.lockTtl == null || scheduler.lockTimeout < scheduler.lockTtl, 
-                    "Timeout " + scheduler.lockTtl + " must be less than TTL " + scheduler.lockTtl);
-            
             scheduler.columnFamily = ColumnFamily.newColumnFamily(columnFamilyName, StringSerializer.get(), compositeSerializer); 
-            scheduler.lockColumn = new SchedulerEntry(
-                    SchedulerEntryType.Lock, 
-                    (short)0,
-                    TimeUUIDUtils.getUniqueTimeUUIDinMicros(), 
-                    SchedulerEntryState.None);
-            
+            scheduler.initialize();
             return scheduler;
         }
     }
 
+    /**
+     * Track the state of a partition
+     * 
+     * @author elandau
+     */
+    private static class Partition {
+        private volatile int   lastCount = 1;
+        private final String   name;
+        private final int      partition;
+        private final int      shard;
+        public Partition(String name, int partition, int shard) {
+            this.name      = name;
+            this.partition = partition;
+            this.shard     = shard;
+        }
+        
+        public String getName() {
+            return name;
+        }
+        
+        public void setLastCount(int count) {
+            this.lastCount = count;
+        }
+        
+        public int getLastCount() {
+            return this.lastCount;
+        }
+        
+        public int getShard() {
+            return this.shard;
+        }
+        
+        public int getPartition() {
+            return this.partition;
+        }
+
+        @Override
+        public String toString() {
+            return "Partition [lastCount=" + lastCount + ", name=" + name + ", partition=" + partition + ", shard=" + shard + "]";
+        }
+    }
+    
+    /**
+     * Scheduler settings that are persisted to cassandra
+     */
+    private static class SchedulerSettings {
+        private long                            partitionDuration   = DEFAULT_BUCKET_DURATION;
+        private int                             partitionCount      = DEFAULT_BUCKET_COUNT;
+        private long                            visibilityTimeout   = DEFAULT_VISIBILITY_TIMEOUT;
+        private int                             shardCount          = DEFAULT_SHARD_COUNT;
+        
+        public long getPartitionDuration() {
+            return partitionDuration;
+        }
+        public int getPartitionCount() {
+            return partitionCount;
+        }
+        public long getVisibilityTimeout() {
+            return visibilityTimeout;
+        }
+        public int getShardCount() {
+            return shardCount;
+        }
+        public void setPartitionDuration(long partitionDuration) {
+            this.partitionDuration = partitionDuration;
+        }
+        public void setPartitionCount(int partitionCount) {
+            this.partitionCount = partitionCount;
+        }
+        public void setVisibilityTimeout(long visibilityTimeout) {
+            this.visibilityTimeout = visibilityTimeout;
+        }
+        public void setShardCount(int shardCount) {
+            this.shardCount = shardCount;
+        }
+        
+        @Override
+        public String toString() {
+            return "SchedulerSettings [partitionDuration=" + partitionDuration + ", partitionCount=" + partitionCount
+                    + ", visibilityTimeout=" + visibilityTimeout + ", shardCount=" + shardCount + "]";
+        }
+    }
+    
     private final static AnnotatedCompositeSerializer<SchedulerEntry> compositeSerializer = new AnnotatedCompositeSerializer<SchedulerEntry>(SchedulerEntry.class);
     
     // Immutable after configuration
     private ColumnFamily<String, SchedulerEntry> columnFamily;
     private Keyspace                        keyspace;
-    private String                          queueName           = DEFAULT_QUEUE_NAME;
     private ConsistencyLevel                consistencyLevel    = DEFAULT_CONSISTENCY_LEVEL;
-    private long                            visibilityTimeout   = DEFAULT_VISIBILITY_TIMEOUT;
     private long                            lockTimeout         = DEFAULT_LOCK_TIMEOUT;
     private Long                            lockTtl             = DEFAULT_LOCK_TTL;
-    private long                            pollInterval        = DEFAULT_POLL_INTERVAL;
+    private long                            pollInterval        = DEFAULT_POLL_WAIT;
     private RetryPolicy                     lockRetryPolicy     = new ExponentialBackoff(50, 10);
-    private AtomicLong                      contentionCounter   = new AtomicLong();
-    private int                             shardCount          = DEFAULT_SHARD_COUNT;
-    private long                            partitionDuration   = DEFAULT_BUCKET_DURATION;
-    private int                             partitionCount      = DEFAULT_BUCKET_COUNT;
     private SchedulerStats                  stats               = new CountingSchedulerStats();
-    private List<String>                    partitions          = Lists.newArrayList();
-    private SchedulerEntry                  lockColumn;
+    private List<Partition>                 activePartitions    = Lists.newArrayList();
+    private String                          queueName           = DEFAULT_QUEUE_NAME;
     private AtomicLong                      counter             = new AtomicLong(new Random().nextInt(1000));
     private SchedulerHooks                  hooks               = new BaseSchedulerHook();
     private Function<String, Task>          invalidTaskHandler  = new Function<String, Task>() {
@@ -218,6 +288,43 @@ public class ShardedDistributedScheduler implements TaskScheduler {
                                                                             return null;
                                                                         }
                                                                     };
+    private List<Partition>                 partitions;
+    private SchedulerSettings               settings            = new SchedulerSettings();
+    
+    private void log(String message) {
+//        System.out.println(">>> " + Thread.currentThread().getName() + " " + message);
+    }
+    
+    private void initialize() {
+        Preconditions.checkArgument(
+                lockTtl == null || lockTimeout < lockTtl, 
+                "Timeout " + lockTtl + " must be less than TTL " + lockTtl);
+        
+        try {
+            Column<SchedulerEntry> column = keyspace.prepareQuery(columnFamily)
+                    .getRow(queueName)
+                    .getColumn(SchedulerEntry.newMetadataEntry())
+                    .execute()
+                    .getResult();
+            
+            ByteArrayInputStream bais = new ByteArrayInputStream(column.getByteArrayValue());
+            settings = mapper.readValue(bais, SchedulerSettings.class);
+        } 
+        catch (Exception e) {
+        }
+        
+        partitions = Lists.newArrayList();
+        
+        for (int i = 0; i < settings.partitionCount; i++) {
+            for (int j = 0; j < settings.shardCount; j++) {
+                partitions.add(new Partition(queueName + ":" + i + ":" + j, i, j));
+            }
+        }
+        
+        for (Partition partition : partitions) {
+            activePartitions.add(partition);
+        }
+    }
     
     @Override
     public UUID scheduleTask(Task task) throws SchedulerException {
@@ -236,8 +343,7 @@ public class ShardedDistributedScheduler implements TaskScheduler {
         task.setToken(TimeUUIDUtils.getMicrosTimeUUID(curTimeMicros));
         
         // Set up the queue entry
-        SchedulerEntry entry = new SchedulerEntry(
-                SchedulerEntryType.Element, 
+        SchedulerEntry entry = SchedulerEntry.newTaskEntry(
                 task.getPriority(), 
                 task.getToken(), 
                 SchedulerEntryState.Waiting);
@@ -251,12 +357,12 @@ public class ShardedDistributedScheduler implements TaskScheduler {
             throw new SchedulerException("Failed to serialize task data", e);
         }
 
-//        System.out.println("Insert: " + getQueueKey(entry) + " " + task.getData());
+//        log("WRITE " + getQueueKey(entry));
         
         // Write the mutation 
         MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
         mb.withRow(columnFamily, getQueueKey(entry))
-            .putColumn(entry, new String(baos.toByteArray()), (int)visibilityTimeout);
+          .putColumn(entry, new String(baos.toByteArray()), (int)settings.visibilityTimeout);
             
         hooks.preScheduleTask(task, mb);
         try {
@@ -273,229 +379,244 @@ public class ShardedDistributedScheduler implements TaskScheduler {
     @Override
     public Collection<Task> acquireTasks(int itemsToPop) throws SchedulerException, BusyLockException, InterruptedException {
         while (true) {
-            if (partitions.isEmpty()) {
-                long timePartition = TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(),  TimeUnit.MILLISECONDS)/partitionDuration;
+            if (activePartitions.isEmpty()) {
+                long timePartition = TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(),  TimeUnit.MILLISECONDS)/settings.partitionDuration;
                 for (int i = 0; i < 2; i++) {
-                    for (int j = 0; j < shardCount; j++) {
-                        partitions.add(queueName + ":" + ((timePartition + partitionCount - i) % partitionCount) + ":" + j);
+                    for (int j = 0; j < settings.shardCount; j++) {
+                        activePartitions.add(partitions.get((int)((timePartition + settings.partitionCount - i) % settings.partitionCount) * settings.shardCount + j));
                     }
                 }
-                Collections.shuffle(partitions);
+                Collections.shuffle(activePartitions);
             }
             
-            Collection<Task> tasks = internalAcquireTasks(itemsToPop, partitions.remove(0));
-            if (tasks.isEmpty()) {
-                stats.incEmptyPartitionCount();
-                Thread.sleep(this.pollInterval);
-                continue;
+            try {
+                Collection<Task> tasks = internalAcquireTasks(itemsToPop, activePartitions.remove(0).getName());
+                if (tasks.isEmpty()) {
+                    stats.incEmptyPartitionCount();
+                    Thread.sleep(this.pollInterval);
+                    continue;
+                }
+                return tasks;
             }
-            return tasks;
+            catch (BusyLockException e) {
+                Thread.sleep(this.pollInterval);
+            }
         }
     }
     
     private Collection<Task> internalAcquireTasks(int itemsToPop, String shardName) throws SchedulerException, BusyLockException {
         RetryPolicy retry         = lockRetryPolicy.duplicate();
         List<Task>  entries       = Lists.newArrayList();
-        boolean     lockFound     = false;
-        boolean     discardMyLock = false;
-        int         lockCount     = 0;
         MutationBatch m           = null;
+        SchedulerEntry lockColumn = null;
         ColumnListMutation<SchedulerEntry> rowMutation = null;
-        List<SchedulerEntry> locksToDelete = Lists.newArrayList();
-
+        
+//        log("SHARD " + shardName);
+        
+        // Try locking first 
         try {
-            while (true) {
-                long curTimeMicros = TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS);
+            // 1. Write the lock column
+            lockColumn = SchedulerEntry.newLockEntry(SchedulerEntryState.None);
+            long curTimeMicros = TimeUUIDUtils.getTimeFromUUID(lockColumn.getTimestamp());
+            m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+            m.withRow(columnFamily, shardName)
+             .putColumn(lockColumn, curTimeMicros + lockTimeout, lockTtl.intValue());
+            m.execute();
+
+            // 2. Read back lock columns and entries
+            ColumnList<SchedulerEntry> result = keyspace.prepareQuery(columnFamily)
+                    .setConsistencyLevel(consistencyLevel)
+                    .getKey(shardName)
+                    .withColumnRange(compositeSerializer.buildRange()
+                            .greaterThanEquals((short)SchedulerEntryType.Lock.ordinal())
+                            .lessThanEquals((short)SchedulerEntryType.Lock.ordinal())
+                            .build())
+                    .execute()
+                    .getResult();
+            
+            m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+            rowMutation = m.withRow(columnFamily, shardName);
+            rowMutation.deleteColumn(lockColumn);
+            
+            int lockCount = 0;
+            boolean lockAcquired = false;
+            for (Column<SchedulerEntry> column : result) {
+                SchedulerEntry lock = column.getName();
                 
-                // 1. Write the lock column
-                if (!lockFound || discardMyLock) {
-                    try {
-                        m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
-                        m.withRow(columnFamily, shardName)
-                         .putColumn(lockColumn, curTimeMicros + lockTimeout, lockTtl.intValue());
-                        m.execute();
-                    }
-                    catch (Exception e) {
-                        e.printStackTrace();
-                        continue;
+                log("Phase1 : " + lock);
+                
+                // Stale lock so we can discard it
+                if (column.getLongValue() < curTimeMicros) {
+                    log("Discard lock");
+                    stats.incExpiredLockCount();
+                    rowMutation.deleteColumn(lock);
+                }
+                else if (lock.getState() == SchedulerEntryState.Acquired) {
+                    log("Already acquired: " + lock);
+                    throw new BusyLockException("Not first lock");
+                }
+                // This is our lock
+                else {
+                    lockCount++;
+                    if (lockCount == 1 && lock.getTimestamp().equals(lockColumn.getTimestamp())) {
+                        lockAcquired = true;
                     }
                 }
-                    
-                m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
                 
-                lockFound     = false;
-                discardMyLock = false;
-                lockCount     = 0;
+                if (!lockAcquired) {
+                    log("Phase1 : Not our lock: " + lock);
+                    throw new BusyLockException("Not first lock");
+                }
                 
-                // 2. Read back lock columns and entries
-                locksToDelete = Lists.newArrayList();
+                log("Phase1 : Our lock" + lock);
                 
-                rowMutation = m.withRow(columnFamily, shardName);
-                try {
-                    ColumnList<SchedulerEntry> result = keyspace.prepareQuery(columnFamily)
-                            .setConsistencyLevel(consistencyLevel)
-                            .getKey(shardName)
-                            .withColumnRange(new RangeBuilder()
-                                .setLimit(2 + itemsToPop)   // +2 to include the lock column and maybe one stale lock
-                                .setEnd(compositeSerializer
-                                        .makeEndpoint((short)SchedulerEntryType.Element.ordinal(), Equality.EQUAL)
-                                        .append((short)0, Equality.EQUAL)
-                                        .append(TimeUUIDUtils.getMicrosTimeUUID(curTimeMicros), Equality.LESS_THAN_EQUALS).toBytes())
-                                .build())
-                        .execute()
-                            .getResult();
-                    
-                    for (Column<SchedulerEntry> column : result) {
-                        if (itemsToPop == 0)
-                            break;
+                // Write the acquired lock column
+                lockColumn = SchedulerEntry.newLockEntry(lockColumn.getTimestamp(), SchedulerEntryState.Acquired);
+                rowMutation.putColumn(lockColumn, curTimeMicros + lockTimeout, lockTtl.intValue());
+                
+            }
+        }
+        catch (BusyLockException e) {
+            stats.incLockContentionCount();
+            throw e;
+        }
+        catch (ConnectionException e) {
+            throw new SchedulerException("Error", e);
+        }
+        finally {
+            try {
+                m.execute();
+            }
+            catch (Exception e) {
+                throw new SchedulerException("Error committing lock", e);
+            }
+        }
+            
+        // 2. Read back lock columns and entries
+        try {
+            long curTimeMicros = TimeUUIDUtils.getMicrosTimeFromUUID(lockColumn.getTimestamp());
+            
+            m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+            rowMutation = m.withRow(columnFamily, shardName);
+            rowMutation.deleteColumn(lockColumn);
+            
+            ColumnList<SchedulerEntry> result = keyspace.prepareQuery(columnFamily)
+                    .setConsistencyLevel(consistencyLevel)
+                    .getKey(shardName)
+                    .withColumnRange(new RangeBuilder()
+                        .setLimit(2 + itemsToPop)   // +2 to include the lock column and maybe one stale lock
+                        .setEnd(compositeSerializer
+                                .makeEndpoint((short)SchedulerEntryType.Element.ordinal(), Equality.EQUAL)
+                                .append((short)0, Equality.EQUAL)
+                                .append(TimeUUIDUtils.getMicrosTimeUUID(curTimeMicros), Equality.LESS_THAN_EQUALS).toBytes())
+                        .build())
+                .execute()
+                    .getResult();
+                
+            for (Column<SchedulerEntry> column : result) {
+                if (itemsToPop == 0) {
+                    break;
+                }
+                
+                SchedulerEntry entry = column.getName();
+                log("Phase2 : " + shardName + " " + entry);
+                
+                switch (entry.getType()) {
+                    case Lock: 
+                        log(Thread.currentThread().getName() + " READ  " + entry.toString());
+                        // We have the lock
+                        if (entry.getState() == SchedulerEntryState.Acquired) {
+                            log("Phase2 : Not locked " + shardName + " " + entry);
+                            if (!entry.getTimestamp().equals(lockColumn.getTimestamp())) {
+                                throw new BusyLockException("Someone else snuck in");
+                            }
+                        }
+                        break;
                         
-                        SchedulerEntry entry = column.getName();
-                        switch (entry.getType()) {
-                            case Lock: 
-                                // We have the lock
-                                if (entry.getTimestamp().equals(lockColumn.getTimestamp())) {
-                                    lockFound = true;
-                                    lockCount++;
-                                    locksToDelete.add(entry);
-                                }
-                                // Not our lock
-                                else {
-                                    // Stale lock so we can discard it
-                                    if (column.getLongValue() < curTimeMicros) {
-                                        stats.incExpiredLockCount();
-                                        locksToDelete.add(entry);
-                                    }
-                                    else {
-                                        lockCount++;
-                                        long otherLockTime = TimeUUIDUtils.getMicrosTimeFromUUID(entry.getTimestamp());
-                                        if (curTimeMicros > otherLockTime) {
-                                            discardMyLock = true;
-                                        }
-                                    }
-                                    return entries;
-                                }
-                                break;
-                                
-                            case Element: {
-                                if (discardMyLock) {
-                                    throw new BusyLockException("Our lock is older");
-                                }
-                                
-                                if (lockCount > 1) {
-                                    System.out.println("Multilock");
-                                }
-                                if (lockFound && lockCount == 1 && !discardMyLock) {
-                                    itemsToPop--; 
-                                    
-                                    // First, we always want to remove the old item
-                                    rowMutation.deleteColumn(entry);
-                                    
-                                    // Next, parse the Task metadata and add a timeout entry
-                                    Task task = null;
-                                    try {
-                                        ByteArrayInputStream bais = new ByteArrayInputStream(column.getByteArrayValue());
-                                        task = mapper.readValue(bais, Task.class);
-                                    } catch (Exception e) {
-                                        e.printStackTrace();
-                                        // Error parsing the task so we pass it on to the invalid task handler.
-                                        try {
-                                            task = this.invalidTaskHandler.apply(column.getStringValue());
-                                        }
-                                        catch (Exception e2) {
-                                            // TODO:
-                                            e2.printStackTrace();
-                                        }
-                                    } 
-                                    
-//                                    System.out.println("Delete " + Thread.currentThread().getId() + " " + shardName + " " + task.getData());
-    
-                                    // Update the task state
-                                    if (task != null) {
-                                        entries.add(task);
-                                        
-                                        if (task.getTimeout() != 0) {
-                                            SchedulerEntry timeoutEntry = new SchedulerEntry(
-                                                    SchedulerEntryType.Element, 
-                                                    entry.getPriority(),
-                                                    TimeUUIDUtils.getMicrosTimeUUID(curTimeMicros + TimeUnit.MICROSECONDS.convert(task.getTimeout(), TimeUnit.SECONDS)), 
-                                                    SchedulerEntryState.Busy);
-                                            
-                                            task.setToken(timeoutEntry.getTimestamp());
-                                            
-                                            m.withRow(columnFamily, getQueueKey(timeoutEntry))
-                                             .putColumn(timeoutEntry, column.getStringValue());
-                                        }
-                                        else {
-                                            task.setToken(null);
-                                        }
-                                        
-                                        // Update some stats
-                                        switch (entry.getState()) {
-                                        case Waiting:
-                                            stats.incProcessCount();
-                                            break;
-                                        case Busy:
-                                            stats.incReprocessCount();
-                                            break;
-                                        default:
-                                            // TODO:
-                                            break;
-                                        }
-                                    }
-                                    // The task metadata was invalid so we just get rid of it.
-                                    else {
-                                        stats.incInvalidTaskCount();
-                                    }
-                                }
-                                else {
-                                    stats.incLockContentionCount();
-                                    throw new BusyLockException("Row " + shardName);
-                                }
-                                break;
-                            }
-                            default: {
-                                System.out.println("****");
-                                // TODO: Error: Unknown type
-                                break;
-                            }
-                        }
-                    }
-                    
-//                    System.out.println(shardName + " count: " + entries.size());
-                    hooks.preAcquireTasks(entries, m);
-                    return entries;
-                }
-                catch (BusyLockException e) {
-//                    System.out.println("Contention " + shardName);
-                    contentionCounter.incrementAndGet();
-                    if (discardMyLock) {
-                        for (SchedulerEntry entry : locksToDelete) {
-                            rowMutation.deleteColumn(entry);
-                        }
+                    case Element: {
+                        itemsToPop--; 
+                        
+                        // First, we always want to remove the old item
+                        rowMutation.deleteColumn(entry);
+                        
+                        // Next, parse the Task metadata and add a timeout entry
+                        Task task = null;
                         try {
-                            m.execute();
+                            ByteArrayInputStream bais = new ByteArrayInputStream(column.getByteArrayValue());
+                            task = mapper.readValue(bais, Task.class);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            // Error parsing the task so we pass it on to the invalid task handler.
+                            try {
+                                task = this.invalidTaskHandler.apply(column.getStringValue());
+                            }
+                            catch (Exception e2) {
+                                // TODO:
+                                e2.printStackTrace();
+                            }
+                        } 
+                        
+                        // Update the task state
+                        if (task != null) {
+                            entries.add(task);
+                            
+                            if (task.getTimeout() != 0) {
+                                SchedulerEntry timeoutEntry = SchedulerEntry.newTaskEntry(
+                                        entry.getPriority(),
+                                        TimeUUIDUtils.getMicrosTimeUUID(curTimeMicros + TimeUnit.MICROSECONDS.convert(task.getTimeout(), TimeUnit.SECONDS)), 
+                                        SchedulerEntryState.Busy);
+                                
+                                task.setToken(timeoutEntry.getTimestamp());
+                                
+                                m.withRow(columnFamily, getQueueKey(timeoutEntry))
+                                 .putColumn(timeoutEntry, column.getStringValue());
+                            }
+                            else {
+                                task.setToken(null);
+                            }
+                            
+                            // Update some stats
+                            switch (entry.getState()) {
+                            case Waiting:
+                                stats.incProcessCount();
+                                break;
+                            case Busy:
+                                stats.incReprocessCount();
+                                break;
+                            default:
+                                // TODO:
+                                break;
+                            }
                         }
-                        catch (Exception e2) {
-                            e2.printStackTrace();
-                            // Hmmm...
+                        // The task metadata was invalid so we just get rid of it.
+                        else {
+                            stats.incInvalidTaskCount();
                         }
-                        if (!retry.allowRetry()) {
-                            throw e;
-                        }
+                        break;
                     }
-                } catch (ConnectionException e) {
-                    throw new SchedulerException("Error querying queue : " + shardName, e);
+                    default: {
+                        log("****");
+                        // TODO: Error: Unknown type
+                        break;
+                    }
                 }
             }
+            
+//                    log(shardName + " count: " + entries.size() + " of " + result.size());
+            hooks.preAcquireTasks(entries, m);
+            return entries;
+        }
+        catch (BusyLockException e) {
+            stats.incLockContentionCount();
+            throw e;
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            throw new SchedulerException("Error processing scheduler queue : " + shardName, e);
         }
         // 3. Release lock and remove any acquired entries
         finally {
             try {
-                if (rowMutation != null) {
-                    for (SchedulerEntry entry : locksToDelete) {
-                        rowMutation.deleteColumn(entry);
-                    }
-                }
                 m.execute();
             }
             catch (Exception e) {
@@ -526,10 +647,12 @@ public class ShardedDistributedScheduler implements TaskScheduler {
     public void ackTasks(Collection<Task> tasks) throws SchedulerException {
         MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
         for (Task task : tasks) {
-            SchedulerEntry entry = getBusyEntry(task);
-            stats.incFinishTaskCount();
-            mb.withRow(columnFamily, getQueueKey(entry))
-              .deleteColumn(entry);
+            if (task.getToken() != null) {
+                SchedulerEntry entry = getBusyEntry(task);
+                stats.incFinishTaskCount();
+                mb.withRow(columnFamily, getQueueKey(entry))
+                  .deleteColumn(entry);
+            }
         }
         
         try {
@@ -540,7 +663,7 @@ public class ShardedDistributedScheduler implements TaskScheduler {
     }
 
     protected SchedulerEntry getBusyEntry(Task task) {
-        return new SchedulerEntry(SchedulerEntryType.Element, task.getPriority(), task.getToken(), SchedulerEntryState.Busy);
+        return SchedulerEntry.newTaskEntry(task.getPriority(), task.getToken(), SchedulerEntryState.Busy);
     }
     
     /**
@@ -558,30 +681,46 @@ public class ShardedDistributedScheduler implements TaskScheduler {
      * @return
      */
     private String getQueueKey(long taskTime) {
-        long timePartition = (taskTime / partitionDuration) % partitionCount;
-        long shard         =  taskTime % shardCount;
+        long timePartition = (taskTime / settings.partitionDuration) % settings.partitionCount;
+        long shard         =  taskTime % settings.shardCount;
         return queueName + ":" + timePartition + ":" + shard;
     }
     
     @Override
     public long getTaskCount() throws SchedulerException {
-        List<String> keys = Lists.newArrayList();
-        for (int i = 0; i < partitionCount; i++) {
-            for (int j = 0; j < shardCount; j++) {
-                keys.add(queueName + ":" + i + ":" + j);
-            }
+        Map<String, Integer> counts = getShardCounts();
+        long count = 0;
+        for (Integer value : counts.values()) {
+            count += value;
         }
-        
+        return count;
+    }
+    
+    @Override
+    public Map<String, Integer> getShardCounts() throws SchedulerException {
         try {
-            Map<String, Integer> counts = keyspace.prepareQuery(columnFamily).getKeySlice(keys).getColumnCounts().execute().getResult();
-            long count = 0;
-            for (Integer value : counts.values()) {
-                count += value;
+            List<String> keys = Lists.newArrayList();
+            for (int i = 0; i < settings.partitionCount; i++) {
+                for (int j = 0; j < settings.shardCount; j++) {
+                    keys.add(queueName + ":" + i + ":" + j);
+                }
             }
-            return count;
+            
+            Map<String, Integer> result = Maps.newTreeMap();
+            result.putAll(keyspace.prepareQuery(columnFamily)
+                    .getKeySlice(keys)
+                    .getColumnCounts()
+                    .execute()
+                    .getResult());
+            return result;
         } catch (ConnectionException e) {
             throw new SchedulerException("Failed to get counts", e);
         }
+    }
+
+    public String getCurrentPartition() {
+        long timePartition = TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(),  TimeUnit.MILLISECONDS)/settings.partitionDuration;
+        return queueName + ":" + ((timePartition + settings.partitionCount) % settings.partitionCount);
     }
 
     @Override
@@ -592,14 +731,30 @@ public class ShardedDistributedScheduler implements TaskScheduler {
     @Override
     public void createScheduler() throws SchedulerException {
         try {
-            // TODO: Calculate gc_grace_period
             keyspace.createColumnFamily(this.columnFamily, ImmutableMap.<String, Object>builder()
                             .put("key_validation_class",     "UTF8Type")
                             .put("comparator_type",          "CompositeType(BytesType, BytesType, TimeUUIDType, BytesType)")
                             .put("read_repair_chance",       1.0)
+                            .put("gc_grace_period",          0)     // TODO: Calculate gc_grace_period
                             .build());
+            
+            mapper.getSerializationConfig().setSerializationInclusion(JsonSerialize.Inclusion.NON_NULL);
         } catch (ConnectionException e) {
             throw new SchedulerException("Failed to create column family for " + columnFamily.getName(), e);
+        }
+        
+        try {
+            // Convert the task object to JSON
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            mapper.writeValue(baos, settings);
+            baos.flush();
+            keyspace.prepareColumnMutation(columnFamily, queueName, SchedulerEntry.newMetadataEntry())
+                    .putValue(baos.toByteArray(), null)
+                    .execute();
+        } catch (ConnectionException e) {
+            throw new SchedulerException("Failed to create column family for " + columnFamily.getName(), e);
+        } catch (Exception e) {
+            throw new SchedulerException("Error serializing scheduler settings " + columnFamily.getName(), e);
         }
     }
 

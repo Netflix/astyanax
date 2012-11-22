@@ -1,6 +1,7 @@
 package com.netflix.astyanax.recipes.scheduler;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.UUID;
 
 import com.netflix.astyanax.recipes.locks.BusyLockException;
@@ -77,4 +78,6 @@ public interface TaskScheduler {
      * @throws SchedulerException
      */
     void createScheduler() throws SchedulerException;
+
+    Map<String, Integer> getShardCounts() throws SchedulerException;
 }

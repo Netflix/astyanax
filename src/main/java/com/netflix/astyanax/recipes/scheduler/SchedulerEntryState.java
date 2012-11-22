@@ -5,4 +5,5 @@ enum SchedulerEntryState {
     Waiting,
     Busy,
     Done,
+    Acquired,
 }

@@ -10,12 +10,28 @@ public class SchedulerEntry {
         
     }
     
-    public SchedulerEntry(SchedulerEntryType type, short priority, UUID timestamp, SchedulerEntryState state) {
+    private SchedulerEntry(SchedulerEntryType type, short priority, UUID timestamp, SchedulerEntryState state) {
         super();
         this.type       = (short)type.ordinal();
         this.priority   = 0;
         this.timestamp  = timestamp;
         this.state      = (short)state.ordinal();
+    }
+    
+    public static SchedulerEntry newLockEntry(SchedulerEntryState state) {
+        return new SchedulerEntry(SchedulerEntryType.Lock,    (short)0, TimeUUIDUtils.getUniqueTimeUUIDinMicros(), state);
+    }
+    
+    public static SchedulerEntry newLockEntry(UUID timestamp, SchedulerEntryState state) {
+        return new SchedulerEntry(SchedulerEntryType.Lock,    (short)0, timestamp, state);
+    }
+    
+    public static SchedulerEntry newMetadataEntry() {
+        return new SchedulerEntry(SchedulerEntryType.Metadata, (short)0, null,      SchedulerEntryState.None);
+    }
+    
+    public static SchedulerEntry newTaskEntry(short priority, UUID timestamp, SchedulerEntryState state) {
+        return new SchedulerEntry(SchedulerEntryType.Element,  priority, timestamp, state);
     }
     
     /**
@@ -75,9 +91,6 @@ public class SchedulerEntry {
 
     @Override
     public String toString() {
-        return "SchedulerEntry [type=" + getType() 
-                + ", timestamp=" + TimeUUIDUtils.getMicrosTimeFromUUID(timestamp) 
-                + ", state="     + getState() 
-                + "]";
+        return "SchedulerEntry [" + getType() + " " + priority + " " + timestamp + " " + getState() + "]";
     }
 }

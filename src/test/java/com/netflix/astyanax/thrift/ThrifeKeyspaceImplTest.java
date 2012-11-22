@@ -71,6 +71,7 @@ import com.netflix.astyanax.query.IndexQuery;
 import com.netflix.astyanax.query.PreparedIndexExpression;
 import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.recipes.UUIDStringSupplier;
+import com.netflix.astyanax.recipes.locks.BusyLockException;
 import com.netflix.astyanax.recipes.locks.ColumnPrefixDistributedRowLock;
 import com.netflix.astyanax.recipes.locks.StaleLockException;
 import com.netflix.astyanax.recipes.reader.AllRowsReader;
@@ -262,7 +263,7 @@ public class ThrifeKeyspaceImplTest {
                                 + "_" + TEST_KEYSPACE_NAME)
                                 .setSocketTimeout(30000)
                                 .setMaxTimeoutWhenExhausted(2000)
-                                .setMaxConnsPerHost(10)
+                                .setMaxConnsPerHost(20)
                                 .setInitConnsPerHost(10)
                                 .setSeeds(SEEDS))
                 .withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
@@ -3022,7 +3023,7 @@ public class ThrifeKeyspaceImplTest {
     }
     
     @Test
-    @Ignore
+//    @Ignore
     public void testScheduler() throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(10);
         
@@ -3037,6 +3038,9 @@ public class ThrifeKeyspaceImplTest {
             .withKeyspace(keyspace)
             .withConsistencyLevel(cl)
             .withSchedulerStats(stats)
+            .withBuckets(10,  30,  TimeUnit.SECONDS)
+            .withShardCount(10)
+            .withPollInterval(10L,  TimeUnit.SECONDS)
             .build();
         
         producer.createScheduler();
@@ -3049,11 +3053,11 @@ public class ThrifeKeyspaceImplTest {
                 long tm = System.currentTimeMillis();
                 for (int i = 0; i < max_count; i++) {
                     try {
-//                        Thread.sleep(10);
+//                        Thread.sleep(1);
                         producer.scheduleTask(new Task()
                             .setData("TEST_" + i)
 //                            .setNextTriggerTime(TimeUnit.SECONDS.convert(tm, TimeUnit.MILLISECONDS))
-//                            .setTimeout(0)
+                            .setTimeout(0)
                             );
                     } catch (Exception e) {
                         // TODO Auto-generated catch block
@@ -3072,22 +3076,23 @@ public class ThrifeKeyspaceImplTest {
                         Thread.sleep(1000);
                         
                         long newCount = counter.get();
-                        LOG.info("#### Count : " + (newCount - prevCount) + " of " + newCount);
-                        LOG.info("#### Existing : " + producer.getTaskCount());
+                        LOG.info("#### Processed : " + (newCount - prevCount) + " of " + newCount);
+                        LOG.info("#### Pending   : " + producer.getTaskCount());
+//                        for (Entry<String, Integer> shard : producer.getShardCounts().entrySet()) {
+//                            LOG.info("  " + shard.getKey() + " : " + shard.getValue());
+//                        }
                         LOG.info(stats.toString());
                         prevCount = newCount;
                     }
                 } 
-                catch (InterruptedException e) {
-                } 
-                catch (SchedulerException e) {
+                catch (Exception e) {
                     // TODO Auto-generated catch block
                     e.printStackTrace();
                 } 
             }
         });
         
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 3; i++) {
             final int schedulerId = i;
             
             executor.submit(new Runnable() {
@@ -3123,8 +3128,16 @@ public class ThrifeKeyspaceImplTest {
                             finally {
                                 scheduler.ackTasks(tasks);
                             }
-//                            Thread.sleep(500);
-                        } catch (Exception e) {
+                        } 
+                        catch (BusyLockException e) {
+                            try {
+                                Thread.sleep(10);
+                            } catch (InterruptedException e1) {
+                                // TODO Auto-generated catch block
+                                e1.printStackTrace();
+                            }
+                        }
+                        catch (Exception e) {
                             e.printStackTrace();
                             Assert.fail();
                         }

@@ -3023,7 +3023,7 @@ public class ThrifeKeyspaceImplTest {
     }
     
     @Test
-//    @Ignore
+    @Ignore
     public void testScheduler() throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(10);
         

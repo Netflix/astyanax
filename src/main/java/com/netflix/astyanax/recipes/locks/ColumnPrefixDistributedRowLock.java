@@ -256,7 +256,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
                 m.execute();
                 
                 verifyLock(curTimeMicros);
-                acquireTime = System.currentTimeMillis();
+                acquireTime = System.nanoTime();
                 return;
             }
             catch (BusyLockException e) {
@@ -335,7 +335,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
     }
     
     public boolean releaseWithMutation(MutationBatch m, boolean force) throws Exception {
-        long elapsed = System.currentTimeMillis() - acquireTime;
+        long elapsed = TimeUnit.MILLISECONDS.convert(System.nanoTime() - acquireTime, TimeUnit.NANOSECONDS);
         boolean isStale = false;
         if (timeout > 0 && elapsed > TimeUnit.MILLISECONDS.convert(timeout, this.timeoutUnits)) {
             isStale = true;

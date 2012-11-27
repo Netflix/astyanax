@@ -31,7 +31,7 @@ public class SchedulerEntry {
     }
     
     public static SchedulerEntry newTaskEntry(short priority, UUID timestamp, SchedulerEntryState state) {
-        return new SchedulerEntry(SchedulerEntryType.Element,  priority, timestamp, state);
+        return new SchedulerEntry(SchedulerEntryType.Task,  priority, timestamp, state);
     }
     
     /**

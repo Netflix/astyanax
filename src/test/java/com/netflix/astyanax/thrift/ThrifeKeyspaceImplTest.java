@@ -77,6 +77,8 @@ import com.netflix.astyanax.recipes.locks.StaleLockException;
 import com.netflix.astyanax.recipes.reader.AllRowsReader;
 import com.netflix.astyanax.recipes.scheduler.CountingSchedulerStats;
 import com.netflix.astyanax.recipes.scheduler.SchedulerException;
+import com.netflix.astyanax.recipes.scheduler.TaskConsumer;
+import com.netflix.astyanax.recipes.scheduler.TaskProducer;
 import com.netflix.astyanax.recipes.scheduler.TaskScheduler;
 import com.netflix.astyanax.recipes.scheduler.ShardedDistributedScheduler;
 import com.netflix.astyanax.recipes.scheduler.Task;
@@ -3033,39 +3035,44 @@ public class ThrifeKeyspaceImplTest {
         final CountingSchedulerStats stats = new CountingSchedulerStats();
         
         final ConsistencyLevel cl = ConsistencyLevel.CL_ONE;
-        final TaskScheduler producer = new ShardedDistributedScheduler.Builder()
+        final TaskScheduler scheduler = new ShardedDistributedScheduler.Builder()
             .withColumnFamily(SCHEDULER_NAME_CF_NAME)
             .withKeyspace(keyspace)
             .withConsistencyLevel(cl)
             .withSchedulerStats(stats)
             .withBuckets(10,  30,  TimeUnit.SECONDS)
             .withShardCount(10)
-            .withPollInterval(10L,  TimeUnit.SECONDS)
+            .withPollInterval(100L,  TimeUnit.MILLISECONDS)
             .build();
         
-        producer.createScheduler();
+        scheduler.createScheduler();
         
         final ConcurrentMap<String, Boolean> lookup = Maps.newConcurrentMap();
         
-        executor.submit(new Runnable() {
-            @Override
-            public void run() {
-                long tm = System.currentTimeMillis();
-                for (int i = 0; i < max_count; i++) {
-                    try {
-//                        Thread.sleep(1);
-                        producer.scheduleTask(new Task()
-                            .setData("TEST_" + i)
-//                            .setNextTriggerTime(TimeUnit.SECONDS.convert(tm, TimeUnit.MILLISECONDS))
-                            .setTimeout(0)
-                            );
-                    } catch (Exception e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
+        final AtomicLong iCounter = new AtomicLong(0);
+        for (int j = 0; j < 4; j++) {
+            executor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    long tm = System.currentTimeMillis();
+                    TaskProducer producer = scheduler.createProducer();
+                    
+                    for (int i = 0; i < max_count; i++) {
+                        try {
+//                            Thread.sleep(10);
+                            producer.scheduleTask(new Task()
+                                .setData("The quick brown fox jumped over the lazy cow" + iCounter.incrementAndGet())
+    //                            .setNextTriggerTime(TimeUnit.SECONDS.convert(tm, TimeUnit.MILLISECONDS))
+//                                .setTimeout(1L, TimeUnit.MINUTES)
+                                );
+                        } catch (Exception e) {
+                            // TODO Auto-generated catch block
+                            e.printStackTrace();
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
         
         executor.submit(new Runnable() {
             @Override
@@ -3077,7 +3084,7 @@ public class ThrifeKeyspaceImplTest {
                         
                         long newCount = counter.get();
                         LOG.info("#### Processed : " + (newCount - prevCount) + " of " + newCount);
-                        LOG.info("#### Pending   : " + producer.getTaskCount());
+                        LOG.info("#### Pending   : " + scheduler.getTaskCount());
 //                        for (Entry<String, Integer> shard : producer.getShardCounts().entrySet()) {
 //                            LOG.info("  " + shard.getKey() + " : " + shard.getValue());
 //                        }
@@ -3092,7 +3099,7 @@ public class ThrifeKeyspaceImplTest {
             }
         });
         
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 10; i++) {
             final int schedulerId = i;
             
             executor.submit(new Runnable() {
@@ -3104,29 +3111,25 @@ public class ThrifeKeyspaceImplTest {
                     }
                     
                     Thread.currentThread().setName("Consumer_" + schedulerId);
-                    final TaskScheduler scheduler = new ShardedDistributedScheduler.Builder()
-                        .withColumnFamily(SCHEDULER_NAME_CF_NAME)
-                        .withKeyspace(keyspace)
-                        .withConsistencyLevel(cl)
-                        .withSchedulerStats(stats)
-                        .build();
+                    
+                    TaskConsumer consumer = scheduler.createConsumer();
                     
                     while (true) {
                         Collection<Task> tasks = null;
                         try {
-                            tasks = scheduler.acquireTasks(200);
+                            tasks = consumer.acquireTasks(200);
                             try {
                                 for (Task task : tasks) {
                                     counter.incrementAndGet();
                                     
-                                    if (lookup.putIfAbsent(task.getData(), new Boolean(true)) != null) {
-                                        LOG.error( "**** DUPLICATE **** " + Thread.currentThread().getId() + " " + task.getData());
-//                                        LOG.info("Scheduler: " + schedulerId + "  Task: " + task.getToken() + "  Data: " + task.getData() + " " + counter.get());
-                                    }
+//                                    if (lookup.putIfAbsent(task.getData(), new Boolean(true)) != null) {
+//                                        LOG.error( "**** DUPLICATE **** " + Thread.currentThread().getId() + " " + task.getData());
+////                                        LOG.info("Scheduler: " + schedulerId + "  Task: " + task.getToken() + "  Data: " + task.getData() + " " + counter.get());
+//                                    }
                                 }
                             }
                             finally {
-                                scheduler.ackTasks(tasks);
+                                consumer.ackTasks(tasks);
                             }
                         } 
                         catch (BusyLockException e) {

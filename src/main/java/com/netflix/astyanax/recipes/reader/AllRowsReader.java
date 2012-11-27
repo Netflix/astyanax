@@ -358,7 +358,10 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                         if (!rows.isEmpty()) {
                             try {
                                 if (rowsFunction != null) {
-                                    rowsFunction.apply(rows);
+                                    if (!rowsFunction.apply(rows)) {
+                                        cancel();
+                                        return false;
+                                    }
                                 }
                                 else {
                                     // Iterate through all the rows and notify the callback function

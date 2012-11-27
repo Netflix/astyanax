@@ -2,6 +2,7 @@ package com.netflix.astyanax.connectionpool.impl;
 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -11,9 +12,12 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.annotation.Nullable;
+
 import org.apache.commons.lang.StringUtils;
 import org.cliffc.high_scale_lib.NonBlockingHashMap;
 
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -35,7 +39,7 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
      * the list of hosts that own the token range.
      */
     private AtomicReference<List<TokenHostConnectionPoolPartition<CL>>> sortedRing
-    	= new AtomicReference<List<TokenHostConnectionPoolPartition<CL>>>();
+    	= new AtomicReference<List<TokenHostConnectionPoolPartition<CL>>>(new ArrayList<TokenHostConnectionPoolPartition<CL>>());
 
     /**
      * Lookup of end token to partition 
@@ -178,6 +182,7 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
         for (TokenHostConnectionPoolPartition<CL> partition : tokenToPartitionMap.values()) {
             partition.refresh();
         }
+        
     }
 
     @Override
@@ -237,8 +242,12 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("TokenPartitionTopology[");
-        sb.append(StringUtils.join(this.sortedRing.get(), ","));
-        sb.append(", RING:").append(this.allPools);
+        sb.append(StringUtils.join(Lists.transform(this.sortedRing.get(), new Function<TokenHostConnectionPoolPartition<CL>, String>() {
+            @Override
+            public String apply(@Nullable TokenHostConnectionPoolPartition<CL> input) {
+                return input.id().toString() + "\n";
+            }
+        }), ","));
         sb.append("]");
         return sb.toString();
     }

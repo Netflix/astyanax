@@ -842,104 +842,106 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                 final CountDownLatch doneSignal = new CountDownLatch(ranges.size());
                 
                 for (final Pair<String, String> tokenPair : ranges) {
+                    // Prepare the range of tokens for this token range
+                    final KeyRange range = new KeyRange()
+                            .setCount(getBlockSize())
+                            .setStart_token(tokenPair.left)
+                            .setEnd_token(tokenPair.right);
+
                     executor.submit(new Callable<Void>() {
                         @Override
                         public Void call() throws Exception {
-                            // Prepare the range of tokens for this token range
-                            final KeyRange range = new KeyRange()
-                                    .setCount(getBlockSize())
-                                    .setStart_token(tokenPair.left)
-                                    .setEnd_token(tokenPair.right);
-
-                            try {
-                                // Loop until we get all the rows for this
-                                // token range or we get an exception
-                                while (error.get() == null) {
-                                    try {
-                                        // Get the next block
-                                        List<KeySlice> ks = connectionPool.executeWithFailover(
-                                                new AbstractKeyspaceOperationImpl<List<KeySlice>>(tracerFactory
-                                                        .newTracer(CassandraOperationType.GET_ROWS_RANGE,
-                                                                columnFamily), pinnedHost, keyspace
-                                                        .getKeyspaceName()) {
-                                                    @Override
-                                                    public List<KeySlice> internalExecute(Client client)
-                                                            throws Exception {
-                                                        return client.get_range_slices(new ColumnParent()
-                                                                .setColumn_family(columnFamily.getName()),
-                                                                predicate, range, ThriftConverter
-                                                                        .ToThriftConsistencyLevel(consistencyLevel));
-                                                    }
-
-                                                    @Override
-                                                    public ByteBuffer getRowKey() {
-                                                        if (range.getStart_key() != null)
-                                                            return ByteBuffer.wrap(range.getStart_key());
-                                                        return null;
-                                                    }
-                                                }, retry.duplicate()).getResult();
-
-                                        // Notify the callback
-                                        if (!ks.isEmpty()) {
-                                            KeySlice lastRow = Iterables.getLast(ks);
-                                            
-                                            boolean bContinue = ks.size() == getBlockSize();
-                                            if (bIgnoreTombstones) {
-                                                Iterator<KeySlice> iter = ks.iterator();
-                                                while (iter.hasNext()) {
-                                                    if (iter.next().getColumnsSize() == 0)
-                                                        iter.remove();
-                                                }
-                                            }
-                                            Rows<K, C> rows = new ThriftRowsSliceImpl<K, C>(ks, columnFamily
-                                                    .getKeySerializer(), columnFamily.getColumnSerializer());
-                                            try {
-                                            	callback.success(rows);
-                                            }
-                                            catch (Throwable t) {
-                                                ConnectionException ce = ThriftConverter.ToConnectionPoolException(t);
-                                                error.set(ce);
-                                                return null;
-                                            }
-                                            
-                                            if (bContinue) {
-                                                // Determine the start token
-                                                // for the next page
-                                                String token = partitioner.getToken(lastRow.bufferForKey()).toString();
-                                                checkpointManager.trackCheckpoint(tokenPair.left, token);
-                                                if (getRepeatLastToken()) {
-                                                    // Start token is
-                                                    // non-inclusive
-                                                    BigInteger intToken = new BigInteger(token).subtract(new BigInteger("1"));
-                                                    range.setStart_token(intToken.toString());
-                                                }
-                                                else {
-                                                    range.setStart_token(token);
-                                                }
-                                            }
-                                            else {
-                                                checkpointManager.trackCheckpoint(tokenPair.left, tokenPair.right);
-                                                return null;
-                                            }
-                                        }
-                                        else {
-                                            checkpointManager.trackCheckpoint(tokenPair.left, tokenPair.right);
-                                            return null;
-                                        }
-                                    }
-                                    catch (Exception e) {
-                                        ConnectionException ce = ThriftConverter.ToConnectionPoolException(e);
-                                        if (!callback.failure(ce)) {
-                                            error.set(ce);
-                                            return null;
-                                        }
-                                    }
-                                }
+                            if (error.get() == null && internalRun()) {
+                                executor.submit(this);
                             }
-                            finally {
+                            else {
                                 doneSignal.countDown();
                             }
                             return null;
+                        }
+                        
+                        private boolean internalRun() throws Exception {
+                            try {
+                                // Get the next block
+                                List<KeySlice> ks = connectionPool.executeWithFailover(
+                                        new AbstractKeyspaceOperationImpl<List<KeySlice>>(tracerFactory
+                                                .newTracer(CassandraOperationType.GET_ROWS_RANGE,
+                                                        columnFamily), pinnedHost, keyspace
+                                                .getKeyspaceName()) {
+                                            @Override
+                                            public List<KeySlice> internalExecute(Client client)
+                                                    throws Exception {
+                                                return client.get_range_slices(new ColumnParent()
+                                                        .setColumn_family(columnFamily.getName()),
+                                                        predicate, range, ThriftConverter
+                                                                .ToThriftConsistencyLevel(consistencyLevel));
+                                            }
+    
+                                            @Override
+                                            public ByteBuffer getRowKey() {
+                                                if (range.getStart_key() != null)
+                                                    return ByteBuffer.wrap(range.getStart_key());
+                                                return null;
+                                            }
+                                        }, retry.duplicate()).getResult();
+    
+                                // Notify the callback
+                                if (!ks.isEmpty()) {
+                                    KeySlice lastRow = Iterables.getLast(ks);
+                                    
+                                    boolean bContinue = ks.size() == getBlockSize();
+                                    if (bIgnoreTombstones) {
+                                        Iterator<KeySlice> iter = ks.iterator();
+                                        while (iter.hasNext()) {
+                                            if (iter.next().getColumnsSize() == 0)
+                                                iter.remove();
+                                        }
+                                    }
+                                    Rows<K, C> rows = new ThriftRowsSliceImpl<K, C>(ks, columnFamily
+                                            .getKeySerializer(), columnFamily.getColumnSerializer());
+                                    try {
+                                    	callback.success(rows);
+                                    }
+                                    catch (Throwable t) {
+                                        ConnectionException ce = ThriftConverter.ToConnectionPoolException(t);
+                                        error.set(ce);
+                                        return false;
+                                    }
+                                    
+                                    if (bContinue) {
+                                        // Determine the start token
+                                        // for the next page
+                                        String token = partitioner.getToken(lastRow.bufferForKey()).toString();
+                                        checkpointManager.trackCheckpoint(tokenPair.left, token);
+                                        if (getRepeatLastToken()) {
+                                            // Start token is
+                                            // non-inclusive
+                                            BigInteger intToken = new BigInteger(token).subtract(new BigInteger("1"));
+                                            range.setStart_token(intToken.toString());
+                                        }
+                                        else {
+                                            range.setStart_token(token);
+                                        }
+                                    }
+                                    else {
+                                        checkpointManager.trackCheckpoint(tokenPair.left, tokenPair.right);
+                                        return false;
+                                    }
+                                }
+                                else {
+                                    checkpointManager.trackCheckpoint(tokenPair.left, tokenPair.right);
+                                    return false;
+                                }
+                            }
+                            catch (Exception e) {
+                                ConnectionException ce = ThriftConverter.ToConnectionPoolException(e);
+                                if (!callback.failure(ce)) {
+                                    error.set(ce);
+                                    return false;
+                                }
+                            }
+                            
+                            return true;
                         }
                     });
                 }

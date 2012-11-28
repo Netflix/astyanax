@@ -25,6 +25,7 @@ import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
+import com.netflix.astyanax.connectionpool.impl.Topology;
 import com.netflix.astyanax.retry.RetryPolicy;
 
 public class TestConnectionPool implements ConnectionPool<TestClient> {
@@ -54,7 +55,6 @@ public class TestConnectionPool implements ConnectionPool<TestClient> {
     public <R> OperationResult<R> executeWithFailover(
             Operation<TestClient, R> op, RetryPolicy retry)
             throws ConnectionException, OperationException {
-        // TODO Auto-generated method stub
         return null;
     }
 
@@ -83,13 +83,16 @@ public class TestConnectionPool implements ConnectionPool<TestClient> {
 
     @Override
     public List<HostConnectionPool<TestClient>> getActivePools() {
-        // TODO Auto-generated method stub
         return null;
     }
 
     @Override
     public List<HostConnectionPool<TestClient>> getPools() {
-        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public Topology<TestClient> getTopology() {
         return null;
     }
 

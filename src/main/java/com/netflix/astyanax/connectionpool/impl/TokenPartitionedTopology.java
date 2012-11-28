@@ -18,8 +18,10 @@ import org.apache.commons.lang.StringUtils;
 import org.cliffc.high_scale_lib.NonBlockingHashMap;
 
 import com.google.common.base.Function;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Maps.EntryTransformer;
 import com.google.common.collect.Sets;
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
 import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
@@ -186,6 +188,11 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
     }
 
     @Override
+    public TokenHostConnectionPoolPartition<CL> getPartition(String token) {
+        return tokenToPartitionMap.get(new BigInteger(token));
+    }
+    
+    @Override
     public TokenHostConnectionPoolPartition<CL> getPartition(ByteBuffer rowkey) {
         if (rowkey == null)
             return getAllPools();
@@ -238,6 +245,26 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
     public synchronized void addPool(HostConnectionPool<CL> pool) {
         allPools.addPool(pool);
     }
+    
+    @Override
+    public List<String> getPartitionNames() {
+        return Lists.newArrayList(Collections2.transform(tokenToPartitionMap.keySet(), new Function<BigInteger, String>() {
+            @Override
+            public String apply(@Nullable BigInteger input) {
+                return input.toString();
+            }
+        }));
+    }
+    
+    @Override
+    public Map<String, TokenHostConnectionPoolPartition<CL>> getPartitions() {
+        Map<String, TokenHostConnectionPoolPartition<CL>> result = Maps.newHashMap();
+        for (Entry<BigInteger, TokenHostConnectionPoolPartition<CL>> entry : tokenToPartitionMap.entrySet()) {
+            result.put(entry.getKey().toString(), entry.getValue());
+        }
+        return result;
+    }
+
 
     public String toString() {
         StringBuilder sb = new StringBuilder();

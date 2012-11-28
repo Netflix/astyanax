@@ -2,8 +2,13 @@ package com.netflix.astyanax.connectionpool.impl;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
 import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
@@ -84,5 +89,20 @@ public class AbstractTopology<CL> implements Topology<CL> {
     public synchronized void addPool(HostConnectionPool<CL> pool) {
         allPools.addPool(pool);
         allPools.refresh();
+    }
+
+    @Override
+    public List<String> getPartitionNames() {
+        return Lists.newArrayList(allPools.id().toString());
+    }
+
+    @Override
+    public TokenHostConnectionPoolPartition<CL> getPartition(String token) {
+        return allPools;
+    }
+
+    @Override
+    public Map<String, TokenHostConnectionPoolPartition<CL>> getPartitions() {
+        return ImmutableMap.of(allPools.id().toString(), allPools);
     }
 }

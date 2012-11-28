@@ -45,7 +45,7 @@ public class Host implements Comparable<Host> {
     private final String url;
     private String       rack = UKNOWN_RACK;
     private String       id;
-    private Set<String> alternateIpAddress = Sets.newHashSet();
+    private Set<String>  alternateIpAddress = Sets.newHashSet();
     private List<TokenRange> ranges = Lists.newArrayList();
 
     public static Pattern IP_ADDR_PATTERN = Pattern
@@ -130,11 +130,11 @@ public class Host implements Comparable<Host> {
             return false;
         }
         Host other = (Host) obj;
-        return other.ipAddress.equals(ipAddress) && other.port == port;
+        return (other.host.equals(host) || other.ipAddress.equals(ipAddress)) && other.port == port;
     }
 
     public int hashCode() {
-        return ipAddress.hashCode();
+        return host.hashCode() + port;
     }
 
     public String getName() {
@@ -195,7 +195,10 @@ public class Host implements Comparable<Host> {
 
     @Override
     public int compareTo(Host other) {
-        int comp = this.ipAddress.compareTo(other.ipAddress);
+        int comp = this.host.compareTo(other.host);
+        if (comp != 0) {
+            comp = this.ipAddress.compareTo(other.ipAddress);
+        }
         if (comp == 0) {
             comp = this.port - other.port;
         }

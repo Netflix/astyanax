@@ -11,6 +11,9 @@ allprojects {
     repositories { mavenCentral() }
 }
 
+apply plugin: 'idea'
+apply plugin: 'eclipse'
+
 apply from: file('gradle/convention.gradle')
 apply from: file('gradle/maven.gradle')
 apply from: file('gradle/check.gradle')

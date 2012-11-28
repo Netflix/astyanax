@@ -1,6 +1,7 @@
 package com.netflix.astyanax.serializers;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 
 import com.netflix.astyanax.model.Composite;
 
@@ -20,6 +21,8 @@ public class CompositeSerializer extends AbstractSerializer<Composite> {
     @Override
     public Composite fromByteBuffer(ByteBuffer byteBuffer) {
         Composite composite = new Composite();
+
+        composite.setComparatorsByPosition(getComparators());
         composite.deserialize(byteBuffer);
 
         return composite;
@@ -34,5 +37,9 @@ public class CompositeSerializer extends AbstractSerializer<Composite> {
     @Override
     public ComparatorType getComparatorType() {
         return ComparatorType.COMPOSITETYPE;
+    }
+
+    public List<String> getComparators() {
+        return null;
     }
 }

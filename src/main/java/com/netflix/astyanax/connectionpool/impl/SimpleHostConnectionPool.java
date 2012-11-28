@@ -26,6 +26,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.netflix.astyanax.connectionpool.BadHostDetector;
@@ -55,7 +58,7 @@ import com.netflix.astyanax.connectionpool.exceptions.UnknownException;
  * 
  */
 public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
-    
+    private final static Logger LOG = LoggerFactory.getLogger(SimpleHostConnectionPool.class);
     private final static int MAX_PRIME_CONNECTIONS_RETRY_ATTEMPT = 2;
     private final static int PRIME_CONNECTION_DELAY = 100;
 
@@ -84,8 +87,9 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
     private final AtomicInteger                 openConnections      = new AtomicInteger(0);
     private final AtomicInteger                 failedOpenConnections= new AtomicInteger(0);
     private final AtomicInteger                 closedConnections    = new AtomicInteger(0);
-    private final AtomicInteger                 borrowedCount        = new AtomicInteger(0);
-    private final AtomicInteger                 returnedCount        = new AtomicInteger(0);
+    private final AtomicLong                    borrowedCount        = new AtomicLong(0);
+    private final AtomicLong                    returnedCount        = new AtomicLong(0);
+    private final AtomicInteger                 connectAttempt       = new AtomicInteger(0);
     
     private final AtomicInteger                 errorsSinceLastSuccess = new AtomicInteger(0);
 
@@ -104,6 +108,7 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
 
     public SimpleHostConnectionPool(Host host, ConnectionFactory<CL> factory, ConnectionPoolMonitor monitor,
             ConnectionPoolConfiguration config, Listener<CL> listener) {
+        
         this.host            = host;
         this.config          = config;
         this.factory         = factory;
@@ -345,6 +350,7 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
         try {
             if (activeCount.get() < config.getMaxConnsPerHost()) {
                 if (activeCount.incrementAndGet() <= config.getMaxConnsPerHost()) {
+                    connectAttempt.incrementAndGet();
                     Connection<CL> connection = factory.createConnection(SimpleHostConnectionPool.this);
                     connection.open();
                     
@@ -400,6 +406,7 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
                     }
                     else {
                         try {
+                            connectAttempt.incrementAndGet();
                             connection = factory.createConnection(this);
                             connection.openAsync(new Connection.AsyncOpenCallback<CL>() {
                                 @Override
@@ -494,6 +501,11 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
     @Override
     public int getClosedConnectionCount() {
         return closedConnections.get();
+    }
+    
+    @Override
+    public int getConnectAttemptCount() {
+        return this.connectAttempt.get();
     }
 
     

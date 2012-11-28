@@ -282,4 +282,8 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
     protected void rebuildPartitions() {
         topology.refresh();
     }
+    
+    public Topology<CL> getTopology() {
+        return topology;
+    }
 }

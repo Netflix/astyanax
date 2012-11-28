@@ -5,13 +5,13 @@ package com.netflix.astyanax.recipes.scheduler;
  * 
  * @author elandau
  */
-public class SchedulerPartition {
-    private volatile int   lastCount = 1;
+public class SchedulerShard {
+    private volatile int   lastCount = 0;
     private final String   name;
     private final int      partition;
     private final int      shard;
     
-    public SchedulerPartition(String name, int partition, int shard) {
+    public SchedulerShard(String name, int partition, int shard) {
         this.name      = name;
         this.partition = partition;
         this.shard     = shard;

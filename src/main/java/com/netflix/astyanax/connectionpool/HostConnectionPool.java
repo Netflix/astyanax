@@ -154,27 +154,28 @@ public interface HostConnectionPool<CL> {
     void addLatencySample(long lastLatency, long now);
 
     /**
-     * Get total number of connections opened since the pool was created
-     * @return
+     * @return Get total number of connections opened since the pool was created
      */
     int getOpenedConnectionCount();
 
     /**
-     * Get the total number of failed connection open attempts
-     * @return
+     * @return Get the total number of failed connection open attempts
      */
     int getFailedOpenConnectionCount();
 
     /**
-     * Get total number of connections closed
-     * @return
+     * @return Get total number of connections closed
      */
     int getClosedConnectionCount();
 
     /**
-     * Get number of errors since the last successful operation
-     * @return
+     * @return Get number of errors since the last successful operation
      */
     int getErrorsSinceLastSuccess();
+
+    /**
+     * @return Return the number of open connection attempts
+     */
+    int getConnectAttemptCount();
 
 }

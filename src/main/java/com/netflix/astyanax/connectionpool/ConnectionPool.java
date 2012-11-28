@@ -20,6 +20,7 @@ import java.util.Collection;
 
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
+import com.netflix.astyanax.connectionpool.impl.Topology;
 import com.netflix.astyanax.retry.RetryPolicy;
 
 /**
@@ -115,4 +116,10 @@ public interface ConnectionPool<CL> {
      * Setup the connection pool and start any maintenance threads
      */
     void start();
+    
+    /**
+     * Return the internal topology which represents the partitioning of data across hosts in the pool
+     * @return
+     */
+    Topology<CL> getTopology();
 }

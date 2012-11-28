@@ -41,9 +41,26 @@ import com.netflix.astyanax.util.RangeBuilder;
 import com.netflix.astyanax.util.TimeUUIDUtils;
 
 /**
+ * ShardedDistributedScheduler is a Cassandra backed client driven task scheduler.  
+ * 
+ * Key features
+ * 1.  Time partition circular row key set used to time bound how much a wide row can grow.  This,
+ *      along with an aggressive gc_grace_period will give cassandra a chance to clear out the row
+ *      before the clients cycle back to the time partition.  Only one partition is active at any
+ *      given time.
+ * 2.  Mod sharding per partition based on task time.  This solves the problem of lock contention 
+ *      on the acitve time partition.
+ * 3.  Smart processing of partitions and shards to read mostly from the current time shard but allowing
+ *      some cycle for processing older shards
+ * 4.  Read-ack model of removing elements from the queue.  As part of removing an element from the queue
+ *      the client inserts a timeout task.  Once the task has been processed the timeout task is removed 
+ *      from the queue.  Otherwise it will be processed if it's time arrived and it is still in the queue.
+ * 5.  Batch read of events
+ * 6.  Batch insert of events
+ * 
  * Algorithm:
  * 
- *  Jobs are stored as columns in an index where the columns are stored in time order.  The time can
+ *  Tasks are stored as columns in an index where the columns are stored in time order.  The time can
  *  be the current time for immediate execution or future time for recurring or scheduled tasks.
  *  Jobs will be processed in time order.
  *  

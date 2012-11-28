@@ -1,10 +1,6 @@
 package com.netflix.astyanax.recipes.scheduler;
 
-import java.util.Collection;
 import java.util.Map;
-import java.util.UUID;
-
-import com.netflix.astyanax.recipes.locks.BusyLockException;
 
 /**
  * Base interface for a distributed task scheduler.
@@ -27,8 +23,9 @@ import com.netflix.astyanax.recipes.locks.BusyLockException;
  */
 public interface TaskScheduler {
     /**
-     * Return the number of tasks in the queue
-     * @return
+     * Return the number of tasks in the queue.  This is an estimate.
+     * This is an expensive operation and should be used sparingly.
+     * @return  Number of tasks, including tasks currently being processed
      */
     long getTaskCount() throws SchedulerException;
     
@@ -46,7 +43,8 @@ public interface TaskScheduler {
     void createScheduler() throws SchedulerException;
 
     /**
-     * Get the counts for each shard in the scheduler
+     * Get the counts for each shard in the scheduler.  This is an estimate.
+     * This is an expensive operation and should be used sparingly.
      * @return
      * @throws SchedulerException
      */

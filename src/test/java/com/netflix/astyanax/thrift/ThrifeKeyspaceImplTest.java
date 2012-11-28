@@ -3027,10 +3027,11 @@ public class ThrifeKeyspaceImplTest {
     @Test
     @Ignore
     public void testScheduler() throws Exception {
-        ExecutorService executor = Executors.newFixedThreadPool(10);
+        ExecutorService executor = Executors.newFixedThreadPool(100);
         
         final AtomicLong counter = new AtomicLong(0);
-        final int max_count = 200000;
+        final AtomicLong insertCount = new AtomicLong(0);
+        final int max_count = 2000000;
 
         final CountingSchedulerStats stats = new CountingSchedulerStats();
         
@@ -3040,8 +3041,8 @@ public class ThrifeKeyspaceImplTest {
             .withKeyspace(keyspace)
             .withConsistencyLevel(cl)
             .withSchedulerStats(stats)
-            .withBuckets(10,  30,  TimeUnit.SECONDS)
-            .withShardCount(10)
+            .withBuckets(50,  30,  TimeUnit.SECONDS)
+            .withShardCount(20)
             .withPollInterval(100L,  TimeUnit.MILLISECONDS)
             .build();
         
@@ -3049,55 +3050,66 @@ public class ThrifeKeyspaceImplTest {
         
         final ConcurrentMap<String, Boolean> lookup = Maps.newConcurrentMap();
         
+        final int batchSize = 5;
+        
         final AtomicLong iCounter = new AtomicLong(0);
-        for (int j = 0; j < 4; j++) {
+        for (int j = 0; j < 1; j++) {
             executor.submit(new Runnable() {
                 @Override
                 public void run() {
                     long tm = System.currentTimeMillis();
                     TaskProducer producer = scheduler.createProducer();
                     
+                    List<Task> tasks = Lists.newArrayList();
+                          
                     for (int i = 0; i < max_count; i++) {
                         try {
-//                            Thread.sleep(10);
-                            producer.scheduleTask(new Task()
+//                            Thread.sleep(100);
+                            insertCount.incrementAndGet();
+                            tasks.add(new Task()
                                 .setData("The quick brown fox jumped over the lazy cow" + iCounter.incrementAndGet())
     //                            .setNextTriggerTime(TimeUnit.SECONDS.convert(tm, TimeUnit.MILLISECONDS))
 //                                .setTimeout(1L, TimeUnit.MINUTES)
                                 );
+                            
+                            if (tasks.size() == batchSize) {
+                                producer.scheduleTasks(tasks);
+                                tasks.clear();
+                            }
                         } catch (Exception e) {
-                            // TODO Auto-generated catch block
-                            e.printStackTrace();
+                            LOG.error(e.getMessage());
+                            try {
+                                Thread.sleep(1000);
+                            } catch (InterruptedException e1) {
+                                // TODO Auto-generated catch block
+                                e1.printStackTrace();
+                            }
                         }
                     }
                 }
             });
         }
         
-        executor.submit(new Runnable() {
+        final AtomicLong prevCount = new AtomicLong(0);
+        Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 try {
-                    long prevCount = 0;
-                    while (true) {
-                        Thread.sleep(1000);
-                        
-                        long newCount = counter.get();
-                        LOG.info("#### Processed : " + (newCount - prevCount) + " of " + newCount);
-                        LOG.info("#### Pending   : " + scheduler.getTaskCount());
+                    long newCount = counter.get();
+                    System.out.println("#### Processed : " + (newCount - prevCount.get()) + " of " + newCount + " (" + (insertCount.get() - newCount) + ")");
+//                        System.out.println("#### Pending   : " + scheduler.getTaskCount());
 //                        for (Entry<String, Integer> shard : producer.getShardCounts().entrySet()) {
 //                            LOG.info("  " + shard.getKey() + " : " + shard.getValue());
 //                        }
-                        LOG.info(stats.toString());
-                        prevCount = newCount;
-                    }
+                    System.out.println(stats.toString());
+                    prevCount.set(newCount);
                 } 
                 catch (Exception e) {
                     // TODO Auto-generated catch block
                     e.printStackTrace();
                 } 
             }
-        });
+        }, 1, 1, TimeUnit.SECONDS);
         
         for (int i = 0; i < 10; i++) {
             final int schedulerId = i;
@@ -3142,7 +3154,14 @@ public class ThrifeKeyspaceImplTest {
                         }
                         catch (Exception e) {
                             e.printStackTrace();
-                            Assert.fail();
+                            LOG.error(e.getMessage());
+                            try {
+                                Thread.sleep(1000);
+                            } catch (InterruptedException e1) {
+                                // TODO Auto-generated catch block
+                                e1.printStackTrace();
+                            }
+//                            Assert.fail();
                         }
                         
                         

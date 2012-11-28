@@ -30,18 +30,18 @@ import com.netflix.astyanax.retry.RunOnce;
 import com.netflix.astyanax.util.StringUtils;
 
 public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
-    private ConsistencyLevel defaultReadConsistencyLevel = ConsistencyLevel.CL_ONE;
-    private ConsistencyLevel defaultWriteConsistencyLevel = ConsistencyLevel.CL_ONE;
-    private Clock clock = new MicrosecondsSyncClock();
-    private RetryPolicy retryPolicy = RunOnce.get();
-    private ExecutorService asyncExecutor = Executors.newFixedThreadPool(5, 
+    private ConsistencyLevel   defaultReadConsistencyLevel  = ConsistencyLevel.CL_ONE;
+    private ConsistencyLevel   defaultWriteConsistencyLevel = ConsistencyLevel.CL_ONE;
+    private Clock              clock                        = new MicrosecondsSyncClock();
+    private RetryPolicy        retryPolicy                  = RunOnce.get();
+    private ExecutorService    asyncExecutor                = Executors.newFixedThreadPool(5, 
             new ThreadFactoryBuilder().setDaemon(true)
                 .setNameFormat("AstyanaxAsync-%d")
                 .build());
-    private NodeDiscoveryType discoveryType = NodeDiscoveryType.NONE;
-    private int discoveryIntervalInSeconds = 30;
-    private ConnectionPoolType connectionPoolType = ConnectionPoolType.ROUND_ROBIN;
-    private String cqlVersion = null;
+    private NodeDiscoveryType   discoveryType               = NodeDiscoveryType.NONE;
+    private int                 discoveryIntervalInSeconds  = 30;
+    private ConnectionPoolType  connectionPoolType          = ConnectionPoolType.ROUND_ROBIN;
+    private String              cqlVersion                  = null;
 
     public AstyanaxConfigurationImpl() {
     }

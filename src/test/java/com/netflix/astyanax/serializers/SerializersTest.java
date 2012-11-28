@@ -376,6 +376,12 @@ public class SerializersTest {
 		ByteBuffer byteBuffer = serializer.toByteBuffer( composite1 );
 		Composite composite2 = serializer.fromByteBuffer( byteBuffer );
 
+		Assert.assertEquals(String.class, composite1.getComponent( 0 ).getValue().getClass());
+		Assert.assertEquals(Long.class, composite1.getComponent( 1 ).getValue().getClass());
+		
+		Assert.assertEquals( composite1.getComponent( 0 ).getValue().getClass(), composite2.getComponent( 0 ).getValue().getClass() );
+		Assert.assertEquals( composite1.getComponent( 1 ).getValue().getClass(), composite2.getComponent( 1 ).getValue().getClass() );
+		
 		Assert.assertEquals( composite1.getComponent( 0 ).getValue(), composite2.getComponent( 0 ).getValue() );
 		Assert.assertEquals( composite1.getComponent( 1 ).getValue(), composite2.getComponent( 1 ).getValue() );
 	}

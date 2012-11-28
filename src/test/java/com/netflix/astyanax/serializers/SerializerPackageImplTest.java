@@ -28,6 +28,7 @@ public class SerializerPackageImplTest {
 	{
 		SerializerPackageImpl serializers = new SerializerPackageImpl();
 		serializers.setKeyType( "CompositeType(UTF8Type, LongType)" );
+		Assert.assertTrue(serializers.getKeySerializer() instanceof SpecificCompositeSerializer);
 	}
 
 	@Test
@@ -35,5 +36,6 @@ public class SerializerPackageImplTest {
 	{
 		SerializerPackageImpl serializers = new SerializerPackageImpl();
 		serializers.setKeyType( "LongType" );
+		Assert.assertTrue(serializers.getKeySerializer() instanceof LongSerializer);
 	}
 }

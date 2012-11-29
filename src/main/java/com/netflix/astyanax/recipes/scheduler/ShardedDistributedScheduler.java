@@ -788,4 +788,10 @@ public class ShardedDistributedScheduler implements TaskScheduler {
         };
     }
 
+
+    @Override
+    public String getName() {
+        return queueName;
+    }
+
 }

@@ -64,4 +64,10 @@ public interface TaskScheduler {
      * @throws SchedulerException
      */
     TaskProducer createProducer();
+    
+    /**
+     * Return the scheduler's unique name
+     * @return
+     */
+    String getName();
 }

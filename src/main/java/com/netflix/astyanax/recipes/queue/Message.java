@@ -1,14 +1,14 @@
-package com.netflix.astyanax.recipes.scheduler;
+package com.netflix.astyanax.recipes.queue;
 
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-public class Task {
+public class Message {
     /**
      * Last execution time, this value changes as the task state is transitioned.  
      * The token is a timeUUID and represents the next execution/expiration time
-     * within the scheduler.
+     * within the queue.
      */
     private UUID    token;
     
@@ -28,40 +28,24 @@ public class Task {
     private Map<String, Object> parameters;
     
     /**
-     * Flag indicating whether the job can be re-run on timeout
-     */
-    private Boolean rerunnable;
-    
-    /**
-     * Number of iterations.  Must be set in conjunction with 'interval'.
-     * If set to 0 then repeat indefinitely
-     */
-    private Long iterationCount;
-    
-    /**
      * Lower value priority tasks get executed first
      */
     private short priority = 0;
-    
-    /**
-     * Interval between execution.  Must be set in conjunction with 'iterationCount'.  
-     */
-    private Long interval;
     
     /**
      * Timeout value in seconds
      */
     private Integer timeout = 10;
     
-    public Task() {
+    public Message() {
         
     }
     
-    public Task(String data) {
+    public Message(String data) {
         this.data = data;
     }
     
-    public Task(UUID token, String data) {
+    public Message(UUID token, String data) {
         this.token = token;
         this.data   = data;
     }
@@ -74,12 +58,12 @@ public class Task {
         return data;
     }
 
-    public Task setToken(UUID token) {
+    public Message setToken(UUID token) {
         this.token = token;
         return this;
     }
 
-    public Task setData(String data) {
+    public Message setData(String data) {
         this.data = data;
         return this;
     }
@@ -90,7 +74,7 @@ public class Task {
         return nextTriggerTime;
     }
 
-    public Task setNextTriggerTime(Long nextTriggerTime) {
+    public Message setNextTriggerTime(Long nextTriggerTime) {
         this.nextTriggerTime = nextTriggerTime;
         return this;
     }
@@ -99,32 +83,8 @@ public class Task {
         return parameters;
     }
 
-    public Boolean getRerunnable() {
-        return rerunnable;
-    }
-
-    public Long getIterationCount() {
-        return iterationCount;
-    }
-
-    public Long getInterval() {
-        return interval;
-    }
-
     public void setParameters(Map<String, Object> parameters) {
         this.parameters = parameters;
-    }
-
-    public void setRerunnable(Boolean rerunnable) {
-        this.rerunnable = rerunnable;
-    }
-
-    public void setIterationCount(Long iterationCount) {
-        this.iterationCount = iterationCount;
-    }
-
-    public void setInterval(Long interval) {
-        this.interval = interval;
     }
 
     public short getPriority() {
@@ -137,17 +97,17 @@ public class Task {
         return timeout;
     }
 
-    public Task setPriority(short priority) {
+    public Message setPriority(short priority) {
         this.priority = priority;
         return this;
     }
 
-    public Task setTimeout(Integer timeout) {
+    public Message setTimeout(Integer timeout) {
         this.timeout = timeout;
         return this;
     }
     
-    public Task setTimeout(Long timeout, TimeUnit units) {
+    public Message setTimeout(Long timeout, TimeUnit units) {
         this.timeout = (int)TimeUnit.SECONDS.convert(timeout, units);
         return this;
     }

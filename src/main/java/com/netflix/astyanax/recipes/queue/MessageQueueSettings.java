@@ -1,13 +1,13 @@
-package com.netflix.astyanax.recipes.scheduler;
+package com.netflix.astyanax.recipes.queue;
 
 /**
- * Scheduler settings that are persisted to cassandra
+ * MessageQueueSettings settings that are persisted to cassandra
  */
-class SchedulerSettings {
-    private long  partitionDuration   = ShardedDistributedScheduler.DEFAULT_BUCKET_DURATION;
-    private int   partitionCount      = ShardedDistributedScheduler.DEFAULT_BUCKET_COUNT;
-    private long  visibilityTimeout   = ShardedDistributedScheduler.DEFAULT_VISIBILITY_TIMEOUT;
-    private int   shardCount          = ShardedDistributedScheduler.DEFAULT_SHARD_COUNT;
+class MessageQueueSettings {
+    private long  partitionDuration   = ShardedDistributedMessageQueue.DEFAULT_BUCKET_DURATION;
+    private int   partitionCount      = ShardedDistributedMessageQueue.DEFAULT_BUCKET_COUNT;
+    private long  visibilityTimeout   = ShardedDistributedMessageQueue.DEFAULT_VISIBILITY_TIMEOUT;
+    private int   shardCount          = ShardedDistributedMessageQueue.DEFAULT_SHARD_COUNT;
     
     public long getPartitionDuration() {
         return partitionDuration;
@@ -36,7 +36,7 @@ class SchedulerSettings {
     
     @Override
     public String toString() {
-        return "SchedulerSettings [partitionDuration=" + partitionDuration + ", partitionCount=" + partitionCount
+        return "MessageQueueSettings [partitionDuration=" + partitionDuration + ", partitionCount=" + partitionCount
                 + ", visibilityTimeout=" + visibilityTimeout + ", shardCount=" + shardCount + "]";
     }
 }

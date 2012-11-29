@@ -1,17 +1,17 @@
-package com.netflix.astyanax.recipes.scheduler;
+package com.netflix.astyanax.recipes.queue;
 
 /**
  * Track the state of a partition
  * 
  * @author elandau
  */
-public class SchedulerShard {
+public class MessageQueueShard {
     private volatile int   lastCount = 0;
     private final String   name;
     private final int      partition;
     private final int      shard;
     
-    public SchedulerShard(String name, int partition, int shard) {
+    public MessageQueueShard(String name, int partition, int shard) {
         this.name      = name;
         this.partition = partition;
         this.shard     = shard;

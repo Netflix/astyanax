@@ -1,10 +1,10 @@
-package com.netflix.astyanax.recipes.scheduler;
+package com.netflix.astyanax.recipes.queue;
 
 import java.util.Collection;
 
 import com.netflix.astyanax.recipes.locks.BusyLockException;
 
-public interface TaskConsumer {
+public interface MessageConsumer {
     /**
      * Acquire N items from the queue.  Each item must be released
      * 
@@ -15,19 +15,19 @@ public interface TaskConsumer {
      * @throws InterruptedException 
      * @throws Exception 
      */
-    Collection<Task> acquireTasks(int itemsToPop) throws SchedulerException, BusyLockException, InterruptedException;
+    Collection<Message> readMessages(int itemsToPop) throws MessageQueueException, BusyLockException, InterruptedException;
 
     /**
      * Release a job after completion
      * @param item
      * @throws Exception 
      */
-    void ackTask(Task task) throws SchedulerException;
+    void ackMessage(Message message) throws MessageQueueException;
 
     /**
      * Release a set of jobs
      * @param items
      */
-    void ackTasks(Collection<Task> tasks) throws SchedulerException;
+    void ackMessages(Collection<Message> messages) throws MessageQueueException;
     
 }

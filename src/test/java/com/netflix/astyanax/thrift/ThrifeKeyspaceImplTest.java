@@ -74,14 +74,14 @@ import com.netflix.astyanax.recipes.UUIDStringSupplier;
 import com.netflix.astyanax.recipes.locks.BusyLockException;
 import com.netflix.astyanax.recipes.locks.ColumnPrefixDistributedRowLock;
 import com.netflix.astyanax.recipes.locks.StaleLockException;
+import com.netflix.astyanax.recipes.queue.CountingQueueStats;
+import com.netflix.astyanax.recipes.queue.Message;
+import com.netflix.astyanax.recipes.queue.MessageConsumer;
+import com.netflix.astyanax.recipes.queue.MessageProducer;
+import com.netflix.astyanax.recipes.queue.MessageQueue;
+import com.netflix.astyanax.recipes.queue.MessageQueueException;
+import com.netflix.astyanax.recipes.queue.ShardedDistributedMessageQueue;
 import com.netflix.astyanax.recipes.reader.AllRowsReader;
-import com.netflix.astyanax.recipes.scheduler.CountingSchedulerStats;
-import com.netflix.astyanax.recipes.scheduler.SchedulerException;
-import com.netflix.astyanax.recipes.scheduler.TaskConsumer;
-import com.netflix.astyanax.recipes.scheduler.TaskProducer;
-import com.netflix.astyanax.recipes.scheduler.TaskScheduler;
-import com.netflix.astyanax.recipes.scheduler.ShardedDistributedScheduler;
-import com.netflix.astyanax.recipes.scheduler.Task;
 import com.netflix.astyanax.recipes.uniqueness.ColumnPrefixUniquenessConstraint;
 import com.netflix.astyanax.recipes.uniqueness.DedicatedMultiRowUniquenessConstraint;
 import com.netflix.astyanax.recipes.uniqueness.MultiRowUniquenessConstraint;
@@ -3033,20 +3033,20 @@ public class ThrifeKeyspaceImplTest {
         final AtomicLong insertCount = new AtomicLong(0);
         final int max_count = 2000000;
 
-        final CountingSchedulerStats stats = new CountingSchedulerStats();
+        final CountingQueueStats stats = new CountingQueueStats();
         
         final ConsistencyLevel cl = ConsistencyLevel.CL_ONE;
-        final TaskScheduler scheduler = new ShardedDistributedScheduler.Builder()
+        final MessageQueue scheduler = new ShardedDistributedMessageQueue.Builder()
             .withColumnFamily(SCHEDULER_NAME_CF_NAME)
             .withKeyspace(keyspace)
             .withConsistencyLevel(cl)
-            .withSchedulerStats(stats)
+            .withStats(stats)
             .withBuckets(50,  30,  TimeUnit.SECONDS)
             .withShardCount(20)
             .withPollInterval(100L,  TimeUnit.MILLISECONDS)
             .build();
         
-        scheduler.createScheduler();
+        scheduler.createQueue();
         
         final ConcurrentMap<String, Boolean> lookup = Maps.newConcurrentMap();
         
@@ -3058,22 +3058,22 @@ public class ThrifeKeyspaceImplTest {
                 @Override
                 public void run() {
                     long tm = System.currentTimeMillis();
-                    TaskProducer producer = scheduler.createProducer();
+                    MessageProducer producer = scheduler.createProducer();
                     
-                    List<Task> tasks = Lists.newArrayList();
+                    List<Message> tasks = Lists.newArrayList();
                           
                     for (int i = 0; i < max_count; i++) {
                         try {
 //                            Thread.sleep(100);
                             insertCount.incrementAndGet();
-                            tasks.add(new Task()
+                            tasks.add(new Message()
                                 .setData("The quick brown fox jumped over the lazy cow" + iCounter.incrementAndGet())
     //                            .setNextTriggerTime(TimeUnit.SECONDS.convert(tm, TimeUnit.MILLISECONDS))
 //                                .setTimeout(1L, TimeUnit.MINUTES)
                                 );
                             
                             if (tasks.size() == batchSize) {
-                                producer.scheduleTasks(tasks);
+                                producer.sendMessages(tasks);
                                 tasks.clear();
                             }
                         } catch (Exception e) {
@@ -3124,14 +3124,14 @@ public class ThrifeKeyspaceImplTest {
                     
                     Thread.currentThread().setName("Consumer_" + schedulerId);
                     
-                    TaskConsumer consumer = scheduler.createConsumer();
+                    MessageConsumer consumer = scheduler.createConsumer();
                     
                     while (true) {
-                        Collection<Task> tasks = null;
+                        Collection<Message> tasks = null;
                         try {
-                            tasks = consumer.acquireTasks(200);
+                            tasks = consumer.readMessages(200);
                             try {
-                                for (Task task : tasks) {
+                                for (Message task : tasks) {
                                     counter.incrementAndGet();
                                     
 //                                    if (lookup.putIfAbsent(task.getData(), new Boolean(true)) != null) {
@@ -3141,7 +3141,7 @@ public class ThrifeKeyspaceImplTest {
                                 }
                             }
                             finally {
-                                consumer.ackTasks(tasks);
+                                consumer.ackMessages(tasks);
                             }
                         } 
                         catch (BusyLockException e) {

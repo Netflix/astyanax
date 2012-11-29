@@ -1,4 +1,4 @@
-package com.netflix.astyanax.recipes.scheduler;
+package com.netflix.astyanax.recipes.queue;
 
 import java.util.Collection;
 
@@ -11,28 +11,28 @@ import com.netflix.astyanax.MutationBatch;
  * @author elandau
  *
  */
-public interface SchedulerHooks {
+public interface MessageQueueHooks {
     /**
      * Called after tasks are read from the queue and before the mutation
      * for updating their state is committed.
      * 
-     * @param tasks
+     * @param messages
      * @param mb
      */
-    void preAcquireTasks(Collection<Task> tasks, MutationBatch mb);
+    void beforeAckMessages(Collection<Message> messages, MutationBatch mb);
 
     /**
      * Called before a task is released from the queue
      * 
-     * @param task
+     * @param message
      * @param mb
      */
-    void preAckTask(Task task, MutationBatch mb);
+    void beforeAckMessage(Message message, MutationBatch mb);
 
     /**
-     * Called before a task is inserted in the scheduler
-     * @param task
+     * Called before a task is inserted in the queue
+     * @param message
      * @param mb
      */
-    void preScheduleTask(Task task, MutationBatch mb);
+    void beforeSendMessage(Message message, MutationBatch mb);
 }

@@ -1,15 +1,15 @@
-package com.netflix.astyanax.recipes.scheduler;
+package com.netflix.astyanax.recipes.queue;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-public class CountingSchedulerStats implements SchedulerStats {
+public class CountingQueueStats implements MessageQueueStats {
     private AtomicLong emptyPartitionCount = new AtomicLong();
     private AtomicLong lockContentionCount = new AtomicLong();
     private AtomicLong eventProcessCount   = new AtomicLong();
     private AtomicLong eventReprocessCount = new AtomicLong();
     private AtomicLong expiredLockCount    = new AtomicLong();
-    private AtomicLong releaseTaskCount    = new AtomicLong();
-    private AtomicLong submitTaskCount     = new AtomicLong();
+    private AtomicLong releaseMessageCount = new AtomicLong();
+    private AtomicLong sendMessageCount    = new AtomicLong();
     private AtomicLong invalidTaskCount    = new AtomicLong();
     
     @Override
@@ -38,29 +38,29 @@ public class CountingSchedulerStats implements SchedulerStats {
     }
 
     @Override
-    public void incSubmitTaskCount() {
-        submitTaskCount.incrementAndGet();
+    public void incSendMessageCount() {
+        sendMessageCount.incrementAndGet();
     }
 
     @Override
-    public void incFinishTaskCount() {
-        releaseTaskCount.incrementAndGet();
+    public void incFinishMessageCount() {
+        releaseMessageCount.incrementAndGet();
     }
 
     @Override
-    public void incInvalidTaskCount() {
+    public void incInvalidMessageCount() {
         invalidTaskCount.incrementAndGet();
     }
 
     @Override
     public String toString() {
-        return "CountingSchedulerStats [empty=" + emptyPartitionCount.get() 
+        return "CountingQueueStats [empty=" + emptyPartitionCount.get() 
                 + ", cont="     + lockContentionCount.get()
                 + ", ok="       + eventProcessCount .get()
                 + ", redo="     + eventReprocessCount.get()
                 + ", exp="      + expiredLockCount .get()
-                + ", rel="      + releaseTaskCount .get()
-                + ", new="      + submitTaskCount .get()
+                + ", rel="      + releaseMessageCount .get()
+                + ", new="      + sendMessageCount .get()
                 + ", invalid="  + invalidTaskCount + "]";
     }
 }

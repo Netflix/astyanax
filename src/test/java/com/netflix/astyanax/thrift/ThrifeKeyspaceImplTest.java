@@ -3184,7 +3184,7 @@ public class ThrifeKeyspaceImplTest {
     }
 
     @Test
-//    @Ignore
+    @Ignore
     public void testScheduler() throws Exception {
         TaskScheduler scheduler = new DistributedTaskScheduler.Builder()
             .withBatchSize(5)

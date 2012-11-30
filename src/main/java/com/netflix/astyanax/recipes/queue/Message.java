@@ -20,7 +20,7 @@ public class Message {
     /**
      * Execution time for the task in milliseconds
      */
-    private Long    nextTriggerTime;
+    private Long    triggerTime;
 
     /**
      * Map of task arguments.
@@ -68,14 +68,14 @@ public class Message {
         return this;
     }
 
-    public Long getNextTriggerTime() {
-        if (nextTriggerTime == null)
+    public Long getTriggerTime() {
+        if (triggerTime == null)
             return 0L;
-        return nextTriggerTime;
+        return triggerTime;
     }
 
-    public Message setNextTriggerTime(Long nextTriggerTime) {
-        this.nextTriggerTime = nextTriggerTime;
+    public Message setTriggerTime(Long triggerTime) {
+        this.triggerTime = triggerTime;
         return this;
     }
 

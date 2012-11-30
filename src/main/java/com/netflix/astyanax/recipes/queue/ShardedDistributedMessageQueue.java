@@ -108,9 +108,9 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     public static final String           DEFAULT_QUEUE_NAME              = "Queue";
     public static final ConsistencyLevel DEFAULT_CONSISTENCY_LEVEL       = ConsistencyLevel.CL_LOCAL_QUORUM;
     public static final RetryPolicy      DEFAULT_RETRY_POLICY            = RunOnce.get();
-    public static final long             DEFAULT_LOCK_TIMEOUT            = TimeUnit.MICROSECONDS.convert(1,   TimeUnit.MINUTES);
-    public static final long             DEFAULT_LOCK_TTL                = TimeUnit.MICROSECONDS.convert(10,  TimeUnit.MINUTES);
-    public static final long             DEFAULT_POLL_WAIT               = TimeUnit.MILLISECONDS.convert(50,  TimeUnit.MILLISECONDS);
+    public static final long             DEFAULT_LOCK_TIMEOUT            = TimeUnit.MICROSECONDS.convert(30,  TimeUnit.SECONDS);
+    public static final long             DEFAULT_LOCK_TTL                = TimeUnit.MICROSECONDS.convert(2,   TimeUnit.MINUTES);
+    public static final long             DEFAULT_POLL_WAIT               = TimeUnit.MILLISECONDS.convert(100, TimeUnit.MILLISECONDS);
     public static final long             DEFAULT_VISIBILITY_TIMEOUT      = TimeUnit.SECONDS.convert(4,  TimeUnit.DAYS);
     public static final int              DEFAULT_SHARD_COUNT             = 1;
     public static final long             DEFAULT_BUCKET_DURATION         = TimeUnit.MICROSECONDS.convert(30,  TimeUnit.SECONDS);
@@ -183,12 +183,17 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             return this;
         }
         
-        public Builder withHooks(MessageQueueHooks hooks) {
-            queue.hooks = hooks;
+        public Builder withHook(MessageQueueHooks hooks) {
+            queue.hooks.add(hooks);
             return this;
         }
         
-        public MessageQueue build() {
+        public Builder withHooks(Collection<MessageQueueHooks> hooks) {
+            queue.hooks.addAll(hooks);
+            return this;
+        }
+        
+        public ShardedDistributedMessageQueue build() {
             queue.columnFamily = ColumnFamily.newColumnFamily(columnFamilyName, StringSerializer.get(), compositeSerializer); 
             queue.initialize();
             return queue;
@@ -204,23 +209,24 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     private long                            lockTimeout         = DEFAULT_LOCK_TIMEOUT;
     private Long                            lockTtl             = DEFAULT_LOCK_TTL;
     private long                            pollInterval        = DEFAULT_POLL_WAIT;
-    private MessageQueueStats                      stats               = new CountingQueueStats();
+    private MessageQueueStats               stats               = new CountingQueueStats();
     private String                          queueName           = DEFAULT_QUEUE_NAME;
     private AtomicLong                      counter             = new AtomicLong(new Random().nextInt(1000));
-    private MessageQueueHooks                      hooks               = new BaseQueueHook();
+    private Collection<MessageQueueHooks>   hooks               = Lists.newArrayList();
+    private MessageQueueSettings            settings            = new MessageQueueSettings();
+    private List<MessageQueueShard>         partitions;
     private Function<String, Message>       invalidMessageHandler  = new Function<String, Message>() {
                                                                         @Override
                                                                         public Message apply(@Nullable String input) {
                                                                             return null;
                                                                         }
                                                                     };
-    private List<MessageQueueShard>        partitions;
-    private MessageQueueSettings               settings            = new MessageQueueSettings();
     
     private void initialize() {
         Preconditions.checkArgument(
                 lockTtl == null || lockTimeout < lockTtl, 
                 "Timeout " + lockTtl + " must be less than TTL " + lockTtl);
+        Preconditions.checkNotNull(keyspace, "Must specify keyspace");
         
         try {
             Column<MessageQueueEntry> column = keyspace.prepareQuery(columnFamily)
@@ -621,7 +627,9 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                         }
                     }
                     
-                    hooks.beforeAckMessages(entries, m);
+                    for (MessageQueueHooks hook : hooks) {
+                        hook.beforeAckMessages(entries, m);
+                    }
                     return entries;
                 }
                 catch (BusyLockException e) {
@@ -651,7 +659,9 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 mb.withRow(columnFamily, getQueueKey(entry))
                     .deleteColumn(entry);
                 
-                hooks.beforeAckMessage(message, mb);
+                for (MessageQueueHooks hook : hooks) {
+                    hook.beforeAckMessage(message, mb);
+                }
                 try {
                     mb.execute();
                 } catch (ConnectionException e) {
@@ -688,13 +698,13 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             public UUID sendMessage(Message message) throws MessageQueueException {
                 // Get the execution time from the message or set to current time so it runs immediately
                 long curTimeMicros;
-                if (message.getNextTriggerTime() == 0) {
+                if (message.getTriggerTime() == 0) {
                     curTimeMicros = TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
                                   + (counter.incrementAndGet() % 1000);
                 }
                 else {
-                    curTimeMicros = TimeUnit.MICROSECONDS.convert(message.getNextTriggerTime(),  TimeUnit.SECONDS)
-                                  + (counter.incrementAndGet() % 1000000);
+                    curTimeMicros = TimeUnit.MICROSECONDS.convert(message.getTriggerTime(),  TimeUnit.MILLISECONDS)
+                                  + (counter.incrementAndGet() % 1000);
                 }
 
                 // Update the message for the new token
@@ -712,6 +722,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     mapper.writeValue(baos, message);
                     baos.flush();
                 } catch (Exception e) {
+                    e.printStackTrace();
                     throw new MessageQueueException("Failed to serialize message data", e);
                 }
 
@@ -720,7 +731,9 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 mb.withRow(columnFamily, getQueueKey(entry))
                   .putColumn(entry, new String(baos.toByteArray()), (int)settings.getVisibilityTimeout());
                     
-                hooks.beforeSendMessage(message, mb);
+                for (MessageQueueHooks hook : hooks) {
+                    hook.beforeSendMessage(message, mb);
+                }
                 try {
                     mb.execute();
                 } catch (ConnectionException e) {
@@ -739,13 +752,13 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 for (Message message : messages) {
                     // Get the execution time from the message or set to current time so it runs immediately
                     long curTimeMicros;
-                    if (message.getNextTriggerTime() == 0) {
+                    if (message.getTriggerTime() == 0) {
                         curTimeMicros = TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
                                       + (counter.incrementAndGet() % 1000);
                     }
                     else {
-                        curTimeMicros = TimeUnit.MICROSECONDS.convert(message.getNextTriggerTime(),  TimeUnit.SECONDS)
-                                      + (counter.incrementAndGet() % 1000000);
+                        curTimeMicros = TimeUnit.MICROSECONDS.convert(message.getTriggerTime(), TimeUnit.MILLISECONDS)
+                                      + (counter.incrementAndGet() % 1000);
                     }
     
                     // Update the message for the new token
@@ -770,7 +783,9 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     mb.withRow(columnFamily, getQueueKey(entry))
                       .putColumn(entry, new String(baos.toByteArray()), (int)settings.getVisibilityTimeout());
                         
-                    hooks.beforeSendMessage(message, mb);
+                    for (MessageQueueHooks hook : hooks) {
+                        hook.beforeSendMessage(message, mb);
+                    }
                     response.put(message,  message.getToken());
                     
                     // Update state and retun the token

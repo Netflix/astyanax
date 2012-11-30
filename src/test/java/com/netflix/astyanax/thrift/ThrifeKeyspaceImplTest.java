@@ -82,6 +82,10 @@ import com.netflix.astyanax.recipes.queue.MessageQueue;
 import com.netflix.astyanax.recipes.queue.MessageQueueException;
 import com.netflix.astyanax.recipes.queue.ShardedDistributedMessageQueue;
 import com.netflix.astyanax.recipes.reader.AllRowsReader;
+import com.netflix.astyanax.recipes.scheduler.TaskInfo;
+import com.netflix.astyanax.recipes.scheduler.DistributedTaskScheduler;
+import com.netflix.astyanax.recipes.scheduler.TaskScheduler;
+import com.netflix.astyanax.recipes.scheduler.triggers.RepeatingTrigger;
 import com.netflix.astyanax.recipes.uniqueness.ColumnPrefixUniquenessConstraint;
 import com.netflix.astyanax.recipes.uniqueness.DedicatedMultiRowUniquenessConstraint;
 import com.netflix.astyanax.recipes.uniqueness.MultiRowUniquenessConstraint;
@@ -279,7 +283,7 @@ public class ThrifeKeyspaceImplTest {
             keyspace.dropKeyspace();
         }
         catch (Exception e) {
-            
+            e.printStackTrace();
         }
         
         keyspace.createKeyspace(ImmutableMap.<String, Object>builder()
@@ -3025,8 +3029,8 @@ public class ThrifeKeyspaceImplTest {
     }
     
     @Test
-//    @Ignore
-    public void testScheduler() throws Exception {
+    @Ignore
+    public void testQueue() throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(100);
         
         final AtomicLong counter = new AtomicLong(0);
@@ -3179,6 +3183,35 @@ public class ThrifeKeyspaceImplTest {
         executor.awaitTermination(1000,  TimeUnit.SECONDS);
     }
 
+    @Test
+//    @Ignore
+    public void testScheduler() throws Exception {
+        TaskScheduler scheduler = new DistributedTaskScheduler.Builder()
+            .withBatchSize(5)
+            .withKeyspace(keyspace)
+            .withName("TestScheduler")
+            .build();
+        
+        scheduler.create();
+        Thread.sleep(3000);
+        
+        scheduler.start();
+        
+        scheduler.scheduleTask(
+            new TaskInfo.Builder()
+                .withKey("SomeTest")
+                .withClass(HelloWorldTask.class)
+                .build()
+            , 
+            new RepeatingTrigger.Builder()
+                .withDelay(10,  TimeUnit.SECONDS)
+                .withInterval(10,  TimeUnit.SECONDS)
+                .build()
+        );
+        
+        Thread.sleep(TimeUnit.MILLISECONDS.convert(1,  TimeUnit.HOURS));
+    }
+    
     private boolean deleteColumn(ColumnFamily<String, String> cf,
             String rowKey, String columnName) {
         MutationBatch m = keyspace.prepareMutationBatch();

@@ -10,6 +10,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Nullable;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.codehaus.jackson.JsonGenerationException;
@@ -20,6 +22,7 @@ import org.codehaus.jackson.map.SerializationConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -36,6 +39,8 @@ import com.netflix.astyanax.recipes.queue.MessageProducer;
 import com.netflix.astyanax.recipes.queue.MessageQueueException;
 import com.netflix.astyanax.recipes.queue.MessageQueueHooks;
 import com.netflix.astyanax.recipes.queue.ShardedDistributedMessageQueue;
+import com.netflix.astyanax.recipes.uniqueness.ColumnPrefixUniquenessConstraint;
+import com.netflix.astyanax.recipes.uniqueness.NotUniqueException;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.TimeUUIDSerializer;
 import com.netflix.astyanax.util.TimeUUIDUtils;
@@ -417,23 +422,31 @@ public class DistributedTaskScheduler implements MessageQueueHooks, TaskSchedule
      * @see com.netflix.astyanax.recipes.scheduler.TaskScheduler#scheduleTask(com.netflix.astyanax.recipes.scheduler.TaskInfo, com.netflix.astyanax.recipes.scheduler.Trigger)
      */
     @Override
-    public void scheduleTask(TaskInfo task, Trigger trigger) throws TaskSchedulerException {
-        // First, add the task, including trigger details to the task queue
-        MutationBatch mb = keyspace.prepareMutationBatch();
+    public void scheduleTask(final TaskInfo task, final Trigger trigger) throws TaskSchedulerException, NotUniqueException {
+        ColumnPrefixUniquenessConstraint<String> unique = new ColumnPrefixUniquenessConstraint<String>(keyspace, taskCf, task.getKey());
+        
+        final String serializedTask;
+        final String serializedTrigger;
         try {
-            mb.withRow(taskCf, task.getKey())
-                  .putColumn(COLUMN_TASK_INFO,     serializeToString(task))
-                  .putColumn(COLUMN_TRIGGER,       serializeToString(trigger))
-                  .putColumn(COLUMN_TRIGGER_CLASS, trigger.getClass().getCanonicalName());
+            serializedTask    = serializeToString(task);
+            serializedTrigger = serializeToString(trigger);
         } catch (Exception e) {
             throw new TaskSchedulerException("Failed to serialize trigger or task for " + task.getKey(), e);
         }
 
-        // Persist the task
         try {
-            mb.execute();
-        } catch (ConnectionException e) {
-            throw new TaskSchedulerException("Failed to commit task " + task.getKey(), e);
+            unique.acquireAndApplyMutation(new Function<MutationBatch, Boolean>() {
+                @Override
+                public Boolean apply(@Nullable MutationBatch mb) {
+                    mb.withRow(taskCf, task.getKey())
+                        .putColumn(COLUMN_TASK_INFO,     serializedTask)
+                        .putColumn(COLUMN_TRIGGER,       serializedTrigger)
+                        .putColumn(COLUMN_TRIGGER_CLASS, trigger.getClass().getCanonicalName());
+                    return true;
+                }
+            });
+        } catch (Exception e) {
+            throw new TaskSchedulerException("Failed to serialize trigger or task for " + task.getKey(), e);
         }
         
         // Now, send 

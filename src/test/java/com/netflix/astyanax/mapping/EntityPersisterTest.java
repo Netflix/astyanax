@@ -21,6 +21,7 @@ import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.ColumnFamily;
+import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.test.EmbeddedCassandra;
 import com.netflix.astyanax.thrift.ThrifeKeyspaceImplTest;
@@ -104,7 +105,7 @@ public class EntityPersisterTest {
 
 		keyspace.createColumnFamily(CF_SAMPLE_ENTITY, null);
 	}
-	
+
 	private SampleEntity createRandomEntity(String id) {
 		Random prng = new Random();
 		SampleEntity entity = new SampleEntity();
@@ -129,7 +130,7 @@ public class EntityPersisterTest {
 	}
 
 	@Test
-	public void basicLifecycle() {
+	public void basicLifecycle() throws Exception {
 		final String id = "basicLifecycle";
 		EntityPersister<SampleEntity, String> entityPersister = new EntityPersister.Builder<SampleEntity, String>()
 				.withEntity(SampleEntity.class)
@@ -137,15 +138,28 @@ public class EntityPersisterTest {
 				.withColumnFamily(CF_SAMPLE_ENTITY)
 				.build();
 		SampleEntity origEntity = createRandomEntity(id);
-		
+
 		entityPersister.put(origEntity);
+
 		// use low-level astyanax API to confirm the write
-		
-		
+		{
+			ColumnList<String> cl = keyspace.prepareQuery(CF_SAMPLE_ENTITY).getKey(id).execute().getResult();
+			Assert.assertEquals(17, cl.size());
+			// more field-level check
+			Assert.assertEquals(origEntity.getStr(), cl.getColumnByName("STRING").getStringValue());
+			Assert.assertEquals(origEntity.getByteArray(), cl.getColumnByName("BYTE_ARRAY").getByteArrayValue());
+			Assert.assertEquals(123456, cl.getColumnByName("BYTE_ARRAY").getTtl());
+		}
+
 		SampleEntity getEntity = entityPersister.get(id);
 		Assert.assertEquals(origEntity, getEntity);
-		
+
 		entityPersister.delete(id);
+
 		// use low-level astyanax API to confirm the delete
+		{
+			ColumnList<String> cl = keyspace.prepareQuery(CF_SAMPLE_ENTITY).getKey(id).execute().getResult();
+			Assert.assertEquals(0, cl.size());
+		}
 	}
 }

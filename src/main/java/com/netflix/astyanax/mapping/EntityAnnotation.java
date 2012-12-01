@@ -38,6 +38,7 @@ class EntityAnnotation {
 
 			if(idAnnotation != null) {
 				Preconditions.checkArgument(tmpIdField == null, "there are multiple fields with @Id annotation");
+				field.setAccessible(true);
 				tmpIdField = field;
 			}
 
@@ -45,7 +46,6 @@ class EntityAnnotation {
 				String columnName = getColumnName(columnAnnotation, field);
 				Preconditions.checkArgument(!lowerCaseColumnNames.contains(columnName.toLowerCase()), String.format("duplicate case-insensitive column name: %s", columnName));
 				lowerCaseColumnNames.add(columnName.toLowerCase());
-				System.out.println(columnName);
 				field.setAccessible(true);
 				builder.put(columnName, field);
 			}

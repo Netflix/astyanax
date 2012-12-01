@@ -68,44 +68,43 @@ class Coercions {
         }
     }
 
-    @SuppressWarnings("unchecked")
     static <T> void setColumnMutationFromField(T instance, Field field,
-            String columnName, ColumnListMutation<String> mutation) {
+            String columnName, ColumnListMutation<String> mutation, Integer ttl) {
         try {
             Object objValue = field.get(instance);
 
             if (objValue != null) {
                 if ((objValue.getClass() == Byte.class)
                         || (objValue.getClass() == Byte.TYPE)) {
-                    mutation.putColumn(columnName, (Byte) objValue & 0xff, null);
+                    mutation.putColumn(columnName, (Byte) objValue & 0xff, ttl);
                 } else if ((objValue.getClass() == Boolean.class)
                         || (objValue.getClass() == Boolean.TYPE)) {
-                    mutation.putColumn(columnName, (Boolean) objValue, null);
+                    mutation.putColumn(columnName, (Boolean) objValue, ttl);
                 } else if ((objValue.getClass() == Short.class)
                         || (objValue.getClass() == Short.TYPE)) {
-                    mutation.putColumn(columnName, (Short) objValue, null);
+                    mutation.putColumn(columnName, (Short) objValue, ttl);
                 } else if ((objValue.getClass() == Integer.class)
                         || (objValue.getClass() == Integer.TYPE)) {
-                    mutation.putColumn(columnName, (Integer) objValue, null);
+                    mutation.putColumn(columnName, (Integer) objValue, ttl);
                 } else if ((objValue.getClass() == Long.class)
                         || (objValue.getClass() == Long.TYPE)) {
-                    mutation.putColumn(columnName, (Long) objValue, null);
+                    mutation.putColumn(columnName, (Long) objValue, ttl);
                 } else if ((objValue.getClass() == Float.class)
                         || (objValue.getClass() == Float.TYPE)) {
-                    mutation.putColumn(columnName, (Float) objValue, null);
+                    mutation.putColumn(columnName, (Float) objValue, ttl);
                 } else if ((objValue.getClass() == Double.class)
                         || (objValue.getClass() == Double.TYPE)) {
-                    mutation.putColumn(columnName, (Double) objValue, null);
+                    mutation.putColumn(columnName, (Double) objValue, ttl);
                 } else if (objValue.getClass() == Date.class) {
-                    mutation.putColumn(columnName, (Date) objValue, null);
+                    mutation.putColumn(columnName, (Date) objValue, ttl);
                 } else if (objValue.getClass() == String.class) {
-                    mutation.putColumn(columnName, (String) objValue, null);
+                    mutation.putColumn(columnName, (String) objValue, ttl);
                 } else if(objValue.getClass() == byte[].class) {
-                    mutation.putColumn(columnName, (byte[]) objValue, null);
+                    mutation.putColumn(columnName, (byte[]) objValue, ttl);
                 } else if (objValue.getClass() == UUID.class) {
-                    mutation.putColumn(columnName, (UUID) objValue, null);
+                    mutation.putColumn(columnName, (UUID) objValue, ttl);
                 } else if (objValue.getClass().isEnum()) {
-                    mutation.putColumn(columnName, objValue.toString(), null);
+                    mutation.putColumn(columnName, objValue.toString(), ttl);
                 } else {
                     throw new UnsupportedOperationException();
                 }

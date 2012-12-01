@@ -26,7 +26,10 @@ import java.util.List;
 
 /**
  * Higher level mapping functions. Methods that behave similar to a Map.
+ * 
+ * @deprecated  please use EntityPersister
  */
+@Deprecated
 public class MappingUtil {
     private final Keyspace keyspace;
     private final MappingCache cache;

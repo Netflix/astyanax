@@ -211,6 +211,8 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
 
     @Override
     public ByteBuffer getKeyAlias() {
+        if (cfDef.getKey_alias() == null)
+            return null;
         return ByteBuffer.wrap(cfDef.getKey_alias());
     }
 

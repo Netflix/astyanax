@@ -70,6 +70,8 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
 
     @Override
     public void start() {
+        config.initialize();
+        
         ConnectionPoolMBeanManager.getInstance().registerMonitor(config.getName(), this);
 
         String seeds = config.getSeeds();
@@ -99,6 +101,7 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
         }
 
         config.getLatencyScoreStrategy().shutdown();
+        config.shutdown();
     }
 
     protected HostConnectionPool<CL> newHostConnectionPool(Host host, ConnectionFactory<CL> factory,

@@ -17,8 +17,11 @@ package com.netflix.astyanax.connectionpool.impl;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.netflix.astyanax.AuthenticationCredentials;
 import com.netflix.astyanax.connectionpool.BadHostDetector;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
@@ -64,6 +67,8 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     public static final int DEFAULT_BLOCKED_THREAD_THRESHOLD = 10;
     public static final BadHostDetector DEFAULT_BAD_HOST_DETECTOR = EmptyBadHostDetectorImpl.getInstance();
     public static final Partitioner DEFAULT_PARTITIONER = BigInteger127Partitioner.get();
+    private static final int DEFAULT_RECONNECT_THREAD_COUNT = 5;
+    private static final int DEFAULT_MAINTAINANCE_THREAD_COUNT = 1;
     
     private final String name;
 
@@ -100,7 +105,12 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     private AuthenticationCredentials credentials         = null;
     private OperationFilterFactory filterFactory          = EmptyOperationFilterFactory.getInstance();
     private Partitioner partitioner                       = DEFAULT_PARTITIONER;
-
+    private ScheduledExecutorService maintainanceExecutor;
+    private ScheduledExecutorService reconnectExecutor;
+    
+    private boolean bOwnMaintainanceExecutor              = false;
+    private boolean bOwnReconnectExecutor                 = false;
+            
     private String localDatacenter = null;
     
     public ConnectionPoolConfigurationImpl(String name) {
@@ -109,6 +119,29 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
         this.hostRetryBackoffStrategy = new ExponentialRetryBackoffStrategy(this);
     }
 
+    @Override
+    public void initialize() {
+        if (maintainanceExecutor == null) {
+            maintainanceExecutor = Executors.newScheduledThreadPool(DEFAULT_MAINTAINANCE_THREAD_COUNT, new ThreadFactoryBuilder().setDaemon(true).build());
+            bOwnMaintainanceExecutor = true;
+        }
+        if (reconnectExecutor == null) {
+            reconnectExecutor = Executors.newScheduledThreadPool(DEFAULT_RECONNECT_THREAD_COUNT, new ThreadFactoryBuilder().setDaemon(true).build());
+            bOwnReconnectExecutor = true;
+        }
+    }
+    
+    @Override
+    public void shutdown() {
+        if (bOwnMaintainanceExecutor) {
+            maintainanceExecutor.shutdownNow();
+        }
+        
+        if (bOwnReconnectExecutor) {
+            reconnectExecutor.shutdownNow();
+        }
+    }
+    
     /*
      * (non-Javadoc)
      * 
@@ -522,6 +555,28 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     
     public ConnectionPoolConfigurationImpl setMinHostInPoolRatio(float ratio) {
         this.minHostInPoolRatio = ratio;
+        return this;
+    }
+
+    @Override
+    public ScheduledExecutorService getMaintainanceScheduler() {
+        return maintainanceExecutor;
+    }
+
+    public ConnectionPoolConfigurationImpl setMaintainanceScheduler(ScheduledExecutorService executor) {
+        maintainanceExecutor = executor;
+        bOwnMaintainanceExecutor = false;
+        return this;
+    }
+
+    @Override
+    public ScheduledExecutorService getHostReconnectExecutor() {
+        return this.reconnectExecutor;
+    }
+
+    public ConnectionPoolConfigurationImpl setHostReconnectExecutor(ScheduledExecutorService executor) {
+        reconnectExecutor = executor;
+        bOwnReconnectExecutor = false;
         return this;
     }
 

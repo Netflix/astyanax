@@ -188,6 +188,9 @@ public class EntityPersister<T, K> {
 			ColumnList<String> cl = rq.execute().getResult();
 
 			T entity = clazz.newInstance();
+			Field idField = entityAnnotation.getId();
+			idField.set(entity, id);
+			
 			Map<String, Field> columns = entityAnnotation.getColumns();
 			for (com.netflix.astyanax.model.Column<String> c : cl) {
 				Field field = columns.get(c.getName());

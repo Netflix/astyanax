@@ -2,10 +2,9 @@ package com.netflix.astyanax.mapping;
 
 import java.util.Random;
 
-import junit.framework.Assert;
-
 import org.apache.commons.lang.RandomStringUtils;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -54,6 +53,8 @@ public class EntityPersisterTest {
 		Thread.sleep(1000 * 3);
 
 		createKeyspace();
+		
+		Thread.sleep(1000 * 3);
 	}
 
 	@AfterClass
@@ -109,6 +110,7 @@ public class EntityPersisterTest {
 	private SampleEntity createRandomEntity(String id) {
 		Random prng = new Random();
 		SampleEntity entity = new SampleEntity();
+		entity.setId(id);
 		entity.setBooleanPrimitive(prng.nextBoolean());
 		entity.setBooleanObject(prng.nextBoolean());
 		entity.setBytePrimitive((byte)prng.nextInt(Byte.MAX_VALUE));
@@ -147,7 +149,7 @@ public class EntityPersisterTest {
 			Assert.assertEquals(17, cl.size());
 			// more field-level check
 			Assert.assertEquals(origEntity.getStr(), cl.getColumnByName("STRING").getStringValue());
-			Assert.assertEquals(origEntity.getByteArray(), cl.getColumnByName("BYTE_ARRAY").getByteArrayValue());
+			Assert.assertArrayEquals(origEntity.getByteArray(), cl.getColumnByName("BYTE_ARRAY").getByteArrayValue());
 			Assert.assertEquals(123456, cl.getColumnByName("BYTE_ARRAY").getTtl());
 		}
 

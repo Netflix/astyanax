@@ -5,6 +5,8 @@ import java.util.UUID;
 import javax.persistence.Column;
 import javax.persistence.Id;
 
+import com.google.common.base.Charsets;
+
 /**
  * id is not counted as column
  * 17 columns
@@ -210,5 +212,54 @@ public class SampleEntity {
 	public void setUuid(UUID uuid) {
 		this.uuid = uuid;
 	}
+	
+	@Override
+	public String toString() {
+		return String.format("SampleEntity(id = %s, booleanPrimitive = %b, booleanObject = %b, " +
+				"bytePrimitive = %d, byteObject = %d, shortPrimitive = %d, shortObject = %d, " +
+				"intPrimitive = %d, intObject = %d, longPrimitive = %d, longObject = %d, " +
+				"floatPrimitive = %f, floatObject = %f, doublePrimitive = %f, doubleObject = %f, " +
+				"str = %s, byteArray = %s, uuid = %s)", 
+				id, booleanPrimitive, booleanObject, 
+				bytePrimitive, byteObject, shortPrimitive, shortObject, 
+				intPrimitive, intObject, longPrimitive, longObject,
+				floatPrimitive, floatObject, doublePrimitive, doubleObject,
+				str, new String(byteArray, Charsets.UTF_8), uuid);
+	}
 
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		
+		if (obj == null)
+			return false;
+
+		if (getClass() != obj.getClass())
+			return false;
+
+		SampleEntity other = (SampleEntity) obj;
+		if(id.equals(other.id) &&
+				booleanPrimitive == other.booleanPrimitive &&
+				booleanObject.equals(other.booleanObject) &&
+				bytePrimitive == other.bytePrimitive &&
+				byteObject.equals(other.byteObject) &&
+				shortPrimitive == other.shortPrimitive &&
+				shortObject.equals(other.shortObject) &&
+				intPrimitive == other.intPrimitive &&
+				intObject.equals(other.intObject) &&
+				longPrimitive == other.longPrimitive &&
+				longObject.equals(other.longObject) &&
+				floatPrimitive == other.floatPrimitive &&
+				floatObject.equals(other.floatObject) &&
+				doublePrimitive == other.doublePrimitive &&
+				doubleObject.equals(other.doubleObject) &&
+				str.equals(other.str) &&
+				byteArray.equals(other.byteArray) &&
+				uuid.equals(other.uuid)
+				)
+			return true;
+		else
+			return false;
+	}
 }

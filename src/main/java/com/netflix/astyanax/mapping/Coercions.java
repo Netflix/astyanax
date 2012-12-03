@@ -28,13 +28,13 @@ class Coercions {
             Column<String> column) {
         Object objValue;
         if ((field.getType() == Byte.class) || (field.getType() == Byte.TYPE)) {
-            objValue = (byte) (column.getIntegerValue() & 0xff);
+            objValue = (byte) (column.getIntegerValue());
         } else if ((field.getType() == Boolean.class)
                 || (field.getType() == Boolean.TYPE)) {
             objValue = column.getBooleanValue();
         } else if ((field.getType() == Short.class)
                 || (field.getType() == Short.TYPE)) {
-            objValue = (short) (column.getIntegerValue() & 0xff);
+            objValue = (short) (column.getIntegerValue());
         } else if ((field.getType() == Integer.class)
                 || (field.getType() == Integer.TYPE)) {
             objValue = column.getIntegerValue();
@@ -76,7 +76,7 @@ class Coercions {
             if (objValue != null) {
                 if ((objValue.getClass() == Byte.class)
                         || (objValue.getClass() == Byte.TYPE)) {
-                    mutation.putColumn(columnName, (Byte) objValue & 0xff, ttl);
+                    mutation.putColumn(columnName, (Byte) objValue, ttl);
                 } else if ((objValue.getClass() == Boolean.class)
                         || (objValue.getClass() == Boolean.TYPE)) {
                     mutation.putColumn(columnName, (Boolean) objValue, ttl);

@@ -3,7 +3,6 @@ package com.netflix.astyanax.serializers;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 
-import com.netflix.astyanax.model.Composite;
 import junit.framework.Assert;
 
 import org.apache.cassandra.config.ConfigurationException;
@@ -15,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.netflix.astyanax.annotations.Component;
+import com.netflix.astyanax.model.Composite;
 
 public class SerializersTest {
 	private static Logger LOG = LoggerFactory.getLogger(SerializersTest.class);
@@ -172,6 +172,31 @@ public class SerializersTest {
 		}
 	}
 
+	@Test
+	public void testByteSerializer() {
+		ByteSerializer ser = new ByteSerializer();
+
+		Byte val1 = 31;
+		ByteBuffer bb1 = ser.toByteBuffer(val1);
+		Byte val1_verify = ser.fromByteBuffer(bb1.duplicate());
+		ByteBuffer bb1_str = ser.fromString("31");
+		ByteBuffer bb2 = ser.getNext(bb1);
+		Byte val2 = ser.fromByteBuffer(bb2);
+
+		Assert.assertEquals(val1, val1_verify);
+		Assert.assertEquals(bb1, bb1_str);
+		Assert.assertEquals(1, val2.intValue() - val1.intValue());
+		Assert.assertEquals(bb2.capacity(), bb1.capacity());
+
+		ByteBuffer bbMax = ser.toByteBuffer(Byte.MAX_VALUE);
+		try {
+			ser.getNext(bbMax);
+			Assert.fail();
+		} catch (Exception e) {
+			LOG.info(e.getMessage());
+		}
+	}
+	
 	@Test
 	public void testShortSerializer() {
 		ShortSerializer ser = new ShortSerializer();

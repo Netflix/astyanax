@@ -2,14 +2,16 @@ package com.netflix.astyanax.serializers;
 
 import java.nio.ByteBuffer;
 
-public class ByteSerializer extends AbstractSerializer<Byte> {
+import org.apache.cassandra.db.marshal.IntegerType;
 
+public class ByteSerializer extends AbstractSerializer<Byte> {
+	
     private static final ByteSerializer instance = new ByteSerializer();
 
     public static ByteSerializer get() {
         return instance;
     }
-    
+
     @Override
     public ByteBuffer toByteBuffer(Byte obj) {
         if (obj == null) {
@@ -23,32 +25,22 @@ public class ByteSerializer extends AbstractSerializer<Byte> {
 
     @Override
     public Byte fromByteBuffer(ByteBuffer byteBuffer) {
-        if ((byteBuffer == null) || (byteBuffer.remaining() != 4)) {
+        if (byteBuffer == null) {
             return null;
         }
-        byte by = byteBuffer.get();
-        byteBuffer.rewind();
-        return by;
-    }
-
-    @Override
-    public Byte fromBytes(byte[] bytes) {
-        if ((bytes == null) || (bytes.length != 1)) {
-            return null;
-        }
-        ByteBuffer bb = ByteBuffer.allocate(1).put(bytes, 0, 1);
-        bb.rewind();
-        return bb.get();
+        byte in = byteBuffer.get();
+        return in;
     }
 
     @Override
     public ByteBuffer fromString(String str) {
+        // Verify value is a short
         return toByteBuffer(Byte.parseByte(str));
     }
 
     @Override
     public String getString(ByteBuffer byteBuffer) {
-        return Byte.toString(fromByteBuffer(byteBuffer));
+        return IntegerType.instance.getString(byteBuffer);
     }
 
     @Override
@@ -57,7 +49,8 @@ public class ByteSerializer extends AbstractSerializer<Byte> {
         if (val == Byte.MAX_VALUE) {
             throw new ArithmeticException("Can't paginate past max byte");
         }
-        return toByteBuffer((byte) (val + 1));
+        val++;
+        return toByteBuffer(val);
     }
-
+    
 }

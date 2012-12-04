@@ -59,6 +59,16 @@ public interface ColumnListMutation<C> {
     ColumnListMutation<C> putColumnIfNotNull(C columnName, byte[] value, Integer ttl);
     ColumnListMutation<C> putColumnIfNotNull(C columnName, byte[] value);
 
+    ColumnListMutation<C> putColumn(C columnName, byte value, Integer ttl);
+    ColumnListMutation<C> putColumn(C columnName, byte value);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, Byte value, Integer ttl);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, Byte value);
+    
+    ColumnListMutation<C> putColumn(C columnName, short value, Integer ttl);
+    ColumnListMutation<C> putColumn(C columnName, short value);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, Short value, Integer ttl);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, Short value);
+    
     ColumnListMutation<C> putColumn(C columnName, int value, Integer ttl);
     ColumnListMutation<C> putColumn(C columnName, int value);
     ColumnListMutation<C> putColumnIfNotNull(C columnName, Integer value, Integer ttl);

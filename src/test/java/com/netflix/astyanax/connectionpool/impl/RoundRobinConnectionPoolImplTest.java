@@ -47,6 +47,7 @@ public class RoundRobinConnectionPoolImplTest extends BaseConnectionPoolTest {
 
         ConnectionPoolConfiguration config = new ConnectionPoolConfigurationImpl(
                 TestConstants.CLUSTER_NAME + "_" + TestConstants.KEYSPACE_NAME);
+        config.initialize();
 
         ConnectionPool<TestClient> pool = new RoundRobinConnectionPoolImpl<TestClient>(
                 config, new TestConnectionFactory(config, monitor), monitor);
@@ -60,6 +61,7 @@ public class RoundRobinConnectionPoolImplTest extends BaseConnectionPoolTest {
 
         ConnectionPoolConfigurationImpl config = new ConnectionPoolConfigurationImpl(
                 TestConstants.CLUSTER_NAME + "_" + TestConstants.KEYSPACE_NAME);
+        config.initialize();
 
         ConnectionPool<TestClient> pool = new RoundRobinConnectionPoolImpl<TestClient>(
                 config, new TestConnectionFactory(config, monitor), monitor);
@@ -92,6 +94,7 @@ public class RoundRobinConnectionPoolImplTest extends BaseConnectionPoolTest {
 
         ConnectionPoolConfigurationImpl config = new ConnectionPoolConfigurationImpl(
                 TestConstants.CLUSTER_NAME + "_" + TestConstants.KEYSPACE_NAME);
+        config.initialize();
 
         config.setInitConnsPerHost(0);
         ConnectionPool<TestClient> pool = new RoundRobinConnectionPoolImpl<TestClient>(
@@ -131,6 +134,7 @@ public class RoundRobinConnectionPoolImplTest extends BaseConnectionPoolTest {
         config.setRetryBackoffStrategy(new FixedRetryBackoffStrategy(200, 2000));
         config.setMaxConnsPerHost(3);
         config.setMaxPendingConnectionsPerHost(2);
+        config.initialize();
 
         ConnectionPool<TestClient> cp = new RoundRobinConnectionPoolImpl<TestClient>(
                 config, new TestConnectionFactory(config, monitor), monitor);
@@ -183,6 +187,7 @@ public class RoundRobinConnectionPoolImplTest extends BaseConnectionPoolTest {
             .setMaxConnsPerHost(3)
             .setMaxPendingConnectionsPerHost(2)
             .setInitConnsPerHost(0);
+        config.initialize();
 
         ConnectionPool<TestClient> cp = new RoundRobinConnectionPoolImpl<TestClient>(
                 config, new TestConnectionFactory(config, monitor), monitor);

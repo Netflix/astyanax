@@ -2,12 +2,27 @@ package com.netflix.astyanax.recipes.queue;
 
 import java.util.UUID;
 
+import org.apache.commons.lang.StringUtils;
+
 import com.netflix.astyanax.annotations.Component;
 import com.netflix.astyanax.util.TimeUUIDUtils;
 
 public class MessageQueueEntry {
+    private static final String ID_DELIMITER = ":";
+            
     public MessageQueueEntry() {
         
+    }
+    
+    public MessageQueueEntry(String id) {
+        String[] parts = StringUtils.split(id, ID_DELIMITER);
+        if (parts.length != 4)
+            throw new RuntimeException("Invalid message ID.  Expection <type>:<priority>:<timestamp>:<state> but got " + id);
+        
+        type      = Short.parseShort(parts[0]);
+        priority  = Short.parseShort(parts[1]);
+        timestamp = UUID.fromString (parts[2]);
+        state     = Short.parseShort(parts[3]);
     }
     
     private MessageQueueEntry(MessageQueueEntryType type, short priority, UUID timestamp, MessageQueueEntryState state) {
@@ -89,6 +104,19 @@ public class MessageQueueEntry {
         this.priority = priority;
     }
 
+    public String getMessageId() {
+        return new StringBuilder()
+                .append(type)
+                .append(ID_DELIMITER)
+                .append(priority)
+                .append(ID_DELIMITER)
+                .append(timestamp.toString())
+                .append(ID_DELIMITER)
+                .append(state)
+                .toString();
+        
+    }
+    
     @Override
     public String toString() {
         return "MessageQueueEntry [" + getType() + " " + priority + " " + timestamp + " " + getState() + "]";

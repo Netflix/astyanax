@@ -1,5 +1,7 @@
 package com.netflix.astyanax.recipes.queue;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -42,6 +44,29 @@ public interface MessageQueue {
      */
     void createQueue() throws MessageQueueException;
 
+    /**
+     * Read a specific message from the queue.  The message isn't modified or removed from the queue.
+     * 
+     * @param message Message id returned from MessageProducer.sendMessage
+     * @return
+     * @throws MessageQueueException
+     */
+    Message readMessage(String token) throws MessageQueueException;
+    
+    /**
+     * Delete a specific message from the queue.  
+     * @param message
+     * @throws MessageQueueException
+     */
+    void deleteMessage(String token) throws MessageQueueException;
+    
+    /**
+     * Delete a set of messages
+     * @param messageIds
+     * @throws MessageQueueException
+     */
+    void deleteMessages(Collection<String> messageIds) throws MessageQueueException;
+    
     /**
      * Get the counts for each shard in the queue.  This is an estimate.
      * This is an expensive operation and should be used sparingly.

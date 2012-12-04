@@ -10,7 +10,7 @@ public class Message {
      * The token is a timeUUID and represents the next execution/expiration time
      * within the queue.
      */
-    private UUID    token;
+    private UUID  token;
     
     /**
      * Data associated with the task
@@ -20,7 +20,7 @@ public class Message {
     /**
      * Execution time for the task in milliseconds
      */
-    private Long    triggerTime;
+    private long    triggerTime = 0;
 
     /**
      * Map of task arguments.
@@ -69,8 +69,6 @@ public class Message {
     }
 
     public Long getTriggerTime() {
-        if (triggerTime == null)
-            return 0L;
         return triggerTime;
     }
 
@@ -97,6 +95,12 @@ public class Message {
         return timeout;
     }
 
+    /**
+     * Setting priority will NOT work correctly with a future trigger time due to 
+     * internal data model implementations.
+     * @param priority
+     * @return
+     */
     public Message setPriority(short priority) {
         this.priority = priority;
         return this;
@@ -110,6 +114,61 @@ public class Message {
     public Message setTimeout(Long timeout, TimeUnit units) {
         this.timeout = (int)TimeUnit.SECONDS.convert(timeout, units);
         return this;
+    }
+
+    @Override
+    public String toString() {
+        return "Message [token=" + token + ", data=" + data + ", triggerTime=" + triggerTime + ", parameters=" + parameters
+                + ", priority=" + priority + ", timeout=" + timeout + "]";
+    }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((data == null) ? 0 : data.hashCode());
+        result = prime * result + ((parameters == null) ? 0 : parameters.hashCode());
+        result = prime * result + priority;
+        result = prime * result + ((timeout == null) ? 0 : timeout.hashCode());
+        result = prime * result + ((token == null) ? 0 : token.hashCode());
+        result = prime * result + (int) (triggerTime ^ (triggerTime >>> 32));
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        Message other = (Message) obj;
+        if (data == null) {
+            if (other.data != null)
+                return false;
+        } else if (!data.equals(other.data))
+            return false;
+        if (parameters == null) {
+            if (other.parameters != null)
+                return false;
+        } else if (!parameters.equals(other.parameters))
+            return false;
+        if (priority != other.priority)
+            return false;
+        if (timeout == null) {
+            if (other.timeout != null)
+                return false;
+        } else if (!timeout.equals(other.timeout))
+            return false;
+        if (token == null) {
+            if (other.token != null)
+                return false;
+        } else if (!token.equals(other.token))
+            return false;
+        if (triggerTime != other.triggerTime)
+            return false;
+        return true;
     }
     
     

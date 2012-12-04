@@ -423,7 +423,8 @@ public class DistributedTaskScheduler implements MessageQueueHooks, TaskSchedule
      */
     @Override
     public void scheduleTask(final TaskInfo task, final Trigger trigger) throws TaskSchedulerException, NotUniqueException {
-        ColumnPrefixUniquenessConstraint<String> unique = new ColumnPrefixUniquenessConstraint<String>(keyspace, taskCf, task.getKey());
+        ColumnPrefixUniquenessConstraint<String> unique = new ColumnPrefixUniquenessConstraint<String>(keyspace, taskCf, task.getKey())
+                .withConsistencyLevel(consistencyLevel);
         
         final String serializedTask;
         final String serializedTrigger;

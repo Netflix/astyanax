@@ -7,7 +7,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.UUID;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -27,6 +26,7 @@ import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
@@ -317,13 +317,80 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     public void clearMessages() throws MessageQueueException {
         // TODO:  Clear columns from all shards
     }
+    
+    @Override
+    public Message readMessage(String messageId) throws MessageQueueException {
+        MessageQueueEntry entry = new MessageQueueEntry(messageId);
+        String shardKey = getQueueKey(entry);
+        
+        try {
+            Column<MessageQueueEntry> column = keyspace
+                    .prepareQuery(columnFamily)
+                    .setConsistencyLevel(consistencyLevel)
+                    .getKey(shardKey)
+                        .getColumn(entry)
+                    .execute().getResult();
+            try {
+                ByteArrayInputStream bais = new ByteArrayInputStream(column.getByteArrayValue());
+                return mapper.readValue(bais, Message.class);
+            } catch (Exception e) {
+                // Error parsing the message so we pass it on to the invalid message handler.
+                try {
+                    return invalidMessageHandler.apply(column.getStringValue());
+                }
+                catch (Exception e2) {
+                    throw new MessageQueueException("Error parsing message " + messageId);
+                }
+            } 
+        } catch (NotFoundException e) {
+            return null;
+        } catch (ConnectionException e) {
+            throw new MessageQueueException("Error getting message " + messageId, e);
+        }
+    }
+
+    @Override
+    public void deleteMessage(String messageId) throws MessageQueueException {
+        MessageQueueEntry entry = new MessageQueueEntry(messageId);
+        String shardKey = getQueueKey(entry);
+        
+        try {
+            keyspace.prepareColumnMutation(columnFamily, shardKey, entry)
+                .setConsistencyLevel(consistencyLevel)
+                .deleteColumn().execute();
+        }
+        catch (ConnectionException e) {
+            throw new MessageQueueException("Error deleting message " + messageId, e);
+        }
+    }
+    
+    @Override
+    public void deleteMessages(Collection<String> messageIds) throws MessageQueueException {
+        MutationBatch mb = keyspace.prepareMutationBatch()
+            .setConsistencyLevel(consistencyLevel);
+        
+        for (String messageId : messageIds) {
+                MessageQueueEntry entry = new MessageQueueEntry(messageId);
+                String shardKey = getQueueKey(entry);
+                
+                mb.withRow(columnFamily, shardKey)
+                    .deleteColumn(entry);
+        }
+        
+        try {
+            mb.execute();
+        }
+        catch (ConnectionException e) {
+            throw new MessageQueueException("Error deleting messages " + messageIds, e);
+        }
+    }
 
     @Override
     public void createQueue() throws MessageQueueException {
         try {
             keyspace.createColumnFamily(this.columnFamily, ImmutableMap.<String, Object>builder()
                             .put("key_validation_class",     "UTF8Type")
-                            .put("comparator_type",          "CompositeType(BytesType, BytesType, TimeUUIDType, BytesType)")
+                            .put("comparator_type",          "CompositeType(BytesType, BytesType(reversed=true), TimeUUIDType, BytesType)")
                             .put("read_repair_chance",       1.0)
                             .put("gc_grace_period",          0)     // TODO: Calculate gc_grace_period
                             .build());
@@ -351,7 +418,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         return new MessageConsumer() {
             private LinkedBlockingQueue<MessageQueueShard> workQueue    = Queues.newLinkedBlockingQueue();
             private LinkedBlockingQueue<MessageQueueShard> idleQueue    = Queues.newLinkedBlockingQueue();
-            private long                                currentPartition = -1;
+            private long currentPartition = -1;
             
             {
                 // Add all the shards to the idle queue
@@ -362,6 +429,15 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             
             @Override
             public Collection<Message> readMessages(int itemsToPop) throws MessageQueueException, BusyLockException, InterruptedException {
+                return readMessages(itemsToPop, 0, null);
+            }         
+            
+            @Override
+            public Collection<Message> readMessages(int itemsToPop, long timeout, TimeUnit units) throws MessageQueueException, BusyLockException, InterruptedException {
+                long timeoutTime = (timeout == 0)
+                                 ? 0 
+                                 : System.currentTimeMillis() + TimeUnit.MILLISECONDS.convert(timeout,  units);
+                
                 // Whenever the partition changes we add all shards from this partition to the workQueue
                 long partitionIndex = (TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS)/settings.getPartitionDuration())%settings.getPartitionCount();
                 if (partitionIndex != currentPartition) {
@@ -382,36 +458,21 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 // Loop while trying to get messages.
                 // TODO: Make it possible to cancel this loop
                 // TODO: Read full itemsToPop instead of just stopping when we get the first sucessful set
+                Collection<Message> messages = null;
                 while (true) {
-                    Collection<Message>   messages = null;
                     MessageQueueShard partition = null;
                     
                     // First, try an item from the work queue
                     if (!workQueue.isEmpty()) {
                         partition = workQueue.remove();
                         if (partition != null) {
-                            try {
-                                messages = internalReadMessages(itemsToPop, partition.getName());
-                                if (!messages.isEmpty()) {
-                                    return messages;
-                                }
-                                stats.incEmptyPartitionCount();
-                                
-                                if (partition.getPartition() != currentPartition)
-                                    continue;
-                            }
-                            catch (BusyLockException e) {
-                                Thread.sleep(pollInterval);
-                            }
-                            finally {
-                                if (partition.getPartition() == currentPartition ||
-                                    (messages != null && !messages.isEmpty())) {
-                                    workQueue.add(partition);
-                                }
-                                else {
-                                    idleQueue.add(partition);
-                                }
-                            }
+                            messages = readAndReturnShard(partition, itemsToPop);
+                            if (messages != null && !messages.isEmpty()) 
+                                return messages;
+                            
+                            // This is an old partition so we quickly skip to the next partition
+                            if (partition.getPartition() != currentPartition) 
+                                continue;
                         }
                     }
                     
@@ -420,35 +481,97 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     if (!idleQueue.isEmpty()) {
                         partition = idleQueue.remove();
                         if (partition != null) {
-                            try {
-                                messages = internalReadMessages(itemsToPop, partition.getName());
-                                if (!messages.isEmpty()) {
-                                    return messages;
-                                }
-                                stats.incEmptyPartitionCount();
-                            }
-                            catch (BusyLockException e) {
-                                Thread.sleep(pollInterval);
-                            }
-                            finally {
-                                if (partition.getPartition() == currentPartition ||
-                                    (messages != null && !messages.isEmpty())) {
-                                    workQueue.add(partition);
-                                }
-                                else {
-                                    idleQueue.add(partition);
-                                }
-                            }
+                            messages = readAndReturnShard(partition, itemsToPop);
+                            if (messages != null && !messages.isEmpty()) 
+                                return messages;
                         }
                     }
 
+                    if (timeoutTime != 0 && System.currentTimeMillis() > timeoutTime) 
+                        return Lists.newLinkedList();
+                    
                     Thread.sleep(pollInterval);
                 }
             }
             
-            private Collection<Message> internalReadMessages(int itemsToPop, String shardName) throws MessageQueueException, BusyLockException {
+            private Collection<Message> readAndReturnShard(MessageQueueShard partition, int itemsToPop) throws MessageQueueException, BusyLockException, InterruptedException {
+                Collection<Message>   messages = null;
+                if (partition != null) {
+                    try {
+                        messages = internalReadMessages(partition.getName(), itemsToPop);
+                        if (!messages.isEmpty()) {
+                            return messages;
+                        }
+                        stats.incEmptyPartitionCount();
+                    }
+                    catch (BusyLockException e) {
+//                        Thread.sleep(pollInterval);
+                    }
+                    finally {
+                        if (partition.getPartition() == currentPartition ||
+                            (messages != null && !messages.isEmpty())) {
+                            workQueue.add(partition);
+                        }
+                        else {
+                            idleQueue.add(partition);
+                        }
+                    }
+                }
+                return messages;
+            }
+            
+            @Override
+            public Collection<Message> peekMessages(int itemsToPop) throws MessageQueueException {
+                long partitionIndex = (TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS)/settings.getPartitionDuration())%settings.getPartitionCount();
+                
+                List<Message> messages = Lists.newArrayList();
+                
+                for (int i = 0; i < settings.getPartitionCount(); i++) {
+                    for (int j = 0; j < settings.getShardCount(); j++) {
+                        int index = (int) (((i + partitionIndex) % settings.getPartitionCount()) * settings.getShardCount() + j);
+                        
+                        messages.addAll(peekMessages(partitions.get(index).getName(), itemsToPop - messages.size()));
+                        
+                        if (messages.size() == itemsToPop)
+                            return messages;
+                    }
+                }
+                
+                return messages;
+            }
+            
+            private Collection<Message> peekMessages(String shardName, int itemsToPop) throws MessageQueueException {
+                long curTimeMicros = TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS);
+                
+                try {
+                    ColumnList<MessageQueueEntry> result = keyspace.prepareQuery(columnFamily)
+                            .setConsistencyLevel(consistencyLevel)
+                            .getKey(shardName)
+                            .withColumnRange(new RangeBuilder()
+                                .setLimit(itemsToPop)
+                                .setEnd(compositeSerializer
+                                        .makeEndpoint((short)MessageQueueEntryType.Message.ordinal(), Equality.EQUAL)
+                                        .append((short)0, Equality.EQUAL)
+                                        .append(TimeUUIDUtils.getMicrosTimeUUID(curTimeMicros), Equality.LESS_THAN_EQUALS).toBytes())
+                                .build())
+                        .execute()
+                            .getResult();
+                    
+                    List<Message> messages = Lists.newArrayListWithCapacity(result.size());
+                    for (Column<MessageQueueEntry> column : result) {
+                        Message message = extractMessageFromColumn(column);
+                        if (message != null)
+                            messages.add(message);
+                    }
+                    return messages;
+                } catch (ConnectionException e) {
+                    throw new MessageQueueException("Error peeking for messages from shard " + shardName, e);
+                }
+            }
+            
+            private Collection<Message> internalReadMessages(String shardName, int itemsToPop) throws MessageQueueException, BusyLockException {
                 List<Message>  entries       = Lists.newArrayList();
-                MutationBatch m           = null;
+                MutationBatch m              = null;
                 MessageQueueEntry lockColumn = null;
                 ColumnListMutation<MessageQueueEntry> rowMutation = null;
                 
@@ -568,19 +691,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                                 rowMutation.deleteColumn(entry);
                                 
                                 // Next, parse the message metadata and add a timeout entry
-                                Message message = null;
-                                try {
-                                    ByteArrayInputStream bais = new ByteArrayInputStream(column.getByteArrayValue());
-                                    message = mapper.readValue(bais, Message.class);
-                                } catch (Exception e) {
-                                    // Error parsing the message so we pass it on to the invalid message handler.
-                                    try {
-                                        message = invalidMessageHandler.apply(column.getStringValue());
-                                    }
-                                    catch (Exception e2) {
-                                        // OK to ignore this
-                                    }
-                                } 
+                                Message message = extractMessageFromColumn(column);
                                 
                                 // Update the message state
                                 if (message != null) {
@@ -588,7 +699,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                                     
                                     if (message.getTimeout() != 0) {
                                         MessageQueueEntry timeoutEntry = MessageQueueEntry.newMessageEntry(
-                                                entry.getPriority(),
+                                                (short)0,   // Timeout has to be of 0 priority otherwise it screws up the ordering of everything else
                                                 TimeUUIDUtils.getMicrosTimeUUID(curTimeMicros + TimeUnit.MICROSECONDS.convert(message.getTimeout(), TimeUnit.SECONDS)), 
                                                 MessageQueueEntryState.Busy);
                                         
@@ -686,7 +797,26 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 } catch (ConnectionException e) {
                     throw new MessageQueueException("Failed to ack messages", e);
                 }
-            }            
+            }
+
+            private Message extractMessageFromColumn(Column<MessageQueueEntry> column) {
+                // Next, parse the message metadata and add a timeout entry
+                Message message = null;
+                try {
+                    ByteArrayInputStream bais = new ByteArrayInputStream(column.getByteArrayValue());
+                    message = mapper.readValue(bais, Message.class);
+                } catch (Exception e) {
+                    // Error parsing the message so we pass it on to the invalid message handler.
+                    try {
+                        message = invalidMessageHandler.apply(column.getStringValue());
+                    }
+                    catch (Exception e2) {
+                        // OK to ignore this
+                    }
+                } 
+                return message;
+            }
+
         };
     }
 
@@ -695,7 +825,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         return new MessageProducer() {
 
             @Override
-            public UUID sendMessage(Message message) throws MessageQueueException {
+            public String sendMessage(Message message) throws MessageQueueException {
                 // Get the execution time from the message or set to current time so it runs immediately
                 long curTimeMicros;
                 if (message.getTriggerTime() == 0) {
@@ -742,12 +872,12 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 
                 // Update state and retun the token
                 stats.incSendMessageCount();
-                return message.getToken();
+                return entry.getMessageId();
             }
 
             @Override
-            public Map<Message, UUID> sendMessages(Collection<Message> messages) throws MessageQueueException {
-                Map<Message, UUID> response = Maps.newLinkedHashMap();
+            public Map<Message, String> sendMessages(Collection<Message> messages) throws MessageQueueException {
+                Map<Message, String> response = Maps.newLinkedHashMap();
                 MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
                 for (Message message : messages) {
                     // Get the execution time from the message or set to current time so it runs immediately
@@ -780,13 +910,14 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     }
     
                     // Write the mutation 
-                    mb.withRow(columnFamily, getQueueKey(entry))
+                    String key = getQueueKey(entry);
+                    mb.withRow(columnFamily, key)
                       .putColumn(entry, new String(baos.toByteArray()), (int)settings.getVisibilityTimeout());
                         
                     for (MessageQueueHooks hook : hooks) {
                         hook.beforeSendMessage(message, mb);
                     }
-                    response.put(message,  message.getToken());
+                    response.put(message, key + "$" + entry.getMessageId());
                     
                     // Update state and retun the token
                     stats.incSendMessageCount();
@@ -808,5 +939,6 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     public String getName() {
         return queueName;
     }
+
 
 }

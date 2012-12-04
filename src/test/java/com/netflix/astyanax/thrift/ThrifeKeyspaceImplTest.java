@@ -511,7 +511,7 @@ public class ThrifeKeyspaceImplTest {
         Assert.assertEquals(1, hosts.get(0).getTokenRanges().size());
         hosts = new FilteringHostSupplier(ringSupplier, sourceSupplier2).get();
         LOG.info(hosts.toString());
-        Assert.assertEquals(0, hosts.size());
+        Assert.assertEquals(1, hosts.size());
     }
     
     @Test

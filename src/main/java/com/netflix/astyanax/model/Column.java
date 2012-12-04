@@ -71,6 +71,20 @@ public interface Column<C> {
      * @return
      */
     String getStringValue();
+    
+    /**
+     * Return value as an integer
+     * 
+     * @return
+     */
+    byte getByteValue();
+    
+    /**
+     * Return value as an integer
+     * 
+     * @return
+     */
+    short getShortValue();
 
     /**
      * Return value as an integer
@@ -78,6 +92,13 @@ public interface Column<C> {
      * @return
      */
     int getIntegerValue();
+    
+    /**
+     * Return value as a float
+     * 
+     * @return
+     */
+    float getFloatValue();
 
     /**
      * Return value as a double

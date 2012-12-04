@@ -5,8 +5,15 @@ import java.io.PrintWriter;
 import java.io.Serializable;
 import java.io.StringReader;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -21,6 +28,7 @@ import javax.annotation.Nullable;
 import junit.framework.Assert;
 
 import org.apache.cassandra.utils.Pair;
+import org.apache.commons.lang.RandomStringUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -79,11 +87,10 @@ import com.netflix.astyanax.recipes.queue.Message;
 import com.netflix.astyanax.recipes.queue.MessageConsumer;
 import com.netflix.astyanax.recipes.queue.MessageProducer;
 import com.netflix.astyanax.recipes.queue.MessageQueue;
-import com.netflix.astyanax.recipes.queue.MessageQueueException;
 import com.netflix.astyanax.recipes.queue.ShardedDistributedMessageQueue;
 import com.netflix.astyanax.recipes.reader.AllRowsReader;
-import com.netflix.astyanax.recipes.scheduler.TaskInfo;
 import com.netflix.astyanax.recipes.scheduler.DistributedTaskScheduler;
+import com.netflix.astyanax.recipes.scheduler.TaskInfo;
 import com.netflix.astyanax.recipes.scheduler.TaskScheduler;
 import com.netflix.astyanax.recipes.scheduler.triggers.RepeatingTrigger;
 import com.netflix.astyanax.recipes.uniqueness.ColumnPrefixUniquenessConstraint;
@@ -883,27 +890,24 @@ public class ThrifeKeyspaceImplTest {
     }    
     
     @Test
-    public void testSingleOps() {
+    public void testSingleOps() throws Exception {
         String key = "SingleOpsTest";
+        Random prng = new Random();
 
         // Set a string value
-        try {
+        {
             String column = "StringColumn";
-            String value = "Theophiles Thistle, the successful thistle-sifter, in sifting a sieve full of un-sifted thistles, thrust three thousand thistles through the thick of his thumb";
-
+            String value = RandomStringUtils.randomAlphanumeric(32);
             // Set
             keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
                     .putValue(value, null).execute();
-
             // Read
             String v = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
                     .getColumn(column).execute().getResult().getStringValue();
-            Assert.assertEquals(v, value);
-
+            Assert.assertEquals(value, v);
             // Delete
             keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
                     .deleteColumn().execute();
-
             try {
                 keyspace.prepareQuery(CF_STANDARD1).getKey(key)
                         .getColumn(column).execute().getResult()
@@ -913,71 +917,160 @@ public class ThrifeKeyspaceImplTest {
             } catch (ConnectionException e) {
                 Assert.fail();
             }
-        } catch (ConnectionException e) {
-            Assert.fail();
-        }
+        } 
 
-        // Set a int value
-        try {
-            String column = "IntColumn";
-            int value = Integer.MAX_VALUE / 4;
-
+        // Set a byte value
+        {
+            String column = "ByteColumn";
+            byte value = (byte) prng.nextInt(Byte.MAX_VALUE);
             // Set
             keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
                     .putValue(value, null).execute();
-
             // Read
-            int v = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
-                    .getColumn(column).execute().getResult().getIntegerValue();
-            Assert.assertEquals(v, value);
-
-            long vl = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
-                    .getColumn(column).execute().getResult().getLongValue();
-            Assert.assertEquals(vl, value);
-
+            byte v = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
+                    .getColumn(column).execute().getResult().getByteValue();
+            Assert.assertEquals(value, v);
             // Delete
             keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
                     .deleteColumn().execute();
-
+            // verify column gone
             try {
                 keyspace.prepareQuery(CF_STANDARD1).getKey(key)
-                        .getColumn(column).execute().getResult()
-                        .getIntegerValue();
+                        .getColumn(column).execute().getResult().getByteValue();
                 Assert.fail();
             } catch (NotFoundException e) {
-            } catch (ConnectionException e) {
-                Assert.fail();
+            	// expected
             }
-        } catch (ConnectionException e) {
-            Assert.fail();
-        }
-
-        // Set a double value
-        try {
-            String column = "IntColumn";
-            double value = 3.14;
-
+        } 
+        
+        // Set a short value
+        {
+            String column = "ShortColumn";
+            short value = (short) prng.nextInt(Short.MAX_VALUE);
             // Set
             keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
                     .putValue(value, null).execute();
-
             // Read
-            double v = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
-                    .getColumn(column).execute().getResult().getDoubleValue();
-            Assert.assertEquals(v, value);
-
+            short v = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
+                    .getColumn(column).execute().getResult().getShortValue();
+            Assert.assertEquals(value, v);
+            // Delete
+            keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
+                    .deleteColumn().execute();
+            // verify column gone
+            try {
+                keyspace.prepareQuery(CF_STANDARD1).getKey(key)
+                        .getColumn(column).execute().getResult().getShortValue();
+                Assert.fail();
+            } catch (NotFoundException e) {
+            	// expected
+            }
+        } 
+        
+        // Set a int value
+        {
+            String column = "IntColumn";
+            int value = prng.nextInt();
+            // Set
+            keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
+                    .putValue(value, null).execute();
+            // Read
+            int v = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
+                    .getColumn(column).execute().getResult().getIntegerValue();
+            Assert.assertEquals(value, v);
+            // Delete
+            keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
+                    .deleteColumn().execute();
+            // verify column gone
+            try {
+                keyspace.prepareQuery(CF_STANDARD1).getKey(key)
+                        .getColumn(column).execute().getResult().getIntegerValue();
+                Assert.fail();
+            } catch (NotFoundException e) {
+            	// expected
+            }
+        }
+        
+        // Set a long value
+        {
+            String column = "LongColumn";
+            long value = prng.nextLong();
+            // Set
+            keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
+                    .putValue(value, null).execute();
+            // Read
+            long v = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
+                    .getColumn(column).execute().getResult().getLongValue();
+            Assert.assertEquals(value, v);
+         // get as integer should fail
             try {
                 keyspace.prepareQuery(CF_STANDARD1).getKey(key)
                         .getColumn(column).execute().getResult()
                         .getIntegerValue();
                 Assert.fail();
             } catch (Exception e) {
+            	// expected
             }
-
             // Delete
             keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
                     .deleteColumn().execute();
+            // verify column gone
+            try {
+                keyspace.prepareQuery(CF_STANDARD1).getKey(key)
+                        .getColumn(column).execute().getResult().getLongValue();
+                Assert.fail();
+            } catch (NotFoundException e) {
+            	// expected
+            }
+        }
+        
+        // Set a float value
+        {
+            String column = "FloatColumn";
+            float value = prng.nextFloat();
+            // Set
+            keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
+                    .putValue(value, null).execute();
+            // Read
+            float v = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
+                    .getColumn(column).execute().getResult().getFloatValue();
+            Assert.assertEquals(value, v);
+            // Delete
+            keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
+                    .deleteColumn().execute();
+            // verify column gone
+            try {
+                keyspace.prepareQuery(CF_STANDARD1).getKey(key)
+                        .getColumn(column).execute().getResult().getFloatValue();
+                Assert.fail();
+            } catch (NotFoundException e) {
+            	// expected
+            }
+        }
 
+        // Set a double value
+        {
+            String column = "IntColumn";
+            double value = prng.nextDouble();
+            // Set
+            keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
+                    .putValue(value, null).execute();
+            // Read
+            double v = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
+                    .getColumn(column).execute().getResult().getDoubleValue();
+            Assert.assertEquals(value, v);
+            // get as integer should fail
+            try {
+                keyspace.prepareQuery(CF_STANDARD1).getKey(key)
+                        .getColumn(column).execute().getResult()
+                        .getIntegerValue();
+                Assert.fail();
+            } catch (Exception e) {
+            	// expected
+            }
+            // Delete
+            keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
+                    .deleteColumn().execute();
             try {
                 keyspace.prepareQuery(CF_STANDARD1).getKey(key)
                         .getColumn(column).execute().getResult()
@@ -987,52 +1080,12 @@ public class ThrifeKeyspaceImplTest {
             } catch (ConnectionException e) {
                 Assert.fail();
             }
-        } catch (ConnectionException e) {
-            Assert.fail();
-        }
-
-        // Set a long value
-        try {
-            String column = "IntColumn";
-            long value = Long.MAX_VALUE / 4;
-
-            // Set
-            keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
-                    .putValue(value, null).execute();
-
-            // Read
-            long v = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
-                    .getColumn(column).execute().getResult().getLongValue();
-            Assert.assertEquals(v, value);
-
-            try {
-                keyspace.prepareQuery(CF_STANDARD1).getKey(key)
-                        .getColumn(column).execute().getResult()
-                        .getIntegerValue();
-                Assert.fail();
-            } catch (Exception e) {
-            }
-
-            // Delete
-            keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
-                    .deleteColumn().execute();
-
-            try {
-                keyspace.prepareQuery(CF_STANDARD1).getKey(key)
-                        .getColumn(column).execute().getResult().getLongValue();
-                Assert.fail();
-            } catch (NotFoundException e) {
-            } catch (ConnectionException e) {
-                Assert.fail();
-            }
-        } catch (ConnectionException e) {
-            Assert.fail();
-        }
+        } 
         
-        // Set a long value
-        try {
+        // Set long column with timestamp
+        {
             String column = "TimestampColumn";
-            long value = Long.MAX_VALUE / 4;
+            long value = prng.nextLong();
 
             // Set
             keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
@@ -1044,9 +1097,7 @@ public class ThrifeKeyspaceImplTest {
             Column<String> c = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
                     .getColumn(column).execute().getResult();
             Assert.assertEquals(100,  c.getTimestamp());
-        } catch (ConnectionException e) {
-            Assert.fail();
-        }
+        } 
     }
 
     @Test

@@ -91,6 +91,58 @@ public abstract class AbstractColumnListMutation<C> implements ColumnListMutatio
         }
         return this;
     }
+    
+    @Override
+    public ColumnListMutation<C> putColumn(C columnName, byte value, Integer ttl) {
+        return putColumn(columnName, value, ByteSerializer.get(), ttl);
+    }
+
+    @Override
+    public ColumnListMutation<C> putColumn(final C columnName, final byte value) {
+        return putColumn(columnName, value, null);
+    }
+    
+    @Override
+    public ColumnListMutation<C> putColumnIfNotNull(C columnName, Byte value, Integer ttl) {
+        if (value != null) {
+            return putColumn(columnName, value, ttl);
+        }
+        return this;
+    }
+
+    @Override
+    public ColumnListMutation<C> putColumnIfNotNull(C columnName, Byte value) {
+        if (value != null) {
+            return putColumn(columnName, value);
+        }
+        return this;
+    }
+    
+    @Override
+    public ColumnListMutation<C> putColumn(C columnName, short value, Integer ttl) {
+        return putColumn(columnName, value, ShortSerializer.get(), ttl);
+    }
+
+    @Override
+    public ColumnListMutation<C> putColumn(final C columnName, final short value) {
+        return putColumn(columnName, value, null);
+    }
+    
+    @Override
+    public ColumnListMutation<C> putColumnIfNotNull(C columnName, Short value, Integer ttl) {
+        if (value != null) {
+            return putColumn(columnName, value, ttl);
+        }
+        return this;
+    }
+
+    @Override
+    public ColumnListMutation<C> putColumnIfNotNull(C columnName, Short value) {
+        if (value != null) {
+            return putColumn(columnName, value);
+        }
+        return this;
+    }
 
     @Override
     public ColumnListMutation<C> putColumn(C columnName, int value, Integer ttl) {

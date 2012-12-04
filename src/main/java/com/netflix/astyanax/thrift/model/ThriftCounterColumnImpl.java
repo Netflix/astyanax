@@ -52,6 +52,18 @@ public class ThriftCounterColumnImpl<C> implements Column<C> {
     }
 
     @Override
+    public byte getByteValue() {
+        throw new UnsupportedOperationException("CounterColumn \'" + this.name
+                + "\' has no Byte value. Call getLongValue().");
+    }
+    
+    @Override
+    public short getShortValue() {
+        throw new UnsupportedOperationException("CounterColumn \'" + this.name
+                + "\' has no Short value. Call getLongValue().");
+    }
+    
+    @Override
     public int getIntegerValue() {
         throw new UnsupportedOperationException("CounterColumn \'" + this.name
                 + "\' has no Integer value. Call getLongValue().");
@@ -103,9 +115,15 @@ public class ThriftCounterColumnImpl<C> implements Column<C> {
     }
 
     @Override
+    public float getFloatValue() {
+        throw new UnsupportedOperationException("CounterColumn \'" + this.name
+                + "\' has no Float value. Call getLongValue().");
+    }
+    
+    @Override
     public double getDoubleValue() {
         throw new UnsupportedOperationException("CounterColumn \'" + this.name
-                + "\' has no String value. Call getLongValue().");
+                + "\' has no Double value. Call getLongValue().");
     }
 
     @Override

@@ -1,12 +1,9 @@
 package com.netflix.astyanax.index;
 
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
@@ -24,16 +21,11 @@ import com.netflix.astyanax.model.Composite;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
-import com.netflix.astyanax.serializers.BytesArraySerializer;
 import com.netflix.astyanax.serializers.CompositeSerializer;
-import com.netflix.astyanax.serializers.IntegerSerializer;
-import com.netflix.astyanax.serializers.LongSerializer;
-import com.netflix.astyanax.serializers.ObjectSerializer;
 import com.netflix.astyanax.serializers.SerializerTypeInferer;
-import com.netflix.astyanax.serializers.ShortSerializer;
-import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.TypeInferringSerializer;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
+
 
 /**
  * Thread unsafe row based - high cardinality index 
@@ -133,7 +125,7 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 			
 			ByteBuffer buffer = TypeInferringSerializer.get().toByteBuffer(row.getKey());
 			
-			m.withRow(CF, toInsert).putColumn(buffer, getType(row.getKey()));
+			m.withRow(CF, toInsert).putColumn(buffer, MappingUtil.getType(row.getKey()));
 			
 			
 			
@@ -158,56 +150,7 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 		this.cf = columnFamilyName;
 		
 	}
-	static byte [] zeroByte = new byte[1];
-	static byte [] byteBuffByte = new byte[1]; 
-	static byte [] strByte = new byte[1];
-	static byte [] byteArrByte = new byte[1];
-	static byte [] longByte = new byte[1];
-	static byte [] intByte = new byte[1];
-	static byte [] shortByte = new byte[1];
-	static byte [] compByte = new byte[1];
-	static byte [] objByte = new byte[1];
-	static byte [] bigIntByte = new byte[1];
 	
-	static Map<Class<?>,byte[]> clToByteMap = new HashMap<Class<?>,byte[]>();
-	static {
-		zeroByte[0] = new Integer(0).byteValue();
-		clToByteMap.put(Class.class, zeroByte);
-		
-		strByte[0] = new Integer(1).byteValue();
-		clToByteMap.put(String.class, strByte);
-		
-		byteArrByte[0] = new Integer(2).byteValue();
-		clToByteMap.put(byte [].class, byteArrByte);
-		
-		longByte[0] = new Integer(3).byteValue();
-		clToByteMap.put(Long.class, longByte);
-		clToByteMap.put(long.class, longByte);
-		
-		intByte[0] = new Integer(4).byteValue(); 
-		clToByteMap.put(Integer.class, intByte);
-		clToByteMap.put(int.class, intByte);
-		
-		shortByte[0] = new Integer(5).byteValue();
-		clToByteMap.put(Short.class, shortByte);
-		clToByteMap.put(short.class, shortByte);
-		
-		
-		byteBuffByte[0] = new Integer(6).byteValue();
-		clToByteMap.put(ByteBuffer.class, byteBuffByte);
-			
-		
-		objByte[0] = new Integer(7).byteValue();
-		clToByteMap.put(Object.class, intByte);
-				
-		
-		bigIntByte[0] = new Integer(8).byteValue();
-		clToByteMap.put(BigInteger.class, bigIntByte);
-		
-		//byteArrByte[0] = new Integer(2).byteValue();
-		
-		
-	}
 	
 	
 	@Override
@@ -222,10 +165,10 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 		Composite row = new Composite(this.cf,name,value);
 				
 		ByteBuffer buffer = TypeInferringSerializer.get().toByteBuffer(pkValue);
-		Composite col = new Composite(getType(pkValue),buffer);
+		Composite col = new Composite(MappingUtil.getType(pkValue),buffer);
 		
 		//valueless
-		m.withRow(CF, row).putColumn(col, zeroByte);
+		m.withRow(CF, row).putEmptyColumn(col);
 		
 		m.execute();
 		
@@ -243,18 +186,18 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 		ColumnFamily<Composite, Composite> CF = new ColumnFamily<Composite, Composite>(
 				"index_cf", compSerializer, compSerializer);
 		
-		byte [] pkType = getType(pkValue);
+		byte [] pkType = MappingUtil.getType(pkValue);
 		Composite row = new Composite(this.cf,name,value,pkType);
 		Composite oldRow = new Composite(this.cf,name,pkType);
 			
 		ByteBuffer newBuffer = TypeInferringSerializer.get().toByteBuffer(pkValue);
-		Composite newCol = new Composite(getType(pkValue),newBuffer);
+		Composite newCol = new Composite(MappingUtil.getType(pkValue),newBuffer);
 		
 		ByteBuffer oldValBuf = TypeInferringSerializer.get().toByteBuffer(oldValue);
-		Composite oldCol = new Composite(getType(pkValue),oldValBuf);
+		Composite oldCol = new Composite(MappingUtil.getType(pkValue),oldValBuf);
 		
 		m.withRow(CF, oldRow).deleteColumn(oldCol);
-		m.withRow(CF, row).putColumn(newCol, zeroByte);
+		m.withRow(CF, row).putEmptyColumn(newCol);
 		
 		m.execute();
 		
@@ -283,7 +226,7 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 		Serializer<K> ser = null;
 		if (!col.isEmpty()) {
 			byteType = (byte[])col.iterator().next().get(0);
-			ser = getSerializer(byteType);
+			ser = MappingUtil.getSerializer(byteType);
 		}
 		
 		for (Composite comp:col) {
@@ -297,45 +240,7 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 		
 	}
 
-	public static <K>Serializer<K> getSerializer(byte []b) {
-		Serializer<?> serializer = BytesArraySerializer.get();
-		if (strByte.equals(b)) {
-            serializer = StringSerializer.get();
-        }
-        else if (longByte.equals(b)) {
-            serializer = LongSerializer.get();
-        }
-        else if (intByte.equals(b)) {
-            serializer = IntegerSerializer.get();
-        }
-        else if (shortByte.equals(b)) {
-            serializer = ShortSerializer.get();
-        }
-        /*else if (valueClass.equals(Boolean.class) || valueClass.equals(boolean.class)) {
-            serializer = BooleanSerializer.get();
-        }*/
-        else if (byteArrByte.equals(b)) {
-            serializer = BytesArraySerializer.get();
-        }
-        else if (byteBuffByte.equals(b)) {
-            serializer = ByteBufferSerializer.get();
-        }
-        else if (objByte.equals(b)) {
-            serializer = ObjectSerializer.get();
-        }
-		
-		return (Serializer<K>)serializer;
-	}
-	private static byte[] getType(Class<?> cl) {
-		return clToByteMap.get(cl);
-		
-	}
-	private static byte[] getType(Object value) {
-		 
-		byte [] ret = zeroByte;
-	    ret = getType(value.getClass());   
-	    return ret;
-	}
+	
 	
 	
 	

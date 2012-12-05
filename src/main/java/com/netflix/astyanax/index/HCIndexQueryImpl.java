@@ -1,5 +1,6 @@
 package com.netflix.astyanax.index;
 
+import java.util.Collection;
 import java.util.concurrent.Future;
 
 import com.netflix.astyanax.Keyspace;
@@ -7,6 +8,7 @@ import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.Rows;
+import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.query.RowSliceQuery;
 
 public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> {
@@ -17,7 +19,8 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 	protected Index index;
 	
 	public HCIndexQueryImpl(Keyspace keyspace,ColumnFamily<K, C> columnFamily) {
-		
+		this.keyspace = keyspace;
+		this.columnFamily = columnFamily;
 	}
 	@Override
 	public OperationResult<Rows<K, C>> execute() throws ConnectionException {
@@ -35,8 +38,19 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 	@Override
 	public RowSliceQuery<K, C> equals(C name, V value) {
 		//OK, this is where it happens
-		keyspace.prepareQuery(columnFamily);
+		ColumnFamilyQuery<K, C> query = keyspace.prepareQuery(columnFamily);
 		
+		Index<C, V, K> ind = new IndexImpl<C, V, K>();
+		try {
+			//get keys associated with 
+			Collection<K> keys = ind.eq(name, value);
+			
+			query.getRowSlice(keys);
+			
+			
+		}catch (ConnectionException e) {
+			e.printStackTrace();
+		}
 		return null;
 	}
 

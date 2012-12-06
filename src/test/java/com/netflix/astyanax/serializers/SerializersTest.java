@@ -1,5 +1,6 @@
 package com.netflix.astyanax.serializers;
 
+import java.lang.reflect.Field;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 
@@ -9,10 +10,12 @@ import org.apache.cassandra.config.ConfigurationException;
 import org.apache.cassandra.db.marshal.AbstractType;
 import org.apache.cassandra.db.marshal.CompositeType;
 import org.apache.cassandra.db.marshal.TypeParser;
+import org.apache.commons.codec.binary.Hex;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Stopwatch;
 import com.netflix.astyanax.annotations.Component;
 import com.netflix.astyanax.model.Composite;
 
@@ -295,6 +298,82 @@ public class SerializersTest {
 			LOG.error(e.getMessage());
 			Assert.fail();
 		}
+	}
+	
+	@Test
+	public void testStressAnnotatedCompositeSerializer() throws Exception {
+        AnnotatedCompositeSerializer<Composite1> ser = new AnnotatedCompositeSerializer<Composite1>(
+                Composite1.class);
+
+        int count = 10000;
+        
+        Composite1 c1 = new Composite1("Arielle", "Landau", 6);
+        
+        long startTime, runTime;
+        
+        for (int j = 0; j < 3; j++) {
+            System.out.println("-----");
+            
+            startTime = System.nanoTime();
+            for (int i = 0; i < count; i++) {
+                ByteBuffer bb = ByteBuffer.allocate(8092);
+                bb.putShort((short) c1.firstName.length());
+                bb.put(ByteBuffer.wrap(c1.firstName.getBytes()));
+                bb.put((byte) 0x00);
+                
+                bb.putShort((short) c1.lastName.length());
+                bb.put(ByteBuffer.wrap(c1.lastName.getBytes()));
+                bb.put((byte) 0x00);
+        
+                bb.putShort((short)4);
+                bb.putInt(c1.age);
+                bb.put((byte) 0x00);
+                
+                bb.flip();
+            }
+            runTime = System.nanoTime() - startTime;
+            System.out.println("Raw Time in msec : " + runTime/1000000);
+            
+            StringSerializer sser = StringSerializer.get();
+            
+            Field fFirstName = Composite1.class.getField("firstName");
+            Field fLastName  = Composite1.class.getField("lastName");
+            Field fAge       = Composite1.class.getField("age");
+            
+            startTime = System.nanoTime();
+            for (int i = 0; i < count; i++) {
+                ByteBuffer bb = ByteBuffer.allocate(8092);
+                
+                String firstName = (String)fFirstName.get(c1);
+                bb.putShort((short) firstName.length());
+                bb.put(firstName.getBytes());
+                bb.put((byte) 0x00);
+                
+                String lastName = (String)fLastName.get(c1);
+                bb.putShort((short) lastName.length());
+                bb.put(lastName.getBytes());
+                bb.put((byte) 0x00);
+        
+                int age = (Integer)fAge.get(c1);
+                bb.putShort((short)4);
+                bb.putInt(age);
+                bb.put((byte) 0x00);
+                
+                bb.flip();
+            }
+            runTime = System.nanoTime() - startTime;
+            System.out.println("Reflection Time in msec : " + runTime/1000000);
+            
+            startTime = System.nanoTime();
+            for (int i = 0; i < count; i++) {
+                ByteBuffer bb = ser.toByteBuffer(c1);
+    //            Composite1 c2 = ser.fromByteBuffer(bytes);
+    //            System.out.println(Hex.encodeHexString(bb.array()));
+            }
+            
+            runTime = System.nanoTime() - startTime;
+            System.out.println("toByteBuffer Time in msec : " + runTime/1000000);
+        }
 	}
 
 	@Test

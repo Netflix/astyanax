@@ -76,6 +76,11 @@ public class Message {
         this.triggerTime = triggerTime;
         return this;
     }
+    
+    public Message setDelay(Long delay, TimeUnit units) {
+        this.triggerTime = System.currentTimeMillis() + TimeUnit.MILLISECONDS.convert(delay,  units);
+        return this;
+    }
 
     public Map<String, Object> getParameters() {
         return parameters;

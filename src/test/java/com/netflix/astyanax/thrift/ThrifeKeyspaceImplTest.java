@@ -3241,6 +3241,7 @@ public class ThrifeKeyspaceImplTest {
             .withBatchSize(5)
             .withKeyspace(keyspace)
             .withName("TestScheduler")
+            .withGroupName("MyGroup")
             .build();
         
         scheduler.create();
@@ -3255,8 +3256,9 @@ public class ThrifeKeyspaceImplTest {
                 .build()
             , 
             new RepeatingTrigger.Builder()
-                .withDelay(10,  TimeUnit.SECONDS)
-                .withInterval(10,  TimeUnit.SECONDS)
+                .withDelay(5,     TimeUnit.SECONDS)
+                .withInterval(5,  TimeUnit.SECONDS)
+                .withRepeatCount(10)
                 .build()
         );
         

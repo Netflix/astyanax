@@ -58,6 +58,7 @@ public class RepeatingTrigger extends AbstractTrigger {
         
         // TODO: Handle missed or delayed execution
         next.setTriggerTime(getTriggerTime() + interval);
+
         return next;
     }
 
@@ -91,5 +92,10 @@ public class RepeatingTrigger extends AbstractTrigger {
 
     public void setEndTime(long endTime) {
         this.endTime = endTime;
+    }
+
+    @Override
+    public String toString() {
+        return "RepeatingTrigger [delay=" + delay + ", interval=" + interval + ", repeatCount=" + repeatCount + ", endTime=" + endTime + "] " + super.toString();
     }
 }

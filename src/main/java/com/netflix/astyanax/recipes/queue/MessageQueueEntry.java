@@ -1,6 +1,7 @@
 package com.netflix.astyanax.recipes.queue;
 
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang.StringUtils;
 
@@ -78,6 +79,10 @@ public class MessageQueueEntry {
 
     public UUID getTimestamp() {
         return timestamp;
+    }
+    
+    public long getTimetsamp(TimeUnit units) {
+        return units.convert(TimeUUIDUtils.getMicrosTimeFromUUID(timestamp), TimeUnit.MICROSECONDS);
     }
 
     public MessageQueueEntryState getState() {

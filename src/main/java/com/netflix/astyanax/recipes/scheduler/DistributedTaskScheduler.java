@@ -140,6 +140,17 @@ public class DistributedTaskScheduler implements MessageQueueHooks, TaskSchedule
         }
         
         /**
+         * Group name within the column families.  This allows for multiple schedulers
+         * to run in the same column famil.
+         * @param schedulerName
+         * @return
+         */
+        public Builder withGroupName(String groupName) {
+            taskExecutor.groupName = groupName;
+            return this;
+        }
+        
+        /**
          * The keyspace client to use 
          * @param keyspace
          */
@@ -161,6 +172,7 @@ public class DistributedTaskScheduler implements MessageQueueHooks, TaskSchedule
     private volatile boolean    terminate        = false;
     private ConsistencyLevel    consistencyLevel = DEFAULT_CONSISTENCY_LEVEL;
     private String              name             = DEFAULT_SCHEDULER_NAME;
+    private String              groupName;
     private MessageProducer     producer;
     private Keyspace            keyspace;
     private ColumnFamily<String, String> taskCf;
@@ -179,10 +191,14 @@ public class DistributedTaskScheduler implements MessageQueueHooks, TaskSchedule
         taskCf    = new ColumnFamily<String, String>(name + TASKS_SUFFIX,   StringSerializer.get(), StringSerializer.get());
         historyCf = new ColumnFamily<String, UUID>  (name + HISTORY_SUFFIX, StringSerializer.get(), TimeUUIDSerializer.get());
         
+        if (groupName == null) 
+            groupName = name;
+        
         executor = Executors.newFixedThreadPool(threadCount);
         
         messageQueue = new ShardedDistributedMessageQueue.Builder()
                     .withColumnFamily(taskCf.getName() + QUEUE_SUFFIX)
+                    .withQueueName(groupName)
                     .withKeyspace(keyspace)
                     .withConsistencyLevel(consistencyLevel)
                     .withShardCount(DEFAULT_SHARD_COUNT)
@@ -321,16 +337,20 @@ public class DistributedTaskScheduler implements MessageQueueHooks, TaskSchedule
                                         // Get the key from the message parameters
                                         Map<String, Object> parameters = message.getParameters();
                                         taskKey = (String)parameters.get(PARAM_KEY);
-                                        
                                         // Get all column data for the task
-                                        columns = keyspace.prepareQuery(taskCf).getRow(taskKey).execute().getResult();
+                                        columns = keyspace.prepareQuery(taskCf)
+                                                 .getRow(taskKey)
+                                                 .execute()
+                                                 .getResult();
                                         // TODO: Check that the token isn't stale
                                         if (columns.isEmpty()) {
                                             // Task was deleted so just ignore it
                                             continue;
                                         }
                                         String triggerClassName = columns.getStringValue(COLUMN_TRIGGER_CLASS, null);
-                                        String triggerData      = columns.getStringValue(COLUMN_TRIGGER,       null);
+                                        // String triggerData      = columns.getStringValue(COLUMN_TRIGGER,       null);
+                                        // TODO: Compare triggers for updates
+                                        String triggerData      = (String)message.getParameters().get(COLUMN_TRIGGER);
                                         TaskState state         = TaskState.valueOf(columns.getStringValue(COLUMN_STATE, TaskState.Active.name()));
                                         
                                         // If inactive then we simply skip processing the trigger
@@ -412,7 +432,7 @@ public class DistributedTaskScheduler implements MessageQueueHooks, TaskSchedule
                     }
                 }
                 finally {
-                    System.out.println("Done with consumer " + name);
+                    LOG.info("Done with consumer " + name);
                 }
             }
         });
@@ -423,7 +443,9 @@ public class DistributedTaskScheduler implements MessageQueueHooks, TaskSchedule
      */
     @Override
     public void scheduleTask(final TaskInfo task, final Trigger trigger) throws TaskSchedulerException, NotUniqueException {
-        ColumnPrefixUniquenessConstraint<String> unique = new ColumnPrefixUniquenessConstraint<String>(keyspace, taskCf, task.getKey())
+        final String rowKey = getGroupKey(task.getKey());
+        
+        ColumnPrefixUniquenessConstraint<String> unique = new ColumnPrefixUniquenessConstraint<String>(keyspace, taskCf, rowKey)
                 .withConsistencyLevel(consistencyLevel);
         
         final String serializedTask;
@@ -432,14 +454,14 @@ public class DistributedTaskScheduler implements MessageQueueHooks, TaskSchedule
             serializedTask    = serializeToString(task);
             serializedTrigger = serializeToString(trigger);
         } catch (Exception e) {
-            throw new TaskSchedulerException("Failed to serialize trigger or task for " + task.getKey(), e);
+            throw new TaskSchedulerException("Failed to serialize trigger or task for " + rowKey, e);
         }
 
         try {
             unique.acquireAndApplyMutation(new Function<MutationBatch, Boolean>() {
                 @Override
                 public Boolean apply(@Nullable MutationBatch mb) {
-                    mb.withRow(taskCf, task.getKey())
+                    mb.withRow(taskCf, rowKey)
                         .putColumn(COLUMN_TASK_INFO,     serializedTask)
                         .putColumn(COLUMN_TRIGGER,       serializedTrigger)
                         .putColumn(COLUMN_TRIGGER_CLASS, trigger.getClass().getCanonicalName());
@@ -447,14 +469,14 @@ public class DistributedTaskScheduler implements MessageQueueHooks, TaskSchedule
                 }
             });
         } catch (Exception e) {
-            throw new TaskSchedulerException("Failed to serialize trigger or task for " + task.getKey(), e);
+            throw new TaskSchedulerException("Failed to serialize trigger or task for " + rowKey, e);
         }
         
         // Now, send 
         try {
-            sendMessage(task.getKey(), trigger);
+            sendMessage(rowKey, trigger);
         } catch (Exception e) {
-            throw new TaskSchedulerException("Failed to send message for task " + task.getKey(), e);
+            throw new TaskSchedulerException("Failed to send message for task " + rowKey, e);
         }
     }
     
@@ -463,12 +485,14 @@ public class DistributedTaskScheduler implements MessageQueueHooks, TaskSchedule
      */
     @Override
     public void stopTask(String taskKey) throws TaskSchedulerException {
+        String rowKey = getGroupKey(taskKey);
+        
         try {
-            keyspace.prepareColumnMutation(taskCf, taskKey, COLUMN_STATE)
+            keyspace.prepareColumnMutation(taskCf, rowKey, COLUMN_STATE)
                 .putValue(TaskState.Inactive.name(), null)
                 .execute();
         } catch (ConnectionException e) {
-            throw new TaskSchedulerException("Failed to deactive task " + taskKey, e);
+            throw new TaskSchedulerException("Failed to deactive task " + rowKey, e);
         }
     }
     
@@ -477,12 +501,14 @@ public class DistributedTaskScheduler implements MessageQueueHooks, TaskSchedule
      */
     @Override
     public void startTask(String taskKey) throws TaskSchedulerException {
+        String rowKey = getGroupKey(taskKey);
+        
         try {
-            keyspace.prepareColumnMutation(taskCf, taskKey, COLUMN_STATE)
+            keyspace.prepareColumnMutation(taskCf, rowKey, COLUMN_STATE)
                 .putValue(TaskState.Active.name(), null)
                 .execute();
         } catch (ConnectionException e) {
-            throw new TaskSchedulerException("Failed to deactive task " + taskKey, e);
+            throw new TaskSchedulerException("Failed to deactive task " + rowKey, e);
         }
     }
     
@@ -491,12 +517,14 @@ public class DistributedTaskScheduler implements MessageQueueHooks, TaskSchedule
      */
     @Override
     public void deleteTask(String taskKey) throws TaskSchedulerException {
-        MutationBatch mb = keyspace.prepareMutationBatch();
-        mb.withRow(taskCf, taskKey).delete();
+        String rowKey = getGroupKey(taskKey);
+        
+        MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+        mb.withRow(taskCf, rowKey).delete();
         try {
             mb.execute();
         } catch (ConnectionException e) {
-            throw new TaskSchedulerException("Failed to delete task " + taskKey, e);
+            throw new TaskSchedulerException("Failed to delete task " + rowKey, e);
         }
     }
     
@@ -519,9 +547,10 @@ public class DistributedTaskScheduler implements MessageQueueHooks, TaskSchedule
         Message message = new Message();
         message.setParameters(ImmutableMap.<String, Object>builder()
                 .put(PARAM_KEY,         taskKey)
-                .put(COLUMN_TRIGGER,     serializeToString(trigger))
+                .put(COLUMN_TRIGGER,    serializeToString(trigger))
                 .build());
         message.setTriggerTime(trigger.getTriggerTime());
+        
         producer.sendMessage(message);
         return message;
     }
@@ -565,5 +594,9 @@ public class DistributedTaskScheduler implements MessageQueueHooks, TaskSchedule
         catch (Exception e) {
             e.printStackTrace();
         }
+    }
+    
+    private String getGroupKey(String key) {
+        return groupName + "$" + key;
     }
 }

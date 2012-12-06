@@ -23,4 +23,9 @@ public abstract class AbstractTrigger implements Trigger {
     public void setExecutionCount(long executeCount) {
         this.executeCount = executeCount;
     }
+
+    @Override
+    public String toString() {
+        return "AbstractTrigger [triggerTime=" + triggerTime + ", executeCount=" + executeCount + "]";
+    }
 }

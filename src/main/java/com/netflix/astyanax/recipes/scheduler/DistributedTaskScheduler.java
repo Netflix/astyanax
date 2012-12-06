@@ -64,6 +64,7 @@ public class DistributedTaskScheduler implements MessageQueueHooks, TaskSchedule
     private final static int              DEFAULT_SHARD_COUNT           = 1;
     private final static int              DEFAULT_BUCKET_COUNT          = 1;
     private final static int              DEFAULT_BUCKET_DURATION       = 1;
+    private final static int              DEFAULT_POLLING_INTERVAL      = 1; // Seconds
     private final static int              THROTTLE_DURATION             = 1000;
     
     private final static String           TASKS_SUFFIX        = "_Tasks";
@@ -159,6 +160,18 @@ public class DistributedTaskScheduler implements MessageQueueHooks, TaskSchedule
             return this;
         }
         
+        /**
+         * Set the polling interval for checking for events to execute.
+         * 
+         * @param interval
+         * @param units     Lowest granularity is in seconds
+         * @return
+         */
+        public Builder withPollingInterval(long interval, TimeUnit units) {
+            taskExecutor.pollingInterval = TimeUnit.SECONDS.convert(interval, units);
+            return this;
+        }
+        
         public TaskScheduler build() {
             taskExecutor.intialize();
             return taskExecutor;
@@ -177,6 +190,7 @@ public class DistributedTaskScheduler implements MessageQueueHooks, TaskSchedule
     private Keyspace            keyspace;
     private ColumnFamily<String, String> taskCf;
     private ColumnFamily<String, UUID>   historyCf;
+    private long                pollingInterval = DEFAULT_POLLING_INTERVAL;
     
     public DistributedTaskScheduler() {
         
@@ -204,6 +218,7 @@ public class DistributedTaskScheduler implements MessageQueueHooks, TaskSchedule
                     .withShardCount(DEFAULT_SHARD_COUNT)
                     .withHook(this)
                     .withBuckets(DEFAULT_BUCKET_COUNT,  DEFAULT_BUCKET_DURATION,  TimeUnit.HOURS)
+                    .withPollInterval(pollingInterval,  TimeUnit.SECONDS)
                     .build();
         producer = messageQueue.createProducer();
         

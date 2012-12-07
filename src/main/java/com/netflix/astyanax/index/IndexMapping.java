@@ -29,10 +29,14 @@ public class IndexMapping<C,V> {
 		this.valueOfCol = valueOfCol;
 		this.oldValueofCol = oldValue;
 	}
+	public IndexMapping(IndexMappingKey<C> key,V valueOfCol) {
+		this(key,valueOfCol,null);
+		
+		
+	}
 	public IndexMapping(String columnFamily,C columnName,V valueOfCol, V oldValue) {
-		this(new IndexMappingKey<C>(columnFamily,columnName));
-		this.valueOfCol = valueOfCol;
-		this.oldValueofCol = oldValue;
+		this(new IndexMappingKey<C>(columnFamily,columnName),valueOfCol,oldValue);
+		
 	}
 	
 	

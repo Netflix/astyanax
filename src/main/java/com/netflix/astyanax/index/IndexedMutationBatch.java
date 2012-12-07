@@ -11,6 +11,12 @@ import com.netflix.astyanax.model.ColumnFamily;
  * 
  * This is to be used in concert with {@link HighCardinalityQuery}.
  * 
+ * The supported use case:
+ * Add indexMetaData using  {@link IndexCoordination#addIndexMetaData(IndexMetadata)}
+ * this is a one time operation, and could be persisted in the future.
+ * 
+ * {@link HighCardinalityQuery#equals(Object)}
+ * 
  * @author marcus
  *
  */

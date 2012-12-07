@@ -1,9 +1,6 @@
 package com.netflix.astyanax.index;
 
-import java.nio.ByteBuffer;
-import java.util.Date;
-import java.util.UUID;
-
+import com.netflix.astyanax.AbstractColumnListMutation;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.Serializer;
@@ -13,8 +10,11 @@ import com.netflix.astyanax.thrift.ThriftColumnFamilyMutationImpl;
 
 public class HCMutationBatchImpl implements IndexedMutationBatch {
 
-	IndexCoordination indexcontext;
+	IndexCoordination indexcoorindator;
 	
+	public HCMutationBatchImpl(IndexCoordination coordinator) {
+		this.indexcoorindator = coordinator;
+	}
 	@Override
 	public <K, C> ColumnListMutation<C> withIndexedRow(
 			MutationBatch currentBatch, ColumnFamily<K, C> columnFamily,
@@ -22,10 +22,11 @@ public class HCMutationBatchImpl implements IndexedMutationBatch {
 		
 				
 		//wrap and return wrapping
+		//this might throw if its the super column implementation :(
 		ThriftColumnFamilyMutationImpl<C> impl =  (ThriftColumnFamilyMutationImpl<C>)currentBatch.withRow(columnFamily, rowKey);
 				
 		
-		ThriftMutatorExt<C> cfMutatorWrapper = new ThriftMutatorExt<C>(impl); 
+		ThriftMutatorExt<C> cfMutatorWrapper = new ThriftMutatorExt<C>(impl,indexcoorindator,columnFamily); 
 		
 		return cfMutatorWrapper;
 		
@@ -36,332 +37,97 @@ public class HCMutationBatchImpl implements IndexedMutationBatch {
 	 * 
 	 * @author marcus
 	 *
-	 * @param <C>
+	 * @param <C> - the column to be indexed
+	 * @param <K> - the column family's indexed row key
 	 */
-	class ThriftMutatorExt<C> implements ColumnListMutation<C> {
+	class ThriftMutatorExt<C> extends AbstractColumnListMutation<C> implements ColumnListMutation<C> {
 
 		ThriftColumnFamilyMutationImpl<C> impl;
+		IndexCoordination coordination;
+		ColumnFamily<?, C> columnFamily;
 		
-		public ThriftMutatorExt(ThriftColumnFamilyMutationImpl<C> impl) {
+		
+		public ThriftMutatorExt(ThriftColumnFamilyMutationImpl<C> impl,IndexCoordination coordination,ColumnFamily<?, C> columnFamily) {
+			
 			this.impl = impl;
+			this.coordination = coordination;
+			this.columnFamily = columnFamily;
+			
 		}
 
+		
 		@Override
 		public <V> ColumnListMutation<C> putColumn(C columnName, V value,
 				Serializer<V> valueSerializer, Integer ttl) {
 			
-			return impl.putColumn(columnName, value, valueSerializer, ttl);
+			//index first
+			//
+			IndexMappingKey<C> mappingKey = new IndexMappingKey<C>( columnFamily.getName(),columnName);
+			coordination.modifying(mappingKey, value);
+			
+			//then modify
+			impl.putColumn(columnName, value, valueSerializer, ttl);
+			
+			
+			return this;
 			
 		}
 
 		@Override
 		public <V> ColumnListMutation<C> putColumnIfNotNull(C columnName,
 				V value, Serializer<V> valueSerializer, Integer ttl) {
+			//this won't support any 
+			impl.putColumnIfNotNull(columnName, value, valueSerializer, ttl);
 			
-			return impl.putColumnIfNotNull(columnName, value, valueSerializer, ttl);
+			return this;
 		}
+
 
 		@Override
 		public <SC> ColumnListMutation<SC> withSuperColumn(
 				ColumnPath<SC> superColumnPath) {
 			
+			//not supported
 			return impl.withSuperColumn(superColumnPath);
 			
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumn(C columnName, String value,
-				Integer ttl) {
-			
-			return impl.putColumnIfNotNull(columnName, value,  ttl);
 			
 		}
 
-		@Override
-		public ColumnListMutation<C> putColumn(C columnName, String value) {
-			
-			return impl.putColumnIfNotNull(columnName, value );
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumnIfNotNull(C columnName,
-				String value, Integer ttl) {
-			return impl.putColumnIfNotNull(columnName, value,ttl);
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumnIfNotNull(C columnName,
-				String value) {
-			return impl.putColumnIfNotNull(columnName, value);
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumn(C columnName, byte[] value,
-				Integer ttl) {
-			return impl.putColumn(columnName, value,ttl);
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumn(C columnName, byte[] value) {
-			return impl.putColumn(columnName, value);
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumnIfNotNull(C columnName,
-				byte[] value, Integer ttl) {
-			return impl.putColumnIfNotNull(columnName, value,ttl);
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumnIfNotNull(C columnName,
-				byte[] value) {
-			return impl.putColumnIfNotNull(columnName, value);
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumn(C columnName, int value,
-				Integer ttl) {
-			return impl.putColumn(columnName, value,ttl);
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumn(C columnName, int value) {
-			
-			return impl.putColumn(columnName, value);
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumnIfNotNull(C columnName,
-				Integer value, Integer ttl) {
-			return impl.putColumnIfNotNull(columnName, value,ttl);
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumnIfNotNull(C columnName,
-				Integer value) {
-			return impl.putColumnIfNotNull(columnName, value);
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumn(C columnName, long value,
-				Integer ttl) {
-			return impl.putColumn(columnName, value,ttl);
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumn(C columnName, long value) {
-			return impl.putColumn(columnName, value);
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumnIfNotNull(C columnName,
-				Long value, Integer ttl) {
-			return impl.putColumnIfNotNull(columnName, value,ttl);
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumnIfNotNull(C columnName, Long value) {
-			return impl.putColumnIfNotNull(columnName, value);
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumn(C columnName, boolean value,
-				Integer ttl) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumn(C columnName, boolean value) {
-			return impl.putColumn(columnName, value);
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumnIfNotNull(C columnName,
-				Boolean value, Integer ttl) {
-			return impl.putColumnIfNotNull(columnName, value,ttl);
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumnIfNotNull(C columnName,
-				Boolean value) {
-			return impl.putColumnIfNotNull(columnName, value);
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumn(C columnName, ByteBuffer value,
-				Integer ttl) {
-			return impl.putColumn(columnName, value,ttl);
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumn(C columnName, ByteBuffer value) {
-			return impl.putColumn(columnName, value);
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumnIfNotNull(C columnName,
-				ByteBuffer value, Integer ttl) {
-			return impl.putColumnIfNotNull(columnName, value,ttl);
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumnIfNotNull(C columnName,
-				ByteBuffer value) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumn(C columnName, Date value,
-				Integer ttl) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumn(C columnName, Date value) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumnIfNotNull(C columnName,
-				Date value, Integer ttl) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumnIfNotNull(C columnName, Date value) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumn(C columnName, float value,
-				Integer ttl) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumn(C columnName, float value) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumnIfNotNull(C columnName,
-				Float value, Integer ttl) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumnIfNotNull(C columnName,
-				Float value) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumn(C columnName, double value,
-				Integer ttl) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumn(C columnName, double value) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumnIfNotNull(C columnName,
-				Double value, Integer ttl) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumnIfNotNull(C columnName,
-				Double value) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumn(C columnName, UUID value,
-				Integer ttl) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumn(C columnName, UUID value) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumnIfNotNull(C columnName,
-				UUID value, Integer ttl) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public ColumnListMutation<C> putColumnIfNotNull(C columnName, UUID value) {
-			// TODO Auto-generated method stub
-			return null;
-		}
 
 		@Override
 		public ColumnListMutation<C> putEmptyColumn(C columnName, Integer ttl) {
-			// TODO Auto-generated method stub
-			return null;
+			
+			impl.putEmptyColumn(columnName, ttl);
+			
+			return this;
 		}
 
-		@Override
-		public ColumnListMutation<C> putEmptyColumn(C columnName) {
-			// TODO Auto-generated method stub
-			return null;
-		}
 
 		@Override
 		public ColumnListMutation<C> incrementCounterColumn(C columnName,
 				long amount) {
-			// TODO Auto-generated method stub
-			return null;
+			impl.incrementCounterColumn(columnName, amount);
+			
+			return this;
 		}
+
 
 		@Override
 		public ColumnListMutation<C> deleteColumn(C columnName) {
-			// TODO Auto-generated method stub
-			return null;
+			impl.deleteColumn(columnName);
+			
+			return this;
 		}
 
-		@Override
-		public ColumnListMutation<C> setTimestamp(long timestamp) {
-			// TODO Auto-generated method stub
-			return null;
-		}
 
 		@Override
 		public ColumnListMutation<C> delete() {
-			// TODO Auto-generated method stub
-			return null;
+			impl.delete();
+			
+			return this;
 		}
 
-		@Override
-		public ColumnListMutation<C> setDefaultTtl(Integer ttl) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-		
-		
+				
 	}
 	
 }

@@ -25,7 +25,7 @@ import com.netflix.astyanax.index.IndexCoordination.NoReadException;
  * @author marcus
  *
  */
-public class IndexContextThreadLocalImpl implements IndexCoordination {
+public class IndexCoordinationThreadLocalImpl implements IndexCoordination {
 
 	
 	private static class IndexContextLocal extends ThreadLocal<Map<IndexMappingKey<?>,IndexMapping<?,?>>> {
@@ -45,23 +45,28 @@ public class IndexContextThreadLocalImpl implements IndexCoordination {
 	//we need to "prime" this first because 
 	//reads need to know what values needed to cache
 	//clients will provide this.
-	private Set<IndexMetadata<?,?>> metaDataSet;
+	private Map<IndexMappingKey<?>,IndexMetadata<?,?>> metaDataSet;
 		
 	
-	public IndexContextThreadLocalImpl() {
-		metaDataSet = new HashSet<IndexMetadata<?,?>>();
+	public IndexCoordinationThreadLocalImpl() {
+		metaDataSet = new HashMap<IndexMappingKey<?>,IndexMetadata<?,?>>();
 	}
 	
  	@Override
 	public <C,K> void addIndexMetaData(IndexMetadata<C,K> metaData) {
 		
- 		metaDataSet.add(metaData);
+ 		metaDataSet.put(metaData.getIndexKey(),metaData);
 		
 	}
  	
 	@Override
+	public <C, K> IndexMetadata<C, K> getMetaData(IndexMappingKey<C> key) {
+		return (IndexMetadata<C,K>)metaDataSet.get(key);
+	}
+
+	@Override
 	public <C> boolean indexExists(IndexMappingKey<C> key) {
-		return metaDataSet.contains(key);
+		return metaDataSet.get(key) != null;
 	}
 
 	

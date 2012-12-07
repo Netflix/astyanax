@@ -11,7 +11,7 @@ public class IndexCoordinationFactory {
 	static IndexCoordination indexContext;
 	
 	static {
-		indexContext = new IndexContextThreadLocalImpl();
+		indexContext = new IndexCoordinationThreadLocalImpl();
 	}
 	
 	public static IndexCoordination getIndexContext() {

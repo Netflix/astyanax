@@ -11,6 +11,14 @@ public class IndexMetadata<C,K> {
 	
 	private Class<K> rowKeyClass;
 
+	public IndexMetadata(IndexMappingKey<C> indexKey, Class<K> rowKeyClass) {
+		this.indexKey = indexKey;
+		this.rowKeyClass = rowKeyClass;
+	}
+	public IndexMetadata(String cf, C columnName, Class<K> rowKeyClass) {
+		this (new IndexMappingKey<C>(cf, columnName),rowKeyClass);
+	}
+	
 	public IndexMappingKey<C> getIndexKey() {
 		return indexKey;
 	}

@@ -6,6 +6,12 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 /**
  * High cardinality index utility.
  *  
+ * I broke it off into a read and write interface, if the interface were ever exposed
+ * at the layer of the query or batch mutation level.
+ * The other major reason for this is that a mutator does not need to be provided 
+ * for query.
+ * TODO: split the implementation of index.
+ *  
  * 
  * @author marcus
  *

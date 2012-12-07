@@ -23,6 +23,8 @@ public interface IndexCoordination {
 	 */
 	<C,K> void addIndexMetaData(IndexMetadata<C,K> metaData);
 	
+	<C,K> IndexMetadata<C, K> getMetaData(IndexMappingKey<C> key);
+	
 	<C> boolean indexExists(IndexMappingKey<C> key);
 	
 	<C> boolean indexExists(String cf, C columnName);
@@ -43,11 +45,11 @@ public interface IndexCoordination {
 	<C,V> void modifying(String cf, C columnName, V newValue) throws NoReadException;
 	
 	
-	
-	public class NoReadException extends Exception {
+	//checked or unchecked, that is the question!!
+	public class NoReadException extends RuntimeException {
 		
 	}
-	public class NoMetaDataException extends Exception {
+	public class NoMetaDataException extends RuntimeException {
 		
 	}
 }

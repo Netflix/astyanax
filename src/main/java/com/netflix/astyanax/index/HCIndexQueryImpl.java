@@ -3,11 +3,11 @@ package com.netflix.astyanax.index;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.concurrent.Future;
 
 import com.netflix.astyanax.Keyspace;
+import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ByteBufferRange;
@@ -19,6 +19,7 @@ import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.query.RowSliceColumnCountQuery;
 import com.netflix.astyanax.query.RowSliceQuery;
+import com.netflix.astyanax.serializers.SerializerTypeInferer;
 
 /**
  * The problem with the approach is that we have to do double iteration 
@@ -105,12 +106,24 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 			
 			Iterator<Row<K,C>> iter =  opResult.getResult().iterator();
 			
+			//This is an iteration over all the rows returned
+			//however if this is truly high cardinality, it will be small number
+			
 			while (iter.hasNext()) {
 				Row<K,C> row = iter.next();
+				
 				for (C col: colsMapped.keySet()) {
 					Column<C> column = row.getColumns().getColumnByName(col);
-					//we don't know the value type!!
+					//we don't know the value type - get it from meta data
 					byte[] b = column.getByteArrayValue();
+					IndexMappingKey<C> mappingKey = colsMapped.get(column);
+					IndexMetadata<C,K> md = indexContext.getMetaData(mappingKey);
+					Serializer<K> serializer = SerializerTypeInferer.getSerializer(md.getRowKeyClass());
+					
+					//TODO: catch the no meta data exception??
+					indexContext.reading(new IndexMapping<C,K>(mappingKey,serializer.fromBytes(b)));
+					
+					
 				}
 					
 				
@@ -125,7 +138,10 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 		public Future<OperationResult<Rows<K, C>>> executeAsync()
 				throws ConnectionException {
 			//not supported at this time
+			//we won't support this until we move away from 
+			//a thread local implementation
 			return impl.executeAsync();
+			
 		}
 		private void onAddedColumns(C...columns) {
 			

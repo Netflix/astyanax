@@ -1,5 +1,7 @@
 package com.netflix.astyanax.index;
 
+import com.netflix.astyanax.query.ColumnFamilyQuery;
+
 /**
  * Every time an indexed column gets "updated" we need to keep that old value.
  * This is the meta data that stores it.
@@ -24,6 +26,11 @@ public class IndexMapping<C,V> {
 	}
 	public IndexMapping(IndexMappingKey<C> key,V valueOfCol, V oldValue) {
 		this(key);
+		this.valueOfCol = valueOfCol;
+		this.oldValueofCol = oldValue;
+	}
+	public IndexMapping(String columnFamily,C columnName,V valueOfCol, V oldValue) {
+		this(new IndexMappingKey<C>(columnFamily,columnName));
 		this.valueOfCol = valueOfCol;
 		this.oldValueofCol = oldValue;
 	}

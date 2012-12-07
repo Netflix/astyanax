@@ -1,7 +1,5 @@
 package com.netflix.astyanax.index;
 
-import com.netflix.astyanax.Execution;
-import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.query.RowSliceQuery;
 
 /**
@@ -23,7 +21,7 @@ import com.netflix.astyanax.query.RowSliceQuery;
  * @param <C> - the column type
  * @param <V> - the column value type
  */
-public interface HighCardinalityQuery<K, C, V> extends Execution<Rows<K, C>> {
+public interface HighCardinalityQuery<K, C, V>  {
 
 	
 	/**

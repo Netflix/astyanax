@@ -1,7 +1,5 @@
 package com.netflix.astyanax.index;
 
-import java.util.Collection;
-
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 
 
@@ -15,22 +13,13 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
  * @param <V> - the value to be indexed 
  * @param <K> - the primary/row key of your referencing CF (reverse look up key)
  */
-public interface Index<C,V,K> {
+public interface Index<C,V,K> extends IndexRead<C,V,K>, IndexWrite<C,V,K> {
 
 	
-	
-	//void createIndex(String columnFamilyName);
-	
-	
-	void insertIndex(C name,V value, K pkValue) throws ConnectionException;
-	
-	void updateIndex(C name,V value, V oldValue,  K pkValue) throws ConnectionException;
-	
-	//
-	//The only operation supported currently
-	//
-	Collection<K> eq(C name,V value) throws ConnectionException;
-		
+			
+	/*
+	 * Administrative / expensive operations 
+	 */
 	
 	void buildIndex(String targetCF,C name, Class<K> keyType) throws ConnectionException;
 	

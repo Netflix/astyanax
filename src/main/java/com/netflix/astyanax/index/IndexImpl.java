@@ -20,6 +20,7 @@ import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.Composite;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
+import com.netflix.astyanax.recipes.reader.AllRowsReader;
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
 import com.netflix.astyanax.serializers.CompositeSerializer;
 import com.netflix.astyanax.serializers.SerializerTypeInferer;
@@ -61,12 +62,21 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 		
 	}
 	
+	/**
+	 * Will participate in this batch.
+	 * 
+	 * @param mutationBatch
+	 */
 	public IndexImpl(MutationBatch mutationBatch) {
 		this.mutationBatch = mutationBatch;
 	}
 	
 	//TODO
 	//this should be moved out.
+	//In the case that keyspace is not provided, ie, on read path then
+	//we could optionally construct it.
+	//this would mean that the client would need to have to provide this
+	//or at least some configuration for it
 	//TODO
 	public static void init() {
 		context = new AstyanaxContext.Builder()
@@ -87,7 +97,18 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 
 	}
 	
+	private MutationBatch getMutation() {
+		if (mutationBatch == null)
+			init();
+		return mutationBatch;
+			
+	}
 	
+	/**
+	 * TODO: use a paging mechanism and/or {@link AllRowsReader} recipe
+	 * to retrieve and build the index.
+	 * 
+	 */
 	@Override
 	public void buildIndex(String cf,N colName,Class<K> keyType) throws ConnectionException {
 		
@@ -99,7 +120,6 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 		ColumnFamily<K, N> colFamily = new ColumnFamily<K, N>(cf,keySerializer, colSerializer);
 		
 		//Get all rows: 
-		//TODO: danger to paginate
 		MutationBatch m = keyspace.prepareMutationBatch();
 		OperationResult<Rows<K,N>> result = keyspace.prepareQuery(colFamily)
 				.getAllRows()

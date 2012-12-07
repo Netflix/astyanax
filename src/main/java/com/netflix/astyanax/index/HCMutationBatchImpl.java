@@ -13,7 +13,7 @@ import com.netflix.astyanax.thrift.ThriftColumnFamilyMutationImpl;
 
 public class HCMutationBatchImpl implements IndexedMutationBatch {
 
-	IndexContext indexcontext;
+	IndexCoordination indexcontext;
 	
 	@Override
 	public <K, C> ColumnListMutation<C> withIndexedRow(

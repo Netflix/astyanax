@@ -83,7 +83,7 @@ public class MappingUtil {
         else if (shortByte.equals(b)) {
             serializer = ShortSerializer.get();
         }
-        /*else if (valueClass.equals(Boolean.class) || valueClass.equals(boolean.class)) {
+       /* else if (valueClass.equals(Boolean.class) || valueClass.equals(boolean.class)) {
             serializer = BooleanSerializer.get();
         }*/
         else if (byteArrByte.equals(b)) {

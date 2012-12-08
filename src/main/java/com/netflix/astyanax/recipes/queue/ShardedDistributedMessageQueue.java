@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import javax.annotation.Nullable;
 
+import org.apache.commons.lang.StringUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
 
@@ -111,10 +112,13 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     public static final long             DEFAULT_LOCK_TIMEOUT            = TimeUnit.MICROSECONDS.convert(30,  TimeUnit.SECONDS);
     public static final long             DEFAULT_LOCK_TTL                = TimeUnit.MICROSECONDS.convert(2,   TimeUnit.MINUTES);
     public static final long             DEFAULT_POLL_WAIT               = TimeUnit.MILLISECONDS.convert(100, TimeUnit.MILLISECONDS);
-    public static final long             DEFAULT_VISIBILITY_TIMEOUT      = TimeUnit.SECONDS.convert(4,  TimeUnit.DAYS);
-    public static final int              DEFAULT_SHARD_COUNT             = 1;
-    public static final long             DEFAULT_BUCKET_DURATION         = TimeUnit.MICROSECONDS.convert(30,  TimeUnit.SECONDS);
-    public static final int              DEFAULT_BUCKET_COUNT            = 1;
+    public static final Boolean          DEFAULT_POISON_QUEUE_ENABLED    = false;
+    public static final String           KEY_INDEX_SUFFIX                = "_KEY_INDEX";
+    
+    private final static AnnotatedCompositeSerializer<MessageQueueEntry> entrySerializer     
+        = new AnnotatedCompositeSerializer<MessageQueueEntry>(MessageQueueEntry.class);
+    private final static AnnotatedCompositeSerializer<MessageMetadataEntry>   metadataSerializer  
+        = new AnnotatedCompositeSerializer<MessageMetadataEntry>(MessageMetadataEntry.class);
     
     private final ObjectMapper mapper;
     
@@ -124,8 +128,8 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     }
 
     public static class Builder {
-        private ShardedDistributedMessageQueue queue        = new ShardedDistributedMessageQueue();
-        private String                      columnFamilyName = DEFAULT_COLUMN_FAMILY_NAME;
+        private ShardedDistributedMessageQueue queue = new ShardedDistributedMessageQueue();
+        private String columnFamilyName              = DEFAULT_COLUMN_FAMILY_NAME;
 
         public Builder withColumnFamily(String columnFamilyName) {
             this.columnFamilyName = columnFamilyName;
@@ -143,8 +147,8 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             return this;
         }
         
-        public Builder withVisibilityTimeout(Long timeout, TimeUnit units) {
-            queue.settings.setVisibilityTimeout(TimeUnit.SECONDS.convert(timeout,  units));
+        public Builder withRetentionTimeout(Long timeout, TimeUnit units) {
+            queue.settings.setRetentionTimeout(timeout,  units);
             return this;
         }
         
@@ -193,17 +197,24 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             return this;
         }
         
+        public Builder withPoisonQueue(Boolean enabled) {
+            queue.bPoisonQueueEnabled = enabled;
+            return this;
+        }
+        
         public ShardedDistributedMessageQueue build() {
-            queue.columnFamily = ColumnFamily.newColumnFamily(columnFamilyName, StringSerializer.get(), compositeSerializer); 
+            queue.columnFamily         = ColumnFamily.newColumnFamily(columnFamilyName, StringSerializer.get(), entrySerializer); 
+            queue.keyIndexColumnFamily = ColumnFamily.newColumnFamily(columnFamilyName + KEY_INDEX_SUFFIX, StringSerializer.get(), metadataSerializer); 
+            
             queue.initialize();
             return queue;
         }
     }
 
-    private final static AnnotatedCompositeSerializer<MessageQueueEntry> compositeSerializer = new AnnotatedCompositeSerializer<MessageQueueEntry>(MessageQueueEntry.class);
-    
     // Immutable after configuration
     private ColumnFamily<String, MessageQueueEntry> columnFamily;
+    private ColumnFamily<String, MessageMetadataEntry>   keyIndexColumnFamily;
+    
     private Keyspace                        keyspace;
     private ConsistencyLevel                consistencyLevel    = DEFAULT_CONSISTENCY_LEVEL;
     private long                            lockTimeout         = DEFAULT_LOCK_TIMEOUT;
@@ -215,6 +226,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     private Collection<MessageQueueHooks>   hooks               = Lists.newArrayList();
     private MessageQueueSettings            settings            = new MessageQueueSettings();
     private List<MessageQueueShard>         partitions;
+    private Boolean                         bPoisonQueueEnabled = DEFAULT_POISON_QUEUE_ENABLED;
     private Function<String, Message>       invalidMessageHandler  = new Function<String, Message>() {
                                                                         @Override
                                                                         public Message apply(@Nullable String input) {
@@ -261,8 +273,8 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
      * @param message
      * @return
      */
-    protected String getQueueKey(MessageQueueEntry message) {
-        return getQueueKey(TimeUUIDUtils.getMicrosTimeFromUUID(message.getTimestamp()));
+    protected String getShardKey(MessageQueueEntry message) {
+        return getShardKey(TimeUUIDUtils.getMicrosTimeFromUUID(message.getTimestamp()));
     }
     
     /**
@@ -270,12 +282,31 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
      * @param message
      * @return
      */
-    private String getQueueKey(long messageTime) {
+    private String getShardKey(long messageTime) {
         long timePartition = (messageTime / settings.getPartitionDuration()) % settings.getPartitionCount();
         long shard         =  messageTime % settings.getShardCount();
         return queueName + ":" + timePartition + ":" + shard;
     }
     
+    private String getCompositeKey(String name, String key) {
+        return name + "$" + key;
+    }
+    
+    private static String[] splitCompositeKey(String key) throws MessageQueueException {
+        String[] parts = StringUtils.split(key, "$");
+        
+        if (parts.length != 2) {
+            throw new MessageQueueException("Invalid key.  Expected format <queue>$<column name>. " + key);
+        }
+
+        return parts;
+    }
+    
+    @Override
+    public String getName() {
+        return queueName;
+    }
+
     @Override
     public long getMessageCount() throws MessageQueueException {
         Map<String, Integer> counts = getShardCounts();
@@ -320,8 +351,10 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     
     @Override
     public Message readMessage(String messageId) throws MessageQueueException {
-        MessageQueueEntry entry = new MessageQueueEntry(messageId);
-        String shardKey = getQueueKey(entry);
+        String[] parts = splitCompositeKey(messageId);
+        
+        String shardKey = parts[0];
+        MessageQueueEntry entry = new MessageQueueEntry(parts[1]);
         
         try {
             Column<MessageQueueEntry> column = keyspace
@@ -348,11 +381,78 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             throw new MessageQueueException("Error getting message " + messageId, e);
         }
     }
+    
+    @Override
+    public Message readMessageByKey(String key) throws MessageQueueException {
+        String groupRowKey = getCompositeKey(queueName, key);
+        try {
+            ColumnList<MessageMetadataEntry> columns = keyspace.prepareQuery(keyIndexColumnFamily)
+                .getRow(groupRowKey)
+                .withColumnRange(metadataSerializer.buildRange()
+                    .greaterThanEquals((short)MessageMetadataEntryType.MessageId.ordinal())
+                    .lessThanEquals((short)MessageMetadataEntryType.MessageId.ordinal())
+                    .build()
+                )
+                .execute()
+                .getResult();
+            
+            for (Column<MessageMetadataEntry> entry : columns) {
+                // Return the first one we get.  Hmmm... maybe we want to do some validation checks here
+                return readMessage(entry.getName().getName());
+            }
+            return null;
+        } catch (NotFoundException e) {
+            return null;
+        } catch (ConnectionException e) {
+            throw new MessageQueueException("Error fetching row " + groupRowKey, e);
+        }
+    }
+
+    @Override
+    public boolean deleteMessageByKey(String key) throws MessageQueueException {
+        MutationBatch mb = keyspace.prepareMutationBatch();
+        
+        String groupRowKey = getCompositeKey(queueName, key);
+        try {
+            ColumnList<MessageMetadataEntry> columns = keyspace.prepareQuery(keyIndexColumnFamily)
+                .getRow(groupRowKey)
+                .withColumnRange(metadataSerializer.buildRange()
+                    .greaterThanEquals((short)MessageMetadataEntryType.MessageId.ordinal())
+                    .lessThanEquals((short)MessageMetadataEntryType.MessageId.ordinal())
+                    .build()
+                )
+                .execute()
+                .getResult();
+            
+            for (Column<MessageMetadataEntry> entry : columns) {
+                String[] parts = splitCompositeKey(entry.getName().getName());
+                
+                String shardKey = parts[0];
+                MessageQueueEntry queueEntry = new MessageQueueEntry(parts[1]);
+                
+                mb.withRow(columnFamily, shardKey).deleteColumn(queueEntry);
+            }
+            
+            mb.withRow(keyIndexColumnFamily, groupRowKey).delete();
+        } catch (NotFoundException e) {
+            return false;
+        } catch (ConnectionException e) {
+            throw new MessageQueueException("Error fetching row " + groupRowKey, e);
+        }
+        
+        try {
+            mb.execute();
+        } catch (ConnectionException e) {
+            throw new MessageQueueException("Error deleting queue item " + groupRowKey, e);
+        }
+        
+        return true;
+    }
 
     @Override
     public void deleteMessage(String messageId) throws MessageQueueException {
         MessageQueueEntry entry = new MessageQueueEntry(messageId);
-        String shardKey = getQueueKey(entry);
+        String shardKey = getShardKey(entry);
         
         try {
             keyspace.prepareColumnMutation(columnFamily, shardKey, entry)
@@ -371,7 +471,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         
         for (String messageId : messageIds) {
                 MessageQueueEntry entry = new MessageQueueEntry(messageId);
-                String shardKey = getQueueKey(entry);
+                String shardKey = getShardKey(entry);
                 
                 mb.withRow(columnFamily, shardKey)
                     .deleteColumn(entry);
@@ -389,14 +489,28 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     public void createQueue() throws MessageQueueException {
         try {
             keyspace.createColumnFamily(this.columnFamily, ImmutableMap.<String, Object>builder()
-                            .put("key_validation_class",     "UTF8Type")
-                            .put("comparator_type",          "CompositeType(BytesType, BytesType(reversed=true), TimeUUIDType, BytesType)")
-                            .put("read_repair_chance",       1.0)
-                            .put("gc_grace_period",          0)     // TODO: Calculate gc_grace_period
-                            .build());
+                    .put("key_validation_class",     "UTF8Type")
+                    .put("comparator_type",          "CompositeType(BytesType, BytesType(reversed=true), TimeUUIDType, BytesType)")
+                    .put("read_repair_chance",       1.0)
+                    .put("gc_grace_period",          0)     // TODO: Calculate gc_grace_period
+                    .build());
         } catch (ConnectionException e) {
-            throw new MessageQueueException("Failed to create column family for " + columnFamily.getName(), e);
+            if (!e.getMessage().contains("already exist"))
+                throw new MessageQueueException("Failed to create column family for " + columnFamily.getName(), e);
         }
+        
+        try {
+            keyspace.createColumnFamily(this.keyIndexColumnFamily, ImmutableMap.<String, Object>builder()
+                    .put("key_validation_class",     "UTF8Type")
+                    .put("comparator_type",          "CompositeType(BytesType, UTF8Type)")
+                    .put("read_repair_chance",       1.0)
+                    .put("gc_grace_period",          0)     // TODO: Calculate gc_grace_period
+                    .build());
+        } catch (ConnectionException e) {
+            if (!e.getMessage().contains("already exist"))
+                throw new MessageQueueException("Failed to create column family for " + columnFamily.getName(), e);
+        }
+        
         
         try {
             // Convert the message object to JSON
@@ -549,7 +663,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                             .getKey(shardName)
                             .withColumnRange(new RangeBuilder()
                                 .setLimit(itemsToPop)
-                                .setEnd(compositeSerializer
+                                .setEnd(entrySerializer
                                         .makeEndpoint((short)MessageQueueEntryType.Message.ordinal(), Equality.EQUAL)
                                         .append((short)0, Equality.EQUAL)
                                         .append(TimeUUIDUtils.getMicrosTimeUUID(curTimeMicros), Equality.LESS_THAN_EQUALS).toBytes())
@@ -575,6 +689,8 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 MessageQueueEntry lockColumn = null;
                 ColumnListMutation<MessageQueueEntry> rowMutation = null;
                 
+                int lockColumnCount = 0;
+                
                 // Try locking first 
                 try {
                     // 1. Write the lock column
@@ -589,7 +705,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     ColumnList<MessageQueueEntry> result = keyspace.prepareQuery(columnFamily)
                             .setConsistencyLevel(consistencyLevel)
                             .getKey(shardName)
-                            .withColumnRange(compositeSerializer.buildRange()
+                            .withColumnRange(entrySerializer.buildRange()
                                     .greaterThanEquals((short)MessageQueueEntryType.Lock.ordinal())
                                     .lessThanEquals((short)MessageQueueEntryType.Lock.ordinal())
                                     .build())
@@ -602,32 +718,36 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     
                     int lockCount = 0;
                     boolean lockAcquired = false;
+                    lockColumnCount = result.size();
                     for (Column<MessageQueueEntry> column : result) {
                         MessageQueueEntry lock = column.getName();
                         
-                        // Stale lock so we can discard it
-                        if (column.getLongValue() < curTimeMicros) {
-                            stats.incExpiredLockCount();
-                            rowMutation.deleteColumn(lock);
-                        }
-                        else if (lock.getState() == MessageQueueEntryState.Acquired) {
-                            throw new BusyLockException("Not first lock");
-                        }
-                        // This is our lock
-                        else {
-                            lockCount++;
-                            if (lockCount == 1 && lock.getTimestamp().equals(lockColumn.getTimestamp())) {
-                                lockAcquired = true;
+                        if (lock.getType() == MessageQueueEntryType.Lock) {
+                            lockColumnCount++;
+                            // Stale lock so we can discard it
+                            if (column.getLongValue() < curTimeMicros) {
+                                stats.incExpiredLockCount();
+                                rowMutation.deleteColumn(lock);
                             }
+                            else if (lock.getState() == MessageQueueEntryState.Acquired) {
+                                throw new BusyLockException("Not first lock");
+                            }
+                            // This is our lock
+                            else {
+                                lockCount++;
+                                if (lockCount == 1 && lock.getTimestamp().equals(lockColumn.getTimestamp())) {
+                                    lockAcquired = true;
+                                }
+                            }
+                            
+                            if (!lockAcquired) {
+                                throw new BusyLockException("Not first lock");
+                            }
+                            
+                            // Write the acquired lock column
+                            lockColumn = MessageQueueEntry.newLockEntry(lockColumn.getTimestamp(), MessageQueueEntryState.Acquired);
+                            rowMutation.putColumn(lockColumn, curTimeMicros + lockTimeout, lockTtl.intValue());
                         }
-                        
-                        if (!lockAcquired) {
-                            throw new BusyLockException("Not first lock");
-                        }
-                        
-                        // Write the acquired lock column
-                        lockColumn = MessageQueueEntry.newLockEntry(lockColumn.getTimestamp(), MessageQueueEntryState.Acquired);
-                        rowMutation.putColumn(lockColumn, curTimeMicros + lockTimeout, lockTtl.intValue());
                     }
                 }
                 catch (BusyLockException e) {
@@ -658,11 +778,11 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                             .setConsistencyLevel(consistencyLevel)
                             .getKey(shardName)
                             .withColumnRange(new RangeBuilder()
-                                .setLimit(itemsToPop)
-                                .setEnd(compositeSerializer
+                                .setLimit(itemsToPop + lockColumnCount + 1)   // Read extra messages because of the lock column
+                                .setEnd(entrySerializer
                                         .makeEndpoint((short)MessageQueueEntryType.Message.ordinal(), Equality.EQUAL)
                                         .append((short)0, Equality.EQUAL)
-                                        .append(TimeUUIDUtils.getMicrosTimeUUID(curTimeMicros), Equality.LESS_THAN_EQUALS).toBytes())
+                                        .append(lockColumn.getTimestamp(), Equality.LESS_THAN_EQUALS).toBytes())
                                 .build())
                         .execute()
                             .getResult();
@@ -673,9 +793,9 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                         }
                         
                         MessageQueueEntry entry = column.getName();
-                        
                         switch (entry.getType()) {
                             case Lock: 
+                                // TODO: Track number of locks read and make sure we don't exceed itemsToPop
                                 // We have the lock
                                 if (entry.getState() == MessageQueueEntryState.Acquired) {
                                     if (!entry.getTimestamp().equals(lockColumn.getTimestamp())) {
@@ -695,8 +815,14 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                                 
                                 // Update the message state
                                 if (message != null) {
+                                    if (message.hasKey()) {
+                                        m.withRow(keyIndexColumnFamily, getCompositeKey(queueName, message.getKey()))
+                                            .deleteColumn(MessageMetadataEntry.newMessageId(getCompositeKey(shardName, entry.getMessageId())));
+                                    }
+                                    
                                     entries.add(message);
                                     
+                                    // Message has a timeout so we add a timeout event
                                     if (message.getTimeout() != 0) {
                                         MessageQueueEntry timeoutEntry = MessageQueueEntry.newMessageEntry(
                                                 (short)0,   // Timeout has to be of 0 priority otherwise it screws up the ordering of everything else
@@ -705,8 +831,17 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                                         
                                         message.setToken(timeoutEntry.getTimestamp());
                                         
-                                        m.withRow(columnFamily, getQueueKey(timeoutEntry))
-                                         .putColumn(timeoutEntry, column.getStringValue());
+                                        m.withRow(columnFamily, getShardKey(timeoutEntry))
+                                         .putColumn(timeoutEntry, column.getStringValue(), settings.getRetentionTimeout());
+                                        
+                                        // Add the timeout column to the key
+                                        if (message.hasKey()) {
+                                            m.withRow(keyIndexColumnFamily, getCompositeKey(queueName, message.getKey()))
+                                                .putEmptyColumn(
+                                                        MessageMetadataEntry.newMessageId(getCompositeKey(getShardKey(timeoutEntry), timeoutEntry.getMessageId())),
+                                                        settings.getRetentionTimeout());
+                                        }
+                                        
                                     }
                                     else {
                                         message.setToken(null);
@@ -738,9 +873,6 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                         }
                     }
                     
-                    for (MessageQueueHooks hook : hooks) {
-                        hook.beforeAckMessages(entries, m);
-                    }
                     return entries;
                 }
                 catch (BusyLockException e) {
@@ -763,16 +895,9 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             
             @Override
             public void ackMessage(Message message) throws MessageQueueException {
-                MessageQueueEntry entry = getBusyEntry(message);
-                stats.incFinishMessageCount();
-                
                 MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
-                mb.withRow(columnFamily, getQueueKey(entry))
-                    .deleteColumn(entry);
+                fillAckMutation(message, mb);
                 
-                for (MessageQueueHooks hook : hooks) {
-                    hook.beforeAckMessage(message, mb);
-                }
                 try {
                     mb.execute();
                 } catch (ConnectionException e) {
@@ -784,18 +909,35 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             public void ackMessages(Collection<Message> messages) throws MessageQueueException {
                 MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
                 for (Message message : messages) {
-                    if (message.getToken() != null) {
-                        MessageQueueEntry entry = getBusyEntry(message);
-                        stats.incFinishMessageCount();
-                        mb.withRow(columnFamily, getQueueKey(entry))
-                          .deleteColumn(entry);
-                    }
+                    fillAckMutation(message, mb);
                 }
                 
                 try {
                     mb.execute();
                 } catch (ConnectionException e) {
                     throw new MessageQueueException("Failed to ack messages", e);
+                }
+            }
+            
+            private void fillAckMutation(Message message, MutationBatch mb) {
+                if (message.getToken() != null) {
+                    MessageQueueEntry entry = getBusyEntry(message);
+                    stats.incFinishMessageCount();
+                    
+                    // Remove timeout entry from the queue
+                    mb.withRow(columnFamily, getShardKey(entry))
+                      .deleteColumn(entry);
+                    
+                    // Remove entry lookup from the key, if one exists
+                    if (message.getKey() != null) {
+                        mb.withRow(keyIndexColumnFamily, queueName + "$" + message.getKey())
+                            .deleteColumn(MessageMetadataEntry.newMessageId(entry.getMessageId()));
+                    }
+                    
+                    // Run hooks to 
+                    for (MessageQueueHooks hook : hooks) {
+                        hook.beforeAckMessage(message, mb);
+                    }
                 }
             }
 
@@ -826,6 +968,37 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
             @Override
             public String sendMessage(Message message) throws MessageQueueException {
+                MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+                String messageId = fillMessageMutation(message, mb);
+
+                try {
+                    mb.execute();
+                } catch (ConnectionException e) {
+                    throw new MessageQueueException("Failed to insert message into queue", e);
+                }
+                
+                return messageId;
+            }
+            
+            @Override
+            public Map<String, Message> sendMessages(Collection<Message> messages) throws MessageQueueException {
+                Map<String, Message> response = Maps.newLinkedHashMap();
+                MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+                for (Message message : messages) {
+                    String messageId = fillMessageMutation(message, mb);
+                    response.put(messageId, message);
+                }
+                
+                try {
+                    mb.execute();
+                } catch (ConnectionException e) {
+                    throw new MessageQueueException("Failed to insert messages into queue", e);
+                }
+                
+                return response;
+            }
+            
+            private String fillMessageMutation(Message message, MutationBatch mb) throws MessageQueueException {
                 // Get the execution time from the message or set to current time so it runs immediately
                 long curTimeMicros;
                 if (message.getTriggerTime() == 0) {
@@ -852,93 +1025,30 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     mapper.writeValue(baos, message);
                     baos.flush();
                 } catch (Exception e) {
-                    e.printStackTrace();
                     throw new MessageQueueException("Failed to serialize message data", e);
                 }
 
-                // Write the mutation 
-                MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
-                mb.withRow(columnFamily, getQueueKey(entry))
-                  .putColumn(entry, new String(baos.toByteArray()), (int)settings.getVisibilityTimeout());
+                // Write the queue entry  
+                String shardKey = getShardKey(entry);
+                mb.withRow(columnFamily, shardKey)
+                  .putColumn(entry, new String(baos.toByteArray()), (Integer)settings.getRetentionTimeout());
                     
+                // Write the lookup from queue key to queue entry
+                if (message.hasKey()) {
+                    mb.withRow(keyIndexColumnFamily, getCompositeKey(queueName, message.getKey()))
+                        .putEmptyColumn(MessageMetadataEntry.newMessageId(getCompositeKey(shardKey, entry.getMessageId())),
+                                        settings.getRetentionTimeout());
+                }
+                
+                // Allow hook processing
                 for (MessageQueueHooks hook : hooks) {
                     hook.beforeSendMessage(message, mb);
-                }
-                try {
-                    mb.execute();
-                } catch (ConnectionException e) {
-                    throw new MessageQueueException("Failed to insert message into queue", e);
                 }
                 
                 // Update state and retun the token
                 stats.incSendMessageCount();
-                return entry.getMessageId();
-            }
-
-            @Override
-            public Map<Message, String> sendMessages(Collection<Message> messages) throws MessageQueueException {
-                Map<Message, String> response = Maps.newLinkedHashMap();
-                MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
-                for (Message message : messages) {
-                    // Get the execution time from the message or set to current time so it runs immediately
-                    long curTimeMicros;
-                    if (message.getTriggerTime() == 0) {
-                        curTimeMicros = TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
-                                      + (counter.incrementAndGet() % 1000);
-                    }
-                    else {
-                        curTimeMicros = TimeUnit.MICROSECONDS.convert(message.getTriggerTime(), TimeUnit.MILLISECONDS)
-                                      + (counter.incrementAndGet() % 1000);
-                    }
-    
-                    // Update the message for the new token
-                    message.setToken(TimeUUIDUtils.getMicrosTimeUUID(curTimeMicros));
-                    
-                    // Set up the queue entry
-                    MessageQueueEntry entry = MessageQueueEntry.newMessageEntry(
-                            message.getPriority(), 
-                            message.getToken(), 
-                            MessageQueueEntryState.Waiting);
-    
-                    // Convert the message object to JSON
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    try {
-                        mapper.writeValue(baos, message);
-                        baos.flush();
-                    } catch (Exception e) {
-                        throw new MessageQueueException("Failed to serialize message data", e);
-                    }
-    
-                    // Write the mutation 
-                    String key = getQueueKey(entry);
-                    mb.withRow(columnFamily, key)
-                      .putColumn(entry, new String(baos.toByteArray()), (int)settings.getVisibilityTimeout());
-                        
-                    for (MessageQueueHooks hook : hooks) {
-                        hook.beforeSendMessage(message, mb);
-                    }
-                    response.put(message, key + "$" + entry.getMessageId());
-                    
-                    // Update state and retun the token
-                    stats.incSendMessageCount();
-                }
-                
-                try {
-                    mb.execute();
-                } catch (ConnectionException e) {
-                    throw new MessageQueueException("Failed to insert message into queue", e);
-                }
-                
-                return response;
+                return shardKey + "$" + entry.getMessageId();
             }
         };
     }
-
-
-    @Override
-    public String getName() {
-        return queueName;
-    }
-
-
 }

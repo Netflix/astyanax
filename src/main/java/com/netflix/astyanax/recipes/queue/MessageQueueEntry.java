@@ -11,6 +11,30 @@ import com.netflix.astyanax.util.TimeUUIDUtils;
 public class MessageQueueEntry {
     private static final String ID_DELIMITER = ":";
             
+    /**
+     * Type of column.  
+     * 0 - Lock
+     * 1 - Queue item
+     */
+    @Component(ordinal=0)
+    private Short type;
+    
+    @Component(ordinal=1)
+    private Short priority;
+    
+    /**
+     * Time when item is to be processed
+     */
+    @Component(ordinal=2)
+    private UUID timestamp;
+    
+    /**
+     * 
+     */
+    @Component(ordinal=3)
+    private Short state;
+    
+
     public MessageQueueEntry() {
         
     }
@@ -49,29 +73,6 @@ public class MessageQueueEntry {
     public static MessageQueueEntry newMessageEntry(short priority, UUID timestamp, MessageQueueEntryState state) {
         return new MessageQueueEntry(MessageQueueEntryType.Message,  priority, timestamp, state);
     }
-    
-    /**
-     * Type of column.  
-     * 0 - Lock
-     * 1 - Queue item
-     */
-    @Component(ordinal=0)
-    private Short type;
-    
-    @Component(ordinal=1)
-    private Short priority;
-    
-    /**
-     * Time when item is to be processed
-     */
-    @Component(ordinal=2)
-    private UUID timestamp;
-    
-    /**
-     * 
-     */
-    @Component(ordinal=3)
-    private Short state;
     
     public MessageQueueEntryType getType() {
         return MessageQueueEntryType.values()[type];

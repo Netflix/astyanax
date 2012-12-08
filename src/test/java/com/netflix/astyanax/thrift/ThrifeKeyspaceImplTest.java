@@ -3080,8 +3080,82 @@ public class ThrifeKeyspaceImplTest {
     }
     
     @Test
-    @Ignore
     public void testQueue() throws Exception {
+        final CountingQueueStats stats = new CountingQueueStats();
+        
+        final ConsistencyLevel cl = ConsistencyLevel.CL_ONE;
+        final MessageQueue scheduler = new ShardedDistributedMessageQueue.Builder()
+            .withColumnFamily(SCHEDULER_NAME_CF_NAME)
+            .withQueueName("TestQueue")
+            .withKeyspace(keyspace)
+            .withConsistencyLevel(cl)
+            .withStats(stats)
+            .withBuckets(2,  30,  TimeUnit.SECONDS)
+            .withShardCount(2)
+            .withPollInterval(100L,  TimeUnit.MILLISECONDS)
+            .build();
+        
+        scheduler.createQueue();
+        
+        scheduler.createQueue();
+        
+        String key = "MyEvent";
+        
+        MessageProducer producer = scheduler.createProducer();
+        MessageConsumer consumer = scheduler.createConsumer();
+        
+        final Message m1 = new Message().setKey(key);
+        
+        // Add a message
+        System.out.println(m1);
+        String messageId = producer.sendMessage(m1);
+        System.out.println("MessageId: " + messageId);
+        
+        // Read it by the messageId
+        final Message m2 = scheduler.readMessage(messageId);
+        System.out.println("m2: " + m2);
+        Assert.assertNotNull(m2);
+        
+        // Read it by the key
+        final Message m3 = scheduler.readMessageByKey(key);
+        System.out.println("m3: " + m3);
+        Assert.assertNotNull(m3);
+        
+        // Delete the message
+        scheduler.deleteMessageByKey(key);
+        
+        // Read and verify that it is gone
+        final Message m5 = scheduler.readMessageByKey(key);
+        Assert.assertNull(m5);
+        
+        // Read and verify that it is gone
+        final Message m6 = scheduler.readMessage(messageId);
+        Assert.assertNull(m6);
+        
+        // Send another message
+        final Message m7 = new Message().setKey(key);
+        System.out.println("m7: " + m7);
+        final String messageId2 = producer.sendMessage(m7);
+        System.out.println("MessageId2: " + messageId2);
+
+        Map<String, Integer> counts = scheduler.getShardCounts();
+        System.out.println(counts);
+        Assert.assertEquals(1,  scheduler.getMessageCount());
+        
+        // Read the message
+        final Collection<Message> lm8 = consumer.readMessages(1, 1, TimeUnit.SECONDS);
+        Assert.assertEquals(1,  lm8.size());
+        System.out.println(lm8);
+        Assert.assertEquals(1,  scheduler.getMessageCount());
+
+        // Delete the timeout entry
+        scheduler.deleteMessageByKey(key);
+        Assert.assertEquals(0,  scheduler.getMessageCount());
+    }
+    
+    @Test
+    @Ignore
+    public void testStressQueue() throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(100);
         
         final AtomicLong counter = new AtomicLong(0);

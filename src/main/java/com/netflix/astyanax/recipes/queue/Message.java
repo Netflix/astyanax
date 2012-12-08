@@ -37,6 +37,11 @@ public class Message {
      */
     private Integer timeout = 10;
     
+    /**
+     * Unique key for this message.
+     */
+    private String key;
+    
     public Message() {
         
     }
@@ -121,10 +126,23 @@ public class Message {
         return this;
     }
 
+    public String getKey() {
+        return key;
+    }
+
+    public Message setKey(String key) {
+        this.key = key;
+        return this;
+    }
+    
+    public boolean hasKey() {
+        return this.key != null;
+    }
+
     @Override
     public String toString() {
         return "Message [token=" + token + ", data=" + data + ", triggerTime=" + triggerTime + ", parameters=" + parameters
-                + ", priority=" + priority + ", timeout=" + timeout + "]";
+                + ", priority=" + priority + ", timeout=" + timeout + ", key=" + key + "]";
     }
 
     @Override
@@ -139,42 +157,5 @@ public class Message {
         result = prime * result + (int) (triggerTime ^ (triggerTime >>> 32));
         return result;
     }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        Message other = (Message) obj;
-        if (data == null) {
-            if (other.data != null)
-                return false;
-        } else if (!data.equals(other.data))
-            return false;
-        if (parameters == null) {
-            if (other.parameters != null)
-                return false;
-        } else if (!parameters.equals(other.parameters))
-            return false;
-        if (priority != other.priority)
-            return false;
-        if (timeout == null) {
-            if (other.timeout != null)
-                return false;
-        } else if (!timeout.equals(other.timeout))
-            return false;
-        if (token == null) {
-            if (other.token != null)
-                return false;
-        } else if (!token.equals(other.token))
-            return false;
-        if (triggerTime != other.triggerTime)
-            return false;
-        return true;
-    }
-    
     
 }

@@ -214,9 +214,10 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
 
     public <T1> RangeEndpoint makeEndpoint(T1 value, Equality equality) {
         RangeEndpoint endpoint = new RangeEndpoint() {
-            private ByteBufferOutputStream out = new ByteBufferOutputStream();
+            private ByteBuffer out = ByteBuffer.allocate(bufferSize);
             private int position = 0;
-
+            private boolean done = false;
+            
             @Override
             public RangeEndpoint append(Object value, Equality equality) {
                 ComponentSerializer<?> serializer = components.get(position);
@@ -234,16 +235,27 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
                     cb = EMPTY_BYTE_BUFFER;
                 }
 
+                if (cb.limit() + 3 > out.remaining()) {
+                    ByteBuffer temp = ByteBuffer.allocate(out.limit() * 2);
+                    out.flip();
+                    temp.put(out);
+                    out = temp;
+                }
+
                 // Write the data: <length><data><0>
-                out.writeShort((short) cb.remaining());
-                out.write(cb.slice());
-                out.write(equality.toByte());
+                out.putShort((short) cb.remaining());
+                out.put(cb.slice());
+                out.put(equality.toByte());
                 return this;
             }
 
             @Override
             public ByteBuffer toBytes() {
-                return out.getByteBuffer();
+                if (!done) {
+                    out.flip();
+                    done = true;
+                }
+                return out;
             }
         };
         endpoint.append(value, equality);

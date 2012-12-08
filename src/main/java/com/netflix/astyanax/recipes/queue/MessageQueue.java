@@ -1,7 +1,6 @@
 package com.netflix.astyanax.recipes.queue;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -47,18 +46,37 @@ public interface MessageQueue {
     /**
      * Read a specific message from the queue.  The message isn't modified or removed from the queue.
      * 
+     * @param messageId Message id returned from MessageProducer.sendMessage
+     * @return
+     * @throws MessageQueueException
+     */
+    Message readMessage(String messageId) throws MessageQueueException;
+
+    /**
+     * Read a specific message from the queue.  The message isn't modified or removed from the queue.
+     * This operation will require a lookup of key to messageId
+     * 
      * @param message Message id returned from MessageProducer.sendMessage
      * @return
      * @throws MessageQueueException
      */
-    Message readMessage(String token) throws MessageQueueException;
+    Message readMessageByKey(String key) throws MessageQueueException;
     
     /**
      * Delete a specific message from the queue.  
      * @param message
      * @throws MessageQueueException
      */
-    void deleteMessage(String token) throws MessageQueueException;
+    void deleteMessage(String messageId) throws MessageQueueException;
+    
+    /**
+     * Delete a message using the specified key.  This operation will require a lookup of key to messageId
+     * prior to deleting the message 
+     * @param key
+     * @return true if any items were deleted
+     * @throws MessageQueueException
+     */
+    boolean deleteMessageByKey(String key) throws MessageQueueException;
     
     /**
      * Delete a set of messages

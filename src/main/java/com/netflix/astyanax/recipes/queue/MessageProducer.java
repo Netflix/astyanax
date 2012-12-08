@@ -20,5 +20,5 @@ public interface MessageProducer {
      * 
      * @throws MessageQueueException
      */
-    Map<Message, String> sendMessages(Collection<Message> messages) throws MessageQueueException;
+    Map<String, Message> sendMessages(Collection<Message> messages) throws MessageQueueException;
 }

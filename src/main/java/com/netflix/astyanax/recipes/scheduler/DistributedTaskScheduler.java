@@ -55,28 +55,28 @@ import com.netflix.astyanax.util.TimeUUIDUtils;
 public class DistributedTaskScheduler implements MessageQueueHooks, TaskScheduler {
     private final static Logger LOG = LoggerFactory.getLogger(DistributedTaskScheduler.class);
     
-    private final static String           DEFAULT_SCHEDULER_NAME        = "Tasks";
-    private final static ConsistencyLevel DEFAULT_CONSISTENCY_LEVEL     = ConsistencyLevel.CL_QUORUM;
-    private final static int              DEFAULT_BATCH_SIZE            = 5;
-    private final static int              DEFAULT_CONSUMER_THREAD_COUNT = 1;
-    private final static Integer          DEFAULT_ERROR_TTL             = (int)TimeUnit.SECONDS.convert(14,  TimeUnit.DAYS);
-    private final static int              DEFAULT_SCHEMA_AGREEMENT_GRACE_PERIOD = 3000;
-    private final static int              DEFAULT_SHARD_COUNT           = 1;
-    private final static int              DEFAULT_BUCKET_COUNT          = 1;
-    private final static int              DEFAULT_BUCKET_DURATION       = 1;
-    private final static int              DEFAULT_POLLING_INTERVAL      = 1; // Seconds
-    private final static int              THROTTLE_DURATION             = 1000;
+    public final static String           DEFAULT_SCHEDULER_NAME        = "Tasks";
+    public final static ConsistencyLevel DEFAULT_CONSISTENCY_LEVEL     = ConsistencyLevel.CL_QUORUM;
+    public final static int              DEFAULT_BATCH_SIZE            = 5;
+    public final static int              DEFAULT_CONSUMER_THREAD_COUNT = 1;
+    public final static Integer          DEFAULT_ERROR_TTL             = (int)TimeUnit.SECONDS.convert(14,  TimeUnit.DAYS);
+    public final static int              DEFAULT_SCHEMA_AGREEMENT_GRACE_PERIOD = 3000;
+    public final static int              DEFAULT_SHARD_COUNT           = 1;
+    public final static int              DEFAULT_BUCKET_COUNT          = 1;
+    public final static int              DEFAULT_BUCKET_DURATION       = 1;
+    public final static int              DEFAULT_POLLING_INTERVAL      = 1; // Seconds
+    public final static int              THROTTLE_DURATION             = 1000;
     
-    private final static String           TASKS_SUFFIX        = "_Tasks";
-    private final static String           QUEUE_SUFFIX        = "_Queue";
-    private final static String           HISTORY_SUFFIX      = "_History";
+    public final static String           TASKS_SUFFIX        = "_Tasks";
+    public final static String           QUEUE_SUFFIX        = "_Queue";
+    public final static String           HISTORY_SUFFIX      = "_History";
     
-    private final static String           COLUMN_TASK_INFO     = "task_info";
-    private final static String           COLUMN_TRIGGER_CLASS = "trigger_class";
-    private final static String           COLUMN_TRIGGER       = "trigger";
-    private final static String           COLUMN_TOKEN         = "token";
-    private final static String           COLUMN_STATE         = "state";
-    private final static String           PARAM_KEY            = "key";
+    public final static String           COLUMN_TASK_INFO     = "task_info";
+    public final static String           COLUMN_TRIGGER_CLASS = "trigger_class";
+    public final static String           COLUMN_TRIGGER       = "trigger";
+    public final static String           COLUMN_TOKEN         = "token";
+    public final static String           COLUMN_STATE         = "state";
+    public final static String           PARAM_KEY            = "key";
 
     private final ObjectMapper mapper;
     
@@ -304,7 +304,7 @@ public class DistributedTaskScheduler implements MessageQueueHooks, TaskSchedule
     @Override
     public boolean stop() throws TaskSchedulerException {
         terminate = true;
-        executor.shutdown();
+        executor.shutdownNow();
         try {
             executor.awaitTermination(10, TimeUnit.SECONDS);
         } catch (InterruptedException e) {

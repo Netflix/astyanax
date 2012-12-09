@@ -1,10 +1,11 @@
 package com.netflix.astyanax.recipes.queue;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -65,7 +66,7 @@ public class MessageQueueDispatcher {
          * @param executor
          * @return
          */
-        public Builder withExecutor(ExecutorService executor) {
+        public Builder withExecutor(ScheduledExecutorService executor) {
             dispatcher.executor = executor;
             return this;
         }
@@ -94,9 +95,9 @@ public class MessageQueueDispatcher {
     private int             threadCount   = DEFAULT_THREAD_COUNT;
     private int             batchSize     = DEFAULT_BATCH_SIZE;
     private int             consumerCount = DEFAULT_CONSUMER_COUNT;
-    private boolean         terminate     = true;
+    private boolean         terminate     = false;
     private MessageQueue    messageQueue;
-    private ExecutorService executor;
+    private ScheduledExecutorService executor;
     private boolean         bOwnedExecutor = false;
     private Function<Message, Boolean>   callback;
     private LinkedBlockingQueue<Message> toAck = Queues.newLinkedBlockingQueue();
@@ -110,7 +111,7 @@ public class MessageQueueDispatcher {
     
     public void start() {
         if (executor == null) {
-            executor = Executors.newFixedThreadPool(threadCount);
+            executor = Executors.newScheduledThreadPool(threadCount);
             bOwnedExecutor = true;
         }
         
@@ -125,29 +126,6 @@ public class MessageQueueDispatcher {
             executor.shutdownNow();
     }
     
-    private void enqueMessage(final Message message) {
-        executor.submit(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    if (callback.apply(message)) {
-                        executor.submit(new Runnable() {
-                            @Override
-                            public void run() {
-                                // TODO Auto-generated method stub
-                                
-                            }
-                        });
-                        toAck.add(message);
-                    }
-                }
-                catch (Throwable t) {
-                    LOG.error("Error processing message");
-                }
-            }
-        });
-    }
-    
     private void startConsumer(final int id) {
         final String name = StringUtils.join(Lists.newArrayList(messageQueue.getName(), "Consumer", Integer.toString(id)), ":");
         
@@ -160,34 +138,36 @@ public class MessageQueueDispatcher {
                 Thread.currentThread().setName(name);
                 
                 // Create the consumer context
-                MessageConsumer consumer = messageQueue.createConsumer();
+                final MessageConsumer consumer = messageQueue.createConsumer();
                 
                 // Process events in a tight loop, until asked to terminate
                 Collection<Message> messages = null;
                 try {
                     messages = consumer.readMessages(batchSize);
-                    for (Message message : messages) {
-                        enqueMessage(message);
+                    for (final Message message : messages) {
+                        executor.submit(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    if (callback.apply(message)) {
+                                        consumer.ackMessage(message);
+                                    }
+                                }
+                                catch (Throwable t) {
+                                    // TODO: Add to poison queue
+                                    LOG.error("Error processing message " + message.getKey(), t);
+                                }
+                            }
+                        });
                     }
-                    consumer.ackMessages(toAck);
                 } 
                 catch (BusyLockException e) {
-                    try {
-                        Thread.sleep(THROTTLE_DURATION);
-                    } catch (InterruptedException e1) {
-                    }
                 }
                 catch (Exception e) {
                     LOG.warn("Error consuming messages ", e);
-                    try {
-                        Thread.sleep(THROTTLE_DURATION);
-                    } catch (InterruptedException e1) {
-                    }
                 }
                 
-                if (!terminate) {
-                    executor.submit(this);
-                }
+                executor.schedule(this,  THROTTLE_DURATION,  TimeUnit.MILLISECONDS);
             }
         });
     }

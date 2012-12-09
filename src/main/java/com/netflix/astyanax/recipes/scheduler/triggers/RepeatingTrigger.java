@@ -41,7 +41,7 @@ public class RepeatingTrigger extends AbstractTrigger {
     
     @Override
     public Trigger nextTrigger() {
-        if (getExecutionCount() >= repeatCount) {
+        if (getExecutionCount()+1 >= repeatCount) {
             return null;
         }
         

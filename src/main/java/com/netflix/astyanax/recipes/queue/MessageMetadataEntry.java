@@ -7,7 +7,7 @@ public class MessageMetadataEntry {
      * Type of column.  See MessageMetadataType
      */
     @Component(ordinal=0)
-    private Short type;
+    private Byte type;
     
     @Component(ordinal=1)
     private String name;
@@ -17,18 +17,18 @@ public class MessageMetadataEntry {
     }
 
     public MessageMetadataEntry(MessageMetadataEntryType type, String name) {
-        this.type = (short)type.ordinal();
+        this.type = (byte)type.ordinal();
         this.name = name;
     }
 
-    public Short getType() {
+    public Byte getType() {
         return type;
     }
 
     public MessageMetadataEntryType getMetadataType() {
         return MessageMetadataEntryType.values()[type];
     }
-    public void setType(Short type) {
+    public void setType(Byte type) {
         this.type = type;
     }
 

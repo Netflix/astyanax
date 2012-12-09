@@ -17,10 +17,10 @@ public class MessageQueueEntry {
      * 1 - Queue item
      */
     @Component(ordinal=0)
-    private Short type;
+    private Byte type;
     
     @Component(ordinal=1)
-    private Short priority;
+    private Byte priority;
     
     /**
      * Time when item is to be processed
@@ -32,7 +32,7 @@ public class MessageQueueEntry {
      * 
      */
     @Component(ordinal=3)
-    private Short state;
+    private Byte state;
     
 
     public MessageQueueEntry() {
@@ -44,33 +44,33 @@ public class MessageQueueEntry {
         if (parts.length != 4)
             throw new RuntimeException("Invalid message ID.  Expection <type>:<priority>:<timestamp>:<state> but got " + id);
         
-        type      = Short.parseShort(parts[0]);
-        priority  = Short.parseShort(parts[1]);
+        type      = Byte.parseByte(parts[0]);
+        priority  = Byte.parseByte(parts[1]);
         timestamp = UUID.fromString (parts[2]);
-        state     = Short.parseShort(parts[3]);
+        state     = Byte.parseByte(parts[3]);
     }
     
-    private MessageQueueEntry(MessageQueueEntryType type, short priority, UUID timestamp, MessageQueueEntryState state) {
+    private MessageQueueEntry(MessageQueueEntryType type, byte priority, UUID timestamp, MessageQueueEntryState state) {
         super();
-        this.type       = (short)type.ordinal();
+        this.type       = (byte)type.ordinal();
         this.priority   = 0;
         this.timestamp  = timestamp;
-        this.state      = (short)state.ordinal();
+        this.state      = (byte)state.ordinal();
     }
     
     public static MessageQueueEntry newLockEntry(MessageQueueEntryState state) {
-        return new MessageQueueEntry(MessageQueueEntryType.Lock,    (short)0, TimeUUIDUtils.getUniqueTimeUUIDinMicros(), state);
+        return new MessageQueueEntry(MessageQueueEntryType.Lock, (byte)0, TimeUUIDUtils.getUniqueTimeUUIDinMicros(), state);
     }
     
     public static MessageQueueEntry newLockEntry(UUID timestamp, MessageQueueEntryState state) {
-        return new MessageQueueEntry(MessageQueueEntryType.Lock,    (short)0, timestamp, state);
+        return new MessageQueueEntry(MessageQueueEntryType.Lock, (byte)0, timestamp, state);
     }
     
     public static MessageQueueEntry newMetadataEntry() {
-        return new MessageQueueEntry(MessageQueueEntryType.Metadata, (short)0, null,      MessageQueueEntryState.None);
+        return new MessageQueueEntry(MessageQueueEntryType.Metadata, (byte)0, null, MessageQueueEntryState.None);
     }
     
-    public static MessageQueueEntry newMessageEntry(short priority, UUID timestamp, MessageQueueEntryState state) {
+    public static MessageQueueEntry newMessageEntry(byte priority, UUID timestamp, MessageQueueEntryState state) {
         return new MessageQueueEntry(MessageQueueEntryType.Message,  priority, timestamp, state);
     }
     
@@ -94,7 +94,7 @@ public class MessageQueueEntry {
         return priority;
     }
     
-    public void setType(Short type) {
+    public void setType(Byte type) {
         this.type = type;
     }
 
@@ -102,22 +102,19 @@ public class MessageQueueEntry {
         this.timestamp = timestamp;
     }
 
-    public void setState(Short state) {
+    public void setState(Byte state) {
         this.state = state;
     }
 
-    public void setPriorty(Short priority) {
+    public void setPriorty(Byte priority) {
         this.priority = priority;
     }
 
     public String getMessageId() {
         return new StringBuilder()
-                .append(type)
-                .append(ID_DELIMITER)
-                .append(priority)
-                .append(ID_DELIMITER)
-                .append(timestamp.toString())
-                .append(ID_DELIMITER)
+                .append(type)                .append(ID_DELIMITER)
+                .append(priority)            .append(ID_DELIMITER)
+                .append(timestamp.toString()).append(ID_DELIMITER)
                 .append(state)
                 .toString();
         

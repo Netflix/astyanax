@@ -87,6 +87,7 @@ import com.netflix.astyanax.recipes.queue.Message;
 import com.netflix.astyanax.recipes.queue.MessageConsumer;
 import com.netflix.astyanax.recipes.queue.MessageProducer;
 import com.netflix.astyanax.recipes.queue.MessageQueue;
+import com.netflix.astyanax.recipes.queue.MessageQueueDispatcher;
 import com.netflix.astyanax.recipes.queue.ShardedDistributedMessageQueue;
 import com.netflix.astyanax.recipes.reader.AllRowsReader;
 import com.netflix.astyanax.recipes.scheduler.DistributedTaskScheduler;
@@ -3084,7 +3085,7 @@ public class ThrifeKeyspaceImplTest {
         final CountingQueueStats stats = new CountingQueueStats();
         
         final ConsistencyLevel cl = ConsistencyLevel.CL_ONE;
-        final MessageQueue scheduler = new ShardedDistributedMessageQueue.Builder()
+        final ShardedDistributedMessageQueue scheduler = new ShardedDistributedMessageQueue.Builder()
             .withColumnFamily(SCHEDULER_NAME_CF_NAME)
             .withQueueName("TestQueue")
             .withKeyspace(keyspace)
@@ -3104,53 +3105,113 @@ public class ThrifeKeyspaceImplTest {
         MessageProducer producer = scheduler.createProducer();
         MessageConsumer consumer = scheduler.createConsumer();
         
-        final Message m1 = new Message().setKey(key);
+        {
+            final Message m = new Message().setKey(key);
+            
+            // Add a message
+            System.out.println(m);
+            String messageId = producer.sendMessage(m);
+            System.out.println("MessageId: " + messageId);
+            
+            // Read it by the messageId
+            final Message m1rm = scheduler.readMessage(messageId);
+            System.out.println("m1rm: " + m1rm);
+            Assert.assertNotNull(m1rm);
+            
+            // Read it by the key
+            final Message m1rk = scheduler.readMessageByKey(key);
+            System.out.println("m1rk:" + m1rk);
+            Assert.assertNotNull(m1rk);
+            
+            // Delete the message
+            scheduler.deleteMessageByKey(key);
+            
+            // Read and verify that it is gone
+            final Message m1rkd = scheduler.readMessageByKey(key);
+            Assert.assertNull(m1rkd);
+            
+            // Read and verify that it is gone
+            final Message m1rmd = scheduler.readMessage(messageId);
+            Assert.assertNull(m1rmd);
+        }
         
-        // Add a message
-        System.out.println(m1);
-        String messageId = producer.sendMessage(m1);
-        System.out.println("MessageId: " + messageId);
-        
-        // Read it by the messageId
-        final Message m2 = scheduler.readMessage(messageId);
-        System.out.println("m2: " + m2);
-        Assert.assertNotNull(m2);
-        
-        // Read it by the key
-        final Message m3 = scheduler.readMessageByKey(key);
-        System.out.println("m3: " + m3);
-        Assert.assertNotNull(m3);
-        
-        // Delete the message
-        scheduler.deleteMessageByKey(key);
-        
-        // Read and verify that it is gone
-        final Message m5 = scheduler.readMessageByKey(key);
-        Assert.assertNull(m5);
-        
-        // Read and verify that it is gone
-        final Message m6 = scheduler.readMessage(messageId);
-        Assert.assertNull(m6);
-        
-        // Send another message
-        final Message m7 = new Message().setKey(key);
-        System.out.println("m7: " + m7);
-        final String messageId2 = producer.sendMessage(m7);
-        System.out.println("MessageId2: " + messageId2);
+        {
+            // Send another message
+            final Message m = new Message().setKey(key);
+            System.out.println("m2: " + m);
+            final String messageId2 = producer.sendMessage(m);
+            System.out.println("MessageId2: " + messageId2);
+    
+            Map<String, Integer> counts = scheduler.getShardCounts();
+            System.out.println(counts);
+            Assert.assertEquals(1,  scheduler.getMessageCount());
+            
+            // Read the message
+            final Collection<Message> lm2 = consumer.readMessages(1, 1, TimeUnit.SECONDS);
+            System.out.println("Read message: " + lm2);
+            Assert.assertEquals(1,  lm2.size());
+            System.out.println(lm2);
+            Assert.assertEquals(1,  scheduler.getMessageCount());
 
-        Map<String, Integer> counts = scheduler.getShardCounts();
-        System.out.println(counts);
-        Assert.assertEquals(1,  scheduler.getMessageCount());
+            consumer.ackMessages(lm2);
+            Assert.assertEquals(0,  scheduler.getMessageCount());
+        }
         
-        // Read the message
-        final Collection<Message> lm8 = consumer.readMessages(1, 1, TimeUnit.SECONDS);
-        Assert.assertEquals(1,  lm8.size());
-        System.out.println(lm8);
-        Assert.assertEquals(1,  scheduler.getMessageCount());
-
-        // Delete the timeout entry
-        scheduler.deleteMessageByKey(key);
-        Assert.assertEquals(0,  scheduler.getMessageCount());
+        {
+            final Message m = new Message()
+                .setTrigger(new RepeatingTrigger.Builder()
+                    .withInterval(3,  TimeUnit.SECONDS)
+                    .withRepeatCount(10)
+                    .build());
+            final String messageId3 = producer.sendMessage(m);
+            Assert.assertNotNull(messageId3);
+            final Message m3rm = scheduler.readMessage(messageId3);
+            Assert.assertNotNull(m3rm);
+            System.out.println(m3rm);
+            Assert.assertEquals(1,  scheduler.getMessageCount());
+            scheduler.deleteMessage(messageId3);
+            Assert.assertEquals(0,  scheduler.getMessageCount());
+        }
+        
+        {
+            final Message m = new Message()
+                .setKey("RepeatingMessage")
+                .setTrigger(new RepeatingTrigger.Builder()
+                    .withInterval(1,  TimeUnit.SECONDS)
+                    .withRepeatCount(5)
+                    .build());
+            final String messageId = producer.sendMessage(m);
+        
+            final AtomicLong counter = new AtomicLong(0);
+            
+            MessageQueueDispatcher dispatcher = new MessageQueueDispatcher.Builder()
+                .withBatchSize(5)
+                .withCallback(new Function<Message, Boolean>() {
+                    long startTime = 0;
+                    
+                    @Override
+                    public synchronized Boolean apply(Message message) {
+                        if (startTime == 0) 
+                            startTime = System.currentTimeMillis();
+                        
+                        System.out.println("Callback : " + (System.currentTimeMillis() - startTime) + " " + message);
+                        counter.incrementAndGet();
+                        return true;
+                    }
+                })
+                .withMessageQueue(scheduler)
+                .withThreadCount(2)
+                .build();
+            
+            dispatcher.start();
+            
+            Thread.sleep(TimeUnit.MILLISECONDS.convert(6,  TimeUnit.SECONDS));
+            
+            dispatcher.stop();
+            
+            Assert.assertEquals(5,  counter.get());
+        }
+        
     }
     
     @Test

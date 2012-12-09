@@ -344,7 +344,7 @@ public class DistributedTaskScheduler implements MessageQueueHooks, TaskSchedule
                                     
                                     TaskHistory history = new TaskHistory();
                                     history.setStartTime(System.currentTimeMillis());
-                                    history.setTriggerTime(message.getTriggerTime());
+                                    history.setTriggerTime(message.getTrigger().getTriggerTime());
                                     
                                     UUID historyUUID = TimeUUIDUtils.getTimeUUID(history.getStartTime());
                                     
@@ -564,7 +564,7 @@ public class DistributedTaskScheduler implements MessageQueueHooks, TaskSchedule
                 .put(PARAM_KEY,         taskKey)
                 .put(COLUMN_TRIGGER,    serializeToString(trigger))
                 .build());
-        message.setTriggerTime(trigger.getTriggerTime());
+// TODO:     message.getTrigger().setTriggerTime(trigger.getTriggerTime());
         
         producer.sendMessage(message);
         return message;

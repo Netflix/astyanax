@@ -4,7 +4,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import com.netflix.astyanax.recipes.scheduler.Trigger;
+
 public class Message {
+    
     /**
      * Last execution time, this value changes as the task state is transitioned.  
      * The token is a timeUUID and represents the next execution/expiration time
@@ -20,7 +23,7 @@ public class Message {
     /**
      * Execution time for the task in milliseconds
      */
-    private long    triggerTime = 0;
+    private Trigger trigger;
 
     /**
      * Map of task arguments.
@@ -30,12 +33,12 @@ public class Message {
     /**
      * Lower value priority tasks get executed first
      */
-    private short priority = 0;
+    private byte priority = 0;
     
     /**
      * Timeout value in seconds
      */
-    private Integer timeout = 10;
+    private Integer timeout = 5;
     
     /**
      * Unique key for this message.
@@ -73,20 +76,15 @@ public class Message {
         return this;
     }
 
-    public Long getTriggerTime() {
-        return triggerTime;
+    public Trigger getTrigger() {
+        return trigger;
     }
 
-    public Message setTriggerTime(Long triggerTime) {
-        this.triggerTime = triggerTime;
+    public Message setTrigger(Trigger trigger) {
+        this.trigger = trigger;
         return this;
     }
     
-    public Message setDelay(Long delay, TimeUnit units) {
-        this.triggerTime = System.currentTimeMillis() + TimeUnit.MILLISECONDS.convert(delay,  units);
-        return this;
-    }
-
     public Map<String, Object> getParameters() {
         return parameters;
     }
@@ -95,7 +93,7 @@ public class Message {
         this.parameters = parameters;
     }
 
-    public short getPriority() {
+    public byte getPriority() {
         return priority;
     }
 
@@ -111,7 +109,7 @@ public class Message {
      * @param priority
      * @return
      */
-    public Message setPriority(short priority) {
+    public Message setPriority(byte priority) {
         this.priority = priority;
         return this;
     }
@@ -139,23 +137,25 @@ public class Message {
         return this.key != null;
     }
 
-    @Override
-    public String toString() {
-        return "Message [token=" + token + ", data=" + data + ", triggerTime=" + triggerTime + ", parameters=" + parameters
-                + ", priority=" + priority + ", timeout=" + timeout + ", key=" + key + "]";
-    }
-
-    @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ((data == null) ? 0 : data.hashCode());
-        result = prime * result + ((parameters == null) ? 0 : parameters.hashCode());
-        result = prime * result + priority;
-        result = prime * result + ((timeout == null) ? 0 : timeout.hashCode());
-        result = prime * result + ((token == null) ? 0 : token.hashCode());
-        result = prime * result + (int) (triggerTime ^ (triggerTime >>> 32));
-        return result;
+    public boolean hasTrigger() {
+        return trigger != null;
     }
     
+    public Message clone() {
+        Message message = new Message();
+        message.token       = token;
+        message.data        = data;
+        message.trigger     = trigger;
+        message.parameters  = parameters;
+        message.priority    = priority;
+        message.timeout     = timeout;
+        message.key         = key;
+        return message;
+    }
+    
+    @Override
+    public String toString() {
+        return "Message [token=" + token + ", data=" + data + ", trigger=" + trigger + ", parameters=" + parameters
+                + ", priority=" + priority + ", timeout=" + timeout + ", key=" + key + "]";
+    }
 }

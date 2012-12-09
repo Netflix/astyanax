@@ -56,6 +56,12 @@ public class MessageQueueDispatcher {
             return this;
         }
         
+        /**
+         * Set the number of consumers that will be removing items from the 
+         * queue.  This value must be less than or equal to the thread count.
+         * @param consumerCount
+         * @return
+         */
         public Builder withConsumerCount(int consumerCount) {
             dispatcher.consumerCount = consumerCount;
             return this;
@@ -81,12 +87,20 @@ public class MessageQueueDispatcher {
             return this;
         }
         
+        /**
+         * Callback to process messages.  The callback is called from any of the internal processing
+         * threads and is therefore not thread safe.
+         * @param callback
+         * @return true to ack the message, false to not ack and cause the message to timeout
+         *          Throw an exception to force the message to be added to the poison queue
+         */
         public Builder withCallback(Function<Message, Boolean> callback) {
             dispatcher.callback = callback;
             return this;
         }
         
         public MessageQueueDispatcher build() {
+            Preconditions.checkArgument(dispatcher.consumerCount <= dispatcher.threadCount, "consumerCounter must be <= threadCount");
             dispatcher.initialize();
             return dispatcher;
         }

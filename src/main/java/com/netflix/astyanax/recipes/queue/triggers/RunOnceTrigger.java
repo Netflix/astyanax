@@ -1,4 +1,4 @@
-package com.netflix.astyanax.recipes.scheduler.triggers;
+package com.netflix.astyanax.recipes.queue.triggers;
 
 import com.netflix.astyanax.recipes.scheduler.Trigger;
 

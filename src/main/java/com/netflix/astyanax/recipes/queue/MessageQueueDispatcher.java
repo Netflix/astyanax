@@ -1,6 +1,7 @@
 package com.netflix.astyanax.recipes.queue;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -31,6 +32,8 @@ public class MessageQueueDispatcher {
     public final static int   THROTTLE_DURATION             = 1000;
     public final static int   DEFAULT_THREAD_COUNT          = 1;
     public final static int   DEFAULT_CONSUMER_COUNT        = 1;
+    public final static int   DEFAULT_ACK_SIZE              = 100;
+    public final static int   DEFAULT_ACK_INTERVAL          = 1000;
     
     public static class Builder {
         private final MessageQueueDispatcher dispatcher = new MessageQueueDispatcher();
@@ -86,6 +89,11 @@ public class MessageQueueDispatcher {
             return this;
         }
         
+        public Builder withAckInterval(long interval, TimeUnit units) {
+            dispatcher.ackInterval = TimeUnit.MILLISECONDS.convert(interval, units);
+            return this;
+        }
+        
         /**
          * Callback to process messages.  The callback is called from any of the internal processing
          * threads and is therefore not thread safe.
@@ -114,7 +122,10 @@ public class MessageQueueDispatcher {
     private boolean         bOwnedExecutor = false;
     private Function<Message, Boolean>   callback;
     private LinkedBlockingQueue<Message> toAck = Queues.newLinkedBlockingQueue();
-
+    private int             ackSize       = DEFAULT_ACK_SIZE;
+    private long            ackInterval   = DEFAULT_ACK_INTERVAL;
+    private MessageConsumer ackConsumer;
+    
     private MessageQueueDispatcher() {
     }
     
@@ -128,6 +139,8 @@ public class MessageQueueDispatcher {
             bOwnedExecutor = true;
         }
         
+        startAckThread();
+        
         for (int i = 0; i < consumerCount; i++) {
             startConsumer(i);
         }
@@ -137,6 +150,26 @@ public class MessageQueueDispatcher {
         terminate = true;
         if (bOwnedExecutor) 
             executor.shutdownNow();
+    }
+    
+    private void startAckThread() {
+        ackConsumer = messageQueue.createConsumer();
+        
+        executor.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                List<Message> messages = Lists.newArrayList();
+                toAck.drainTo(messages);
+                if (!messages.isEmpty()) {
+                    try {
+                        ackConsumer.ackMessages(messages);
+                    } catch (MessageQueueException e) {
+                        toAck.addAll(messages);
+                        LOG.warn("Failed to ack consumer", e);
+                    }
+                }
+            }
+        }, ackInterval, ackInterval, TimeUnit.MILLISECONDS);
     }
     
     private void startConsumer(final int id) {
@@ -157,6 +190,7 @@ public class MessageQueueDispatcher {
                 Collection<Message> messages = null;
                 try {
                     messages = consumer.readMessages(batchSize);
+                    System.out.println("Read " + messages.size());
                     for (final Message message : messages) {
                         executor.submit(new Runnable() {
                             @Override
@@ -166,10 +200,12 @@ public class MessageQueueDispatcher {
                                         @SuppressWarnings("unchecked")
                                         Function<Message, Boolean> task = (Function<Message, Boolean>)Class.forName(message.getTaskClass()).newInstance();
                                         if (task.apply(message)) {
+                                            toAck.add(message);
                                             consumer.ackMessage(message);
                                         }
                                     }
                                     else if(callback.apply(message)) {
+                                        toAck.add(message);
                                         consumer.ackMessage(message);
                                     }
                                 }

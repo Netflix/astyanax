@@ -869,7 +869,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                                     if (message.getTimeout() != 0) {
                                         MessageQueueEntry timeoutEntry = MessageQueueEntry.newMessageEntry(
                                                 (byte)0,   // Timeout has to be of 0 priority otherwise it screws up the ordering of everything else
-                                                TimeUUIDUtils.getMicrosTimeUUID(curTimeMicros + TimeUnit.MICROSECONDS.convert(message.getTimeout(), TimeUnit.SECONDS)), 
+                                                TimeUUIDUtils.getMicrosTimeUUID(curTimeMicros + TimeUnit.MICROSECONDS.convert(message.getTimeout(), TimeUnit.SECONDS) + (counter.incrementAndGet() % 1000)), 
                                                 MessageQueueEntryState.Busy);
                                         
                                         message.setToken(timeoutEntry.getTimestamp());

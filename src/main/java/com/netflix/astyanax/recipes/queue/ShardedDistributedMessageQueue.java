@@ -500,7 +500,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     }
 
     @Override
-    public void createQueue() throws MessageQueueException {
+    public void createStorage() throws MessageQueueException {
         try {
             keyspace.createColumnFamily(this.queueColumnFamily, ImmutableMap.<String, Object>builder()
                     .put("key_validation_class",     "UTF8Type")
@@ -524,8 +524,10 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             if (!e.getMessage().contains("already exist"))
                 throw new MessageQueueException("Failed to create column family for " + queueColumnFamily.getName(), e);
         }
-        
-        
+    }
+    
+    @Override
+    public void createQueue() throws MessageQueueException {
         try {
             // Convert the message object to JSON
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -1030,6 +1032,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         return new MessageProducer() {
             @Override
             public String sendMessage(Message message) throws MessageQueueException {
+                // TODO: Check for uniqueness
                 MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
                 String messageId = fillMessageMutation(mb, message);
 
@@ -1044,6 +1047,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             
             @Override
             public Map<String, Message> sendMessages(Collection<Message> messages) throws MessageQueueException {
+                // TODO: Check for uniqueness
                 Map<String, Message> response = Maps.newLinkedHashMap();
                 MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
                 for (Message message : messages) {

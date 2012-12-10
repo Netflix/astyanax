@@ -37,8 +37,13 @@ public interface MessageQueue {
     void clearMessages() throws MessageQueueException;
     
     /**
-     * Create the underlying storage for this queue
-     * 
+     * Create the underlying storage
+     * @throws MessageQueueExcewption
+     */
+    void createStorage() throws MessageQueueException;
+    
+    /**
+     * Create any metadata in the storage necessary for the queue
      * @throws MessageQueueException
      */
     void createQueue() throws MessageQueueException;

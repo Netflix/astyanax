@@ -3096,7 +3096,8 @@ public class ThrifeKeyspaceImplTest {
             .withPollInterval(100L,  TimeUnit.MILLISECONDS)
             .build();
         
-        scheduler.createQueue();
+        scheduler.createStorage();
+        scheduler.createStorage();
         
         scheduler.createQueue();
         

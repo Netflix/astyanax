@@ -156,4 +156,10 @@ public class Message {
         message.taskClass   = taskClass;
         return message;
     }
+
+    @Override
+    public String toString() {
+        return "Message [token=" + token + ", trigger=" + trigger + ", parameters=" + parameters + ", priority=" + priority
+                + ", timeout=" + timeout + ", key=" + key + ", taskClass=" + taskClass + "]";
+    }
 }

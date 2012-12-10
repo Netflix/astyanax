@@ -120,6 +120,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     public static final long             DEFAULT_POLL_WAIT               = TimeUnit.MILLISECONDS.convert(100, TimeUnit.MILLISECONDS);
     public static final Boolean          DEFAULT_POISON_QUEUE_ENABLED    = false;
     public static final String           KEY_INDEX_SUFFIX                = "_KEY_INDEX";
+    public static final long             SCHEMA_CHANGE_DELAY             = 3000;
     
     private final static AnnotatedCompositeSerializer<MessageQueueEntry> entrySerializer     
         = new AnnotatedCompositeSerializer<MessageQueueEntry>(MessageQueueEntry.class);
@@ -271,7 +272,6 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 partitions.add(new MessageQueueShard(queueName + ":" + i + ":" + j, i, j));
             }
         }
-        
     }
     
 
@@ -357,7 +357,6 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
     @Override
     public void clearMessages() throws MessageQueueException {
-        // TODO:  Clear columns from all shards
     }
     
     @Override
@@ -508,6 +507,10 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     .put("read_repair_chance",       1.0)
                     .put("gc_grace_period",          0)     // TODO: Calculate gc_grace_period
                     .build());
+            try {
+                Thread.sleep(SCHEMA_CHANGE_DELAY);
+            } catch (InterruptedException e) {
+            }
         } catch (ConnectionException e) {
             if (!e.getMessage().contains("already exist"))
                 throw new MessageQueueException("Failed to create column family for " + queueColumnFamily.getName(), e);
@@ -520,10 +523,39 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     .put("read_repair_chance",       1.0)
                     .put("gc_grace_period",          0)     // TODO: Calculate gc_grace_period
                     .build());
+            try {
+                Thread.sleep(SCHEMA_CHANGE_DELAY);
+            } catch (InterruptedException e) {
+            }
         } catch (ConnectionException e) {
             if (!e.getMessage().contains("already exist"))
                 throw new MessageQueueException("Failed to create column family for " + queueColumnFamily.getName(), e);
         }
+    }
+    
+    @Override
+    public void dropStorage() throws MessageQueueException {
+        try {
+            keyspace.dropColumnFamily(this.queueColumnFamily);
+            try {
+                Thread.sleep(SCHEMA_CHANGE_DELAY);
+            } catch (InterruptedException e) {
+            }
+        } catch (ConnectionException e) {
+            if (!e.getMessage().contains("already exist"))
+                throw new MessageQueueException("Failed to create column family for " + queueColumnFamily.getName(), e);
+        }
+        
+        try {
+            keyspace.dropColumnFamily(this.keyIndexColumnFamily);
+            try {
+                Thread.sleep(SCHEMA_CHANGE_DELAY);
+            } catch (InterruptedException e) {
+            }
+        } catch (ConnectionException e) {
+            if (!e.getMessage().contains("already exist"))
+                throw new MessageQueueException("Failed to create column family for " + queueColumnFamily.getName(), e);
+        }    
     }
     
     @Override
@@ -622,8 +654,9 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 if (partition != null) {
                     try {
                         if (partition.getLastCount() == 0) {
-                            if (!this.hasMessages(partition.getName())) 
+                            if (!this.hasMessages(partition.getName())) {
                                 return null;
+                            }
                         }
                         messages = internalReadMessages(partition.getName(), itemsToPop);
                         if (!messages.isEmpty()) {
@@ -796,6 +829,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     throw e;
                 }
                 catch (ConnectionException e) {
+                    LOG.error("Error reading shard " + shardName, e);
                     throw new MessageQueueException("Error", e);
                 }
                 finally {
@@ -806,7 +840,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                         throw new MessageQueueException("Error committing lock", e);
                     }
                 }
-                    
+                
                 long curTimeMicros = TimeUUIDUtils.getMicrosTimeFromUUID(lockColumn.getTimestamp());
                 
                 m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
@@ -829,7 +863,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                                 .build())
                         .execute()
                             .getResult();
-                        
+                    
                     for (Column<MessageQueueEntry> column : result) {
                         if (itemsToPop == 0) {
                             break;

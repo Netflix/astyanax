@@ -43,6 +43,12 @@ public interface MessageQueue {
     void createStorage() throws MessageQueueException;
     
     /**
+     * Destroy the storage associated with this column family
+     * @throws MessageQueueException
+     */
+    void dropStorage() throws MessageQueueException;
+    
+    /**
      * Create any metadata in the storage necessary for the queue
      * @throws MessageQueueException
      */

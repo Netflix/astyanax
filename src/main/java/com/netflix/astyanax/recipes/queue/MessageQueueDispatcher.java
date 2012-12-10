@@ -4,7 +4,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang.StringUtils;
@@ -34,6 +34,7 @@ public class MessageQueueDispatcher {
     public final static int   DEFAULT_CONSUMER_COUNT        = 1;
     public final static int   DEFAULT_ACK_SIZE              = 100;
     public final static int   DEFAULT_ACK_INTERVAL          = 1000;
+    public final static int   DEFAULT_BACKLOG_SIZE          = 1000;
     
     public static class Builder {
         private final MessageQueueDispatcher dispatcher = new MessageQueueDispatcher();
@@ -59,6 +60,16 @@ public class MessageQueueDispatcher {
         }
         
         /**
+         * Number of pending events to process in the backlog
+         * @param size
+         * @return
+         */
+        public Builder withBacklogSize(int size) {
+            dispatcher.backlogSize = size;
+            return this;
+        }
+        
+        /**
          * Set the number of consumers that will be removing items from the 
          * queue.  This value must be less than or equal to the thread count.
          * @param consumerCount
@@ -66,16 +77,6 @@ public class MessageQueueDispatcher {
          */
         public Builder withConsumerCount(int consumerCount) {
             dispatcher.consumerCount = consumerCount;
-            return this;
-        }
-        
-        /**
-         * Use this external executor
-         * @param executor
-         * @return
-         */
-        public Builder withExecutor(ScheduledExecutorService executor) {
-            dispatcher.executor = executor;
             return this;
         }
         
@@ -89,6 +90,12 @@ public class MessageQueueDispatcher {
             return this;
         }
         
+        /**
+         * Flush the ack queue on this interval.
+         * @param interval
+         * @param units
+         * @return
+         */
         public Builder withAckInterval(long interval, TimeUnit units) {
             dispatcher.ackInterval = TimeUnit.MILLISECONDS.convert(interval, units);
             return this;
@@ -116,119 +123,156 @@ public class MessageQueueDispatcher {
     private int             threadCount   = DEFAULT_THREAD_COUNT;
     private int             batchSize     = DEFAULT_BATCH_SIZE;
     private int             consumerCount = DEFAULT_CONSUMER_COUNT;
-    private boolean         terminate     = false;
-    private MessageQueue    messageQueue;
-    private ScheduledExecutorService executor;
-    private boolean         bOwnedExecutor = false;
-    private Function<Message, Boolean>   callback;
-    private LinkedBlockingQueue<Message> toAck = Queues.newLinkedBlockingQueue();
     private int             ackSize       = DEFAULT_ACK_SIZE;
     private long            ackInterval   = DEFAULT_ACK_INTERVAL;
+    private int             backlogSize   = DEFAULT_BACKLOG_SIZE;
+    private boolean         terminate     = false;
+    private MessageQueue    messageQueue;
+    private ExecutorService executor;
     private MessageConsumer ackConsumer;
+    private Function<Message, Boolean>   callback;
+    private LinkedBlockingQueue<Message> toAck = Queues.newLinkedBlockingQueue();
+    private LinkedBlockingQueue<Message> toProcess = Queues.newLinkedBlockingQueue(500);
     
     private MessageQueueDispatcher() {
     }
     
     private void initialize() {
         Preconditions.checkNotNull(messageQueue, "Must specify message queue");
+        toProcess = Queues.newLinkedBlockingQueue(backlogSize);
     }
     
     public void start() {
-        if (executor == null) {
-            executor = Executors.newScheduledThreadPool(threadCount);
-            bOwnedExecutor = true;
-        }
+        executor = Executors.newScheduledThreadPool(threadCount + consumerCount + 1);
         
         startAckThread();
         
         for (int i = 0; i < consumerCount; i++) {
             startConsumer(i);
         }
+        
+        for (int i = 0; i < threadCount; i++) {
+            startProcessor(i);
+        }
     }
     
     public void stop() {
         terminate = true;
-        if (bOwnedExecutor) 
-            executor.shutdownNow();
+        executor.shutdownNow();
     }
     
     private void startAckThread() {
         ackConsumer = messageQueue.createConsumer();
         
-        executor.scheduleAtFixedRate(new Runnable() {
-            @Override
-            public void run() {
-                List<Message> messages = Lists.newArrayList();
-                toAck.drainTo(messages);
-                if (!messages.isEmpty()) {
-                    try {
-                        ackConsumer.ackMessages(messages);
-                    } catch (MessageQueueException e) {
-                        toAck.addAll(messages);
-                        LOG.warn("Failed to ack consumer", e);
-                    }
-                }
-            }
-        }, ackInterval, ackInterval, TimeUnit.MILLISECONDS);
-    }
-    
-    private void startConsumer(final int id) {
-        final String name = StringUtils.join(Lists.newArrayList(messageQueue.getName(), "Consumer", Integer.toString(id)), ":");
-        
         executor.submit(new Runnable() {
             @Override
             public void run() {
-                if (terminate == true)
-                    return;
-                
+                while (!terminate) {
+                    List<Message> messages = Lists.newArrayList();
+                    toAck.drainTo(messages);
+                    if (!messages.isEmpty()) {
+                        try {
+                            ackConsumer.ackMessages(messages);
+                        } catch (MessageQueueException e) {
+                            toAck.addAll(messages);
+                            LOG.warn("Failed to ack consumer", e);
+                        }
+                    }
+                    
+                    try {
+                        Thread.sleep(ackInterval);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                }
+            }
+        });
+    }
+    
+    private void startConsumer(final int id) {
+        executor.submit(new Runnable() {
+            @Override
+            public void run() {
+                String name = StringUtils.join(Lists.newArrayList(messageQueue.getName(), "Consumer", Integer.toString(id)), ":");
                 Thread.currentThread().setName(name);
                 
                 // Create the consumer context
                 final MessageConsumer consumer = messageQueue.createConsumer();
                 
-                // Process events in a tight loop, until asked to terminate
-                Collection<Message> messages = null;
-                try {
-                    messages = consumer.readMessages(batchSize);
-                    System.out.println("Read " + messages.size());
-                    for (final Message message : messages) {
-                        executor.submit(new Runnable() {
-                            @Override
-                            public void run() {
-                                try {
-                                    if (message.getTaskClass() != null) {
-                                        @SuppressWarnings("unchecked")
-                                        Function<Message, Boolean> task = (Function<Message, Boolean>)Class.forName(message.getTaskClass()).newInstance();
-                                        if (task.apply(message)) {
-                                            toAck.add(message);
-                                            consumer.ackMessage(message);
-                                        }
-                                    }
-                                    else if(callback.apply(message)) {
-                                        toAck.add(message);
-                                        consumer.ackMessage(message);
-                                    }
-                                }
-                                catch (Throwable t) {
-                                    try {
-                                        consumer.ackPoisonMessage(message);
-                                    } catch (MessageQueueException e) {
-                                        LOG.warn("Failed to ack poison message", e);
-                                    }
-                                    // TODO: Add to poison queue
-                                    LOG.error("Error processing message " + message.getKey(), t);
-                                }
-                            }
-                        });
+                while (!terminate) {
+                    // Process events in a tight loop, until asked to terminate
+                    Collection<Message> messages = null;
+                    try {
+                        messages = consumer.readMessages(batchSize);
+                        for (final Message message : messages) {
+                            toProcess.add(message);
+                        }
+                    } 
+                    catch (BusyLockException e) {
+                        try {
+                            Thread.sleep(THROTTLE_DURATION);
+                        } catch (InterruptedException e1) {
+                            Thread.interrupted();
+                            return;
+                        }
                     }
-                } 
-                catch (BusyLockException e) {
+                    catch (Exception e) {
+                        LOG.warn("Error consuming messages ", e);
+                    }
                 }
-                catch (Exception e) {
-                    LOG.warn("Error consuming messages ", e);
+            }
+        });
+    }
+    
+    private void startProcessor(final int id) {
+        executor.submit(new Runnable() {
+            @Override
+            public void run() {
+                String name = StringUtils.join(Lists.newArrayList(messageQueue.getName(), "Processor", Integer.toString(id)), ":");
+                Thread.currentThread().setName(name);
+                LOG.info("Starting message processor : " + name);
+                try {
+                    while (!terminate) {
+                        Message message = null;
+                        try {
+                            message = toProcess.take();
+                            if (message == null)
+                                continue;
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            return;
+                        }
+                        try {
+                            LOG.debug(message.toString());
+                            if (message.getTaskClass() != null) {
+                                @SuppressWarnings("unchecked")
+                                Function<Message, Boolean> task = (Function<Message, Boolean>)Class.forName(message.getTaskClass()).newInstance();
+                                if (task.apply(message)) {
+                                    toAck.add(message);
+                                }
+                                continue;
+                            }
+                            
+                            if (callback.apply(message)) {
+                                toAck.add(message);
+                                continue;
+                            }
+                        }
+                        catch (Throwable t) {
+                            try {
+                                ackConsumer.ackPoisonMessage(message);
+                            } catch (MessageQueueException e) {
+                                LOG.warn("Failed to ack poison message", e);
+                            }
+                            // TODO: Add to poison queue
+                            LOG.error("Error processing message " + message.getKey(), t);
+                        }
+                    }
                 }
-                
-                executor.schedule(this,  THROTTLE_DURATION,  TimeUnit.MILLISECONDS);
+                catch (Throwable t) {
+                    LOG.error("Error running producer : " + name, t);
+                }
             }
         });
     }

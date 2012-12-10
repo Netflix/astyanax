@@ -7,6 +7,7 @@ import com.netflix.astyanax.recipes.uniqueness.NotUniqueException;
 /**
  * Common interface for a task scheduler
  */
+@Deprecated
 public interface TaskScheduler {
 
     /**

@@ -52,6 +52,7 @@ import com.netflix.astyanax.util.TimeUUIDUtils;
  *
  * TODO:  Execute the tasks in a separate executor
  */
+@Deprecated
 public class DistributedTaskScheduler implements MessageQueueHooks, TaskScheduler {
     private final static Logger LOG = LoggerFactory.getLogger(DistributedTaskScheduler.class);
     

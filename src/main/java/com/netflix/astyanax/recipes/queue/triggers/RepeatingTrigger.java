@@ -29,19 +29,22 @@ public class RepeatingTrigger extends AbstractTrigger {
         }
         
         public RepeatingTrigger build() {
-            trigger.setTriggerTime(System.currentTimeMillis() + trigger.delay);
+            if (trigger.delay != null)
+                trigger.setTriggerTime(System.currentTimeMillis() + trigger.delay);
+            else 
+                trigger.setTriggerTime(System.currentTimeMillis());
             return trigger;
         }
     }
 
-    private long delay          = 0;   // In millseconds
+    private Long delay             ;   // In millseconds
     private long interval       = 0;   // In milliseconds
-    private long repeatCount    = 0;   // Repeat count
+    private Long repeatCount       ;   // Repeat count
     private long endTime        = 0;
     
     @Override
     public Trigger nextTrigger() {
-        if (getExecutionCount()+1 >= repeatCount) {
+        if (repeatCount != null && getExecutionCount()+1 >= repeatCount) {
             return null;
         }
         
@@ -62,7 +65,7 @@ public class RepeatingTrigger extends AbstractTrigger {
         return next;
     }
 
-    public long getDelay() {
+    public Long getDelay() {
         return delay;
     }
 
@@ -70,7 +73,7 @@ public class RepeatingTrigger extends AbstractTrigger {
         return interval;
     }
 
-    public long getRepeatCount() {
+    public Long getRepeatCount() {
         return repeatCount;
     }
 

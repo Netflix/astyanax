@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.collect.Maps;
 import com.netflix.astyanax.recipes.scheduler.Trigger;
 
 public class Message {
@@ -14,11 +15,6 @@ public class Message {
      * within the queue.
      */
     private UUID  token;
-    
-    /**
-     * Data associated with the task
-     */
-    private String  data;
     
     /**
      * Execution time for the task in milliseconds
@@ -44,35 +40,26 @@ public class Message {
      * Unique key for this message.
      */
     private String key;
-    
+
+    /**
+     * Class name to handle this message
+     */
+    private String  taskClass;
+
     public Message() {
         
     }
     
-    public Message(String data) {
-        this.data = data;
-    }
-    
-    public Message(UUID token, String data) {
+    public Message(UUID token) {
         this.token = token;
-        this.data   = data;
     }
     
     public UUID getToken() {
         return token;
     }
 
-    public String getData() {
-        return data;
-    }
-
     public Message setToken(UUID token) {
         this.token = token;
-        return this;
-    }
-
-    public Message setData(String data) {
-        this.data = data;
         return this;
     }
 
@@ -85,12 +72,24 @@ public class Message {
         return this;
     }
     
+    public boolean hasTrigger() {
+        return trigger != null;
+    }
+    
     public Map<String, Object> getParameters() {
         return parameters;
     }
 
-    public void setParameters(Map<String, Object> parameters) {
+    public Message setParameters(Map<String, Object> parameters) {
         this.parameters = parameters;
+        return this;
+    }
+    
+    public Message addParameter(String key, Object value) {
+        if (this.parameters == null)
+            this.parameters = Maps.newHashMap();
+        this.parameters.put(key, value);
+        return this;
     }
 
     public byte getPriority() {
@@ -137,25 +136,24 @@ public class Message {
         return this.key != null;
     }
 
-    public boolean hasTrigger() {
-        return trigger != null;
+    public String getTaskClass() {
+        return taskClass;
+    }
+
+    public Message setTaskClass(String taskClass) {
+        this.taskClass = taskClass;
+        return this;
     }
     
     public Message clone() {
         Message message = new Message();
         message.token       = token;
-        message.data        = data;
         message.trigger     = trigger;
         message.parameters  = parameters;
         message.priority    = priority;
         message.timeout     = timeout;
         message.key         = key;
+        message.taskClass   = taskClass;
         return message;
-    }
-    
-    @Override
-    public String toString() {
-        return "Message [token=" + token + ", data=" + data + ", trigger=" + trigger + ", parameters=" + parameters
-                + ", priority=" + priority + ", timeout=" + timeout + ", key=" + key + "]";
     }
 }

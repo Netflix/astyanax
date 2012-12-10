@@ -1,7 +1,6 @@
 package com.netflix.astyanax.recipes.queue;
 
 import java.util.Collection;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -163,11 +162,23 @@ public class MessageQueueDispatcher {
                             @Override
                             public void run() {
                                 try {
-                                    if (callback.apply(message)) {
+                                    if (message.getTaskClass() != null) {
+                                        @SuppressWarnings("unchecked")
+                                        Function<Message, Boolean> task = (Function<Message, Boolean>)Class.forName(message.getTaskClass()).newInstance();
+                                        if (task.apply(message)) {
+                                            consumer.ackMessage(message);
+                                        }
+                                    }
+                                    else if(callback.apply(message)) {
                                         consumer.ackMessage(message);
                                     }
                                 }
                                 catch (Throwable t) {
+                                    try {
+                                        consumer.ackPoisonMessage(message);
+                                    } catch (MessageQueueException e) {
+                                        LOG.warn("Failed to ack poison message", e);
+                                    }
                                     // TODO: Add to poison queue
                                     LOG.error("Error processing message " + message.getKey(), t);
                                 }

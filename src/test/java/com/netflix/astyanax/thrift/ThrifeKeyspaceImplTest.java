@@ -3113,6 +3113,8 @@ public class ThrifeKeyspaceImplTest {
             String messageId = producer.sendMessage(m);
             System.out.println("MessageId: " + messageId);
             
+            Assert.assertEquals(1,  scheduler.getMessageCount());
+            
             // Read it by the messageId
             final Message m1rm = scheduler.readMessage(messageId);
             System.out.println("m1rm: " + m1rm);
@@ -3176,8 +3178,9 @@ public class ThrifeKeyspaceImplTest {
         {
             final Message m = new Message()
                 .setKey("RepeatingMessage")
+//                .setTaskClass(HelloWorldFunction.class.getCanonicalName())
                 .setTrigger(new RepeatingTrigger.Builder()
-                    .withInterval(1,  TimeUnit.SECONDS)
+                    .withInterval(3,  TimeUnit.SECONDS)
                     .withRepeatCount(5)
                     .build());
             final String messageId = producer.sendMessage(m);
@@ -3205,7 +3208,7 @@ public class ThrifeKeyspaceImplTest {
             
             dispatcher.start();
             
-            Thread.sleep(TimeUnit.MILLISECONDS.convert(6,  TimeUnit.SECONDS));
+            Thread.sleep(TimeUnit.MILLISECONDS.convert(20,  TimeUnit.SECONDS));
             
             dispatcher.stop();
             
@@ -3257,7 +3260,7 @@ public class ThrifeKeyspaceImplTest {
 //                            Thread.sleep(100);
                             insertCount.incrementAndGet();
                             tasks.add(new Message()
-                                .setData("The quick brown fox jumped over the lazy cow" + iCounter.incrementAndGet())
+                                .addParameter("data", "The quick brown fox jumped over the lazy cow" + iCounter.incrementAndGet())
     //                            .setNextTriggerTime(TimeUnit.SECONDS.convert(tm, TimeUnit.MILLISECONDS))
 //                                .setTimeout(1L, TimeUnit.MINUTES)
                                 );

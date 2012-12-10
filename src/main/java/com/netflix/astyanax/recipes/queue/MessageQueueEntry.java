@@ -90,7 +90,7 @@ public class MessageQueueEntry {
         return MessageQueueEntryState.values()[state];
     }
 
-    public short getPriority() {
+    public byte getPriority() {
         return priority;
     }
     

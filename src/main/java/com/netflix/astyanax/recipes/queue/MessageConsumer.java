@@ -48,5 +48,13 @@ public interface MessageConsumer {
      * @param items
      */
     void ackMessages(Collection<Message> messages) throws MessageQueueException;
+
+    /**
+     * Acknowledge the message as a poison message.  This will put the message into
+     * a poison queue so it is persisted but does not interfere with the active queue.
+     * 
+     * @param message
+     */
+    void ackPoisonMessage(Message message) throws MessageQueueException;
     
 }

@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -16,6 +17,8 @@ import javax.annotation.Nullable;
 import org.apache.commons.lang.StringUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -106,6 +109,8 @@ import com.netflix.astyanax.util.TimeUUIDUtils;
  *
  */
 public class ShardedDistributedMessageQueue implements MessageQueue {
+    private static final Logger LOG = LoggerFactory.getLogger(ShardedDistributedMessageQueue.class);
+    
     public static final String           DEFAULT_COLUMN_FAMILY_NAME      = "Queues";
     public static final String           DEFAULT_QUEUE_NAME              = "Queue";
     public static final ConsistencyLevel DEFAULT_CONSISTENCY_LEVEL       = ConsistencyLevel.CL_LOCAL_QUORUM;
@@ -235,6 +240,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     private Function<String, Message>       invalidMessageHandler  = new Function<String, Message>() {
                                                                         @Override
                                                                         public Message apply(@Nullable String input) {
+                                                                            LOG.warn("Invalid message: " + input);
                                                                             return null;
                                                                         }
                                                                     };
@@ -582,31 +588,24 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 // TODO: Read full itemsToPop instead of just stopping when we get the first sucessful set
                 Collection<Message> messages = null;
                 while (true) {
-                    MessageQueueShard partition = null;
-                    
                     // First, try an item from the work queue
                     if (!workQueue.isEmpty()) {
-                        partition = workQueue.remove();
-                        if (partition != null) {
-                            messages = readAndReturnShard(partition, itemsToPop);
-                            if (messages != null && !messages.isEmpty()) 
-                                return messages;
-                            
-                            // This is an old partition so we quickly skip to the next partition
-                            if (partition.getPartition() != currentPartition) 
-                                continue;
-                        }
+                        MessageQueueShard partition = workQueue.remove();
+                        messages = readAndReturnShard(partition, itemsToPop);
+                        if (messages != null && !messages.isEmpty()) 
+                            return messages;
+                        
+                        // This is an old partition so we quickly skip to the next partition
+                        if (partition.getPartition() != currentPartition) 
+                            continue;
                     }
                     
                     // If we got here then the shard from the busy queue was empty
                     // so we try one of the idle shards, in case it has old, skipped data
                     if (!idleQueue.isEmpty()) {
-                        partition = idleQueue.remove();
-                        if (partition != null) {
-                            messages = readAndReturnShard(partition, itemsToPop);
-                            if (messages != null && !messages.isEmpty()) 
-                                return messages;
-                        }
+                        messages = readAndReturnShard(idleQueue.remove(), itemsToPop);
+                        if (messages != null && !messages.isEmpty()) 
+                            return messages;
                     }
 
                     if (timeoutTime != 0 && System.currentTimeMillis() > timeoutTime) 
@@ -620,6 +619,10 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 Collection<Message>   messages = null;
                 if (partition != null) {
                     try {
+                        if (partition.getLastCount() == 0) {
+                            if (!this.hasMessages(partition.getName())) 
+                                return null;
+                        }
                         messages = internalReadMessages(partition.getName(), itemsToPop);
                         if (!messages.isEmpty()) {
                             return messages;
@@ -688,6 +691,34 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     return messages;
                 } catch (ConnectionException e) {
                     throw new MessageQueueException("Error peeking for messages from shard " + shardName, e);
+                }
+            }
+            
+            private boolean hasMessages(String shardName) throws MessageQueueException {
+                UUID currentTime = TimeUUIDUtils.getUniqueTimeUUIDinMicros();
+                
+                try {
+                    ColumnList<MessageQueueEntry> result = keyspace.prepareQuery(queueColumnFamily)
+                            .setConsistencyLevel(consistencyLevel)
+                            .getKey(shardName)
+                            .withColumnRange(new RangeBuilder()
+                                .setLimit(1)   // Read extra messages because of the lock column
+                                .setStart(entrySerializer
+                                        .makeEndpoint((byte)MessageQueueEntryType.Message.ordinal(), Equality.EQUAL)
+                                        .toBytes()
+                                        )
+                                .setEnd(entrySerializer
+                                        .makeEndpoint((byte)MessageQueueEntryType.Message.ordinal(), Equality.EQUAL)
+                                        .append((byte)0, Equality.EQUAL)
+                                        .append(currentTime, Equality.LESS_THAN_EQUALS)
+                                        .toBytes()
+                                        )
+                                .build())
+                        .execute()
+                            .getResult();
+                    return !result.isEmpty();
+                } catch (ConnectionException e) {
+                    throw new MessageQueueException("Error checking shard for messages. " + shardName, e);
                 }
             }
             
@@ -976,6 +1007,19 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     }
                 } 
                 return message;
+            }
+
+            @Override
+            public void ackPoisonMessage(Message message) throws MessageQueueException {
+                // TODO: Remove bad message and add to poison queue
+                MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+                fillAckMutation(message, mb);
+                
+                try {
+                    mb.execute();
+                } catch (ConnectionException e) {
+                    throw new MessageQueueException("Failed to ack messages", e);
+                }
             }
 
         };

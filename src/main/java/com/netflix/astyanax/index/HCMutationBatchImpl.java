@@ -10,7 +10,7 @@ import com.netflix.astyanax.thrift.ThriftColumnFamilyMutationImpl;
 
 public class HCMutationBatchImpl implements IndexedMutationBatch {
 
-	IndexCoordination indexcoorindator;
+	private IndexCoordination indexcoorindator;
 	
 	public HCMutationBatchImpl(IndexCoordination coordinator) {
 		this.indexcoorindator = coordinator;
@@ -31,6 +31,15 @@ public class HCMutationBatchImpl implements IndexedMutationBatch {
 		return cfMutatorWrapper;
 		
 	}
+
+	
+	public IndexCoordination getIndexcoorindator() {
+		return indexcoorindator;
+	}
+	public void setIndexcoorindator(IndexCoordination indexcoorindator) {
+		this.indexcoorindator = indexcoorindator;
+	}
+
 
 	/**
 	 * Wrapping the Column family mutator to "detect" puts on indexed columns

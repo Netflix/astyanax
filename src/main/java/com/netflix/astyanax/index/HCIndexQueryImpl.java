@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.Future;
 
 import com.netflix.astyanax.Keyspace;
@@ -35,16 +36,16 @@ import com.netflix.astyanax.serializers.SerializerTypeInferer;
  */
 public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> {
 
-	protected Keyspace keyspace;
-	protected ColumnFamily<K, C> columnFamily;
+	private Keyspace keyspace;
+	private ColumnFamily<K, C> columnFamily;
 	
-	protected IndexCoordination indexContext = null;
+	private IndexCoordination indexCoordination = null;
 	
 	public HCIndexQueryImpl(Keyspace keyspace,ColumnFamily<K, C> columnFamily) {
 		this.keyspace = keyspace;
 		this.columnFamily = columnFamily;
 		
-		indexContext = IndexCoordinationFactory.getIndexContext();
+		indexCoordination = IndexCoordinationFactory.getIndexContext();
 	}
 	
 
@@ -53,14 +54,14 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 		//OK, this is where it happens
 		ColumnFamilyQuery<K, C> query = keyspace.prepareQuery(columnFamily);
 		
-		Index<C, V, K> ind = new IndexImpl<C, V, K>();
+		Index<C, V, K> ind = new IndexImpl<C, V, K>(keyspace,columnFamily.getName());
 		try {
 			//get keys associated with 
 			Collection<K> keys = ind.eq(name, value);
 			
 			RowSliceQuery<K,C> rsqImpl = query.getRowSlice(keys);
 			
-			RowSliceQueryWrapper wrapper = new RowSliceQueryWrapper(rsqImpl,indexContext,columnFamily);
+			RowSliceQueryWrapper wrapper = new RowSliceQueryWrapper(rsqImpl,indexCoordination,columnFamily);
 			
 			
 			return wrapper;
@@ -71,10 +72,36 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 		}
 		
 	}
-	//testing
-	public void setIndexContext(IndexCoordination indexContext) {
-		this.indexContext = indexContext;
+	
+	public Keyspace getKeyspace() {
+		return keyspace;
 	}
+
+
+	public void setKeyspace(Keyspace keyspace) {
+		this.keyspace = keyspace;
+	}
+
+
+	public ColumnFamily<K, C> getColumnFamily() {
+		return columnFamily;
+	}
+
+
+	public void setColumnFamily(ColumnFamily<K, C> columnFamily) {
+		this.columnFamily = columnFamily;
+	}
+
+
+	public IndexCoordination getIndexCoordination() {
+		return indexCoordination;
+	}
+
+
+	public void setIndexCoordination(IndexCoordination indexCoordination) {
+		this.indexCoordination = indexCoordination;
+	}
+
 	/**
 	 * 
 	 * @author marcus
@@ -86,11 +113,13 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 		IndexCoordination indexContext;
 		ColumnFamily<K, C> cf;
 		HashMap<C,IndexMappingKey<C>> colsMapped = new HashMap<C,IndexMappingKey<C>>();
+		boolean columnsSelected  = false;
 		
 		RowSliceQueryWrapper(RowSliceQuery<K, C> impl,IndexCoordination indexContext,ColumnFamily<K, C> cf) {
 			this.impl = impl;
 			this.indexContext = indexContext;
 			this.cf = cf;
+			//this.colsMapped = indexContext.getMetaDataByCf(cf.getName());
 		}
 		@Override
 		public OperationResult<Rows<K, C>> execute() throws ConnectionException {
@@ -106,22 +135,37 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 			
 			Iterator<Row<K,C>> iter =  opResult.getResult().iterator();
 			
+			//we don't have a column slice selected
+			//we'll have to check for all of them.
+			if (!columnsSelected) {
+				
+				List<IndexMetadata<C, K>> list = indexContext.getMetaDataByCf(cf.getName());
+				for (IndexMetadata<C, K> metadata:list) {
+					colsMapped.put(metadata.getIndexKey().getColumnName(), metadata.getIndexKey());
+				}
+			}
 			//This is an iteration over all the rows returned
-			//however if this is truly high cardinality, it will be small number
+			//however if this is truly high cardinality, it will be a small number
 			
 			while (iter.hasNext()) {
 				Row<K,C> row = iter.next();
 				
 				for (C col: colsMapped.keySet()) {
 					Column<C> column = row.getColumns().getColumnByName(col);
+					
+					//I don't have to read this
+					if (column == null)
+						continue;
 					//we don't know the value type - get it from meta data
 					byte[] b = column.getByteArrayValue();
-					IndexMappingKey<C> mappingKey = colsMapped.get(column);
+					IndexMappingKey<C> mappingKey = colsMapped.get(col);
 					IndexMetadata<C,K> md = indexContext.getMetaData(mappingKey);
 					Serializer<K> serializer = SerializerTypeInferer.getSerializer(md.getRowKeyClass());
 					
 					//TODO: catch the no meta data exception??
-					indexContext.reading(new IndexMapping<C,K>(mappingKey,serializer.fromBytes(b)));
+					//possible warn or throw an exception
+					K colVal = serializer.fromBytes(b);
+					indexContext.reading(new IndexMapping<C,K>(mappingKey,colVal,colVal));
 					
 					
 				}
@@ -144,7 +188,7 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 			
 		}
 		private void onAddedColumns(C...columns) {
-			
+			columnsSelected = true;
 			for (C column:columns) {
 				if (indexContext.indexExists(cf.getName(), column)) {
 					colsMapped.put(column,new IndexMappingKey<C>(cf.getName(), column));

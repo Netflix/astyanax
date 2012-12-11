@@ -29,6 +29,8 @@ public class MappingUtil {
 	static byte [] bigIntByte = new byte[1];
 	
 	static Map<Class<?>,byte[]> clToByteMap = new HashMap<Class<?>,byte[]>();
+	static Map<Class<?>,byte[]> byteToClMap = new HashMap<Class<?>,byte[]>();
+	
 	static {
 		zeroByte[0] = new Integer(0).byteValue();
 		clToByteMap.put(Class.class, zeroByte);
@@ -37,7 +39,7 @@ public class MappingUtil {
 		clToByteMap.put(String.class, strByte);
 		
 		byteArrByte[0] = new Integer(2).byteValue();
-		clToByteMap.put(byte [].class, byteArrByte);
+		clToByteMap.put(byte[].class, byteArrByte);
 		
 		longByte[0] = new Integer(3).byteValue();
 		clToByteMap.put(Long.class, longByte);
@@ -68,31 +70,38 @@ public class MappingUtil {
 		
 	}
 	
-	
-	public static <K>Serializer<K> getSerializer(byte []b) {
+	/**
+	 * TODO: fix this to be a hashmap lookup.
+	 * 
+	 * @param b
+	 * @return
+	 */
+	public static <K>Serializer<K> getSerializer(byte []allb) {
 		Serializer<?> serializer = BytesArraySerializer.get();
-		if (strByte.equals(b)) {
+		byte b = allb[0];
+		
+		if (strByte[0] == b) {
             serializer = StringSerializer.get();
         }
-        else if (longByte.equals(b)) {
+        else if (longByte[0] == b) {
             serializer = LongSerializer.get();
         }
-        else if (intByte.equals(b)) {
+        else if (intByte[0] == b) {
             serializer = IntegerSerializer.get();
         }
-        else if (shortByte.equals(b)) {
+        else if (shortByte[0] == b) {
             serializer = ShortSerializer.get();
         }
        /* else if (valueClass.equals(Boolean.class) || valueClass.equals(boolean.class)) {
             serializer = BooleanSerializer.get();
         }*/
-        else if (byteArrByte.equals(b)) {
+        else if (byteArrByte[0] == b) {
             serializer = BytesArraySerializer.get();
         }
-        else if (byteBuffByte.equals(b)) {
+        else if (byteBuffByte[0] == b) {
             serializer = ByteBufferSerializer.get();
         }
-        else if (objByte.equals(b)) {
+        else if (objByte[0] == b) {
             serializer = ObjectSerializer.get();
         }
 		

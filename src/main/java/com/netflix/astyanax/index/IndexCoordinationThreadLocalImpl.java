@@ -1,12 +1,9 @@
 package com.netflix.astyanax.index;
 
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
-
-import com.netflix.astyanax.index.IndexCoordination.NoMetaDataException;
-import com.netflix.astyanax.index.IndexCoordination.NoReadException;
 
 /**
  * The point of synchronization between the clients  
@@ -17,8 +14,7 @@ import com.netflix.astyanax.index.IndexCoordination.NoReadException;
  * It also supports <strong>a write once only</strong>, as the update to index 
  * will remove the value from the thread local.
  * 
- * TODO: tie into transaction context.
- * 
+ *  
  * TODO: provide other non-thread local implementations (one that is a fixed length static
  * hashmap) this is also a reasonable approach.
  * 
@@ -46,16 +42,26 @@ public class IndexCoordinationThreadLocalImpl implements IndexCoordination {
 	//reads need to know what values needed to cache
 	//clients will provide this.
 	private Map<IndexMappingKey<?>,IndexMetadata<?,?>> metaDataSet;
-		
+	private Map<String,ArrayList<IndexMetadata<?, ?>>> metaDataByCF;
+	
 	
 	public IndexCoordinationThreadLocalImpl() {
 		metaDataSet = new HashMap<IndexMappingKey<?>,IndexMetadata<?,?>>();
+		metaDataByCF = new HashMap<String, ArrayList<IndexMetadata<?,?>>>();
 	}
 	
  	@Override
 	public <C,K> void addIndexMetaData(IndexMetadata<C,K> metaData) {
 		
  		metaDataSet.put(metaData.getIndexKey(),metaData);
+ 		
+ 		ArrayList<IndexMetadata<?, ?>> list = metaDataByCF.get(metaData.getIndexKey().getColumnFamily());
+ 		if (metaDataByCF.get(metaData.getIndexKey().getColumnFamily()) ==null) {
+ 			list = new ArrayList<IndexMetadata<?,?>>();
+ 			metaDataByCF.put(metaData.getIndexKey().getColumnFamily(),list );
+ 		}
+ 		list.add(metaData);
+ 		
 		
 	}
  	
@@ -64,6 +70,16 @@ public class IndexCoordinationThreadLocalImpl implements IndexCoordination {
 		return (IndexMetadata<C,K>)metaDataSet.get(key);
 	}
 
+	public <C,K> List<IndexMetadata<C, K>> getMetaDataByCf(String cf) {
+		
+		ArrayList<IndexMetadata<?, ?>> uncastlist = metaDataByCF.get(cf);
+		ArrayList<IndexMetadata<C,K>> castList = new ArrayList<IndexMetadata<C,K>>();
+		for (IndexMetadata<?, ?> indexdata:uncastlist) {
+			castList.add((IndexMetadata<C,K>)indexdata);
+		}
+		return castList;
+		
+	}
 	@Override
 	public <C> boolean indexExists(IndexMappingKey<C> key) {
 		return metaDataSet.get(key) != null;
@@ -91,7 +107,7 @@ public class IndexCoordinationThreadLocalImpl implements IndexCoordination {
 	public <C, V> void reading(String cf, C columnName, V value)
 			throws NoMetaDataException {
 		
-		reading (new IndexMapping<C, V>(cf, columnName, null, value));
+		reading (new IndexMapping<C, V>(cf, columnName, value, value));
 		
 	}
 
@@ -127,6 +143,7 @@ public class IndexCoordinationThreadLocalImpl implements IndexCoordination {
 		
 	}
 
+	
 	
 
 }

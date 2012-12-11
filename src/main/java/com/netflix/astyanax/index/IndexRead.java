@@ -19,4 +19,7 @@ public interface IndexRead<C,V,K> {
 	//The only operation supported currently
 	//
 	Collection<K> eq(C name,V value) throws ConnectionException;
+	
+	//I'll do the conversion to K
+	Collection<byte[]> eqBytes(C name,V value) throws ConnectionException;
 }

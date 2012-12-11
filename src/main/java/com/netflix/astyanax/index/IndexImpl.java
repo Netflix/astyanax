@@ -1,20 +1,16 @@
 package com.netflix.astyanax.index;
 
+import java.lang.reflect.TypeVariable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 
-import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.Serializer;
-import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
-import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
-import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.Composite;
@@ -22,10 +18,10 @@ import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.recipes.reader.AllRowsReader;
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
+import com.netflix.astyanax.serializers.BytesArraySerializer;
 import com.netflix.astyanax.serializers.CompositeSerializer;
 import com.netflix.astyanax.serializers.SerializerTypeInferer;
 import com.netflix.astyanax.serializers.TypeInferringSerializer;
-import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 
 
 /**
@@ -46,20 +42,23 @@ import com.netflix.astyanax.thrift.ThriftFamilyFactory;
  */
 /*
  drop column family index_cf;
- create column family index_cf;
+ create column family index_cf with caching = 'ALL';
  */
 public class IndexImpl<N,V,K> implements Index<N, V, K>
 {
 
-	static Keyspace keyspace = null;
-	static AstyanaxContext<Keyspace> context = null;
+	Keyspace keyspace = null;
+	//static AstyanaxContext<Keyspace> context = null;
 	private MutationBatch mutationBatch;
 	
 	
-	private String cf;
+	private String targetCF;
+	public static String DEFAULT_INDEX_CF = "index_cf"; 
+	private String indexCF = DEFAULT_INDEX_CF;
 	
-	public IndexImpl() {
-		
+	protected IndexImpl(Keyspace keyspace,String targetCf) {
+		this.keyspace = keyspace;
+		this.targetCF = targetCf;
 	}
 	
 	/**
@@ -67,46 +66,34 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 	 * 
 	 * @param mutationBatch
 	 */
-	public IndexImpl(MutationBatch mutationBatch) {
+	protected IndexImpl(MutationBatch mutationBatch) {
 		this.mutationBatch = mutationBatch;
 	}
 	
-	//TODO
-	//this should be moved out.
-	//In the case that keyspace is not provided, ie, on read path then
-	//we could optionally construct it.
-	//this would mean that the client would need to have to provide this
-	//or at least some configuration for it
-	//TODO
-	public static void init() {
-		context = new AstyanaxContext.Builder()
-				.forCluster("ClusterName")
-				.forKeyspace("icrskeyspace")
-				.withAstyanaxConfiguration(
-						new AstyanaxConfigurationImpl()
-								.setDiscoveryType(NodeDiscoveryType.NONE))
-				.withConnectionPoolConfiguration(
-						new ConnectionPoolConfigurationImpl("MyConnectionPool")
-								.setPort(9160).setMaxConnsPerHost(1)
-								.setSeeds("127.0.0.1:9160"))
-				.withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
-				.buildKeyspace(ThriftFamilyFactory.getInstance());
-		context.start();
-		
-		keyspace = context.getEntity();
-
+	//support both read and write to index
+	public IndexImpl(Keyspace keyspace,MutationBatch mutationBatch,String targetCf) {
+		this.keyspace = keyspace;
+		this.mutationBatch = mutationBatch;
+		this.targetCF = targetCf;
 	}
 	
-	private MutationBatch getMutation() {
-		if (mutationBatch == null)
-			init();
-		return mutationBatch;
-			
+	public IndexImpl(Keyspace keyspace,MutationBatch mutationBatch,String targetCf,String indexCF) {
+		this.keyspace = keyspace;
+		this.mutationBatch = mutationBatch;
+		this.targetCF = targetCf;
+		this.indexCF = indexCF;
 	}
+	
+	
+	
 	
 	/**
-	 * TODO: use a paging mechanism and/or {@link AllRowsReader} recipe
+	 * 
+	 * TODO: Check that paging is actually used
+	 * ORs 
+	 * use a paging mechanism and/or {@link AllRowsReader} recipe
 	 * to retrieve and build the index.
+	 * and own it's own mutator.
 	 * 
 	 */
 	@Override
@@ -120,7 +107,7 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 		ColumnFamily<K, N> colFamily = new ColumnFamily<K, N>(cf,keySerializer, colSerializer);
 		
 		//Get all rows: 
-		MutationBatch m = keyspace.prepareMutationBatch();
+		MutationBatch m = mutationBatch;
 		OperationResult<Rows<K,N>> result = keyspace.prepareQuery(colFamily)
 				.getAllRows()
 				.withColumnSlice(colName)
@@ -131,7 +118,7 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 		//The index column family
 		CompositeSerializer compSerializer = CompositeSerializer.get();
 		ColumnFamily<Composite, ByteBuffer> CF = new ColumnFamily<Composite, ByteBuffer>(
-				"index_cf", compSerializer, ByteBufferSerializer.get());
+				indexCF, compSerializer, ByteBufferSerializer.get());
 		//byte []pkType = getType(value)
 		//put them all in: no updates
 		while (iter.hasNext()) {
@@ -141,7 +128,7 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 			byte []value = row.getColumns().getColumnByName(colName).getByteArrayValue();
 						
 			
-			Composite toInsert = new Composite(this.cf,colName,value);
+			Composite toInsert = new Composite(this.targetCF,colName,value);
 			
 			ByteBuffer buffer = TypeInferringSerializer.get().toByteBuffer(row.getKey());
 			
@@ -151,7 +138,7 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 			
 			
 		}
-		m.execute();
+		//m.execute();
 		
 		
 	}
@@ -167,7 +154,7 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 	//@Override
 	public void createIndex(String columnFamilyName) {
 		
-		this.cf = columnFamilyName;
+		this.targetCF = columnFamilyName;
 		
 	}
 	
@@ -175,84 +162,88 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 	
 	@Override
 	public void insertIndex(N name, V value, K pkValue) throws ConnectionException {
-		MutationBatch m = keyspace.prepareMutationBatch();
 		
-		CompositeSerializer compSerializer = CompositeSerializer.get();
 		
-		ColumnFamily<Composite, Composite> CF = new ColumnFamily<Composite, Composite>(
-				"index_cf", compSerializer, compSerializer);
 		
-		Composite row = new Composite(this.cf,name,value);
+		
+		Composite row = new Composite(this.targetCF,name,value);
 				
-		ByteBuffer buffer = TypeInferringSerializer.get().toByteBuffer(pkValue);
-		Composite col = new Composite(MappingUtil.getType(pkValue),buffer);
+		byte []bType = MappingUtil.getType(pkValue);
 		
-		//valueless
-		m.withRow(CF, row).putEmptyColumn(col);
 		
-		m.execute();
+		//I suppose that if we can save space by
+		//storing the type information else-where
+		mutationBatch.withRow(getRowCF(), row).putColumn(pkValue,bType);
+		
+		
 		
 	}
-
+	
+	private ColumnFamily<Composite,K> getRowCF() {
+		CompositeSerializer compSerializer = CompositeSerializer.get();
+		Serializer<K> colSerizalier = TypeInferringSerializer.get();
+		
+		ColumnFamily<Composite, K> CF = new ColumnFamily<Composite, K>(
+				indexCF, compSerializer, colSerizalier);
+		return CF;
+	}
 	
 	@Override
 	public void updateIndex(N name, V value, V oldValue, K pkValue)
 			throws ConnectionException {
 		
-		MutationBatch m = keyspace.prepareMutationBatch();
+		insertIndex(name, value, pkValue);
 		
-		CompositeSerializer compSerializer = CompositeSerializer.get();
-		
-		ColumnFamily<Composite, Composite> CF = new ColumnFamily<Composite, Composite>(
-				"index_cf", compSerializer, compSerializer);
-		
-		byte [] pkType = MappingUtil.getType(pkValue);
-		Composite row = new Composite(this.cf,name,value,pkType);
-		Composite oldRow = new Composite(this.cf,name,pkType);
-			
-		ByteBuffer newBuffer = TypeInferringSerializer.get().toByteBuffer(pkValue);
-		Composite newCol = new Composite(MappingUtil.getType(pkValue),newBuffer);
-		
-		ByteBuffer oldValBuf = TypeInferringSerializer.get().toByteBuffer(oldValue);
-		Composite oldCol = new Composite(MappingUtil.getType(pkValue),oldValBuf);
-		
-		m.withRow(CF, oldRow).deleteColumn(oldCol);
-		m.withRow(CF, row).putEmptyColumn(newCol);
-		
-		m.execute();
+		//remove the old row
+		removeIndex(name,oldValue,pkValue);
 		
 		
+		
+	}
+	
+
+	@Override
+	public void removeIndex(N name, V value, K pkValue)
+			throws ConnectionException {
+		Composite row = new Composite(this.targetCF,name,value);
+		mutationBatch.withRow(getRowCF(), row).deleteColumn(pkValue);
 	}
 
 	@Override
 	public Collection<K> eq(N name, V value) throws ConnectionException {
 		
-		
-		
+				
 		CompositeSerializer compSerializer = CompositeSerializer.get();
 		
-		ColumnFamily<Composite, Composite> CF = new ColumnFamily<Composite, Composite>(
-				"index_cf", compSerializer, compSerializer);
+		BytesArraySerializer bSer = BytesArraySerializer.get();
 		
-		Composite row = new Composite(this.cf,name,value);
+		ColumnFamily<Composite, byte[]> CF = new ColumnFamily<Composite, byte[]>(
+				indexCF, compSerializer, bSer);
+		
+		Composite row = new Composite(this.targetCF,name,value);
 		
 		
-		OperationResult<ColumnList<Composite>> result = keyspace.prepareQuery(CF).getKey(row).execute();
-		Collection<Composite> col = result.getResult().getColumnNames();
-		ArrayList<K> list = new ArrayList<K>(col.size());
+		OperationResult<ColumnList<byte[]>> result = keyspace.prepareQuery(CF).getKey(row).execute();
 		
-		//get serializer once
-		byte []byteType = null;
-		Serializer<K> ser = null;
-		if (!col.isEmpty()) {
-			byteType = (byte[])col.iterator().next().get(0);
-			ser = MappingUtil.getSerializer(byteType);
+		if (result.getResult().isEmpty()) {
+			return new ArrayList<K>(0);
 		}
 		
-		for (Composite comp:col) {
-					
-			byte []pkVal = (byte[])comp.get(1);
-			list.add( ser.fromBytes(pkVal) );
+		Collection<byte[]> col = result.getResult().getColumnNames();
+		ArrayList<K> list = new ArrayList<K>(col.size());
+		
+		
+		//get serializer once
+		byte []byteType = result.getResult().getColumnByIndex(0).getByteArrayValue();
+		Serializer<K> ser = MappingUtil.getSerializer(byteType);
+		
+						
+		
+		for (byte[] comp:col) {						
+			
+			K val = ser.fromBytes(comp);
+			//byte []pkVal = ((ByteBuffer)comp.get(1)).array();
+			list.add( val );
 		}
 		
 		
@@ -260,6 +251,42 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 		
 	}
 
+	/**
+	 * A bit of code redundancy here
+	 */
+	@Override
+	public Collection<byte[]> eqBytes(N name, V value)
+			throws ConnectionException {
+		CompositeSerializer compSerializer = CompositeSerializer.get();
+		
+		BytesArraySerializer bSer = BytesArraySerializer.get();
+		
+		ColumnFamily<Composite, byte[]> CF = new ColumnFamily<Composite, byte[]>(
+				targetCF, compSerializer, bSer);
+		
+		Composite row = new Composite(this.targetCF,name,value);
+		
+		
+		OperationResult<ColumnList<byte[]>> result = keyspace.prepareQuery(CF).getKey(row).execute();
+		
+		if (result.getResult().isEmpty()) {
+			return new ArrayList<byte[]>(0);
+		}
+		
+		Collection<byte[]> col = result.getResult().getColumnNames();
+		ArrayList<byte[]> list = new ArrayList<byte[]>(col.size());
+		
+					
+		
+		for (byte[] comp:col) {						
+			
+			list.add( comp );
+		}
+		
+		
+		return list;
+	}
+	
 	
 	
 	

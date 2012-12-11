@@ -1,6 +1,5 @@
 package com.netflix.astyanax.index;
 
-import com.netflix.astyanax.query.ColumnFamilyQuery;
 
 /**
  * Every time an indexed column gets "updated" we need to keep that old value.
@@ -36,7 +35,7 @@ public class IndexMapping<C,V> {
 	}
 	public IndexMapping(String columnFamily,C columnName,V valueOfCol, V oldValue) {
 		this(new IndexMappingKey<C>(columnFamily,columnName),valueOfCol,oldValue);
-		
+				
 	}
 	
 	

@@ -1,5 +1,7 @@
 package com.netflix.astyanax.index;
 
+import java.util.List;
+
 /**
  * 
  * Ties the reading and the writing together locally on the client.
@@ -16,8 +18,9 @@ package com.netflix.astyanax.index;
 public interface IndexCoordination {
 
 	/**
-	 * This may be stored in future, but for now client are expected to add this
-	 * for each life-cycle of the context.
+	 * This may be stored in future, but for now client are expected to add meta data
+	 * {@link IndexMetadata} for each life-cycle of the context.
+	 * See {@link IndexCoordinationFactory} is currently a singleton
 	 * 
 	 * @param metaData
 	 */
@@ -28,6 +31,8 @@ public interface IndexCoordination {
 	<C> boolean indexExists(IndexMappingKey<C> key);
 	
 	<C> boolean indexExists(String cf, C columnName);
+	
+	<C,K> List<IndexMetadata<C, K>> getMetaDataByCf(String cf);
 	
 	
 	<C,V> void reading(IndexMapping<C,V> mapping) throws NoMetaDataException;
@@ -43,6 +48,7 @@ public interface IndexCoordination {
 	
 	
 	<C,V> void modifying(String cf, C columnName, V newValue) throws NoReadException;
+	
 	
 	
 	//checked or unchecked, that is the question!!

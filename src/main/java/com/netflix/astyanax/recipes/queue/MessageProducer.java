@@ -1,7 +1,6 @@
 package com.netflix.astyanax.recipes.queue;
 
 import java.util.Collection;
-import java.util.Map;
 
 public interface MessageProducer {
     /**
@@ -20,5 +19,5 @@ public interface MessageProducer {
      * 
      * @throws MessageQueueException
      */
-    Map<String, Message> sendMessages(Collection<Message> messages) throws MessageQueueException;
+    SendMessageResponse sendMessages(Collection<Message> messages) throws MessageQueueException;
 }

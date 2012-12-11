@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -23,9 +24,11 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
+import com.google.common.collect.Sets;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
@@ -36,6 +39,8 @@ import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.model.Equality;
+import com.netflix.astyanax.model.Row;
+import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.recipes.locks.BusyLockException;
 import com.netflix.astyanax.recipes.scheduler.Trigger;
 import com.netflix.astyanax.retry.RetryPolicy;
@@ -105,6 +110,11 @@ import com.netflix.astyanax.util.TimeUUIDUtils;
  *    
  * Recurring Messages:
  * 
+ * Column families:
+ *  Queue
+ *  KeyLookup
+ *  History
+ *  
  * @author elandau
  *
  */
@@ -116,10 +126,10 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     public static final ConsistencyLevel DEFAULT_CONSISTENCY_LEVEL       = ConsistencyLevel.CL_LOCAL_QUORUM;
     public static final RetryPolicy      DEFAULT_RETRY_POLICY            = RunOnce.get();
     public static final long             DEFAULT_LOCK_TIMEOUT            = TimeUnit.MICROSECONDS.convert(30,  TimeUnit.SECONDS);
-    public static final long             DEFAULT_LOCK_TTL                = TimeUnit.MICROSECONDS.convert(2,   TimeUnit.MINUTES);
+    public static final Integer          DEFAULT_LOCK_TTL                = (int)TimeUnit.MICROSECONDS.convert(2,   TimeUnit.MINUTES);
     public static final long             DEFAULT_POLL_WAIT               = TimeUnit.MILLISECONDS.convert(100, TimeUnit.MILLISECONDS);
     public static final Boolean          DEFAULT_POISON_QUEUE_ENABLED    = false;
-    public static final String           KEY_INDEX_SUFFIX                = "_KEY_INDEX";
+    public static final String           DEFAULT_METADATA_SUFFIX         = "_metadata";
     public static final long             SCHEMA_CHANGE_DELAY             = 3000;
     
     private final static AnnotatedCompositeSerializer<MessageQueueEntry> entrySerializer     
@@ -169,7 +179,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         }
         
         public Builder withLockTtl(Long ttl, TimeUnit units) {
-            queue.lockTtl = TimeUnit.SECONDS.convert(ttl,  units);
+            queue.lockTtl = (int)TimeUnit.SECONDS.convert(ttl,  units);
             return this;
         }
         
@@ -214,8 +224,8 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         }
         
         public ShardedDistributedMessageQueue build() {
-            queue.queueColumnFamily         = ColumnFamily.newColumnFamily(columnFamilyName, StringSerializer.get(), entrySerializer); 
-            queue.keyIndexColumnFamily = ColumnFamily.newColumnFamily(columnFamilyName + KEY_INDEX_SUFFIX, StringSerializer.get(), metadataSerializer); 
+            queue.queueColumnFamily    = ColumnFamily.newColumnFamily(columnFamilyName, StringSerializer.get(), entrySerializer); 
+            queue.keyIndexColumnFamily = ColumnFamily.newColumnFamily(columnFamilyName + DEFAULT_METADATA_SUFFIX, StringSerializer.get(), metadataSerializer); 
             
             queue.initialize();
             return queue;
@@ -229,7 +239,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     private Keyspace                        keyspace;
     private ConsistencyLevel                consistencyLevel    = DEFAULT_CONSISTENCY_LEVEL;
     private long                            lockTimeout         = DEFAULT_LOCK_TIMEOUT;
-    private Long                            lockTtl             = DEFAULT_LOCK_TTL;
+    private Integer                         lockTtl             = DEFAULT_LOCK_TTL;
     private long                            pollInterval        = DEFAULT_POLL_WAIT;
     private MessageQueueStats               stats               = new CountingQueueStats();
     private String                          queueName           = DEFAULT_QUEUE_NAME;
@@ -307,7 +317,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         String[] parts = StringUtils.split(key, "$");
         
         if (parts.length != 2) {
-            throw new MessageQueueException("Invalid key.  Expected format <queue|shard>$<name>. " + key);
+            throw new MessageQueueException("Invalid key '" + key + "'.  Expected format <queue|shard>$<name>. ");
         }
 
         return parts;
@@ -949,6 +959,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                                 // The message metadata was invalid so we just get rid of it.
                                 else {
                                     stats.incInvalidMessageCount();
+                                    // TODO: Add to poison queue
                                 }
                                 break;
                             }
@@ -1066,36 +1077,92 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         return new MessageProducer() {
             @Override
             public String sendMessage(Message message) throws MessageQueueException {
-                // TODO: Check for uniqueness
-                MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
-                String messageId = fillMessageMutation(mb, message);
-
-                try {
-                    mb.execute();
-                } catch (ConnectionException e) {
-                    throw new MessageQueueException("Failed to insert message into queue", e);
-                }
-                
-                return messageId;
+                SendMessageResponse response = sendMessages(Lists.newArrayList(message));
+                if (!response.getNotUnique().isEmpty()) 
+                    throw new KeyExistsException("Key already exists ." + message.getKey());
+                return Iterables.getFirst(response.getMessages().entrySet(), null).getKey();
             }
             
             @Override
-            public Map<String, Message> sendMessages(Collection<Message> messages) throws MessageQueueException {
-                // TODO: Check for uniqueness
-                Map<String, Message> response = Maps.newLinkedHashMap();
+            public SendMessageResponse sendMessages(Collection<Message> messages) throws MessageQueueException {
+                Map<String, Message> keys = Maps.newHashMap();
+                Set<String> notUniqueKeys = Sets.newHashSet();
+                List<Message> notUniqueMessages = Lists.newArrayList();
+
                 MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+                MessageMetadataEntry lockColumn = MessageMetadataEntry.newUnique();
+                
+                // Get list of keys that must be unique and prepare the mutation for phase 1
                 for (Message message : messages) {
+                    if (message.hasKey()) {
+                        String groupKey = getCompositeKey(queueName, message.getKey());
+                        keys.put(groupKey, message);
+                        mb.withRow(keyIndexColumnFamily, groupKey)
+                            .putEmptyColumn(lockColumn, (Integer)lockTtl);
+                    }
+                }
+
+                // We have some keys that need to be unique
+                if (!keys.isEmpty()) {
+                    // Submit phase 1: Create a unique column for ALL of the unique keys
+                    try {
+                        mb.execute();
+                    } catch (ConnectionException e) {
+                        throw new MessageQueueException("Failed to check keys for uniqueness (1): " + keys, e);
+                    }
+                    
+                    // Phase 2: Read back ALL the lock columms
+                    mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+                    Rows<String, MessageMetadataEntry> result;
+                    try {
+                        result = keyspace.prepareQuery(keyIndexColumnFamily)
+                            .setConsistencyLevel(consistencyLevel)
+                            .getRowSlice(keys.keySet())
+                            .withColumnRange(metadataSerializer.buildRange()
+                                    .greaterThanEquals((byte)MessageMetadataEntryType.Unique.ordinal())
+                                    .lessThanEquals((byte)MessageMetadataEntryType.Unique.ordinal())
+                                    .build())
+                            .execute()
+                            .getResult();
+                    } catch (ConnectionException e) {
+                        throw new MessageQueueException("Failed to check keys for uniqueness (2): " + keys, e);
+                    }
+                    
+                    for (Row<String, MessageMetadataEntry> row : result) {
+                        // This key is already taken, roll back the check
+                        if (row.getColumns().size() != 1) {
+                            String messageKey = splitCompositeKey(row.getKey())[1];
+                            
+                            notUniqueKeys.add(messageKey);
+                            notUniqueMessages.add(keys.get(messageKey));
+                            mb.withRow(keyIndexColumnFamily, row.getKey())
+                                .deleteColumn(lockColumn);
+                        }
+                        // This key is now unique
+                        else {
+                            mb.withRow(keyIndexColumnFamily, row.getKey())
+                                .putEmptyColumn(lockColumn);
+                        }
+                    }
+                }
+                
+                // Commit the messages
+                Map<String, Message> success = Maps.newLinkedHashMap();
+                for (Message message : messages) {
+                    if (message.hasKey() && notUniqueKeys.contains(message.getKey()))
+                        continue;
+                    
                     String messageId = fillMessageMutation(mb, message);
-                    response.put(messageId, message);
+                    success.put(messageId, message);
                 }
                 
                 try {
                     mb.execute();
                 } catch (ConnectionException e) {
-                    throw new MessageQueueException("Failed to insert messages into queue", e);
+                    throw new MessageQueueException("Failed to insert messages into queue.", e);
                 }
                 
-                return response;
+                return new SendMessageResponse(success, notUniqueMessages);
             }
         };
     }

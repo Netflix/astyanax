@@ -23,16 +23,17 @@ import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 
 /*
  * 
-there is no set up or tear down of data that is required for this test
+ 
  
  
  */
-public class HCIndexQueryTest {
+public class HCIndexUpdateTest {
 
 	static IndexCoordination indexCoordination;
 	static Keyspace keyspace;
 	
 	HighCardinalityQuery<String, String, String> hcq = null;
+	IndexedMutationBatch indBatchMutator = null;
 	
 	@BeforeClass
 	public static void beforeClass() {
@@ -69,42 +70,18 @@ public class HCIndexQueryTest {
 		ColumnFamily<String, String> CF = new ColumnFamily<String, String>("device_service", StringSerializer.get(), StringSerializer.get());
 		
 		hcq = new HCIndexQueryImpl<String, String, String>(keyspace, CF);
-	}
-	
-	@Test
-	public void testEmpty() throws Exception {
-		
-				
-		RowSliceQuery<String,String> sliceQuery = hcq.equals("", "");
-				
-		sliceQuery.withColumnSlice("srv_id","srv_type","pin");
-		
-		Rows<String,String> rowResults= sliceQuery.execute().getResult();
-		Assert.assertTrue(rowResults.isEmpty());
-		
+		indBatchMutator = new HCMutationBatchImpl();
 		
 	}
 	
-	@Test
-	public void testNoData() throws Exception {
-		
-				
-		RowSliceQuery<String, String> sliceQuery = hcq.equals("one", "two").withColumnSlice("srv_id","srv_type");
-		
-		Rows<String,String> rowResults= sliceQuery.execute().getResult();
-		Assert.assertTrue(rowResults.isEmpty());
-		
-	}
 	
 	@Test
-	public void queryIndexData() throws Exception {
+	public void queryIndexDataAndUpdate() throws Exception {
 		MutationBatch batch = keyspace.prepareMutationBatch();
 		Index<String,String,String> ind = new IndexImpl<String, String, String>( keyspace, batch,"device_service" );
 		ind.buildIndex("device_service", "pin", String.class);
 		batch.execute();
-		
-		Collection<String> keys = ind.eq("pin", "100998880");
-		Assert.assertEquals(2, keys.size());
+				
 		
 		RowSliceQuery<String, String> sliceQuery = hcq.equals("pin", "100998880");
 		

@@ -1,5 +1,6 @@
 package com.netflix.astyanax.recipes.queue;
 
+import java.util.Collection;
 import java.util.Map;
 
 /**
@@ -36,12 +37,73 @@ public interface MessageQueue {
     void clearMessages() throws MessageQueueException;
     
     /**
-     * Create the underlying storage for this queue
-     * 
+     * Create the underlying storage
+     * @throws MessageQueueExcewption
+     */
+    void createStorage() throws MessageQueueException;
+    
+    /**
+     * Destroy the storage associated with this column family
+     * @throws MessageQueueException
+     */
+    void dropStorage() throws MessageQueueException;
+    
+    /**
+     * Create any metadata in the storage necessary for the queue
      * @throws MessageQueueException
      */
     void createQueue() throws MessageQueueException;
 
+    /**
+     * Deletes all the rows for this queue.  This will not 
+     * delete any 'key' columns'
+     * 
+     * @throws MessageQueueException
+     */
+    void deleteQueue() throws MessageQueueException;
+    
+    /**
+     * Read a specific message from the queue.  The message isn't modified or removed from the queue.
+     * 
+     * @param messageId Message id returned from MessageProducer.sendMessage
+     * @return
+     * @throws MessageQueueException
+     */
+    Message readMessage(String messageId) throws MessageQueueException;
+
+    /**
+     * Read a specific message from the queue.  The message isn't modified or removed from the queue.
+     * This operation will require a lookup of key to messageId
+     * 
+     * @param message Message id returned from MessageProducer.sendMessage
+     * @return
+     * @throws MessageQueueException
+     */
+    Message readMessageByKey(String key) throws MessageQueueException;
+    
+    /**
+     * Delete a specific message from the queue.  
+     * @param message
+     * @throws MessageQueueException
+     */
+    void deleteMessage(String messageId) throws MessageQueueException;
+    
+    /**
+     * Delete a message using the specified key.  This operation will require a lookup of key to messageId
+     * prior to deleting the message 
+     * @param key
+     * @return true if any items were deleted
+     * @throws MessageQueueException
+     */
+    boolean deleteMessageByKey(String key) throws MessageQueueException;
+    
+    /**
+     * Delete a set of messages
+     * @param messageIds
+     * @throws MessageQueueException
+     */
+    void deleteMessages(Collection<String> messageIds) throws MessageQueueException;
+    
     /**
      * Get the counts for each shard in the queue.  This is an estimate.
      * This is an expensive operation and should be used sparingly.

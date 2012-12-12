@@ -2,9 +2,12 @@ package com.netflix.astyanax.recipes.scheduler;
 
 import java.util.Collection;
 
+import com.netflix.astyanax.recipes.uniqueness.NotUniqueException;
+
 /**
  * Common interface for a task scheduler
  */
+@Deprecated
 public interface TaskScheduler {
 
     /**
@@ -31,8 +34,9 @@ public interface TaskScheduler {
      * @param task - Information about how to run the task
      * @param trigger - Can be null for single execution
      * @throws TaskSchedulerException
+     * @throws NotUniqueException 
      */
-    void scheduleTask(TaskInfo task, Trigger trigger) throws TaskSchedulerException;
+    void scheduleTask(TaskInfo task, Trigger trigger) throws TaskSchedulerException, NotUniqueException;
 
     /**
      * Stop a running task

@@ -1,8 +1,6 @@
 package com.netflix.astyanax.recipes.queue;
 
 import java.util.Collection;
-import java.util.Map;
-import java.util.UUID;
 
 public interface MessageProducer {
     /**
@@ -12,7 +10,7 @@ public interface MessageProducer {
      * 
      * @throws MessageQueueException
      */
-    UUID sendMessage(Message message) throws MessageQueueException;
+    String sendMessage(Message message) throws MessageQueueException;
 
     /**
      * Schedule a batch of jobs
@@ -21,5 +19,5 @@ public interface MessageProducer {
      * 
      * @throws MessageQueueException
      */
-    Map<Message, UUID> sendMessages(Collection<Message> messages) throws MessageQueueException;
+    SendMessageResponse sendMessages(Collection<Message> messages) throws MessageQueueException;
 }

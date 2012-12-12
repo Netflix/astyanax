@@ -1,9 +1,8 @@
-package com.netflix.astyanax.recipes.scheduler.triggers;
+package com.netflix.astyanax.recipes.queue.triggers;
 
 import com.netflix.astyanax.recipes.scheduler.Trigger;
 
 public abstract class AbstractTrigger implements Trigger {
-
     private long triggerTime    = 0;   // In milliseconds
     private long executeCount   = 0;
     
@@ -22,5 +21,10 @@ public abstract class AbstractTrigger implements Trigger {
     
     public void setExecutionCount(long executeCount) {
         this.executeCount = executeCount;
+    }
+
+    @Override
+    public String toString() {
+        return "AbstractTrigger [triggerTime=" + triggerTime + ", executeCount=" + executeCount + "]";
     }
 }

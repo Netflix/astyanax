@@ -529,6 +529,7 @@ public class SimpleHostConnectionPoolTest {
         config.setMaxConnsPerHost(2);
         config.setInitConnsPerHost(1);
         config.setConnectTimeout(200);
+        config.initialize();
         return config;
     }
 

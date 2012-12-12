@@ -62,6 +62,9 @@ public class FilteringHostSupplier implements Supplier<List<Host>> {
             throw e;
         }
         
+        if (filterList.isEmpty())
+            return sourceList;
+        
         // Generate a lookup of all alternate IP addresses for the hosts in the
         // filter list
         final Map<String, Host> lookup = Maps.newHashMap();
@@ -72,7 +75,7 @@ public class FilteringHostSupplier implements Supplier<List<Host>> {
             }
         }
 
-        return Lists.newArrayList(Collections2.filter(sourceList, new Predicate<Host>() {
+        List<Host> result = Lists.newArrayList(Collections2.filter(sourceList, new Predicate<Host>() {
             @Override
             public boolean apply(@Nullable Host host) {
                 Host foundHost = lookup.get(host.getHostName());
@@ -93,6 +96,10 @@ public class FilteringHostSupplier implements Supplier<List<Host>> {
                 return false;
             }
         }));
+        
+        if (result.isEmpty()) 
+            return sourceList;
+        return result;
     }
 
 }

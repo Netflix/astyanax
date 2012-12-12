@@ -7,6 +7,7 @@ package com.netflix.astyanax.recipes.scheduler;
  * 
  * @author elandau
  */
+@Deprecated
 public interface Task {
     /**
      * Called every time the trigger is fired

@@ -38,13 +38,7 @@ public abstract class AbstractLatencyScoreStrategyImpl implements LatencyScoreSt
     private final String                   name;
     private final double                   keepRatio;
 
-    /**
-     * 
-     * @param name
-     * @param updateInterval    In milliseconds
-     * @param resetInterval     In milliseconds
-     */
-    public AbstractLatencyScoreStrategyImpl(String name, int updateInterval, int resetInterval, int blockedThreshold, double keepRatio, double scoreThreshold) {
+    public AbstractLatencyScoreStrategyImpl(String name, int updateInterval, int resetInterval, int blockedThreshold, double keepRatio, double scoreThreshold, ScheduledExecutorService executor) {
         this.updateInterval   = updateInterval;
         this.resetInterval    = resetInterval;
         this.name             = name;
@@ -52,8 +46,18 @@ public abstract class AbstractLatencyScoreStrategyImpl implements LatencyScoreSt
         this.blockedThreshold = blockedThreshold;
         this.keepRatio        = keepRatio;
 
-        this.executor  = Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder().setDaemon(true).build());
+        this.executor  = executor;
         this.instances = new NonBlockingHashSet<Instance>();
+    }
+    
+    /**
+     * 
+     * @param name
+     * @param updateInterval    In milliseconds
+     * @param resetInterval     In milliseconds
+     */
+    public AbstractLatencyScoreStrategyImpl(String name, int updateInterval, int resetInterval, int blockedThreshold, double keepRatio, double scoreThreshold) {
+        this(name, updateInterval, resetInterval, blockedThreshold, keepRatio, scoreThreshold, Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder().setDaemon(true).build()));
     }
 
     public AbstractLatencyScoreStrategyImpl(String name, int updateInterval, int resetInterval) {

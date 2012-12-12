@@ -40,8 +40,7 @@ import com.netflix.astyanax.connectionpool.NodeDiscovery;
  */
 public class NodeDiscoveryImpl implements NodeDiscovery {
     private final ConnectionPool<?> connectionPool;
-    private final ScheduledExecutorService executor = Executors
-            .newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setDaemon(true).build());
+    private final ScheduledExecutorService executor;
     private final int interval;
     private final String name;
     private final Supplier<List<Host>> hostSupplier;
@@ -50,12 +49,26 @@ public class NodeDiscoveryImpl implements NodeDiscovery {
     private final AtomicLong refreshCounter = new AtomicLong();
     private final AtomicLong errorCounter = new AtomicLong();
 
-    public NodeDiscoveryImpl(String name, int interval, Supplier<List<Host>> hostSupplier,
+    public NodeDiscoveryImpl(
+            String name, 
+            int interval, 
+            Supplier<List<Host>> hostSupplier,
             ConnectionPool<?> connectionPool) {
+        this(name, interval, hostSupplier, connectionPool, 
+              Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setDaemon(true).build()));
+    }
+    
+    public NodeDiscoveryImpl(
+            String name, 
+            int interval, 
+            Supplier<List<Host>> hostSupplier,
+            ConnectionPool<?> connectionPool,
+            ScheduledExecutorService executor) {
         this.connectionPool = connectionPool;
-        this.interval = interval;
-        this.hostSupplier = hostSupplier;
-        this.name = name;
+        this.interval       = interval;
+        this.hostSupplier   = hostSupplier;
+        this.name           = name;
+        this.executor       = executor;
     }
 
     /**

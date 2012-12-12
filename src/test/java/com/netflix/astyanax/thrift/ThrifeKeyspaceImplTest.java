@@ -5,8 +5,15 @@ import java.io.PrintWriter;
 import java.io.Serializable;
 import java.io.StringReader;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -21,6 +28,7 @@ import javax.annotation.Nullable;
 import junit.framework.Assert;
 
 import org.apache.cassandra.utils.Pair;
+import org.apache.commons.lang.RandomStringUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -79,13 +87,15 @@ import com.netflix.astyanax.recipes.queue.Message;
 import com.netflix.astyanax.recipes.queue.MessageConsumer;
 import com.netflix.astyanax.recipes.queue.MessageProducer;
 import com.netflix.astyanax.recipes.queue.MessageQueue;
+import com.netflix.astyanax.recipes.queue.MessageQueueDispatcher;
 import com.netflix.astyanax.recipes.queue.MessageQueueException;
+import com.netflix.astyanax.recipes.queue.SendMessageResponse;
 import com.netflix.astyanax.recipes.queue.ShardedDistributedMessageQueue;
+import com.netflix.astyanax.recipes.queue.triggers.RepeatingTrigger;
 import com.netflix.astyanax.recipes.reader.AllRowsReader;
-import com.netflix.astyanax.recipes.scheduler.TaskInfo;
 import com.netflix.astyanax.recipes.scheduler.DistributedTaskScheduler;
+import com.netflix.astyanax.recipes.scheduler.TaskInfo;
 import com.netflix.astyanax.recipes.scheduler.TaskScheduler;
-import com.netflix.astyanax.recipes.scheduler.triggers.RepeatingTrigger;
 import com.netflix.astyanax.recipes.uniqueness.ColumnPrefixUniquenessConstraint;
 import com.netflix.astyanax.recipes.uniqueness.DedicatedMultiRowUniquenessConstraint;
 import com.netflix.astyanax.recipes.uniqueness.MultiRowUniquenessConstraint;
@@ -504,7 +514,7 @@ public class ThrifeKeyspaceImplTest {
         Assert.assertEquals(1, hosts.get(0).getTokenRanges().size());
         hosts = new FilteringHostSupplier(ringSupplier, sourceSupplier2).get();
         LOG.info(hosts.toString());
-        Assert.assertEquals(0, hosts.size());
+        Assert.assertEquals(1, hosts.size());
     }
     
     @Test
@@ -883,27 +893,24 @@ public class ThrifeKeyspaceImplTest {
     }    
     
     @Test
-    public void testSingleOps() {
+    public void testSingleOps() throws Exception {
         String key = "SingleOpsTest";
+        Random prng = new Random();
 
         // Set a string value
-        try {
+        {
             String column = "StringColumn";
-            String value = "Theophiles Thistle, the successful thistle-sifter, in sifting a sieve full of un-sifted thistles, thrust three thousand thistles through the thick of his thumb";
-
+            String value = RandomStringUtils.randomAlphanumeric(32);
             // Set
             keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
                     .putValue(value, null).execute();
-
             // Read
             String v = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
                     .getColumn(column).execute().getResult().getStringValue();
-            Assert.assertEquals(v, value);
-
+            Assert.assertEquals(value, v);
             // Delete
             keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
                     .deleteColumn().execute();
-
             try {
                 keyspace.prepareQuery(CF_STANDARD1).getKey(key)
                         .getColumn(column).execute().getResult()
@@ -913,71 +920,160 @@ public class ThrifeKeyspaceImplTest {
             } catch (ConnectionException e) {
                 Assert.fail();
             }
-        } catch (ConnectionException e) {
-            Assert.fail();
-        }
+        } 
 
-        // Set a int value
-        try {
-            String column = "IntColumn";
-            int value = Integer.MAX_VALUE / 4;
-
+        // Set a byte value
+        {
+            String column = "ByteColumn";
+            byte value = (byte) prng.nextInt(Byte.MAX_VALUE);
             // Set
             keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
                     .putValue(value, null).execute();
-
             // Read
-            int v = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
-                    .getColumn(column).execute().getResult().getIntegerValue();
-            Assert.assertEquals(v, value);
-
-            long vl = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
-                    .getColumn(column).execute().getResult().getLongValue();
-            Assert.assertEquals(vl, value);
-
+            byte v = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
+                    .getColumn(column).execute().getResult().getByteValue();
+            Assert.assertEquals(value, v);
             // Delete
             keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
                     .deleteColumn().execute();
-
+            // verify column gone
             try {
                 keyspace.prepareQuery(CF_STANDARD1).getKey(key)
-                        .getColumn(column).execute().getResult()
-                        .getIntegerValue();
+                        .getColumn(column).execute().getResult().getByteValue();
                 Assert.fail();
             } catch (NotFoundException e) {
-            } catch (ConnectionException e) {
-                Assert.fail();
+            	// expected
             }
-        } catch (ConnectionException e) {
-            Assert.fail();
-        }
-
-        // Set a double value
-        try {
-            String column = "IntColumn";
-            double value = 3.14;
-
+        } 
+        
+        // Set a short value
+        {
+            String column = "ShortColumn";
+            short value = (short) prng.nextInt(Short.MAX_VALUE);
             // Set
             keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
                     .putValue(value, null).execute();
-
             // Read
-            double v = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
-                    .getColumn(column).execute().getResult().getDoubleValue();
-            Assert.assertEquals(v, value);
-
+            short v = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
+                    .getColumn(column).execute().getResult().getShortValue();
+            Assert.assertEquals(value, v);
+            // Delete
+            keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
+                    .deleteColumn().execute();
+            // verify column gone
+            try {
+                keyspace.prepareQuery(CF_STANDARD1).getKey(key)
+                        .getColumn(column).execute().getResult().getShortValue();
+                Assert.fail();
+            } catch (NotFoundException e) {
+            	// expected
+            }
+        } 
+        
+        // Set a int value
+        {
+            String column = "IntColumn";
+            int value = prng.nextInt();
+            // Set
+            keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
+                    .putValue(value, null).execute();
+            // Read
+            int v = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
+                    .getColumn(column).execute().getResult().getIntegerValue();
+            Assert.assertEquals(value, v);
+            // Delete
+            keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
+                    .deleteColumn().execute();
+            // verify column gone
+            try {
+                keyspace.prepareQuery(CF_STANDARD1).getKey(key)
+                        .getColumn(column).execute().getResult().getIntegerValue();
+                Assert.fail();
+            } catch (NotFoundException e) {
+            	// expected
+            }
+        }
+        
+        // Set a long value
+        {
+            String column = "LongColumn";
+            long value = prng.nextLong();
+            // Set
+            keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
+                    .putValue(value, null).execute();
+            // Read
+            long v = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
+                    .getColumn(column).execute().getResult().getLongValue();
+            Assert.assertEquals(value, v);
+         // get as integer should fail
             try {
                 keyspace.prepareQuery(CF_STANDARD1).getKey(key)
                         .getColumn(column).execute().getResult()
                         .getIntegerValue();
                 Assert.fail();
             } catch (Exception e) {
+            	// expected
             }
-
             // Delete
             keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
                     .deleteColumn().execute();
+            // verify column gone
+            try {
+                keyspace.prepareQuery(CF_STANDARD1).getKey(key)
+                        .getColumn(column).execute().getResult().getLongValue();
+                Assert.fail();
+            } catch (NotFoundException e) {
+            	// expected
+            }
+        }
+        
+        // Set a float value
+        {
+            String column = "FloatColumn";
+            float value = prng.nextFloat();
+            // Set
+            keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
+                    .putValue(value, null).execute();
+            // Read
+            float v = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
+                    .getColumn(column).execute().getResult().getFloatValue();
+            Assert.assertEquals(value, v);
+            // Delete
+            keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
+                    .deleteColumn().execute();
+            // verify column gone
+            try {
+                keyspace.prepareQuery(CF_STANDARD1).getKey(key)
+                        .getColumn(column).execute().getResult().getFloatValue();
+                Assert.fail();
+            } catch (NotFoundException e) {
+            	// expected
+            }
+        }
 
+        // Set a double value
+        {
+            String column = "IntColumn";
+            double value = prng.nextDouble();
+            // Set
+            keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
+                    .putValue(value, null).execute();
+            // Read
+            double v = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
+                    .getColumn(column).execute().getResult().getDoubleValue();
+            Assert.assertEquals(value, v);
+            // get as integer should fail
+            try {
+                keyspace.prepareQuery(CF_STANDARD1).getKey(key)
+                        .getColumn(column).execute().getResult()
+                        .getIntegerValue();
+                Assert.fail();
+            } catch (Exception e) {
+            	// expected
+            }
+            // Delete
+            keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
+                    .deleteColumn().execute();
             try {
                 keyspace.prepareQuery(CF_STANDARD1).getKey(key)
                         .getColumn(column).execute().getResult()
@@ -987,52 +1083,12 @@ public class ThrifeKeyspaceImplTest {
             } catch (ConnectionException e) {
                 Assert.fail();
             }
-        } catch (ConnectionException e) {
-            Assert.fail();
-        }
-
-        // Set a long value
-        try {
-            String column = "IntColumn";
-            long value = Long.MAX_VALUE / 4;
-
-            // Set
-            keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
-                    .putValue(value, null).execute();
-
-            // Read
-            long v = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
-                    .getColumn(column).execute().getResult().getLongValue();
-            Assert.assertEquals(v, value);
-
-            try {
-                keyspace.prepareQuery(CF_STANDARD1).getKey(key)
-                        .getColumn(column).execute().getResult()
-                        .getIntegerValue();
-                Assert.fail();
-            } catch (Exception e) {
-            }
-
-            // Delete
-            keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
-                    .deleteColumn().execute();
-
-            try {
-                keyspace.prepareQuery(CF_STANDARD1).getKey(key)
-                        .getColumn(column).execute().getResult().getLongValue();
-                Assert.fail();
-            } catch (NotFoundException e) {
-            } catch (ConnectionException e) {
-                Assert.fail();
-            }
-        } catch (ConnectionException e) {
-            Assert.fail();
-        }
+        } 
         
-        // Set a long value
-        try {
+        // Set long column with timestamp
+        {
             String column = "TimestampColumn";
-            long value = Long.MAX_VALUE / 4;
+            long value = prng.nextLong();
 
             // Set
             keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
@@ -1044,9 +1100,7 @@ public class ThrifeKeyspaceImplTest {
             Column<String> c = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
                     .getColumn(column).execute().getResult();
             Assert.assertEquals(100,  c.getTimestamp());
-        } catch (ConnectionException e) {
-            Assert.fail();
-        }
+        } 
     }
 
     @Test
@@ -3029,8 +3083,172 @@ public class ThrifeKeyspaceImplTest {
     }
     
     @Test
-    @Ignore
     public void testQueue() throws Exception {
+        final CountingQueueStats stats = new CountingQueueStats();
+        
+        final ConsistencyLevel cl = ConsistencyLevel.CL_ONE;
+        final ShardedDistributedMessageQueue scheduler = new ShardedDistributedMessageQueue.Builder()
+            .withColumnFamily(SCHEDULER_NAME_CF_NAME)
+            .withQueueName("TestQueue")
+            .withKeyspace(keyspace)
+            .withConsistencyLevel(cl)
+            .withStats(stats)
+            .withTimeBuckets(2,  30,  TimeUnit.SECONDS)
+            .withShardCount(2)
+            .withPollInterval(100L,  TimeUnit.MILLISECONDS)
+            .build();
+        
+        scheduler.createStorage();
+        scheduler.createStorage();
+        
+        scheduler.createQueue();
+        
+        String key = "MyEvent";
+        String key2 = "MyEvent2";
+        
+        MessageProducer producer = scheduler.createProducer();
+        MessageConsumer consumer = scheduler.createConsumer();
+        
+        {
+            final Message m = new Message().setKey(key);
+            
+            // Add a message
+            System.out.println(m);
+            String messageId = producer.sendMessage(m);
+            System.out.println("MessageId: " + messageId);
+            
+            Assert.assertEquals(1,  scheduler.getMessageCount());
+            
+            // Read it by the messageId
+            final Message m1rm = scheduler.readMessage(messageId);
+            System.out.println("m1rm: " + m1rm);
+            Assert.assertNotNull(m1rm);
+            
+            // Read it by the key
+            final Message m1rk = scheduler.readMessageByKey(key);
+            System.out.println("m1rk:" + m1rk);
+            Assert.assertNotNull(m1rk);
+            
+            // Delete the message
+            scheduler.deleteMessageByKey(key);
+            
+            // Read and verify that it is gone
+            final Message m1rkd = scheduler.readMessageByKey(key);
+            Assert.assertNull(m1rkd);
+            
+            // Read and verify that it is gone
+            final Message m1rmd = scheduler.readMessage(messageId);
+            Assert.assertNull(m1rmd);
+        }
+        
+        {
+            // Send another message
+            final Message m = new Message().setKey(key);
+            System.out.println("m2: " + m);
+            final String messageId2 = producer.sendMessage(m);
+            System.out.println("MessageId2: " + messageId2);
+    
+            try {
+                final Message m2 = new Message().setKey(key);
+                producer.sendMessage(m2);
+                Assert.fail("Message should already exists");
+            }
+            catch (MessageQueueException e) {
+                LOG.info("Failed to insert duplicate key", e);
+            }
+            
+            try {
+                List<Message> messages = Lists.newArrayList(
+                    new Message().setKey(key), 
+                    new Message().setKey(key2));
+                
+                SendMessageResponse result = producer.sendMessages(messages);
+                Assert.assertEquals(1,  result.getMessages().size());
+                Assert.assertEquals(1,  result.getNotUnique().size());
+            }
+            catch (MessageQueueException e) {
+                Assert.fail(e.getMessage());
+            }
+            
+            Map<String, Integer> counts = scheduler.getShardCounts();
+            System.out.println(counts);
+            Assert.assertEquals(2,  scheduler.getMessageCount());
+            
+            // Delete the message
+            scheduler.deleteMessageByKey(key2);
+
+            // Read the message
+            final Collection<Message> lm2 = consumer.readMessages(1, 1, TimeUnit.SECONDS);
+            System.out.println("Read message: " + lm2);
+            Assert.assertEquals(1,  lm2.size());
+            System.out.println(lm2);
+            Assert.assertEquals(1,  scheduler.getMessageCount());
+
+            consumer.ackMessages(lm2);
+            Assert.assertEquals(0,  scheduler.getMessageCount());
+        }
+        
+        {
+            final Message m = new Message()
+                .setTrigger(new RepeatingTrigger.Builder()
+                    .withInterval(3,  TimeUnit.SECONDS)
+                    .withRepeatCount(10)
+                    .build());
+            final String messageId3 = producer.sendMessage(m);
+            Assert.assertNotNull(messageId3);
+            final Message m3rm = scheduler.readMessage(messageId3);
+            Assert.assertNotNull(m3rm);
+            System.out.println(m3rm);
+            Assert.assertEquals(1,  scheduler.getMessageCount());
+            scheduler.deleteMessage(messageId3);
+            Assert.assertEquals(0,  scheduler.getMessageCount());
+        }
+        
+//        {
+//            final Message m = new Message()
+//                .setKey("RepeatingMessage")
+////                .setTaskClass(HelloWorldFunction.class.getCanonicalName())
+//                .setTrigger(new RepeatingTrigger.Builder()
+//                    .withInterval(3,  TimeUnit.SECONDS)
+//                    .withRepeatCount(5)
+//                    .build());
+//            final String messageId = producer.sendMessage(m);
+//        
+//            final AtomicLong counter = new AtomicLong(0);
+//            
+//            MessageQueueDispatcher dispatcher = new MessageQueueDispatcher.Builder()
+//                .withBatchSize(5)
+//                .withCallback(new Function<Message, Boolean>() {
+//                    long startTime = 0;
+//                    
+//                    @Override
+//                    public synchronized Boolean apply(Message message) {
+//                        if (startTime == 0) 
+//                            startTime = System.currentTimeMillis();
+//                        
+//                        System.out.println("Callback : " + (System.currentTimeMillis() - startTime) + " " + message);
+//                        counter.incrementAndGet();
+//                        return true;
+//                    }
+//                })
+//                .withMessageQueue(scheduler)
+//                .withThreadCount(2)
+//                .build();
+//            
+//            dispatcher.start();
+//            
+//            Thread.sleep(TimeUnit.MILLISECONDS.convert(20,  TimeUnit.SECONDS));
+//            
+//            dispatcher.stop();
+//            
+//            Assert.assertEquals(5,  counter.get());
+//        }
+        
+    }
+    
+    @Test
+    @Ignore
+    public void testStressQueue() throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(100);
         
         final AtomicLong counter = new AtomicLong(0);
@@ -3045,7 +3263,7 @@ public class ThrifeKeyspaceImplTest {
             .withKeyspace(keyspace)
             .withConsistencyLevel(cl)
             .withStats(stats)
-            .withBuckets(50,  30,  TimeUnit.SECONDS)
+            .withTimeBuckets(50,  30,  TimeUnit.SECONDS)
             .withShardCount(20)
             .withPollInterval(100L,  TimeUnit.MILLISECONDS)
             .build();
@@ -3071,7 +3289,7 @@ public class ThrifeKeyspaceImplTest {
 //                            Thread.sleep(100);
                             insertCount.incrementAndGet();
                             tasks.add(new Message()
-                                .setData("The quick brown fox jumped over the lazy cow" + iCounter.incrementAndGet())
+                                .addParameter("data", "The quick brown fox jumped over the lazy cow" + iCounter.incrementAndGet())
     //                            .setNextTriggerTime(TimeUnit.SECONDS.convert(tm, TimeUnit.MILLISECONDS))
 //                                .setTimeout(1L, TimeUnit.MINUTES)
                                 );
@@ -3190,6 +3408,7 @@ public class ThrifeKeyspaceImplTest {
             .withBatchSize(5)
             .withKeyspace(keyspace)
             .withName("TestScheduler")
+            .withGroupName("MyGroup")
             .build();
         
         scheduler.create();
@@ -3204,8 +3423,9 @@ public class ThrifeKeyspaceImplTest {
                 .build()
             , 
             new RepeatingTrigger.Builder()
-                .withDelay(10,  TimeUnit.SECONDS)
-                .withInterval(10,  TimeUnit.SECONDS)
+                .withDelay(5,     TimeUnit.SECONDS)
+                .withInterval(5,  TimeUnit.SECONDS)
+                .withRepeatCount(10)
                 .build()
         );
         

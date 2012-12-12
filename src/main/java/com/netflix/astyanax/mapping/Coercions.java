@@ -53,6 +53,8 @@ class Coercions {
             objValue = column.getStringValue();
         } else if (field.getType() == byte[].class) {
             objValue = column.getByteArrayValue();
+        } else if (field.getType() == Date.class) {
+            objValue = column.getDateValue();
         } else if (field.getType() == UUID.class) {
             objValue = column.getUUIDValue();
         } else if (field.getType().isEnum()) {
@@ -101,6 +103,8 @@ class Coercions {
                     mutation.putColumn(columnName, (String) objValue, ttl);
                 } else if(objValue.getClass() == byte[].class) {
                     mutation.putColumn(columnName, (byte[]) objValue, ttl);
+                } else if (objValue.getClass() == Date.class) {
+                    mutation.putColumn(columnName, (Date) objValue, ttl);
                 } else if (objValue.getClass() == UUID.class) {
                     mutation.putColumn(columnName, (UUID) objValue, ttl);
                 } else if (objValue.getClass().isEnum()) {

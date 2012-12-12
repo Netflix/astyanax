@@ -1,6 +1,7 @@
 package com.netflix.astyanax.mapping;
 
 import java.util.Arrays;
+import java.util.Date;
 import java.util.UUID;
 
 import javax.persistence.Column;
@@ -65,6 +66,9 @@ public class SampleEntity {
 	@Column(name="BYTE_ARRAY")
 	@TTL(123456)
     private byte[] byteArray;
+	
+	@Column(name="DATE")
+	private Date date;
 	
 	// name should default to field name
 	@Column()
@@ -205,6 +209,14 @@ public class SampleEntity {
 	public void setByteArray(byte[] byteArray) {
 		this.byteArray = byteArray;
 	}
+	
+	public Date getDate() {
+		return date;
+	}
+
+	public void setDate(Date date) {
+		this.date = date;
+	}
 
 	public UUID getUuid() {
 		return uuid;
@@ -220,12 +232,12 @@ public class SampleEntity {
 				"bytePrimitive = %d, byteObject = %d, shortPrimitive = %d, shortObject = %d, " +
 				"intPrimitive = %d, intObject = %d, longPrimitive = %d, longObject = %d, " +
 				"floatPrimitive = %f, floatObject = %f, doublePrimitive = %f, doubleObject = %f, " +
-				"str = %s, byteArray = %s, uuid = %s)", 
+				"string = %s, byteArray = %s, date = %s, uuid = %s)", 
 				id, booleanPrimitive, booleanObject, 
 				bytePrimitive, byteObject, shortPrimitive, shortObject, 
 				intPrimitive, intObject, longPrimitive, longObject,
 				floatPrimitive, floatObject, doublePrimitive, doubleObject,
-				string, new String(byteArray, Charsets.UTF_8), uuid);
+				string, new String(byteArray, Charsets.UTF_8), date, uuid);
 	}
 
 	@Override
@@ -257,6 +269,7 @@ public class SampleEntity {
 				doubleObject.equals(other.doubleObject) &&
 				string.equals(other.string) &&
 				Arrays.equals(byteArray, other.byteArray) &&
+				date.equals(other.date) &&
 				uuid.equals(other.uuid)
 				)
 			return true;

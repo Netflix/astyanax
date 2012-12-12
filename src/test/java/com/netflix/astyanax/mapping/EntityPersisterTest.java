@@ -1,5 +1,6 @@
 package com.netflix.astyanax.mapping;
 
+import java.util.Date;
 import java.util.Random;
 
 import org.apache.commons.lang.RandomStringUtils;
@@ -127,6 +128,7 @@ public class EntityPersisterTest {
 		entity.setDoubleObject(prng.nextDouble());
 		entity.setString(RandomStringUtils.randomAlphanumeric(16));
 		entity.setByteArray(RandomStringUtils.randomAlphanumeric(16).getBytes(Charsets.UTF_8));
+		entity.setDate(new Date());
 		entity.setUuid(TimeUUIDUtils.getUniqueTimeUUIDinMicros());
 		return entity;
 	}

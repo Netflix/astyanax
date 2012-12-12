@@ -60,7 +60,7 @@ public class SampleEntity {
 	private Double doubleObject;
 	
 	@Column(name="STRING")
-	private String str;
+	private String string;
 	
 	@Column(name="BYTE_ARRAY")
 	@TTL(123456)
@@ -190,12 +190,12 @@ public class SampleEntity {
 		this.doubleObject = doubleObject;
 	}
 
-	public String getStr() {
-		return str;
+	public String getString() {
+		return string;
 	}
 
-	public void setStr(String str) {
-		this.str = str;
+	public void setString(String string) {
+		this.string = string;
 	}
 
 	public byte[] getByteArray() {
@@ -225,7 +225,7 @@ public class SampleEntity {
 				bytePrimitive, byteObject, shortPrimitive, shortObject, 
 				intPrimitive, intObject, longPrimitive, longObject,
 				floatPrimitive, floatObject, doublePrimitive, doubleObject,
-				str, new String(byteArray, Charsets.UTF_8), uuid);
+				string, new String(byteArray, Charsets.UTF_8), uuid);
 	}
 
 	@Override
@@ -255,7 +255,7 @@ public class SampleEntity {
 				floatObject.equals(other.floatObject) &&
 				doublePrimitive == other.doublePrimitive &&
 				doubleObject.equals(other.doubleObject) &&
-				str.equals(other.str) &&
+				string.equals(other.string) &&
 				Arrays.equals(byteArray, other.byteArray) &&
 				uuid.equals(other.uuid)
 				)

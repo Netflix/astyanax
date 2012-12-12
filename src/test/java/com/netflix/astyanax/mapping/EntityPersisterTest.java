@@ -125,7 +125,7 @@ public class EntityPersisterTest {
 		entity.setFloatObject(prng.nextFloat());
 		entity.setDoublePrimitive(prng.nextDouble());
 		entity.setDoubleObject(prng.nextDouble());
-		entity.setStr(RandomStringUtils.randomAlphanumeric(16));
+		entity.setString(RandomStringUtils.randomAlphanumeric(16));
 		entity.setByteArray(RandomStringUtils.randomAlphanumeric(16).getBytes(Charsets.UTF_8));
 		entity.setUuid(TimeUUIDUtils.getUniqueTimeUUIDinMicros());
 		return entity;
@@ -148,7 +148,7 @@ public class EntityPersisterTest {
 			ColumnList<String> cl = keyspace.prepareQuery(CF_SAMPLE_ENTITY).getKey(id).execute().getResult();
 			Assert.assertEquals(17, cl.size());
 			// more field-level check
-			Assert.assertEquals(origEntity.getStr(), cl.getColumnByName("STRING").getStringValue());
+			Assert.assertEquals(origEntity.getString(), cl.getColumnByName("STRING").getStringValue());
 			Assert.assertArrayEquals(origEntity.getByteArray(), cl.getColumnByName("BYTE_ARRAY").getByteArrayValue());
 			Assert.assertEquals(123456, cl.getColumnByName("BYTE_ARRAY").getTtl());
 		}

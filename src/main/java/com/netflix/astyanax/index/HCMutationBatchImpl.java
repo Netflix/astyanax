@@ -12,6 +12,11 @@ public class HCMutationBatchImpl implements IndexedMutationBatch {
 
 	private IndexCoordination indexcoorindator;
 	
+	//TODO perhaps a constructor with the mutator is called for??
+	
+	public HCMutationBatchImpl() {
+		this.indexcoorindator = IndexCoordinationFactory.getIndexContext();
+	}
 	public HCMutationBatchImpl(IndexCoordination coordinator) {
 		this.indexcoorindator = coordinator;
 	}

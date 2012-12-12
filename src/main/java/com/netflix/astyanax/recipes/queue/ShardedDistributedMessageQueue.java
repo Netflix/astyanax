@@ -125,8 +125,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     public static final String           DEFAULT_QUEUE_NAME              = "Queue";
     public static final ConsistencyLevel DEFAULT_CONSISTENCY_LEVEL       = ConsistencyLevel.CL_LOCAL_QUORUM;
     public static final RetryPolicy      DEFAULT_RETRY_POLICY            = RunOnce.get();
-    public static final long             DEFAULT_LOCK_TIMEOUT            = TimeUnit.MICROSECONDS.convert(30,  TimeUnit.SECONDS);
-    public static final Integer          DEFAULT_LOCK_TTL                = (int)TimeUnit.MICROSECONDS.convert(2,   TimeUnit.MINUTES);
+    public static final Integer          DEFAULT_LOCK_TTL                = (int)TimeUnit.SECONDS.convert(1,   TimeUnit.MINUTES);
     public static final long             DEFAULT_POLL_WAIT               = TimeUnit.MILLISECONDS.convert(100, TimeUnit.MILLISECONDS);
     public static final Boolean          DEFAULT_POISON_QUEUE_ENABLED    = false;
     public static final String           DEFAULT_METADATA_SUFFIX         = "_metadata";
@@ -179,11 +178,6 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         
         public Builder withRetentionTimeout(Long timeout, TimeUnit units) {
             queue.settings.setRetentionTimeout(timeout,  units);
-            return this;
-        }
-        
-        public Builder withLockTimeout(Long timeout, TimeUnit units) {
-            queue.lockTimeout = TimeUnit.MICROSECONDS.convert(timeout,  units);
             return this;
         }
         
@@ -247,8 +241,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     
     private Keyspace                        keyspace;
     private ConsistencyLevel                consistencyLevel    = DEFAULT_CONSISTENCY_LEVEL;
-    private long                            lockTimeout         = DEFAULT_LOCK_TIMEOUT;
-    private Integer                         lockTtl             = DEFAULT_LOCK_TTL;
+    private int                             lockTtl             = DEFAULT_LOCK_TTL;
     private long                            pollInterval        = DEFAULT_POLL_WAIT;
     private MessageQueueStats               stats               = new CountingQueueStats();
     private String                          queueName           = DEFAULT_QUEUE_NAME;
@@ -266,9 +259,6 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                                                                     };
     
     private void initialize() {
-        Preconditions.checkArgument(
-                lockTtl == null || lockTimeout < lockTtl, 
-                "Timeout " + lockTtl + " must be less than TTL " + lockTtl);
         Preconditions.checkNotNull(keyspace, "Must specify keyspace");
         
         try {
@@ -837,7 +827,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     long curTimeMicros = TimeUUIDUtils.getTimeFromUUID(lockColumn.getTimestamp());
                     m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
                     m.withRow(queueColumnFamily, shardName)
-                     .putColumn(lockColumn, curTimeMicros + lockTimeout, lockTtl.intValue());
+                     .putEmptyColumn(lockColumn, lockTtl);
                     m.execute();
 
                     // 2. Read back lock columns and entries
@@ -885,7 +875,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                             
                             // Write the acquired lock column
                             lockColumn = MessageQueueEntry.newLockEntry(lockColumn.getTimestamp(), MessageQueueEntryState.Acquired);
-                            rowMutation.putColumn(lockColumn, curTimeMicros + lockTimeout, lockTtl.intValue());
+                            rowMutation.putColumn(lockColumn, curTimeMicros, lockTtl);
                         }
                     }
                 }

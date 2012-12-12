@@ -148,7 +148,7 @@ public class EntityPersisterTest {
 		// use low-level astyanax API to confirm the write
 		{
 			ColumnList<String> cl = keyspace.prepareQuery(CF_SAMPLE_ENTITY).getKey(id).execute().getResult();
-			Assert.assertEquals(17, cl.size());
+			Assert.assertEquals(18, cl.size());
 			// more field-level check
 			Assert.assertEquals(origEntity.getString(), cl.getColumnByName("STRING").getStringValue());
 			Assert.assertArrayEquals(origEntity.getByteArray(), cl.getColumnByName("BYTE_ARRAY").getByteArrayValue());

@@ -1,5 +1,6 @@
 package com.netflix.astyanax.mapping;
 
+import java.util.Arrays;
 import java.util.UUID;
 
 import javax.persistence.Column;
@@ -255,7 +256,7 @@ public class SampleEntity {
 				doublePrimitive == other.doublePrimitive &&
 				doubleObject.equals(other.doubleObject) &&
 				str.equals(other.str) &&
-				byteArray.equals(other.byteArray) &&
+				Arrays.equals(byteArray, other.byteArray) &&
 				uuid.equals(other.uuid)
 				)
 			return true;

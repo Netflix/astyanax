@@ -55,6 +55,14 @@ public interface MessageQueue {
     void createQueue() throws MessageQueueException;
 
     /**
+     * Deletes all the rows for this queue.  This will not 
+     * delete any 'key' columns'
+     * 
+     * @throws MessageQueueException
+     */
+    void deleteQueue() throws MessageQueueException;
+    
+    /**
      * Read a specific message from the queue.  The message isn't modified or removed from the queue.
      * 
      * @param messageId Message id returned from MessageProducer.sendMessage

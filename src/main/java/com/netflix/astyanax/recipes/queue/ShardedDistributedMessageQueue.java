@@ -367,6 +367,36 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
     @Override
     public void clearMessages() throws MessageQueueException {
+        LOG.info("Clearing messages from '" + queueName + "'");
+        MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+        
+        for (MessageQueueShard partition : partitions) {
+            mb.withRow(queueColumnFamily, partition.getName()).delete();
+        }
+        
+        try {
+            mb.execute();
+        } catch (ConnectionException e) {
+            throw new MessageQueueException("Failed to clear messages from queue " + queueName, e);
+        }
+    }
+    
+    @Override
+    public void deleteQueue() throws MessageQueueException {
+        LOG.info("Deleting queue '" + queueName + "'");
+        MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+        
+        for (MessageQueueShard partition : partitions) {
+            mb.withRow(queueColumnFamily, partition.getName()).delete();
+        }
+        
+        mb.withRow(queueColumnFamily, queueName);
+        
+        try {
+            mb.execute();
+        } catch (ConnectionException e) {
+            throw new MessageQueueException("Failed to clear messages from queue " + queueName, e);
+        }
     }
     
     @Override

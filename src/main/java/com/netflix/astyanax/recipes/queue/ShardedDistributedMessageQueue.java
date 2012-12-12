@@ -162,6 +162,15 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             return this;
         }
         
+        public Builder withTimeBuckets(int bucketCount, int bucketDuration, TimeUnit units) {
+            queue.settings.setPartitionDuration(TimeUnit.MICROSECONDS.convert(bucketDuration,  units));
+            queue.settings.setPartitionCount(bucketCount);
+            return this;
+        }
+        
+        /**
+         * @deprecated Use withTimeBuckets instead
+         */
         public Builder withBuckets(int bucketCount, int bucketDuration, TimeUnit units) {
             queue.settings.setPartitionDuration(TimeUnit.MICROSECONDS.convert(bucketDuration,  units));
             queue.settings.setPartitionCount(bucketCount);
@@ -276,7 +285,6 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         }
         
         partitions = Lists.newArrayList();
-        
         for (int i = 0; i < settings.getPartitionCount(); i++) {
             for (int j = 0; j < settings.getShardCount(); j++) {
                 partitions.add(new MessageQueueShard(queueName + ":" + i + ":" + j, i, j));
@@ -304,7 +312,11 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
      * @return
      */
     private String getShardKey(long messageTime) {
-        long timePartition = (messageTime / settings.getPartitionDuration()) % settings.getPartitionCount();
+        long timePartition;
+        if (settings.getPartitionDuration() != null)
+            timePartition = (messageTime / settings.getPartitionDuration()) % settings.getPartitionCount();
+        else 
+            timePartition = 0;
         long shard         =  messageTime % settings.getShardCount();
         return queueName + ":" + timePartition + ":" + shard;
     }
@@ -361,7 +373,11 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     }
 
     public String getCurrentPartition() {
-        long timePartition = TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(),  TimeUnit.MILLISECONDS)/settings.getPartitionDuration();
+        long timePartition;
+        if (settings.getPartitionDuration() != null)
+            timePartition = TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(),  TimeUnit.MILLISECONDS)/settings.getPartitionDuration();
+        else
+            timePartition = 0;
         return queueName + ":" + ((timePartition + settings.getPartitionCount()) % settings.getPartitionCount());
     }
 
@@ -641,20 +657,25 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                                  : System.currentTimeMillis() + TimeUnit.MILLISECONDS.convert(timeout,  units);
                 
                 // Whenever the partition changes we add all shards from this partition to the workQueue
-                long partitionIndex = (TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS)/settings.getPartitionDuration())%settings.getPartitionCount();
-                if (partitionIndex != currentPartition) {
-                    currentPartition = partitionIndex;
-                    
-                    List<MessageQueueShard> partitions = Lists.newArrayList();
-                    idleQueue.drainTo(partitions);
-                    for (MessageQueueShard partition : partitions) {
-                        if (partition.getPartition() == currentPartition) {
-                            workQueue.add(partition);
-                        }
-                        else {
-                            idleQueue.add(partition);
+                if (settings.getPartitionDuration() != null) {
+                    long partitionIndex = (TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS)/settings.getPartitionDuration())%settings.getPartitionCount();
+                    if (partitionIndex != currentPartition) {
+                        currentPartition = partitionIndex;
+                        
+                        List<MessageQueueShard> partitions = Lists.newArrayList();
+                        idleQueue.drainTo(partitions);
+                        for (MessageQueueShard partition : partitions) {
+                            if (partition.getPartition() == currentPartition) {
+                                workQueue.add(partition);
+                            }
+                            else {
+                                idleQueue.add(partition);
+                            }
                         }
                     }
+                }
+                else {
+                    currentPartition = 0;
                 }
                 
                 // Loop while trying to get messages.
@@ -722,7 +743,11 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             
             @Override
             public Collection<Message> peekMessages(int itemsToPop) throws MessageQueueException {
-                long partitionIndex = (TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS)/settings.getPartitionDuration())%settings.getPartitionCount();
+                long partitionIndex ;
+                if (settings.getPartitionDuration() != null)
+                    partitionIndex = (TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS)/settings.getPartitionDuration())%settings.getPartitionCount();
+                else 
+                    partitionIndex = 0;
                 
                 List<Message> messages = Lists.newArrayList();
                 

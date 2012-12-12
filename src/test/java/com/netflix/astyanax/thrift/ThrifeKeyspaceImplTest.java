@@ -3093,7 +3093,7 @@ public class ThrifeKeyspaceImplTest {
             .withKeyspace(keyspace)
             .withConsistencyLevel(cl)
             .withStats(stats)
-            .withBuckets(2,  30,  TimeUnit.SECONDS)
+            .withTimeBuckets(2,  30,  TimeUnit.SECONDS)
             .withShardCount(2)
             .withPollInterval(100L,  TimeUnit.MILLISECONDS)
             .build();
@@ -3263,7 +3263,7 @@ public class ThrifeKeyspaceImplTest {
             .withKeyspace(keyspace)
             .withConsistencyLevel(cl)
             .withStats(stats)
-            .withBuckets(50,  30,  TimeUnit.SECONDS)
+            .withTimeBuckets(50,  30,  TimeUnit.SECONDS)
             .withShardCount(20)
             .withPollInterval(100L,  TimeUnit.MILLISECONDS)
             .build();

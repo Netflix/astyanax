@@ -218,7 +218,7 @@ public class DistributedTaskScheduler implements MessageQueueHooks, TaskSchedule
                     .withConsistencyLevel(consistencyLevel)
                     .withShardCount(DEFAULT_SHARD_COUNT)
                     .withHook(this)
-                    .withBuckets(DEFAULT_BUCKET_COUNT,  DEFAULT_BUCKET_DURATION,  TimeUnit.HOURS)
+                    .withTimeBuckets(DEFAULT_BUCKET_COUNT,  DEFAULT_BUCKET_DURATION,  TimeUnit.HOURS)
                     .withPollInterval(pollingInterval,  TimeUnit.SECONDS)
                     .build();
         producer = messageQueue.createProducer();

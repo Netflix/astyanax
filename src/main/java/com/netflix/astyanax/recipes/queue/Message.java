@@ -22,7 +22,7 @@ public class Message {
     private Trigger trigger;
 
     /**
-     * Map of task arguments.
+     * Map of message parameters that are stored with the queued item
      */
     private Map<String, Object> parameters;
     
@@ -101,6 +101,10 @@ public class Message {
             return 0;
         return timeout;
     }
+    
+    public boolean hasTimeout() {
+        return timeout != null;
+    }
 
     /**
      * Setting priority will NOT work correctly with a future trigger time due to 
@@ -143,6 +147,10 @@ public class Message {
     public Message setTaskClass(String taskClass) {
         this.taskClass = taskClass;
         return this;
+    }
+    
+    public boolean hasTaskClass() {
+        return this.taskClass != null;
     }
     
     public Message clone() {

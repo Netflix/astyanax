@@ -8,15 +8,15 @@ import java.util.concurrent.TimeUnit;
 class MessageQueueSettings {
     public static final Integer       DEFAULT_RETENTION_TIMEOUT = null;
     public static final int           DEFAULT_SHARD_COUNT       = 1;
-    public static final long          DEFAULT_BUCKET_DURATION   = TimeUnit.MICROSECONDS.convert(30,  TimeUnit.SECONDS);
+    public static final Long          DEFAULT_BUCKET_DURATION   = null; 
     public static final int           DEFAULT_BUCKET_COUNT      = 1;
 
-    private long      partitionDuration = DEFAULT_BUCKET_DURATION;
+    private Long      partitionDuration = DEFAULT_BUCKET_DURATION;
     private int       partitionCount    = DEFAULT_BUCKET_COUNT;
     private Integer   retentionTimeout  = DEFAULT_RETENTION_TIMEOUT;
     private int       shardCount        = DEFAULT_SHARD_COUNT;
     
-    public long getPartitionDuration() {
+    public Long getPartitionDuration() {
         return partitionDuration;
     }
     public int getPartitionCount() {

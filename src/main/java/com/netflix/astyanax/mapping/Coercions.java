@@ -28,13 +28,13 @@ class Coercions {
             Column<String> column) {
         Object objValue;
         if ((field.getType() == Byte.class) || (field.getType() == Byte.TYPE)) {
-            objValue = (byte) (column.getIntegerValue());
+            objValue = column.getByteValue();
         } else if ((field.getType() == Boolean.class)
                 || (field.getType() == Boolean.TYPE)) {
             objValue = column.getBooleanValue();
         } else if ((field.getType() == Short.class)
                 || (field.getType() == Short.TYPE)) {
-            objValue = (short) (column.getIntegerValue());
+            objValue = column.getShortValue();
         } else if ((field.getType() == Integer.class)
                 || (field.getType() == Integer.TYPE)) {
             objValue = column.getIntegerValue();
@@ -43,7 +43,7 @@ class Coercions {
             objValue = column.getLongValue();
         } else if ((field.getType() == Float.class)
                 || (field.getType() == Float.TYPE)) {
-            objValue = (float) column.getDoubleValue();
+            objValue = column.getFloatValue();
         } else if ((field.getType() == Double.class)
                 || (field.getType() == Double.TYPE)) {
             objValue = column.getDoubleValue();

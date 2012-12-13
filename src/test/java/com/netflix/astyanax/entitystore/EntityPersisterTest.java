@@ -1,4 +1,4 @@
-package com.netflix.astyanax.mapping;
+package com.netflix.astyanax.entitystore;
 
 import java.util.Date;
 import java.util.Random;
@@ -19,6 +19,7 @@ import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
+import com.netflix.astyanax.entitystore.EntityPersister;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;

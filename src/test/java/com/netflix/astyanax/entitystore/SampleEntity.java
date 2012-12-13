@@ -1,4 +1,4 @@
-package com.netflix.astyanax.mapping;
+package com.netflix.astyanax.entitystore;
 
 import java.util.Arrays;
 import java.util.Date;
@@ -8,6 +8,7 @@ import javax.persistence.Column;
 import javax.persistence.Id;
 
 import com.google.common.base.Charsets;
+import com.netflix.astyanax.entitystore.TTL;
 
 /**
  * id is not counted as column

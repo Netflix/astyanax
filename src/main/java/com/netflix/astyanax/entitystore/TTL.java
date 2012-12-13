@@ -1,4 +1,4 @@
-package com.netflix.astyanax.mapping;
+package com.netflix.astyanax.entitystore;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

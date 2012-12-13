@@ -96,7 +96,6 @@ public class EntityPersister<T, K> {
 		 * @return
 		 */
 		public Builder<T, K> withTTL(Integer ttl) {
-			Preconditions.checkNotNull(ttl);
 			this.ttl = ttl;
 			return this;
 		}

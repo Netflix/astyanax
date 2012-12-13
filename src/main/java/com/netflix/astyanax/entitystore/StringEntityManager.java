@@ -17,10 +17,9 @@ import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
 
 /**
- * @param <T> entity type 
- * @param <K> rowKey type
+ * Column name is String
  */
-public class EntityPersister<T, K> {
+public class StringEntityManager<T, K> implements EntityManager<T, K> {
 
 	//////////////////////////////////////////////////////////////////
 	// Builder pattern
@@ -125,13 +124,13 @@ public class EntityPersister<T, K> {
 			return this;
 		}
 
-		public EntityPersister<T, K> build() {
+		public StringEntityManager<T, K> build() {
 			// check mandatory fields
 			Preconditions.checkNotNull(clazz, "clazz is not set");
 			Preconditions.checkNotNull(keyspace, "keyspace is not set");
 			Preconditions.checkNotNull(columnFamily, "columnFamily is not set");
 			// build object
-			return new EntityPersister<T, K>(this);
+			return new StringEntityManager<T, K>(this);
 		}
 	}
 
@@ -147,7 +146,7 @@ public class EntityPersister<T, K> {
 	private final Integer ttl;
 	private final RetryPolicy retryPolicy;
 
-	private EntityPersister(Builder<T, K> builder) {
+	private StringEntityManager(Builder<T, K> builder) {
 		clazz = builder.clazz;
 		entityAnnotation = builder.entityAnnotation;
 		keyspace = builder.keyspace;
@@ -173,8 +172,7 @@ public class EntityPersister<T, K> {
 	// public APIs
 
 	/**
-	 * write entity to cassandra with mapped rowId and columns
-	 * @param entity entity object
+	 * @inheritDoc
 	 */
 	public void put(T entity) throws PersistenceException {
 		try {
@@ -201,9 +199,7 @@ public class EntityPersister<T, K> {
 	}
 
 	/**
-	 * fetch whole row and construct entity object mapping from columns
-	 * @param id row key
-	 * @return entity object
+	 * @inheritDoc
 	 */
 	public T get(K id) throws PersistenceException {
 		try {
@@ -233,8 +229,7 @@ public class EntityPersister<T, K> {
 	}
 
 	/**
-	 * delete the whole row
-	 * @param id row key
+	 * @inheritDoc
 	 */
 	public void delete(K id) throws PersistenceException {
 		try {

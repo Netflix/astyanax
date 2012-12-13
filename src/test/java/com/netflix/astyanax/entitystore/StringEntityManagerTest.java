@@ -19,7 +19,7 @@ import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
-import com.netflix.astyanax.entitystore.EntityPersister;
+import com.netflix.astyanax.entitystore.StringEntityManager;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
@@ -29,7 +29,7 @@ import com.netflix.astyanax.thrift.ThrifeKeyspaceImplTest;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 import com.netflix.astyanax.util.TimeUUIDUtils;
 
-public class EntityPersisterTest {
+public class StringEntityManagerTest {
 
 	private static Logger logger = LoggerFactory.getLogger(ThrifeKeyspaceImplTest.class);
 
@@ -137,7 +137,7 @@ public class EntityPersisterTest {
 	@Test
 	public void basicLifecycle() throws Exception {
 		final String id = "basicLifecycle";
-		EntityPersister<SampleEntity, String> entityPersister = new EntityPersister.Builder<SampleEntity, String>()
+		EntityManager<SampleEntity, String> entityPersister = new StringEntityManager.Builder<SampleEntity, String>()
 				.withEntityType(SampleEntity.class)
 				.withKeyspace(keyspace)
 				.withColumnFamily(CF_SAMPLE_ENTITY)

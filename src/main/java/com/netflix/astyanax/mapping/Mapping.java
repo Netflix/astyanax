@@ -210,7 +210,7 @@ public class Mapping<T> {
      */
     public void fillMutation(T instance, ColumnListMutation<String> mutation) {
         for (String fieldName : getNames()) {
-            Coercions.setColumnMutationFromField(instance, fields.get(fieldName), fieldName, mutation, null);
+            Coercions.setColumnMutationFromField(instance, fields.get(fieldName), fieldName, mutation);
         }
     }
 

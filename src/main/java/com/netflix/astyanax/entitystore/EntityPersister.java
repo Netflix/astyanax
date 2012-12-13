@@ -3,11 +3,12 @@ package com.netflix.astyanax.entitystore;
 import java.lang.reflect.Field;
 import java.util.Map;
 
+import javax.persistence.PersistenceException;
+
 import com.google.common.base.Preconditions;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ConsistencyLevel;
@@ -174,9 +175,8 @@ public class EntityPersister<T, K> {
 	/**
 	 * write entity to cassandra with mapped rowId and columns
 	 * @param entity entity object
-	 * @throws ConnectionException 
 	 */
-	public void put(T entity) {
+	public void put(T entity) throws PersistenceException {
 		try {
 			MutationBatch mb = keyspace.prepareMutationBatch();
 			if(writeConsistency != null)
@@ -196,7 +196,7 @@ public class EntityPersister<T, K> {
 
 			mb.execute();
 		} catch(Exception e) {
-			throw new RuntimeException("failed to write entity", e);
+			throw new PersistenceException("failed to write entity", e);
 		}
 	}
 
@@ -205,7 +205,7 @@ public class EntityPersister<T, K> {
 	 * @param id row key
 	 * @return entity object
 	 */
-	public T get(K id) {
+	public T get(K id) throws PersistenceException {
 		try {
 			ColumnFamilyQuery<K, String> cfq = keyspace.prepareQuery(columnFamily);
 			if(readConsitency != null)
@@ -228,7 +228,7 @@ public class EntityPersister<T, K> {
 			}
 			return entity;
 		} catch(Exception e) {
-			throw new RuntimeException("failed to write entity", e);
+			throw new PersistenceException("failed to write entity", e);
 		}
 	}
 
@@ -236,7 +236,7 @@ public class EntityPersister<T, K> {
 	 * delete the whole row
 	 * @param id row key
 	 */
-	public void delete(K id) {
+	public void delete(K id) throws PersistenceException {
 		try {
 			MutationBatch mb = keyspace.prepareMutationBatch();
 			ColumnListMutation<String> clm = mb.withRow(columnFamily, id);
@@ -247,7 +247,7 @@ public class EntityPersister<T, K> {
 				mb.withRetryPolicy(retryPolicy);
 			mb.execute();
 		} catch(Exception e) {
-			throw new RuntimeException("failed to write entity", e);
+			throw new PersistenceException("failed to write entity", e);
 		}
 	}
 }

@@ -41,7 +41,7 @@ public class EntityPersister<T, K> {
 		 * mandatory
 		 * @param clazz entity class type
 		 */
-		public Builder<T, K> withEntity(Class<T> clazz) {
+		public Builder<T, K> withEntityType(Class<T> clazz) {
 			Preconditions.checkNotNull(clazz);
 			this.clazz = clazz;
 			// TODO: check @Id type compatibility

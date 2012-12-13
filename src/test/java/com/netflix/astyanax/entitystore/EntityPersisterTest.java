@@ -138,7 +138,7 @@ public class EntityPersisterTest {
 	public void basicLifecycle() throws Exception {
 		final String id = "basicLifecycle";
 		EntityPersister<SampleEntity, String> entityPersister = new EntityPersister.Builder<SampleEntity, String>()
-				.withEntity(SampleEntity.class)
+				.withEntityType(SampleEntity.class)
 				.withKeyspace(keyspace)
 				.withColumnFamily(CF_SAMPLE_ENTITY)
 				.build();

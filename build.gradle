@@ -36,7 +36,7 @@ dependencies {
     compile 'org.apache.thrift:libthrift:0.7.0'
     compile 'org.codehaus.jackson:jackson-core-asl:1.9.2'
     compile 'org.codehaus.jackson:jackson-mapper-asl:1.9.2'
-	compile 'javax.persistence:persistence-api:1.0'
+    compile 'javax.persistence:persistence-api:1.0'
     testCompile 'junit:junit:4.8.1'
 }
 

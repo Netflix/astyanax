@@ -27,7 +27,7 @@ class EntityAnnotation {
 
 		Field tmpIdField = null;
 		ImmutableMap.Builder<String, Field> builder = ImmutableMap.builder();
-		Set<String> lowerCaseColumnNames = Sets.newHashSet();
+		Set<String> usedColumnNames = Sets.newHashSet();
 		for (Field field : clazz.getDeclaredFields()) {
 			Id idAnnotation = field.getAnnotation(Id.class);
 			Column columnAnnotation = field.getAnnotation(Column.class);
@@ -44,8 +44,8 @@ class EntityAnnotation {
 
 			if ((columnAnnotation != null)) {
 				String columnName = getColumnName(columnAnnotation, field);
-				Preconditions.checkArgument(!lowerCaseColumnNames.contains(columnName.toLowerCase()), String.format("duplicate case-insensitive column name: %s", columnName));
-				lowerCaseColumnNames.add(columnName.toLowerCase());
+				Preconditions.checkArgument(!usedColumnNames.contains(columnName), String.format("duplicate case-insensitive column name: %s", columnName));
+				usedColumnNames.add(columnName);
 				field.setAccessible(true);
 				builder.put(columnName, field);
 			}

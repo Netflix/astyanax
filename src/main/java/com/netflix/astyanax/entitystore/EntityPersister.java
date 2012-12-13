@@ -89,6 +89,18 @@ public class EntityPersister<T, K> {
 			this.writeConsistency = level;
 			return this;
 		}
+		
+		/**
+		 * set both read and write consistency
+		 * optional
+		 * @param level
+		 */
+		public Builder<T, K> withConsistency(ConsistencyLevel level) {
+			Preconditions.checkNotNull(level);
+			this.readConsitency = level;
+			this.writeConsistency = level;
+			return this;
+		}
 
 		/**
 		 * default TTL for all columns written to cassandra

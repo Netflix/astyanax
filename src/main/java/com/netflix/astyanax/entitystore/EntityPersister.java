@@ -13,6 +13,7 @@ import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.query.RowQuery;
+import com.netflix.astyanax.retry.RetryPolicy;
 
 /**
  * @param <T> entity type 
@@ -32,6 +33,7 @@ public class EntityPersister<T, K> {
 		private ConsistencyLevel readConsitency = null;
 		private ConsistencyLevel writeConsistency = null;
 		private Integer ttl = null;
+		private RetryPolicy retryPolicy = null;
 
 		public Builder() {
 
@@ -111,6 +113,16 @@ public class EntityPersister<T, K> {
 			this.ttl = ttl;
 			return this;
 		}
+		
+		/**
+		 * optional
+		 * @param level
+		 */
+		public Builder<T, K> withRetryPolicy(RetryPolicy policy) {
+			Preconditions.checkNotNull(policy);
+			this.retryPolicy = policy;
+			return this;
+		}
 
 		public EntityPersister<T, K> build() {
 			// check mandatory fields
@@ -132,6 +144,7 @@ public class EntityPersister<T, K> {
 	private final ConsistencyLevel readConsitency;
 	private final ConsistencyLevel writeConsistency;
 	private final Integer ttl;
+	private final RetryPolicy retryPolicy;
 
 	private EntityPersister(Builder<T, K> builder) {
 		clazz = builder.clazz;
@@ -141,6 +154,7 @@ public class EntityPersister<T, K> {
 		readConsitency = builder.readConsitency;
 		writeConsistency = builder.writeConsistency;
 		ttl = builder.ttl;
+		retryPolicy = builder.retryPolicy;
 	}
 
 	private Integer getTTL(Field field) {
@@ -167,6 +181,8 @@ public class EntityPersister<T, K> {
 			MutationBatch mb = keyspace.prepareMutationBatch();
 			if(writeConsistency != null)
 				mb.withConsistencyLevel(writeConsistency);
+			if(retryPolicy != null)
+				mb.withRetryPolicy(retryPolicy);
 
 			Field idField = entityAnnotation.getId();
 			@SuppressWarnings("unchecked")
@@ -194,6 +210,8 @@ public class EntityPersister<T, K> {
 			ColumnFamilyQuery<K, String> cfq = keyspace.prepareQuery(columnFamily);
 			if(readConsitency != null)
 				cfq.setConsistencyLevel(readConsitency);
+			if(retryPolicy != null)
+				cfq.withRetryPolicy(retryPolicy);
 			RowQuery<K, String> rq = cfq.getKey(id);
 			ColumnList<String> cl = rq.execute().getResult();
 
@@ -225,6 +243,8 @@ public class EntityPersister<T, K> {
 			clm.delete();
 			if(writeConsistency != null)
 				mb.withConsistencyLevel(writeConsistency);
+			if(retryPolicy != null)
+				mb.withRetryPolicy(retryPolicy);
 			mb.execute();
 		} catch(Exception e) {
 			throw new RuntimeException("failed to write entity", e);

@@ -60,8 +60,9 @@ class EntityAnnotation {
 	
 	private String getColumnName(Column annotation, Field field) {
 		// use field name if annotation name is not set
-		String name = annotation.name();
-        return (name.length() > 0) ? name : field.getName();
+		String name = annotation.name().isEmpty() ? field.getName() : annotation.name();
+        // standardize to lower case. make column names case insensitive
+        return name.toLowerCase();
 	}
 
 	Field getId() {

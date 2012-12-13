@@ -151,9 +151,9 @@ public class EntityPersisterTest {
 			ColumnList<String> cl = keyspace.prepareQuery(CF_SAMPLE_ENTITY).getKey(id).execute().getResult();
 			Assert.assertEquals(18, cl.size());
 			// more field-level check
-			Assert.assertEquals(origEntity.getString(), cl.getColumnByName("STRING").getStringValue());
-			Assert.assertArrayEquals(origEntity.getByteArray(), cl.getColumnByName("BYTE_ARRAY").getByteArrayValue());
-			Assert.assertEquals(123456, cl.getColumnByName("BYTE_ARRAY").getTtl());
+			Assert.assertEquals(origEntity.getString(), cl.getColumnByName("string").getStringValue());
+			Assert.assertArrayEquals(origEntity.getByteArray(), cl.getColumnByName("byte_array").getByteArrayValue());
+			Assert.assertEquals(123456, cl.getColumnByName("byte_array").getTtl());
 		}
 
 		SampleEntity getEntity = entityPersister.get(id);

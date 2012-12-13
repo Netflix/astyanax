@@ -92,7 +92,7 @@ public class EntityPersister<T, K> {
 			this.writeConsistency = level;
 			return this;
 		}
-		
+
 		/**
 		 * set both read and write consistency
 		 * optional
@@ -114,7 +114,7 @@ public class EntityPersister<T, K> {
 			this.ttl = ttl;
 			return this;
 		}
-		
+
 		/**
 		 * optional
 		 * @param level
@@ -218,13 +218,13 @@ public class EntityPersister<T, K> {
 			T entity = clazz.newInstance();
 			Field idField = entityAnnotation.getId();
 			idField.set(entity, id);
-			
+
 			Map<String, Field> columns = entityAnnotation.getColumns();
 			for (com.netflix.astyanax.model.Column<String> c : cl) {
 				Field field = columns.get(c.getName());
-	            if (field != null) {
-	                Coercions.setFieldFromColumn(entity, field, c);
-	            }
+				if (field != null) {
+					Coercions.setFieldFromColumn(entity, field, c);
+				}
 			}
 			return entity;
 		} catch(Exception e) {

@@ -102,12 +102,11 @@ public class EntityPersister<T, K> {
 		}
 
 		public EntityPersister<T, K> build() {
-			if(clazz == null)
-				throw new IllegalStateException("clazz is not set");
-			if(keyspace == null)
-				throw new IllegalStateException("keyspace is not set");
-			if(columnFamily == null)
-				throw new IllegalStateException("columnFamily is not set");
+			// check mandatory fields
+			Preconditions.checkNotNull(clazz, "clazz is not set");
+			Preconditions.checkNotNull(keyspace, "keyspace is not set");
+			Preconditions.checkNotNull(columnFamily, "columnFamily is not set");
+			// build object
 			return new EntityPersister<T, K>(this);
 		}
 	}

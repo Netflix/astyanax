@@ -69,7 +69,7 @@ public interface MessageQueue {
      * @return
      * @throws MessageQueueException
      */
-    Message readMessage(String messageId) throws MessageQueueException;
+    Message peekMessage(String messageId) throws MessageQueueException;
 
     /**
      * Read a specific message from the queue.  The message isn't modified or removed from the queue.
@@ -79,7 +79,15 @@ public interface MessageQueue {
      * @return
      * @throws MessageQueueException
      */
-    Message readMessageByKey(String key) throws MessageQueueException;
+    Message peekMessageByKey(String key) throws MessageQueueException;
+    
+    /**
+     * Read history for the specified key
+     * @param key
+     * @return
+     * @throws MessageQueueException
+     */
+    Collection<MessageHistory> getKeyHistory(String key, Long startTime, Long endTime, int count) throws MessageQueueException;
     
     /**
      * Delete a specific message from the queue.  

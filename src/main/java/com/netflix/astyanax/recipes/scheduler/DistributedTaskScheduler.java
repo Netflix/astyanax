@@ -35,10 +35,12 @@ import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.recipes.locks.BusyLockException;
 import com.netflix.astyanax.recipes.queue.Message;
 import com.netflix.astyanax.recipes.queue.MessageConsumer;
+import com.netflix.astyanax.recipes.queue.MessageContext;
 import com.netflix.astyanax.recipes.queue.MessageProducer;
 import com.netflix.astyanax.recipes.queue.MessageQueueException;
 import com.netflix.astyanax.recipes.queue.MessageQueueHooks;
 import com.netflix.astyanax.recipes.queue.ShardedDistributedMessageQueue;
+import com.netflix.astyanax.recipes.queue.triggers.Trigger;
 import com.netflix.astyanax.recipes.uniqueness.ColumnPrefixUniquenessConstraint;
 import com.netflix.astyanax.recipes.uniqueness.NotUniqueException;
 import com.netflix.astyanax.serializers.StringSerializer;
@@ -333,12 +335,13 @@ public class DistributedTaskScheduler implements MessageQueueHooks, TaskSchedule
                 try {
                     // Process events in a tight loop, until asked to terminate
                     while (!terminate) {
-                        Collection<Message> messages = null;
+                        Collection<MessageContext> messages = null;
                         try {
                             messages = consumer.readMessages(batchSize);
                             try {
-                                for (Message message : messages) {
+                                for (MessageContext context : messages) {
                                     
+                                    Message             message = context.getMessage();
                                     TaskInfo            info    = null;
                                     String              taskKey = null;
                                     ColumnList<String>  columns = null;

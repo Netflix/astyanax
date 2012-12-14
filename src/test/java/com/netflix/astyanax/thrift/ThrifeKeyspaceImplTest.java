@@ -85,6 +85,8 @@ import com.netflix.astyanax.recipes.locks.StaleLockException;
 import com.netflix.astyanax.recipes.queue.CountingQueueStats;
 import com.netflix.astyanax.recipes.queue.Message;
 import com.netflix.astyanax.recipes.queue.MessageConsumer;
+import com.netflix.astyanax.recipes.queue.MessageContext;
+import com.netflix.astyanax.recipes.queue.MessageHistory;
 import com.netflix.astyanax.recipes.queue.MessageProducer;
 import com.netflix.astyanax.recipes.queue.MessageQueue;
 import com.netflix.astyanax.recipes.queue.MessageQueueDispatcher;
@@ -273,7 +275,8 @@ public class ThrifeKeyspaceImplTest {
                 .withAstyanaxConfiguration(
                         new AstyanaxConfigurationImpl()
                                 .setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
-                                .setConnectionPoolType(ConnectionPoolType.TOKEN_AWARE))
+                                .setConnectionPoolType(ConnectionPoolType.TOKEN_AWARE)
+                                .setDiscoveryDelayInSeconds(60000))
                 .withConnectionPoolConfiguration(
                         new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME
                                 + "_" + TEST_KEYSPACE_NAME)
@@ -3120,12 +3123,12 @@ public class ThrifeKeyspaceImplTest {
             Assert.assertEquals(1,  scheduler.getMessageCount());
             
             // Read it by the messageId
-            final Message m1rm = scheduler.readMessage(messageId);
+            final Message m1rm = scheduler.peekMessage(messageId);
             System.out.println("m1rm: " + m1rm);
             Assert.assertNotNull(m1rm);
             
             // Read it by the key
-            final Message m1rk = scheduler.readMessageByKey(key);
+            final Message m1rk = scheduler.peekMessageByKey(key);
             System.out.println("m1rk:" + m1rk);
             Assert.assertNotNull(m1rk);
             
@@ -3133,11 +3136,11 @@ public class ThrifeKeyspaceImplTest {
             scheduler.deleteMessageByKey(key);
             
             // Read and verify that it is gone
-            final Message m1rkd = scheduler.readMessageByKey(key);
+            final Message m1rkd = scheduler.peekMessageByKey(key);
             Assert.assertNull(m1rkd);
             
             // Read and verify that it is gone
-            final Message m1rmd = scheduler.readMessage(messageId);
+            final Message m1rmd = scheduler.peekMessage(messageId);
             Assert.assertNull(m1rmd);
         }
         
@@ -3178,7 +3181,7 @@ public class ThrifeKeyspaceImplTest {
             scheduler.deleteMessageByKey(key2);
 
             // Read the message
-            final Collection<Message> lm2 = consumer.readMessages(1, 1, TimeUnit.SECONDS);
+            final Collection<MessageContext> lm2 = consumer.readMessages(1, 1, TimeUnit.SECONDS);
             System.out.println("Read message: " + lm2);
             Assert.assertEquals(1,  lm2.size());
             System.out.println(lm2);
@@ -3196,7 +3199,7 @@ public class ThrifeKeyspaceImplTest {
                     .build());
             final String messageId3 = producer.sendMessage(m);
             Assert.assertNotNull(messageId3);
-            final Message m3rm = scheduler.readMessage(messageId3);
+            final Message m3rm = scheduler.peekMessage(messageId3);
             Assert.assertNotNull(m3rm);
             System.out.println(m3rm);
             Assert.assertEquals(1,  scheduler.getMessageCount());
@@ -3205,8 +3208,10 @@ public class ThrifeKeyspaceImplTest {
         }
         
 //        {
+//            final String repeatingKey = "RepeatingMessage";
 //            final Message m = new Message()
-//                .setKey("RepeatingMessage")
+//                .setKey(repeatingKey)
+////                .setKeepHistory(true)
 ////                .setTaskClass(HelloWorldFunction.class.getCanonicalName())
 //                .setTrigger(new RepeatingTrigger.Builder()
 //                    .withInterval(3,  TimeUnit.SECONDS)
@@ -3218,11 +3223,11 @@ public class ThrifeKeyspaceImplTest {
 //            
 //            MessageQueueDispatcher dispatcher = new MessageQueueDispatcher.Builder()
 //                .withBatchSize(5)
-//                .withCallback(new Function<Message, Boolean>() {
+//                .withCallback(new Function<MessageContext, Boolean>() {
 //                    long startTime = 0;
 //                    
 //                    @Override
-//                    public synchronized Boolean apply(Message message) {
+//                    public synchronized Boolean apply(MessageContext message) {
 //                        if (startTime == 0) 
 //                            startTime = System.currentTimeMillis();
 //                        
@@ -3238,6 +3243,9 @@ public class ThrifeKeyspaceImplTest {
 //            dispatcher.start();
 //            
 //            Thread.sleep(TimeUnit.MILLISECONDS.convert(20,  TimeUnit.SECONDS));
+//            
+//            Collection<MessageHistory> history = scheduler.getKeyHistory(repeatingKey, null, null, 10);
+//            System.out.println(history);
 //            
 //            dispatcher.stop();
 //            
@@ -3349,11 +3357,11 @@ public class ThrifeKeyspaceImplTest {
                     MessageConsumer consumer = scheduler.createConsumer();
                     
                     while (true) {
-                        Collection<Message> tasks = null;
+                        Collection<MessageContext> tasks = null;
                         try {
                             tasks = consumer.readMessages(200);
                             try {
-                                for (Message task : tasks) {
+                                for (MessageContext task : tasks) {
                                     counter.incrementAndGet();
                                     
 //                                    if (lookup.putIfAbsent(task.getData(), new Boolean(true)) != null) {

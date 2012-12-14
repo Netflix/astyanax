@@ -2,7 +2,6 @@ package com.netflix.astyanax.recipes.queue.triggers;
 
 import java.util.concurrent.TimeUnit;
 
-import com.netflix.astyanax.recipes.scheduler.Trigger;
 
 public class RepeatingTrigger extends AbstractTrigger {
     public static class Builder {

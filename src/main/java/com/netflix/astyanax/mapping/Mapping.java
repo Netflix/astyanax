@@ -26,6 +26,7 @@ import com.netflix.astyanax.model.Rows;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -62,9 +63,13 @@ public class Mapping<T> {
      *            clazz type to map
      * @return mapper
      */
-    public static <T> Mapping<T> make(Class<T> clazz) {
-        return new Mapping<T>(clazz, new DefaultAnnotationSet());
+    public static <T> Mapping<T> make(Class<T> clazz, boolean includeParentFields) {
+        return new Mapping<T>(clazz, new DefaultAnnotationSet(), includeParentFields);
     }
+
+    public static <T> Mapping<T> make(Class<T> clazz) {
+        return new Mapping<T>(clazz, new DefaultAnnotationSet(), false);
+	}
 
     /**
      * Convenience for allocation a mapping object
@@ -75,26 +80,33 @@ public class Mapping<T> {
      *            annotations to use when analyzing a bean
      * @return mapper
      */
-    public static <T> Mapping<T> make(Class<T> clazz,
-            AnnotationSet<?, ?> annotationSet) {
-        return new Mapping<T>(clazz, annotationSet);
+    public static <T> Mapping<T> make(Class<T> clazz, AnnotationSet<?, ?> annotationSet, boolean includeParentFields) {
+        return new Mapping<T>(clazz, annotationSet, includeParentFields);
     }
 
+    public static <T> Mapping<T> make(Class<T> clazz, AnnotationSet<?, ?> annotationSet) {
+		return new Mapping(clazz, annotationSet, false);		
+	}
+	
     /**
      * @param clazz
      *            clazz type to map
      */
-    public Mapping(Class<T> clazz) {
-        this(clazz, new DefaultAnnotationSet());
+    public Mapping(Class<T> clazz, boolean includeParentFields) {
+        this(clazz, new DefaultAnnotationSet(), includeParentFields);
     }
 
+    public Mapping(Class<T> clazz) {
+		this(clazz, new DefaultAnnotationSet(), false);		
+	}
+	
     /**
      * @param clazz
      *            clazz type to map
      * @param annotationSet
      *            annotations to use when analyzing a bean
      */
-    public Mapping(Class<T> clazz, AnnotationSet<?, ?> annotationSet) {
+    public Mapping(Class<T> clazz, AnnotationSet<?, ?> annotationSet, boolean includeParentFields) {
         this.clazz = clazz;
 
         String localKeyFieldName = null;
@@ -102,7 +114,9 @@ public class Mapping<T> {
 
         AtomicBoolean isKey = new AtomicBoolean();
         Set<String> usedNames = Sets.newHashSet();
-        for (Field field : clazz.getDeclaredFields()) {
+
+		List<Field> allFields = getFields(clazz, includeParentFields);
+        for (Field field : allFields) {
             String name = mapField(field, annotationSet, builder, usedNames,
                     isKey);
             if (isKey.get()) {
@@ -116,6 +130,23 @@ public class Mapping<T> {
         fields = builder.build();
         idFieldName = localKeyFieldName;
     }
+
+    public Mapping(Class<T> clazz, AnnotationSet<?, ?> annotationSet) {
+		this(clazz, annotationSet, false);
+	}
+
+	private List<Field> getFields(Class clazz, boolean recursuvely) {
+		List<Field> allFields = new ArrayList<Field>();
+		if (clazz.getDeclaredFields() != null && clazz.getDeclaredFields().length > 0) {
+			for (Field field : clazz.getDeclaredFields()) {
+				allFields.add(field);
+			}
+			if (recursuvely && clazz.getSuperclass() != null) {
+				allFields.addAll(getFields(clazz.getSuperclass(), true));
+			}
+		}
+		return allFields;
+	}
 
     /**
      * Return the value for the ID/Key column from the given instance

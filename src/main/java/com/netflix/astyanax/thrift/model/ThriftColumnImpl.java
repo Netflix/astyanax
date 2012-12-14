@@ -20,6 +20,7 @@ import java.util.Date;
 import java.util.UUID;
 
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.mapping.StringCoercible;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.serializers.BooleanSerializer;
@@ -32,6 +33,7 @@ import com.netflix.astyanax.serializers.FloatSerializer;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.ShortSerializer;
+import com.netflix.astyanax.serializers.StringCoercibleSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.UUIDSerializer;
 
@@ -153,5 +155,10 @@ public class ThriftColumnImpl<C> implements Column<C> {
     public boolean hasValue() {
         return column.value != null && column.value.remaining() != 0;
     }
+
+	@Override
+	public StringCoercible getStringCoercibleValue(Class clazz) {
+		return StringCoercibleSerializer.get().fromBytes(column.getValue(), clazz);
+	}
 
 }

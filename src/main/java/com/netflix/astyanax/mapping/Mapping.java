@@ -117,8 +117,7 @@ public class Mapping<T> {
 
 		List<Field> allFields = getFields(clazz, includeParentFields);
         for (Field field : allFields) {
-            String name = mapField(field, annotationSet, builder, usedNames,
-                    isKey);
+            String name = mapField(field, annotationSet, builder, usedNames, isKey);
             if (isKey.get()) {
                 Preconditions.checkArgument(localKeyFieldName == null);
                 localKeyFieldName = name;

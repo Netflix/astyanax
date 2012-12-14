@@ -20,6 +20,7 @@ import java.util.Date;
 import java.util.UUID;
 
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.mapping.StringCoercible;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnList;
 
@@ -114,6 +115,11 @@ public class EmptyColumn<C> implements Column<C> {
     public ByteBuffer getRawName() {
         throw new UnsupportedOperationException();
     }
+	
+	@Override
+	public StringCoercible getStringCoercibleValue(Class clazz) {
+        throw new UnsupportedOperationException();
+	}
 
     @Override
     public int getTtl() {
@@ -124,4 +130,5 @@ public class EmptyColumn<C> implements Column<C> {
     public boolean hasValue() {
         return false;
     }
+
 }

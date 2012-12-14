@@ -20,6 +20,7 @@ import java.util.Date;
 import java.util.UUID;
 
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.mapping.StringCoercible;
 
 /**
  * Common interface for extracting column values after a query.
@@ -127,6 +128,8 @@ public interface Column<C> {
      * @return
      */
     boolean getBooleanValue();
+
+    StringCoercible getStringCoercibleValue(Class clazz);
 
     /**
      * Get the raw ByteBuffer value

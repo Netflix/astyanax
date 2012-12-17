@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.netflix.astyanax.MutationBatch;
+
 /**
  * The point of synchronization between the clients  
  * 
@@ -112,24 +114,34 @@ public class IndexCoordinationThreadLocalImpl implements IndexCoordination {
 	}
 
 	@Override
-	public <C, V> void modifying(IndexMappingKey<C> key, V newValue)
+	public <C, V> IndexMapping<C, V> modifying(IndexMappingKey<C> key, V newValue)
 			throws NoReadException {
 		
 		IndexMapping<C,V> mapping = (IndexMapping<C,V>)indexMapLocal.get().get(key);
 		
-		if (mapping == null)
-			throw new NoReadException();
+		//2 possiblilities
+		//that we haven't read through here using reading method
+		//that it's new value - we'll say its the second case
+		//otherwise it's a user bug.
+		if (mapping == null) {
+			//throw new NoReadException();
+			//assume new "insert"
+			IndexMapping<C,V> newMapping = new IndexMapping<C, V>(key,newValue);
+			indexMapLocal.get().put(key, newMapping);
+			
+		}
 		
 		mapping.setValueOfCol(newValue);
 		
+		return mapping;
 		
 	}
 
 	@Override
-	public <C, V> void modifying(String cf, C columnName, V newValue)
+	public <C, V> IndexMapping<C,V> modifying(String cf, C columnName, V newValue)
 			throws NoReadException {
 		
-		modifying(new IndexMappingKey(cf, columnName), newValue );
+		return modifying(new IndexMappingKey(cf, columnName), newValue);
 		
 	}
 

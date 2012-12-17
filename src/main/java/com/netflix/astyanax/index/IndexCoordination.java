@@ -2,6 +2,8 @@ package com.netflix.astyanax.index;
 
 import java.util.List;
 
+import com.netflix.astyanax.MutationBatch;
+
 /**
  * 
  * Ties the reading and the writing together locally on the client.
@@ -44,10 +46,10 @@ public interface IndexCoordination {
 		
 	
 	
-	<C,V> void modifying(IndexMappingKey<C> key, V newValue) throws NoReadException;
+	<C,V> IndexMapping<C,V> modifying(IndexMappingKey<C> key, V newValue) throws NoReadException;
 	
 	
-	<C,V> void modifying(String cf, C columnName, V newValue) throws NoReadException;
+	<C,V> IndexMapping<C,V> modifying(String cf, C columnName, V newValue) throws NoReadException;
 	
 	
 	

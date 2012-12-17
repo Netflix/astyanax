@@ -66,8 +66,9 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 	 * 
 	 * @param mutationBatch
 	 */
-	protected IndexImpl(MutationBatch mutationBatch) {
+	protected IndexImpl(MutationBatch mutationBatch,String targetCf) {
 		this.mutationBatch = mutationBatch;
+		this.targetCF = targetCf;
 	}
 	
 	//support both read and write to index
@@ -161,7 +162,7 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 	
 	
 	@Override
-	public void insertIndex(N name, V value, K pkValue) throws ConnectionException {
+	public void insertIndex(N name, V value, K pkValue)  {
 		
 		
 		
@@ -190,7 +191,7 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 	
 	@Override
 	public void updateIndex(N name, V value, V oldValue, K pkValue)
-			throws ConnectionException {
+			 {
 		
 		insertIndex(name, value, pkValue);
 		
@@ -203,8 +204,7 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 	
 
 	@Override
-	public void removeIndex(N name, V value, K pkValue)
-			throws ConnectionException {
+	public void removeIndex(N name, V value, K pkValue) {
 		Composite row = new Composite(this.targetCF,name,value);
 		mutationBatch.withRow(getRowCF(), row).deleteColumn(pkValue);
 	}

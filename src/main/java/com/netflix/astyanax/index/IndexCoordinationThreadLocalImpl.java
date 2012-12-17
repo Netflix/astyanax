@@ -115,7 +115,7 @@ public class IndexCoordinationThreadLocalImpl implements IndexCoordination {
 	public <C, V> void modifying(IndexMappingKey<C> key, V newValue)
 			throws NoReadException {
 		
-		IndexMapping<C,V> mapping = (IndexMapping<C,V>)indexMapLocal.get();
+		IndexMapping<C,V> mapping = (IndexMapping<C,V>)indexMapLocal.get().get(key);
 		
 		if (mapping == null)
 			throw new NoReadException();

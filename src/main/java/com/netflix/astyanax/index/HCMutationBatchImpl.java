@@ -4,6 +4,7 @@ import com.netflix.astyanax.AbstractColumnListMutation;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnPath;
 import com.netflix.astyanax.thrift.ThriftColumnFamilyMutationImpl;
@@ -31,7 +32,7 @@ public class HCMutationBatchImpl implements IndexedMutationBatch {
 		ThriftColumnFamilyMutationImpl<C> impl =  (ThriftColumnFamilyMutationImpl<C>)currentBatch.withRow(columnFamily, rowKey);
 				
 		
-		ThriftMutatorExt<C> cfMutatorWrapper = new ThriftMutatorExt<C>(impl,indexcoorindator,columnFamily); 
+		ThriftMutatorExt<C,K> cfMutatorWrapper = new ThriftMutatorExt<C,K>(currentBatch,impl,indexcoorindator,columnFamily, rowKey); 
 		
 		return cfMutatorWrapper;
 		
@@ -54,18 +55,22 @@ public class HCMutationBatchImpl implements IndexedMutationBatch {
 	 * @param <C> - the column to be indexed
 	 * @param <K> - the column family's indexed row key
 	 */
-	class ThriftMutatorExt<C> extends AbstractColumnListMutation<C> implements ColumnListMutation<C> {
+	class ThriftMutatorExt<C,K> extends AbstractColumnListMutation<C> implements ColumnListMutation<C> {
 
 		ThriftColumnFamilyMutationImpl<C> impl;
 		IndexCoordination coordination;
 		ColumnFamily<?, C> columnFamily;
+		MutationBatch mutator;
+		K rowKey;
 		
-		
-		public ThriftMutatorExt(ThriftColumnFamilyMutationImpl<C> impl,IndexCoordination coordination,ColumnFamily<?, C> columnFamily) {
+		public ThriftMutatorExt(MutationBatch mutator,ThriftColumnFamilyMutationImpl<C> impl,
+				IndexCoordination coordination,ColumnFamily<?, C> columnFamily,K rowKey) {
 			
 			this.impl = impl;
 			this.coordination = coordination;
 			this.columnFamily = columnFamily;
+			this.mutator = mutator;
+			this.rowKey = rowKey;
 			
 		}
 
@@ -75,10 +80,30 @@ public class HCMutationBatchImpl implements IndexedMutationBatch {
 				Serializer<V> valueSerializer, Integer ttl) {
 			
 			//index first
-			//
+			//if indexable
 			IndexMappingKey<C> mappingKey = new IndexMappingKey<C>( columnFamily.getName(),columnName);
-			coordination.modifying(mappingKey, value);
+			if (coordination.indexExists(mappingKey)) {
 			
+				IndexMapping<C,V> mapping = coordination.get(mappingKey);
+				coordination.modifying(mappingKey, value);			
+				//check delta:
+				try {
+					if (mapping.getOldValueofCol() == null ) {
+						Index<C,V,K> ind = new IndexImpl<C, V, K>(mutator,columnFamily.getName());
+						ind.insertIndex(columnName, value, rowKey);
+					}else if (!mapping.getValueOfCol().equals(mapping.getOldValueofCol()) ) {
+						Index<C,V,K> ind = new IndexImpl<C, V, K>(mutator,columnFamily.getName());
+						ind.updateIndex(columnName, value, mapping.getOldValueofCol(), rowKey);
+						
+					} else {
+						//no update required
+					}
+				}catch (ConnectionException e) {
+					//TODO
+					e.printStackTrace();
+				}
+			
+			}
 			//then modify
 			impl.putColumn(columnName, value, valueSerializer, ttl);
 			

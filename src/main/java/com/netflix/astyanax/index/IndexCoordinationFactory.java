@@ -1,7 +1,7 @@
 package com.netflix.astyanax.index;
 
 /**
- * Probably manage IndexContext as a singleton.
+ * Manage as a singleton.
  * 
  * @author marcus
  *

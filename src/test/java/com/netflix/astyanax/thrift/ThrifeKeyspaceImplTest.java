@@ -3211,8 +3211,8 @@ public class ThrifeKeyspaceImplTest {
 //            final String repeatingKey = "RepeatingMessage";
 //            final Message m = new Message()
 //                .setKey(repeatingKey)
-////                .setKeepHistory(true)
-////                .setTaskClass(HelloWorldFunction.class.getCanonicalName())
+//                .setKeepHistory(true)
+//                .setTaskClass(HelloWorldFunction.class.getCanonicalName())
 //                .setTrigger(new RepeatingTrigger.Builder()
 //                    .withInterval(3,  TimeUnit.SECONDS)
 //                    .withRepeatCount(5)

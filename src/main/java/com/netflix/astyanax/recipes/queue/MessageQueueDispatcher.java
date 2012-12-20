@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
 import com.netflix.astyanax.recipes.locks.BusyLockException;
@@ -113,6 +114,16 @@ public class MessageQueueDispatcher {
             return this;
         }
         
+        /**
+         * Provide a message handler factory to use when creating tasks.
+         * @param factory
+         * @return
+         */
+        public Builder withMessageHandlerSupplier(MessageHandlerFactory factory) {
+            dispatcher.handlerFactory = factory;
+            return this;
+        }
+        
         public MessageQueueDispatcher build() {
             Preconditions.checkArgument(dispatcher.consumerCount <= dispatcher.threadCount, "consumerCounter must be <= threadCount");
             dispatcher.initialize();
@@ -131,6 +142,7 @@ public class MessageQueueDispatcher {
     private ExecutorService executor;
     private MessageConsumer ackConsumer;
     private Function<MessageContext, Boolean>   callback;
+    private MessageHandlerFactory handlerFactory;
     private LinkedBlockingQueue<MessageContext> toAck = Queues.newLinkedBlockingQueue();
     private LinkedBlockingQueue<MessageContext> toProcess = Queues.newLinkedBlockingQueue(500);
     
@@ -139,6 +151,9 @@ public class MessageQueueDispatcher {
     
     private void initialize() {
         Preconditions.checkNotNull(messageQueue, "Must specify message queue");
+        
+        if (this.handlerFactory == null)
+            this.handlerFactory = new SimpleMessageHandlerFactory();
         toProcess = Queues.newLinkedBlockingQueue(backlogSize);
     }
     
@@ -254,7 +269,7 @@ public class MessageQueueDispatcher {
                             // Message has a specific handler class
                             if (message.getTaskClass() != null) {
                                 @SuppressWarnings("unchecked")
-                                Function<MessageContext, Boolean> task = (Function<MessageContext, Boolean>)Class.forName(message.getTaskClass()).newInstance();
+                                Function<MessageContext, Boolean> task = handlerFactory.createInstance(message.getTaskClass());
                                 if (task.apply(context)) {
                                     toAck.add(context);
                                 }

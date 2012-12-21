@@ -1926,6 +1926,21 @@ public class ThrifeKeyspaceImplTest {
          * 5) .execute();
          */
     }
+    
+    @Test
+    public void testNullKeyInMutation() throws ConnectionException {
+        try {
+            keyspace.prepareMutationBatch()
+                .withRow(CF_STANDARD1,  null)
+                .putColumn("abc", "def");
+            
+            Assert.fail();
+        }
+        catch (NullPointerException e) {
+            
+        }
+    }
+    
 
     @Test
     public void testColumnSlice() throws ConnectionException {

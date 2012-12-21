@@ -28,7 +28,6 @@ public final class StringCoercibleSerializer extends AbstractSerializer<StringCo
         if (obj == null) {
             return null;
         }
-		System.out.println("Key is " + obj.serializeToString());
         return ByteBuffer.wrap(obj.serializeToString().getBytes(charset));
     }
 

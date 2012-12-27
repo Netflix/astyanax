@@ -5,7 +5,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.collect.Maps;
-import com.netflix.astyanax.recipes.scheduler.Trigger;
+import com.netflix.astyanax.recipes.queue.triggers.Trigger;
 
 public class Message {
     
@@ -45,6 +45,11 @@ public class Message {
      * Class name to handle this message
      */
     private String  taskClass;
+
+    /**
+     * 
+     */
+    private boolean isKeepHistory = false;
 
     public Message() {
         
@@ -153,6 +158,15 @@ public class Message {
         return this.taskClass != null;
     }
     
+    public Boolean isKeepHistory() {
+        return isKeepHistory;
+    }
+
+    public Message setKeepHistory(Boolean isKeepHistory) {
+        this.isKeepHistory = isKeepHistory;
+        return this;
+    }
+    
     public Message clone() {
         Message message = new Message();
         message.token       = token;
@@ -162,6 +176,7 @@ public class Message {
         message.timeout     = timeout;
         message.key         = key;
         message.taskClass   = taskClass;
+        message.isKeepHistory = isKeepHistory;
         return message;
     }
 

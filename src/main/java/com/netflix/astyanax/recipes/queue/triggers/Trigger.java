@@ -1,4 +1,4 @@
-package com.netflix.astyanax.recipes.scheduler;
+package com.netflix.astyanax.recipes.queue.triggers;
 
 /**
  * Base interface for all triggers.  Triggers specify the scheduling for a task in the scheduler.

@@ -19,7 +19,7 @@ import com.netflix.astyanax.retry.RetryPolicy;
 /**
  * Column name is String
  */
-public class StringEntityManager<T, K> implements EntityManager<T, K> {
+public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 
 	//////////////////////////////////////////////////////////////////
 	// Builder pattern
@@ -124,13 +124,13 @@ public class StringEntityManager<T, K> implements EntityManager<T, K> {
 			return this;
 		}
 
-		public StringEntityManager<T, K> build() {
+		public DefaultEntityManager<T, K> build() {
 			// check mandatory fields
 			Preconditions.checkNotNull(clazz, "clazz is not set");
 			Preconditions.checkNotNull(keyspace, "keyspace is not set");
 			Preconditions.checkNotNull(columnFamily, "columnFamily is not set");
 			// build object
-			return new StringEntityManager<T, K>(this);
+			return new DefaultEntityManager<T, K>(this);
 		}
 	}
 
@@ -146,7 +146,7 @@ public class StringEntityManager<T, K> implements EntityManager<T, K> {
 	private final Integer ttl;
 	private final RetryPolicy retryPolicy;
 
-	private StringEntityManager(Builder<T, K> builder) {
+	private DefaultEntityManager(Builder<T, K> builder) {
 		clazz = builder.clazz;
 		entityAnnotation = builder.entityAnnotation;
 		keyspace = builder.keyspace;

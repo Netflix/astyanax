@@ -4,6 +4,7 @@ import java.util.Collection;
 
 import junit.framework.Assert;
 
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -18,35 +19,38 @@ import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.Composite;
 import com.netflix.astyanax.serializers.CompositeSerializer;
+import com.netflix.astyanax.test.EmbeddedCassandra;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 
-public class TestIndex {
+public class PlainIndexTest {
 
 	static AstyanaxContext<Keyspace> context;
 	static Keyspace keyspace;
 	
-	public static void init() {
-		context = new AstyanaxContext.Builder()
-				.forCluster("ClusterName")
-				.forKeyspace("icrskeyspace")
-				.withAstyanaxConfiguration(
-						new AstyanaxConfigurationImpl()
-								.setDiscoveryType(NodeDiscoveryType.NONE))
-				.withConnectionPoolConfiguration(
-						new ConnectionPoolConfigurationImpl("MyConnectionPool")
-								.setPort(9160).setMaxConnsPerHost(1)
-								.setSeeds("127.0.0.1:9160"))
-				.withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
-				.buildKeyspace(ThriftFamilyFactory.getInstance());
-		context.start();
-		
-		keyspace = context.getEntity();
-
-	}
+	static EmbeddedCassandra cassandra;
+	
 	@BeforeClass
-	public static void beforeClass() {
-		init();
+	public static void beforeClass() throws Exception {
+		cassandra = new EmbeddedCassandra();
+		cassandra.start();
+		//this seems primitive??
+		Thread.sleep(SetupUtil.SERVER_START_TIME);
+
+		context = SetupUtil.initKeySpace();
+		keyspace = context.getEntity();
+		
+		SetupUtil.indexCFSetup(keyspace);
+		SetupUtil.devSrvDataSetup(keyspace);
+		
 	}
+	@AfterClass
+    public static void teardown() {
+        if (context != null)
+            context.shutdown();
+        
+        if (cassandra != null)
+            cassandra.stop();
+    }
 	@Test
 	public void testPutStringIndex() throws Exception {
 		

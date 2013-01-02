@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
 import com.netflix.astyanax.recipes.locks.BusyLockException;
@@ -33,7 +34,7 @@ public class MessageQueueDispatcher {
     public final static int   DEFAULT_THREAD_COUNT          = 1;
     public final static int   DEFAULT_CONSUMER_COUNT        = 1;
     public final static int   DEFAULT_ACK_SIZE              = 100;
-    public final static int   DEFAULT_ACK_INTERVAL          = 1000;
+    public final static int   DEFAULT_ACK_INTERVAL          = 100;
     public final static int   DEFAULT_BACKLOG_SIZE          = 1000;
     
     public static class Builder {
@@ -108,8 +109,18 @@ public class MessageQueueDispatcher {
          * @return true to ack the message, false to not ack and cause the message to timeout
          *          Throw an exception to force the message to be added to the poison queue
          */
-        public Builder withCallback(Function<Message, Boolean> callback) {
+        public Builder withCallback(Function<MessageContext, Boolean> callback) {
             dispatcher.callback = callback;
+            return this;
+        }
+        
+        /**
+         * Provide a message handler factory to use when creating tasks.
+         * @param factory
+         * @return
+         */
+        public Builder withMessageHandlerSupplier(MessageHandlerFactory factory) {
+            dispatcher.handlerFactory = factory;
             return this;
         }
         
@@ -130,15 +141,19 @@ public class MessageQueueDispatcher {
     private MessageQueue    messageQueue;
     private ExecutorService executor;
     private MessageConsumer ackConsumer;
-    private Function<Message, Boolean>   callback;
-    private LinkedBlockingQueue<Message> toAck = Queues.newLinkedBlockingQueue();
-    private LinkedBlockingQueue<Message> toProcess = Queues.newLinkedBlockingQueue(500);
+    private Function<MessageContext, Boolean>   callback;
+    private MessageHandlerFactory handlerFactory;
+    private LinkedBlockingQueue<MessageContext> toAck = Queues.newLinkedBlockingQueue();
+    private LinkedBlockingQueue<MessageContext> toProcess = Queues.newLinkedBlockingQueue(500);
     
     private MessageQueueDispatcher() {
     }
     
     private void initialize() {
         Preconditions.checkNotNull(messageQueue, "Must specify message queue");
+        
+        if (this.handlerFactory == null)
+            this.handlerFactory = new SimpleMessageHandlerFactory();
         toProcess = Queues.newLinkedBlockingQueue(backlogSize);
     }
     
@@ -167,8 +182,11 @@ public class MessageQueueDispatcher {
         executor.submit(new Runnable() {
             @Override
             public void run() {
+                String name = StringUtils.join(Lists.newArrayList(messageQueue.getName(), "Ack"), ":");
+                Thread.currentThread().setName(name);
+                
                 while (!terminate) {
-                    List<Message> messages = Lists.newArrayList();
+                    List<MessageContext> messages = Lists.newArrayList();
                     toAck.drainTo(messages);
                     if (!messages.isEmpty()) {
                         try {
@@ -202,11 +220,11 @@ public class MessageQueueDispatcher {
                 
                 while (!terminate) {
                     // Process events in a tight loop, until asked to terminate
-                    Collection<Message> messages = null;
+                    Collection<MessageContext> messages = null;
                     try {
                         messages = consumer.readMessages(batchSize);
-                        for (final Message message : messages) {
-                            toProcess.add(message);
+                        for (MessageContext context : messages) {
+                            toProcess.put(context);
                         }
                     } 
                     catch (BusyLockException e) {
@@ -234,39 +252,46 @@ public class MessageQueueDispatcher {
                 LOG.info("Starting message processor : " + name);
                 try {
                     while (!terminate) {
-                        Message message = null;
+                        // Pop a message off the queue
+                        final MessageContext context;
                         try {
-                            message = toProcess.take();
-                            if (message == null)
+                            context = toProcess.take();
+                            if (context == null)
                                 continue;
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
                             return;
                         }
+                        
+                        // Process the message
+                        Message message = context.getMessage();
                         try {
-                            LOG.debug(message.toString());
+                            // Message has a specific handler class
                             if (message.getTaskClass() != null) {
                                 @SuppressWarnings("unchecked")
-                                Function<Message, Boolean> task = (Function<Message, Boolean>)Class.forName(message.getTaskClass()).newInstance();
-                                if (task.apply(message)) {
-                                    toAck.add(message);
+                                Function<MessageContext, Boolean> task = handlerFactory.createInstance(message.getTaskClass());
+                                if (task.apply(context)) {
+                                    toAck.add(context);
                                 }
                                 continue;
                             }
                             
-                            if (callback.apply(message)) {
-                                toAck.add(message);
+                            // Use default callback
+                            if (callback.apply(context)) {
+                                context.setStatus(MessageStatus.DONE);
+                                toAck.add(context);
                                 continue;
                             }
                         }
                         catch (Throwable t) {
-                            try {
-                                ackConsumer.ackPoisonMessage(message);
-                            } catch (MessageQueueException e) {
-                                LOG.warn("Failed to ack poison message", e);
-                            }
-                            // TODO: Add to poison queue
+                            context.setException(t);
+                            toAck.add(context);
                             LOG.error("Error processing message " + message.getKey(), t);
+//                            try {
+//                                ackConsumer.ackPoisonMessage(context);
+//                            } catch (MessageQueueException e) {
+//                                LOG.warn("Failed to ack poison message " + message.getKey(), e);
+//                            }
                         }
                     }
                 }

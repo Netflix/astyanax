@@ -1,6 +1,5 @@
 package com.netflix.astyanax.recipes.queue.triggers;
 
-import com.netflix.astyanax.recipes.scheduler.Trigger;
 
 public abstract class AbstractTrigger implements Trigger {
     private long triggerTime    = 0;   // In milliseconds

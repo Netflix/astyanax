@@ -16,7 +16,7 @@ public interface MessageConsumer {
      * @throws InterruptedException 
      * @throws Exception 
      */
-    Collection<Message> readMessages(int itemsToRead) throws MessageQueueException, BusyLockException, InterruptedException;
+    Collection<MessageContext> readMessages(int itemsToRead) throws MessageQueueException, BusyLockException, InterruptedException;
 
     /**
      * Acquire up to N items from the queue.  Each item must be released by calling ackMessage.
@@ -26,7 +26,7 @@ public interface MessageConsumer {
      * @param units
      * @return
      */
-    Collection<Message> readMessages(int itemsToRead, long timeout, TimeUnit units) throws MessageQueueException, BusyLockException, InterruptedException;
+    Collection<MessageContext> readMessages(int itemsToRead, long timeout, TimeUnit units) throws MessageQueueException, BusyLockException, InterruptedException;
     
     /**
      * Peek into messages from the queue.  The queue state is not altered by this operation.
@@ -41,13 +41,13 @@ public interface MessageConsumer {
      * @param item
      * @throws Exception 
      */
-    void ackMessage(Message message) throws MessageQueueException;
+    void ackMessage(MessageContext message) throws MessageQueueException;
 
     /**
      * Release a set of jobs
      * @param items
      */
-    void ackMessages(Collection<Message> messages) throws MessageQueueException;
+    void ackMessages(Collection<MessageContext> messages) throws MessageQueueException;
 
     /**
      * Acknowledge the message as a poison message.  This will put the message into
@@ -55,6 +55,6 @@ public interface MessageConsumer {
      * 
      * @param message
      */
-    void ackPoisonMessage(Message message) throws MessageQueueException;
+    void ackPoisonMessage(MessageContext message) throws MessageQueueException;
     
 }

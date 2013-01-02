@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Maps.EntryTransformer;
@@ -127,6 +128,9 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
 
     @Override
     public <K, C> ColumnListMutation<C> withRow(ColumnFamily<K, C> columnFamily, K rowKey) {
+        Preconditions.checkNotNull(columnFamily, "columnFamily cannot be null");
+        Preconditions.checkNotNull(rowKey, "Row key cannot be null");
+        
         if (clock != null && mutationMap.isEmpty())
             this.timestamp = clock.getCurrentTime();
 

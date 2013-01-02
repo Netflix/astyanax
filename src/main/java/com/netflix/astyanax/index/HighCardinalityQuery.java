@@ -33,5 +33,6 @@ public interface HighCardinalityQuery<K, C, V>  {
 	 */
 	RowSliceQuery<K, C> equals(C name, V value);
 	
+	//IndexRead<K,C,V> readIndex();
 	
 }

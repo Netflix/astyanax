@@ -48,6 +48,15 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 		indexCoordination = IndexCoordinationFactory.getIndexContext();
 	}
 	
+		
+
+	//@Override
+	public IndexRead<K, C, V> readIndex() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+
 
 	@Override
 	public RowSliceQuery<K, C> equals(C name, V value) {

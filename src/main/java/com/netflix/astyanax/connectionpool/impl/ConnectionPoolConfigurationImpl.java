@@ -18,9 +18,11 @@ package com.netflix.astyanax.connectionpool.impl;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 import com.google.common.base.Preconditions;
-
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.netflix.astyanax.AuthenticationCredentials;
 import com.netflix.astyanax.connectionpool.BadHostDetector;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
@@ -28,6 +30,7 @@ import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
 import com.netflix.astyanax.connectionpool.OperationFilterFactory;
 import com.netflix.astyanax.connectionpool.RetryBackoffStrategy;
+import com.netflix.astyanax.connectionpool.SSLConnectionContext;
 import com.netflix.astyanax.partitioner.BigInteger127Partitioner;
 import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.shallows.EmptyBadHostDetectorImpl;
@@ -66,9 +69,9 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     public static final int DEFAULT_BLOCKED_THREAD_THRESHOLD = 10;
     public static final BadHostDetector DEFAULT_BAD_HOST_DETECTOR = EmptyBadHostDetectorImpl.getInstance();
     public static final Partitioner DEFAULT_PARTITIONER = BigInteger127Partitioner.get();
-    public static final String DEFAULT_SSL_PROTOCOL = "TLS";
-    public static final List<String> DEFAULT_SSL_CIPHER_SUITES = Arrays.asList("TLS_RSA_WITH_AES_128_CBC_SHA", "TLS_RSA_WITH_AES_256_CBC_SHA");
-    
+    private static final int DEFAULT_RECONNECT_THREAD_COUNT = 5;
+    private static final int DEFAULT_MAINTAINANCE_THREAD_COUNT = 1;
+
     private final String name;
 
     private int maxConnsPerPartition             = DEFAULT_MAX_ACTIVE_PER_PARTITION;
@@ -96,8 +99,6 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     private int maxTimeoutWhenExhausted          = DEFAULT_MAX_TIME_WHEN_EXHAUSTED;
     private float minHostInPoolRatio             = DEFAULT_MIN_HOST_IN_POOL_RATIO;
     private int blockedThreadThreshold           = DEFAULT_BLOCKED_THREAD_THRESHOLD;
-    private String sslProtocol                   = DEFAULT_SSL_PROTOCOL;
-    private List<String> sslCipherSuites         = DEFAULT_SSL_CIPHER_SUITES;
 
     private String seeds = null;
     private RetryBackoffStrategy hostRetryBackoffStrategy = null;
@@ -106,11 +107,15 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     private AuthenticationCredentials credentials         = null;
     private OperationFilterFactory filterFactory          = EmptyOperationFilterFactory.getInstance();
     private Partitioner partitioner                       = DEFAULT_PARTITIONER;
-    private String sslTruststore;
-    private String sslTruststorePassword;
+    private SSLConnectionContext sslCtx;
 
+    private ScheduledExecutorService maintainanceExecutor;
+    private ScheduledExecutorService reconnectExecutor;
+    
+    private boolean bOwnMaintainanceExecutor              = false;
+    private boolean bOwnReconnectExecutor                 = false;
+            
     private String localDatacenter = null;
-    private boolean useSsl = false;
 
     public ConnectionPoolConfigurationImpl(String name) {
         this.name = name;
@@ -118,6 +123,29 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
         this.hostRetryBackoffStrategy = new ExponentialRetryBackoffStrategy(this);
     }
 
+    @Override
+    public void initialize() {
+        if (maintainanceExecutor == null) {
+            maintainanceExecutor = Executors.newScheduledThreadPool(DEFAULT_MAINTAINANCE_THREAD_COUNT, new ThreadFactoryBuilder().setDaemon(true).build());
+            bOwnMaintainanceExecutor = true;
+        }
+        if (reconnectExecutor == null) {
+            reconnectExecutor = Executors.newScheduledThreadPool(DEFAULT_RECONNECT_THREAD_COUNT, new ThreadFactoryBuilder().setDaemon(true).build());
+            bOwnReconnectExecutor = true;
+        }
+    }
+    
+    @Override
+    public void shutdown() {
+        if (bOwnMaintainanceExecutor) {
+            maintainanceExecutor.shutdownNow();
+        }
+        
+        if (bOwnReconnectExecutor) {
+            reconnectExecutor.shutdownNow();
+        }
+    }
+    
     /*
      * (non-Javadoc)
      * 
@@ -534,48 +562,35 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
         return this;
     }
 
-    public boolean isUsingSsl() {
-        return useSsl;
+    public SSLConnectionContext getSSLConnectionContext() {
+        return sslCtx;
     }
 
-    public ConnectionPoolConfigurationImpl setUsingSsl(boolean useSsl) {
-        this.useSsl = useSsl;
+    public ConnectionPoolConfigurationImpl setSSLConnectionContext(SSLConnectionContext sslCtx) {
+        this.sslCtx = sslCtx;
         return this;
     }
 
-    public String getSslProtocol() {
-        return sslProtocol;
+    @Override
+    public ScheduledExecutorService getMaintainanceScheduler() {
+        return maintainanceExecutor;
     }
 
-    public ConnectionPoolConfigurationImpl setSslProtocol(String sslProtocol) {
-        this.sslProtocol = sslProtocol;
+    public ConnectionPoolConfigurationImpl setMaintainanceScheduler(ScheduledExecutorService executor) {
+        maintainanceExecutor = executor;
+        bOwnMaintainanceExecutor = false;
         return this;
     }
 
-    public List<String> getSslCipherSuites() {
-        return sslCipherSuites;
+    @Override
+    public ScheduledExecutorService getHostReconnectExecutor() {
+        return this.reconnectExecutor;
     }
 
-    public ConnectionPoolConfigurationImpl setSslCipherSuites(List<String> sslCipherSuites) {
-        this.sslCipherSuites = sslCipherSuites;
+    public ConnectionPoolConfigurationImpl setHostReconnectExecutor(ScheduledExecutorService executor) {
+        reconnectExecutor = executor;
+        bOwnReconnectExecutor = false;
         return this;
     }
 
-    public String getSslTruststore() {
-        return sslTruststore;
-    }
-
-    public ConnectionPoolConfigurationImpl setSslTruststore(String truststore) {
-        this.sslTruststore = truststore;
-        return this;
-    }
-
-    public String getSslTruststorePassword() {
-        return sslTruststorePassword;
-    }
-
-    public ConnectionPoolConfigurationImpl setSslTruststorePassword(String passwd) {
-        this.sslTruststorePassword = passwd;
-        return this;
-    }
 }

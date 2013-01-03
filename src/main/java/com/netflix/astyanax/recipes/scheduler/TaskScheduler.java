@@ -2,69 +2,73 @@ package com.netflix.astyanax.recipes.scheduler;
 
 import java.util.Collection;
 
-import com.netflix.astyanax.recipes.locks.BusyLockException;
+import com.netflix.astyanax.recipes.queue.triggers.Trigger;
+import com.netflix.astyanax.recipes.uniqueness.NotUniqueException;
 
 /**
- * Base interface for a distributed task scheduler.
- * 
- * Common use pattern
- * 
- *  TaskScheduler scheduler = ...;
- *  Collection<Task> tasks = scheduler.acquireTasks(10);
- *  for (Task task : tasks) {
- *      try {
- *          // Do something with this task
- *      }
- *      finally {
- *          scheduler.ackTask(task);
- *      }
- *  }
- *  
- * @author elandau
- *
+ * Common interface for a task scheduler
  */
+@Deprecated
 public interface TaskScheduler {
-    /**
-     * Schedule a job with the provided data
-     * @param data
-     * @throws Exception 
-     */
-    void scheduleTask(Task task) throws SchedulerException;
-    
-    /**
-     * Acquire N items from the queue.  Each item must be released
-     * 
-     * TODO: Items since last process time
-     * 
-     * @param itemsToPop
-     * @return
-     * @throws InterruptedException 
-     * @throws Exception 
-     */
-    Collection<Task> acquireTasks(int itemsToPop) throws SchedulerException, BusyLockException, InterruptedException;
 
     /**
-     * Release a job after completion
-     * @param item
-     * @throws Exception 
+     * Create the underlying storage for the scheduler
+     * @throws TaskSchedulerException
      */
-    void ackTask(Task task) throws SchedulerException;
+    void create() throws TaskSchedulerException;
 
     /**
-     * Release a set of jobs
-     * @param items
+     * Start the scheduler processing threads
+     * @throws TaskSchedulerException
      */
-    void ackTasks(Collection<Task> tasks) throws SchedulerException;
-    
+    void start() throws TaskSchedulerException;
+
     /**
-     * Return the number of tasks in the queue
-     * @return
+     * Stop the scheduler processing threads
+     * @return True if stopped successfully before timing out of false otherwise
+     * @throws TaskSchedulerException
      */
-    long getTaskCount() throws SchedulerException;
-    
+    boolean stop() throws TaskSchedulerException;
+
     /**
-     * Clear all tasks in the queue
-     * @throws SchedulerException
+     * Scheduler a task to run using the provided trigger
+     * @param task - Information about how to run the task
+     * @param trigger - Can be null for single execution
+     * @throws TaskSchedulerException
+     * @throws NotUniqueException 
      */
-    void clearTasks() throws SchedulerException;
+    void scheduleTask(TaskInfo task, Trigger trigger) throws TaskSchedulerException, NotUniqueException;
+
+    /**
+     * Stop a running task
+     * @param taskKey
+     * @throws TaskSchedulerException
+     */
+    void stopTask(String taskKey) throws TaskSchedulerException;
+
+    /**
+     * Start a stopped task
+     * @param taskKey
+     * @throws TaskSchedulerException
+     */
+    void startTask(String taskKey) throws TaskSchedulerException;
+
+    /**
+     * Delete a task
+     * 
+     * @param taskKey
+     * @throws TaskSchedulerException
+     */
+    void deleteTask(String taskKey) throws TaskSchedulerException;
+
+    /**
+     * Get the execution history for a task 
+     * @param taskKey   - Unique task id
+     * @param timeFrom  - History from this time
+     * @param timeTo    - History to this time
+     * @return Collection of history elements
+     * @throws TaskSchedulerException
+     */
+    Collection<TaskHistory> getTaskHistory(String taskKey, Long timeFrom, Long timeTo, int count) throws TaskSchedulerException;
+
 }

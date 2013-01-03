@@ -107,6 +107,7 @@ public class ThriftCounterSuperColumnMutationImpl<C> extends AbstractColumnListM
 
     @Override
     public ColumnListMutation<C> setDefaultTtl(Integer ttl) {
+        // TODO: Throw an exception
         return this;
     }
 }

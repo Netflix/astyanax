@@ -36,58 +36,51 @@ import com.netflix.astyanax.ddl.SchemaChangeResult;
 public interface Cluster {
     /**
      * The cluster name is completely arbitrary
-     * 
-     * @return
      * @throws ConnectionException
      */
     String describeClusterName() throws ConnectionException;
 
     /**
      * Return version of cassandra running on the cluster
-     * 
-     * @return
      * @throws ConnectionException
      */
     String getVersion() throws ConnectionException;
 
     /**
      * Describe the snitch name used on the cluster
-     * 
-     * @return
      * @throws ConnectionException
      */
     String describeSnitch() throws ConnectionException;
 
     /**
      * Describe the partitioner used by the cluster
-     * 
-     * @return
      * @throws ConnectionException
      */
     String describePartitioner() throws ConnectionException;
 
+    /**
+     * For each schema version present in the cluster, returns a list of nodes at that 
+     * version. Hosts that do not respond will be under the key DatabaseDescriptor.INITIAL_VERSION. 
+     * The cluster is all on the same version if the size of the map is 1
+     * @throws ConnectionException
+     */
     Map<String, List<String>> describeSchemaVersions() throws ConnectionException;
 
     /**
      * Prepare a column family definition. Call execute() on the returned object
      * to create the column family.
-     * 
-     * @return
      */
     ColumnFamilyDefinition makeColumnFamilyDefinition();
 
     /**
      * Make a column definitio to be added to a ColumnFamilyDefinition
-     * 
-     * @return
      */
     ColumnDefinition makeColumnDefinition();
 
     /**
      * Delete the column family from the keyspace
      * 
-     * @param columnFamilyName
-     * @return
+     * @param  columnFamilyName To delete
      * @throws OperationException
      * @throws ConnectionException
      */
@@ -97,7 +90,6 @@ public interface Cluster {
      * Add a column family to an existing keyspace
      * 
      * @param def - Created by calling makeColumnFamilyDefinition();
-     * @return
      * @throws ConnectionException
      */
     OperationResult<SchemaChangeResult> addColumnFamily(ColumnFamilyDefinition def) throws ConnectionException;
@@ -106,7 +98,6 @@ public interface Cluster {
      * Update an existing column family
      * 
      * @param def - Created by calling makeColumnFamilyDefinition();
-     * @return
      * @throws ConnectionException
      */
     OperationResult<SchemaChangeResult> updateColumnFamily(ColumnFamilyDefinition def) throws ConnectionException;
@@ -117,15 +108,11 @@ public interface Cluster {
      * 
      * Not that column families can be added the keyspace definition here
      * instead of calling makeColumnFamilyDefinition separately.
-     * 
-     * @return
      */
     KeyspaceDefinition makeKeyspaceDefinition();
 
     /**
      * Return details about all keyspaces in the cluster
-     * 
-     * @return
      * @throws ConnectionException
      */
     List<KeyspaceDefinition> describeKeyspaces() throws ConnectionException;
@@ -133,8 +120,7 @@ public interface Cluster {
     /**
      * Describe a single keyspace
      * 
-     * @param ksName
-     * @return
+     * @param ksName - Keyspace name
      * @throws ConnectionException
      */
     KeyspaceDefinition describeKeyspace(String ksName) throws ConnectionException;
@@ -144,16 +130,13 @@ public interface Cluster {
      * connection pool as the cluster and any other keyspaces created from this
      * cluster instance. As a result each keyspace operation is likely to have
      * some overhead for switching keyspaces.
-     * 
-     * @return
      */
     Keyspace getKeyspace(String keyspace);
 
     /**
      * Delete a keyspace from the cluster
      * 
-     * @param keyspaceName
-     * @return
+     * @param keyspaceName - Keyspace to drop
      * @throws OperationException
      * @throws ConnectionException
      */
@@ -180,26 +163,19 @@ public interface Cluster {
 
     /**
      * Configuration object for this Cluster
-     * 
-     * @return
      */
     AstyanaxConfiguration getConfig();
     
     /**
      * Create a column family in this keyspace
-     * 
-     * @param columnFamily
-     * @param options
-     * @return
+     * @param options - For list of options see http://www.datastax.com/docs/1.0/configuration/storage_configuration
      */
     <K, C>  OperationResult<SchemaChangeResult> createColumnFamily(Map<String, Object> options) throws ConnectionException ;
     
     /**
      * Update the column family in cassandra
      * 
-     * @param columnFamily
-     * @param options
-     * @return
+     * @param options - For list of options see http://www.datastax.com/docs/1.0/configuration/storage_configuration
      */
     <K, C>  OperationResult<SchemaChangeResult> updateColumnFamily(Map<String, Object> options) throws ConnectionException ;
     
@@ -207,13 +183,13 @@ public interface Cluster {
      * Create the keyspace in cassandra.  This call will only create the keyspace and not 
      * any column families.  Once the keyspace has been created then call createColumnFamily
      * for each CF you want to create.
+     * @param options - For list of options see http://www.datastax.com/docs/1.0/configuration/storage_configuration
      */
     OperationResult<SchemaChangeResult> createKeyspace(Map<String, Object> options) throws ConnectionException ;
     
     /**
      * Update the keyspace in cassandra.
-     * @param options
-     * @return
+     * @param options - For list of options see http://www.datastax.com/docs/1.0/configuration/storage_configuration
      */
     OperationResult<SchemaChangeResult> updateKeyspace(Map<String, Object> options) throws ConnectionException ;
     

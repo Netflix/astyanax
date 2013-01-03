@@ -34,13 +34,11 @@ public class TestHostConnectionPool implements HostConnectionPool<TestClient> {
     @Override
     public Connection<TestClient> borrowConnection(int timeout)
             throws ConnectionException {
-        // TODO Auto-generated method stub
         return null;
     }
 
     @Override
     public boolean returnConnection(Connection<TestClient> connection) {
-        // TODO Auto-generated method stub
         return false;
     }
 
@@ -57,7 +55,6 @@ public class TestHostConnectionPool implements HostConnectionPool<TestClient> {
     @Override
     public int primeConnections(int numConnections) throws ConnectionException,
             InterruptedException {
-        // TODO Auto-generated method stub
         return 0;
     }
 
@@ -68,92 +65,82 @@ public class TestHostConnectionPool implements HostConnectionPool<TestClient> {
 
     @Override
     public int getActiveConnectionCount() {
-        // TODO Auto-generated method stub
         return 0;
     }
 
     @Override
     public int getPendingConnectionCount() {
-        // TODO Auto-generated method stub
         return 0;
     }
 
     @Override
     public int getBlockedThreadCount() {
-        // TODO Auto-generated method stub
         return 0;
     }
 
     @Override
     public int getIdleConnectionCount() {
-        // TODO Auto-generated method stub
         return 0;
     }
 
     @Override
     public int getBusyConnectionCount() {
-        // TODO Auto-generated method stub
         return 0;
     }
 
     @Override
     public boolean isReconnecting() {
-        // TODO Auto-generated method stub
         return false;
     }
 
     @Override
     public double getScore() {
-        // TODO Auto-generated method stub
         return 0;
     }
 
     @Override
     public void addLatencySample(long lastLatency, long now) {
-        // TODO Auto-generated method stub
 
     }
 
     @Override
     public boolean closeConnection(Connection<TestClient> connection) {
-        // TODO Auto-generated method stub
         return false;
     }
 
     @Override
     public int getOpenedConnectionCount() {
-        // TODO Auto-generated method stub
         return 0;
     }
 
     @Override
     public int getFailedOpenConnectionCount() {
-        // TODO Auto-generated method stub
         return 0;
     }
 
     @Override
     public int getClosedConnectionCount() {
-        // TODO Auto-generated method stub
         return 0;
     }
 
     @Override
     public int getErrorsSinceLastSuccess() {
-        // TODO Auto-generated method stub
         return 0;
     }
 
     @Override
     public boolean isActive() {
-        // TODO Auto-generated method stub
         return false;
     }
 
     @Override
     public boolean isShutdown() {
-        // TODO Auto-generated method stub
         return false;
+    }
+
+    @Override
+    public int getConnectAttemptCount() {
+        return 0;
     }
 
 }

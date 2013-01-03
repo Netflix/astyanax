@@ -16,6 +16,7 @@
 package com.netflix.astyanax.connectionpool;
 
 import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
 
 import com.netflix.astyanax.AuthenticationCredentials;
 import com.netflix.astyanax.partitioner.Partitioner;
@@ -277,31 +278,33 @@ public interface ConnectionPoolConfiguration {
      */
     Partitioner getPartitioner();
 
-    // ssl values
+    /**
+     * Retrieve a context to determine if connections should be made using SSL.
+     */
+    SSLConnectionContext getSSLConnectionContext();
 
     /**
-     * Declares if connections should be made using SSL.
+     * Return executor service used for maintenance tasks.  This pool is used for internal
+     * operations that update stats such as token aware scores.  Threads in this pool 
+     * and not expected to block on I/O and the pool can therefore be very small
+     * @return
      */
-    boolean isUsingSsl();
+    ScheduledExecutorService getMaintainanceScheduler();
 
     /**
-     * SSL protocol (typically, TLS)
+     * Return executor service used to reconnect hosts.  Keep in mind that the threads 
+     * may be blocked for an extended duration while trying to reconnect to a downed host
+     * @return
      */
-    String getSslProtocol();
+    ScheduledExecutorService getHostReconnectExecutor();
 
     /**
-     * The SSL ciphers to use. Common examples, often default, are
-     * TLS_RSA_WITH_AES_128_CBC_SHA and TLS_RSA_WITH_AES_256_CBC_SHA
+     * Initialization prior to starting the connection pool 
      */
-    List<String> getSslCipherSuites();
+    void initialize();
 
     /**
-     * path to SSL truststore
+     * Shutdown after stopping the connection pool
      */
-    String getSslTruststore();
-
-    /**
-     * password to SSL truststore
-     */
-    String getSslTruststorePassword();
+    void shutdown();
 }

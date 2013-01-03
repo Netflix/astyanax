@@ -59,32 +59,32 @@ public class TestKeyspace implements Keyspace {
 
     @Override
     public MutationBatch prepareMutationBatch() {
-        // TODO Auto-generated method stub
+        
         return null;
     }
 
     @Override
     public <K, C> ColumnFamilyQuery<K, C> prepareQuery(ColumnFamily<K, C> cf) {
-        // TODO Auto-generated method stub
+        
         return null;
     }
 
     @Override
     public <K, C> ColumnMutation prepareColumnMutation(
             ColumnFamily<K, C> columnFamily, K rowKey, C column) {
-        // TODO Auto-generated method stub
+        
         return null;
     }
 
     @Override
     public AstyanaxConfiguration getConfig() {
-        // TODO Auto-generated method stub
+        
         return null;
     }
 
     @Override
     public KeyspaceDefinition describeKeyspace() throws ConnectionException {
-        // TODO Auto-generated method stub
+        
         return null;
     }
 
@@ -97,7 +97,7 @@ public class TestKeyspace implements Keyspace {
     @Override
     public OperationResult<Void> testOperation(Operation<?, ?> operation)
             throws ConnectionException {
-        // TODO Auto-generated method stub
+        
         return null;
     }
 
@@ -105,20 +105,20 @@ public class TestKeyspace implements Keyspace {
     public <K, C> OperationResult<Void> truncateColumnFamily(
             ColumnFamily<K, C> columnFamily) throws OperationException,
             ConnectionException {
-        // TODO Auto-generated method stub
+        
         return null;
     }
 
     @Override
     public OperationResult<Void> testOperation(Operation<?, ?> operation,
             RetryPolicy retry) throws ConnectionException {
-        // TODO Auto-generated method stub
+        
         return null;
     }
 
     @Override
     public List<TokenRange> describeRing(boolean cached) throws ConnectionException {
-        // TODO Auto-generated method stub
+        
         return null;
     }
 
@@ -134,63 +134,63 @@ public class TestKeyspace implements Keyspace {
 
     @Override
     public OperationResult<Void> truncateColumnFamily(String columnFamily) throws ConnectionException {
-        // TODO Auto-generated method stub
+        
         return null;
     }
 
     @Override
     public String describePartitioner() throws ConnectionException {
-        // TODO Auto-generated method stub
+        
         return null;
     }
 
     @Override
     public OperationResult<SchemaChangeResult> dropColumnFamily(String columnFamilyName) throws ConnectionException {
-        // TODO Auto-generated method stub
+        
         return null;
     }
 
     @Override
     public <K, C> OperationResult<SchemaChangeResult> dropColumnFamily(ColumnFamily<K, C> columnFamily) throws ConnectionException {
-        // TODO Auto-generated method stub
+        
         return null;
     }
 
     @Override
     public OperationResult<SchemaChangeResult> dropKeyspace() throws ConnectionException {
-        // TODO Auto-generated method stub
+        
         return null;
     }
 
     @Override
     public <K, C> OperationResult<SchemaChangeResult> createColumnFamily(ColumnFamily<K, C> columnFamily, Map<String, Object> options)
             throws ConnectionException {
-        // TODO Auto-generated method stub
+        
         return null;
     }
 
     @Override
     public <K, C> OperationResult<SchemaChangeResult> updateColumnFamily(ColumnFamily<K, C> columnFamily, Map<String, Object> options)
             throws ConnectionException {
-        // TODO Auto-generated method stub
+        
         return null;
     }
 
     @Override
     public OperationResult<SchemaChangeResult> createKeyspace(Map<String, Object> options) throws ConnectionException {
-        // TODO Auto-generated method stub
+        
         return null;
     }
 
     @Override
     public OperationResult<SchemaChangeResult> updateKeyspace(Map<String, Object> options) throws ConnectionException {
-        // TODO Auto-generated method stub
+        
         return null;
     }
 
     @Override
     public <K, C> OperationResult<SchemaChangeResult> createColumnFamily(Map<String, Object> options) throws ConnectionException {
-        // TODO Auto-generated method stub
+        
         return null;
     }
 }

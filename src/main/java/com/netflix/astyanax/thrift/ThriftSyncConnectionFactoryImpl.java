@@ -31,6 +31,7 @@ import com.netflix.astyanax.connectionpool.HostConnectionPool;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.RateLimiter;
+import com.netflix.astyanax.connectionpool.SSLConnectionContext;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.IsTimeoutException;
 import com.netflix.astyanax.connectionpool.exceptions.ThrottledException;
@@ -161,9 +162,10 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
 
                 long startTime = System.currentTimeMillis();
                 try {
-                    if(cpConfig.isUsingSsl()) {
-                        TSSLTransportParameters params = new TSSLTransportParameters(cpConfig.getSslProtocol(), cpConfig.getSslCipherSuites().toArray(new String[0]));
-                        params.setTrustStore(cpConfig.getSslTruststore(), cpConfig.getSslTruststorePassword());
+                    final SSLConnectionContext sslCxt = cpConfig.getSSLConnectionContext();
+                    if(sslCxt != null) {
+                        TSSLTransportParameters params = new TSSLTransportParameters(sslCxt.getSslProtocol(), sslCxt.getSslCipherSuites().toArray(new String[0]));
+                        params.setTrustStore(sslCxt.getSslTruststore(), sslCxt.getSslTruststorePassword());
                         //thrift's SSL implementation does not allow you set the socket connect timeout, only read timeout
                         socket = TSSLTransportFactory.getClientSocket(getHost().getIpAddress(), getHost().getPort(), cpConfig.getSocketTimeout(), params);
                     } else {

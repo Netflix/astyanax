@@ -1,58 +1,17 @@
 package com.netflix.astyanax.recipes.scheduler;
 
-import java.util.UUID;
-
-public class Task {
+/**
+ * All scheduler tasks must implement this interface.  An instance of the concrete
+ * task class will be created when each trigger is fired and the execute() method
+ * will be called with the task context.
+ * 
+ * @author elandau
+ */
+@Deprecated
+public interface Task {
     /**
-     * Last execution time, this value changes as the task state is transitioned
+     * Called every time the trigger is fired
+     * @param task
      */
-    private UUID    token;
-    
-    /**
-     * Data associated with the task
-     */
-    private String  data;
-    
-    /**
-     * Execution time for the task in milliseconds
-     */
-    private Long    nextTriggerTime;
-
-    public Task() {
-        
-    }
-    
-    public Task(UUID taskId, String data) {
-        this.token = taskId;
-        this.data   = data;
-    }
-    
-    public UUID getTaskId() {
-        return token;
-    }
-
-    public String getData() {
-        return data;
-    }
-
-    public Task setTaskId(UUID taskId) {
-        this.token = taskId;
-        return this;
-    }
-
-    public Task setData(String data) {
-        this.data = data;
-        return this;
-    }
-
-    public Long getNextTriggerTime() {
-        return nextTriggerTime;
-    }
-
-    public Task setNextTriggerTime(Long nextTriggerTime) {
-        this.nextTriggerTime = nextTriggerTime;
-        return this;
-    }
-    
-    
+    void execute(TaskInfo task);
 }

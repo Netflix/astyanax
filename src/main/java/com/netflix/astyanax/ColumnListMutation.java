@@ -34,12 +34,11 @@ public interface ColumnListMutation<C> {
      * only when you need a custom serializer otherwise use the overloaded
      * putColumn calls to insert common value types.
      * 
-     * @param <V>
-     * @param columnName
-     * @param value
-     * @param valueSerializer
-     * @param ttl
-     * @return
+     * @param <V>               The value type
+     * @param columnName        The column name
+     * @param value             The value
+     * @param valueSerializer   Serializer used to convert value to internal ByteBuffer
+     * @param ttl               Optional TTL, null for none
      */
     <V> ColumnListMutation<C> putColumn(C columnName, V value, Serializer<V> valueSerializer, Integer ttl);
     <V> ColumnListMutation<C> putColumnIfNotNull(C columnName, V value, Serializer<V> valueSerializer, Integer ttl);
@@ -60,6 +59,16 @@ public interface ColumnListMutation<C> {
     ColumnListMutation<C> putColumnIfNotNull(C columnName, byte[] value, Integer ttl);
     ColumnListMutation<C> putColumnIfNotNull(C columnName, byte[] value);
 
+    ColumnListMutation<C> putColumn(C columnName, byte value, Integer ttl);
+    ColumnListMutation<C> putColumn(C columnName, byte value);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, Byte value, Integer ttl);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, Byte value);
+    
+    ColumnListMutation<C> putColumn(C columnName, short value, Integer ttl);
+    ColumnListMutation<C> putColumn(C columnName, short value);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, Short value, Integer ttl);
+    ColumnListMutation<C> putColumnIfNotNull(C columnName, Short value);
+    
     ColumnListMutation<C> putColumn(C columnName, int value, Integer ttl);
     ColumnListMutation<C> putColumn(C columnName, int value);
     ColumnListMutation<C> putColumnIfNotNull(C columnName, Integer value, Integer ttl);
@@ -105,13 +114,19 @@ public interface ColumnListMutation<C> {
 
     ColumnListMutation<C> incrementCounterColumn(C columnName, long amount);
 
+    /**
+     * Insert a delete column mutation.  Note that you must be careful when deleting 
+     * and adding the same column on the same mutation.  For the most part all columns
+     * will have the same timestamp so only the first operation will be performed.
+     * @param columnName
+     * @return
+     */
     ColumnListMutation<C> deleteColumn(C columnName);
 
     /**
      * The the timestamp for all subsequent column operation in this ColumnListMutation
      * This timestamp does not affect the current timestamp for the entire MutationBatch
      * @param timestamp New timestamp in microseconds
-     * @return
      */
     ColumnListMutation<C> setTimestamp(long timestamp);
 
@@ -120,8 +135,6 @@ public interface ColumnListMutation<C> {
      * root of a row effectively deletes the entire row. This operation also
      * increments the internal timestamp by 1 so new mutations can be added to
      * this row.
-     * 
-     * @return
      */
     ColumnListMutation<C> delete();
 
@@ -130,7 +143,6 @@ public interface ColumnListMutation<C> {
      * default TTL is null, which means no TTL.
      * 
      * @param ttl  Timeout value in seconds
-     * @return
      */
     ColumnListMutation<C> setDefaultTtl(Integer ttl);
 

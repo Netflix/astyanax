@@ -31,8 +31,6 @@ import com.netflix.astyanax.retry.RetryPolicy;
 public interface AstyanaxConfiguration {
     /**
      * TODO
-     * 
-     * @return
      */
     RetryPolicy getRetryPolicy();
 
@@ -40,8 +38,6 @@ public interface AstyanaxConfiguration {
      * Default consistency level used when reading from the cluster. This value
      * can be overwritten on the Query operations (returned by
      * Keyspace.prepareXXQuery) by calling Query.setConsistencyLevel().
-     * 
-     * @return
      */
     ConsistencyLevel getDefaultReadConsistencyLevel();
 
@@ -50,23 +46,17 @@ public interface AstyanaxConfiguration {
      * can be overwritten on MutationBatch operation (returned by
      * Keyspace.prepareMutationBatch) by calling
      * MutationBatch.setConsistencyLevel().
-     * 
-     * @return
      */
     ConsistencyLevel getDefaultWriteConsistencyLevel();
 
     /**
      * Return clock to use when setting timestamps for column insertion and
      * deletion operations.
-     * 
-     * @return
      */
     Clock getClock();
 
     /**
      * Return the maximum number of allows async threads to executeAsync()
-     * 
-     * @return
      */
     ExecutorService getAsyncExecutor();
 
@@ -77,22 +67,17 @@ public interface AstyanaxConfiguration {
 
     /**
      * Get type of node discovery to perform
-     * 
-     * @return
      */
     NodeDiscoveryType getDiscoveryType();
 
     /**
      * Type of connection pool to use for this instance
-     * 
-     * @return
      */
     ConnectionPoolType getConnectionPoolType();
 
     /**
      * Get the CQL version to set when sending CQL queries
      * @param cqlVersion
-     * @return
      */
     String getCqlVersion();
 }

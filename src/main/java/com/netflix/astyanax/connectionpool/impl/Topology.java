@@ -2,6 +2,8 @@ package com.netflix.astyanax.connectionpool.impl;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
 
@@ -78,4 +80,23 @@ public interface Topology<CL> {
      * @return
      */
     int getPartitionCount();
+
+    /**
+     * Return a list of all unqiue ids or first token for partitions in the topology
+     * @return
+     */
+    List<String> getPartitionNames();
+
+    /**
+     * Return a mapping of partition ids to partition details
+     * @return
+     */
+    Map<String, TokenHostConnectionPoolPartition<CL>> getPartitions();
+    
+    /**
+     * Return the partition for a specific token
+     * @param token
+     * @return
+     */
+    TokenHostConnectionPoolPartition<CL> getPartition(String token);
 }

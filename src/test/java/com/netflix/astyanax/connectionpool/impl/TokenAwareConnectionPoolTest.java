@@ -37,6 +37,7 @@ public class TokenAwareConnectionPoolTest extends BaseConnectionPoolTest {
         ConnectionPoolConfiguration config = new ConnectionPoolConfigurationImpl(
                 TestConstants.CLUSTER_NAME + "_" + TestConstants.KEYSPACE_NAME)
             .setPartitioner(OrderedBigIntegerPartitioner.get());
+        config.initialize();
 
         CountingConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
 

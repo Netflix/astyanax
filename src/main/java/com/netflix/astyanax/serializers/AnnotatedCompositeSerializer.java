@@ -24,7 +24,7 @@ import com.netflix.astyanax.model.RangeEndpoint;
 public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
     private static byte END_OF_COMPONENT = 0;
     private static ByteBuffer EMPTY_BYTE_BUFFER = ByteBuffer.allocate(0);
-
+    private static final int DEFAULT_BUFFER_SIZE = 512;
     /**
      * Serializer for a single component within the Pojo
      * 
@@ -69,12 +69,18 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
         }
     }
 
-    private List<ComponentSerializer<?>> components;
-    private Class<T> clazz;
-
+    private final List<ComponentSerializer<?>> components;
+    private final Class<T> clazz;
+    private final int bufferSize;
+    
     public AnnotatedCompositeSerializer(Class<T> clazz) {
-        this.clazz = clazz;
+        this(clazz, DEFAULT_BUFFER_SIZE);
+    }
+    
+    public AnnotatedCompositeSerializer(Class<T> clazz, int bufferSize) {
+        this.clazz      = clazz;
         this.components = new ArrayList<ComponentSerializer<?>>();
+        this.bufferSize = bufferSize;
 
         for (Field field : clazz.getDeclaredFields()) {
             Component annotation = field.getAnnotation(Component.class);
@@ -89,7 +95,8 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
 
     @Override
     public ByteBuffer toByteBuffer(T obj) {
-        ByteBufferOutputStream out = new ByteBufferOutputStream();
+        ByteBuffer bb = ByteBuffer.allocate(bufferSize);
+        
         for (ComponentSerializer<?> serializer : components) {
             try {
                 // First, serialize the ByteBuffer for this component
@@ -98,16 +105,23 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
                     cb = ByteBuffer.allocate(0);
                 }
 
+                if (cb.limit() + 3 > bb.remaining()) {
+                    ByteBuffer temp = ByteBuffer.allocate(bb.limit() * 2);
+                    bb.flip();
+                    temp.put(bb);
+                    bb = temp;
+                }
                 // Write the data: <length><data><0>
-                out.writeShort((short) cb.remaining());
-                out.write(cb.slice());
-                out.write(END_OF_COMPONENT);
+                bb.putShort((short) cb.remaining());
+                bb.put(cb.slice());
+                bb.put(END_OF_COMPONENT);
             }
             catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
-        return out.getByteBuffer();
+        bb.flip();
+        return bb;
     }
 
     @Override
@@ -200,9 +214,10 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
 
     public <T1> RangeEndpoint makeEndpoint(T1 value, Equality equality) {
         RangeEndpoint endpoint = new RangeEndpoint() {
-            private ByteBufferOutputStream out = new ByteBufferOutputStream();
+            private ByteBuffer out = ByteBuffer.allocate(bufferSize);
             private int position = 0;
-
+            private boolean done = false;
+            
             @Override
             public RangeEndpoint append(Object value, Equality equality) {
                 ComponentSerializer<?> serializer = components.get(position);
@@ -220,16 +235,27 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
                     cb = EMPTY_BYTE_BUFFER;
                 }
 
+                if (cb.limit() + 3 > out.remaining()) {
+                    ByteBuffer temp = ByteBuffer.allocate(out.limit() * 2);
+                    out.flip();
+                    temp.put(out);
+                    out = temp;
+                }
+
                 // Write the data: <length><data><0>
-                out.writeShort((short) cb.remaining());
-                out.write(cb.slice());
-                out.write(equality.toByte());
+                out.putShort((short) cb.remaining());
+                out.put(cb.slice());
+                out.put(equality.toByte());
                 return this;
             }
 
             @Override
             public ByteBuffer toBytes() {
-                return out.getByteBuffer();
+                if (!done) {
+                    out.flip();
+                    done = true;
+                }
+                return out;
             }
         };
         endpoint.append(value, equality);

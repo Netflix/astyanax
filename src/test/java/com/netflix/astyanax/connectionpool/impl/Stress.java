@@ -84,7 +84,8 @@ public class Stress {
         final ConnectionPoolMonitor monitor   = new CountingConnectionPoolMonitor();
         TestConnectionFactory factory         = new TestConnectionFactory(config, monitor);
         final ConnectionPool<TestClient> pool = new RoundRobinConnectionPoolImpl<TestClient>(config, factory, monitor);
-        
+        pool.start();
+
         final List<Host> hosts = Lists.newArrayList(
                 new Host("127.0.0.1",  TestHostType.GOOD_FAST.ordinal()),
                 new Host("127.0.0.2",  TestHostType.GOOD_FAST.ordinal()),
@@ -95,10 +96,10 @@ public class Stress {
                 new Host("127.0.0.7",  TestHostType.GOOD_FAST.ordinal()),
                 new Host("127.0.0.8",  TestHostType.GOOD_FAST.ordinal()),
 //                new Host("127.0.0.9",  TestHostType.GOOD_SLOW.ordinal()),
-//                new Host("127.0.0.8",  TestHostType.SWAP_EVERY_200.ordinal()),
-//                new Host("127.0.0.10", TestHostType.ALTERNATING_SOCKET_TIMEOUT_200.ordinal()),
-//                new Host("127.0.0.11", TestHostType.ALTERNATING_SOCKET_TIMEOUT_200.ordinal()),
-                new Host("127.0.0.0",  TestHostType.GOOD_FAST.ordinal())
+                new Host("127.0.0.10",  TestHostType.SWAP_EVERY_200.ordinal()),
+                new Host("127.0.0.11", TestHostType.ALTERNATING_SOCKET_TIMEOUT_200.ordinal())
+//                new Host("127.0.0.12", TestHostType.ALTERNATING_SOCKET_TIMEOUT_200.ordinal()),
+//                new Host("127.0.0.13",  TestHostType.CONNECT_FAIL_FIRST_TWO.ordinal())
                 );
         
         for (Host host : hosts) {
@@ -110,7 +111,6 @@ public class Stress {
             counts.put(p.getHost(), new AtomicLong());
         }
         System.out.println(monitor.toString());
-        pool.start();
         
         final AtomicBoolean timeoutsEnabled = new AtomicBoolean(false);
         final AtomicLong lastOperationCount = new AtomicLong();
@@ -161,11 +161,11 @@ public class Stress {
 //                    throw new RuntimeException(new HostDownException("HostDownException"));
 //                }
 //            })
-            .withProbability(0.01, new Function<TestDriver, Void>() {
-                public Void apply(@Nullable TestDriver arg0) {
-                    throw new RuntimeException(new ConnectionAbortedException("ConnectionAbortedException"));
-                }
-            })
+//            .withProbability(0.01, new Function<TestDriver, Void>() {
+//                public Void apply(@Nullable TestDriver arg0) {
+//                    throw new RuntimeException(new ConnectionAbortedException("ConnectionAbortedException"));
+//                }
+//            })
 //            .withProbability(0.0001, new Function<TestDriver, Void>() {
 //                public Void apply(@Nullable TestDriver arg0) {
 //                    throw new RuntimeException(new BadRequestException("BadRequestException"));

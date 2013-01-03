@@ -16,6 +16,7 @@
 package com.netflix.astyanax.connectionpool.impl;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -29,6 +30,7 @@ import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
 import com.netflix.astyanax.connectionpool.OperationFilterFactory;
 import com.netflix.astyanax.connectionpool.RetryBackoffStrategy;
+import com.netflix.astyanax.connectionpool.SSLConnectionContext;
 import com.netflix.astyanax.partitioner.BigInteger127Partitioner;
 import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.shallows.EmptyBadHostDetectorImpl;
@@ -69,7 +71,7 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     public static final Partitioner DEFAULT_PARTITIONER = BigInteger127Partitioner.get();
     private static final int DEFAULT_RECONNECT_THREAD_COUNT = 5;
     private static final int DEFAULT_MAINTAINANCE_THREAD_COUNT = 1;
-    
+
     private final String name;
 
     private int maxConnsPerPartition             = DEFAULT_MAX_ACTIVE_PER_PARTITION;
@@ -105,6 +107,8 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     private AuthenticationCredentials credentials         = null;
     private OperationFilterFactory filterFactory          = EmptyOperationFilterFactory.getInstance();
     private Partitioner partitioner                       = DEFAULT_PARTITIONER;
+    private SSLConnectionContext sslCtx;
+
     private ScheduledExecutorService maintainanceExecutor;
     private ScheduledExecutorService reconnectExecutor;
     
@@ -112,7 +116,7 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     private boolean bOwnReconnectExecutor                 = false;
             
     private String localDatacenter = null;
-    
+
     public ConnectionPoolConfigurationImpl(String name) {
         this.name = name;
         this.badHostDetector = new BadHostDetectorImpl(this);
@@ -532,7 +536,7 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     public Partitioner getPartitioner() {
         return this.partitioner;
     }
-    
+
     public ConnectionPoolConfigurationImpl setPartitioner(Partitioner partitioner) {
         this.partitioner = partitioner;
         return this;
@@ -555,6 +559,15 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     
     public ConnectionPoolConfigurationImpl setMinHostInPoolRatio(float ratio) {
         this.minHostInPoolRatio = ratio;
+        return this;
+    }
+
+    public SSLConnectionContext getSSLConnectionContext() {
+        return sslCtx;
+    }
+
+    public ConnectionPoolConfigurationImpl setSSLConnectionContext(SSLConnectionContext sslCtx) {
+        this.sslCtx = sslCtx;
         return this;
     }
 

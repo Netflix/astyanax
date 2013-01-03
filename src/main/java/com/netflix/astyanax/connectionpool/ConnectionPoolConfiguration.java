@@ -277,7 +277,12 @@ public interface ConnectionPoolConfiguration {
      * @return
      */
     Partitioner getPartitioner();
-    
+
+    /**
+     * Retrieve a context to determine if connections should be made using SSL.
+     */
+    SSLConnectionContext getSSLConnectionContext();
+
     /**
      * Return executor service used for maintenance tasks.  This pool is used for internal
      * operations that update stats such as token aware scores.  Threads in this pool 

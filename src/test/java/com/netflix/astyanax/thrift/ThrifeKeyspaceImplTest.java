@@ -122,6 +122,7 @@ import com.netflix.astyanax.util.JsonRowsWriter;
 import com.netflix.astyanax.util.RangeBuilder;
 import com.netflix.astyanax.util.RecordReader;
 import com.netflix.astyanax.util.RecordWriter;
+import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
 import com.netflix.astyanax.util.TimeUUIDUtils;
 
 public class ThrifeKeyspaceImplTest {
@@ -130,7 +131,6 @@ public class ThrifeKeyspaceImplTest {
 
     private static Keyspace                  keyspace;
     private static AstyanaxContext<Keyspace> keyspaceContext;
-    private static EmbeddedCassandra         cassandra;
 
     private static String TEST_CLUSTER_NAME  = "cass_sandbox";
     private static String TEST_KEYSPACE_NAME = "AstyanaxUnitTests";
@@ -251,8 +251,7 @@ public class ThrifeKeyspaceImplTest {
     public static void setup() throws Exception {
         System.out.println("TESTING THRIFT KEYSPACE");
 
-        cassandra = new EmbeddedCassandra();
-        cassandra.start();
+        SingletonEmbeddedCassandra.getInstance();
         
         Thread.sleep(CASSANDRA_WAIT_TIME);
         
@@ -263,9 +262,6 @@ public class ThrifeKeyspaceImplTest {
     public static void teardown() throws Exception {
         if (keyspaceContext != null)
             keyspaceContext.shutdown();
-        
-        if (cassandra != null)
-            cassandra.stop();
         
         Thread.sleep(CASSANDRA_WAIT_TIME);
     }

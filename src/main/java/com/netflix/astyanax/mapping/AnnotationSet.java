@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 /**
  * Allows for any annotations to be used to mark columns in a bean
  */
+@Deprecated
 public interface AnnotationSet<ID extends Annotation, COLUMN extends Annotation> {
     /**
      * @return the Annotation class that marks a bean field as being the ID/Key

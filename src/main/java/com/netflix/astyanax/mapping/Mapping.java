@@ -42,7 +42,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * names must be strings. Annotate your bean with {@link Id} and {@link Column}.
  * Or, provide an {@link AnnotationSet} that defines IDs and Columns in your
  * bean.
+ * 
+ * @deprecated please use EntityPersister instead
  */
+@Deprecated
 @SuppressWarnings({ "SuspiciousMethodCalls" })
 public class Mapping<T> {
     private final ImmutableMap<String, Field> fields;
@@ -207,8 +210,7 @@ public class Mapping<T> {
      */
     public void fillMutation(T instance, ColumnListMutation<String> mutation) {
         for (String fieldName : getNames()) {
-            Coercions.setColumnMutationFromField(instance,
-                    fields.get(fieldName), fieldName, mutation);
+            Coercions.setColumnMutationFromField(instance, fields.get(fieldName), fieldName, mutation);
         }
     }
 

@@ -20,6 +20,10 @@ import java.lang.annotation.*;
 @Documented
 @Target({ ElementType.FIELD })
 @Retention(RetentionPolicy.RUNTIME)
+@Deprecated
+/**
+ * @deprecated please use javax.persistence.Column instead
+ */
 public @interface Column {
     /**
      * The name by which this particular field should be persisted as. By

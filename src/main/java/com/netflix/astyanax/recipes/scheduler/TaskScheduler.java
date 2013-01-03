@@ -2,11 +2,13 @@ package com.netflix.astyanax.recipes.scheduler;
 
 import java.util.Collection;
 
+import com.netflix.astyanax.recipes.queue.triggers.Trigger;
 import com.netflix.astyanax.recipes.uniqueness.NotUniqueException;
 
 /**
  * Common interface for a task scheduler
  */
+@Deprecated
 public interface TaskScheduler {
 
     /**

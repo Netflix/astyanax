@@ -1,20 +1,23 @@
 package com.netflix.astyanax.serializers;
 
+import java.lang.reflect.Field;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 
-import com.netflix.astyanax.model.Composite;
 import junit.framework.Assert;
 
 import org.apache.cassandra.config.ConfigurationException;
 import org.apache.cassandra.db.marshal.AbstractType;
 import org.apache.cassandra.db.marshal.CompositeType;
 import org.apache.cassandra.db.marshal.TypeParser;
+import org.apache.commons.codec.binary.Hex;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Stopwatch;
 import com.netflix.astyanax.annotations.Component;
+import com.netflix.astyanax.model.Composite;
 
 public class SerializersTest {
 	private static Logger LOG = LoggerFactory.getLogger(SerializersTest.class);
@@ -173,6 +176,31 @@ public class SerializersTest {
 	}
 
 	@Test
+	public void testByteSerializer() {
+		ByteSerializer ser = new ByteSerializer();
+
+		Byte val1 = 31;
+		ByteBuffer bb1 = ser.toByteBuffer(val1);
+		Byte val1_verify = ser.fromByteBuffer(bb1.duplicate());
+		ByteBuffer bb1_str = ser.fromString("31");
+		ByteBuffer bb2 = ser.getNext(bb1);
+		Byte val2 = ser.fromByteBuffer(bb2);
+
+		Assert.assertEquals(val1, val1_verify);
+		Assert.assertEquals(bb1, bb1_str);
+		Assert.assertEquals(1, val2.intValue() - val1.intValue());
+		Assert.assertEquals(bb2.capacity(), bb1.capacity());
+
+		ByteBuffer bbMax = ser.toByteBuffer(Byte.MAX_VALUE);
+		try {
+			ser.getNext(bbMax);
+			Assert.fail();
+		} catch (Exception e) {
+			LOG.info(e.getMessage());
+		}
+	}
+	
+	@Test
 	public void testShortSerializer() {
 		ShortSerializer ser = new ShortSerializer();
 
@@ -270,6 +298,82 @@ public class SerializersTest {
 			LOG.error(e.getMessage());
 			Assert.fail();
 		}
+	}
+	
+	@Test
+	public void testStressAnnotatedCompositeSerializer() throws Exception {
+        AnnotatedCompositeSerializer<Composite1> ser = new AnnotatedCompositeSerializer<Composite1>(
+                Composite1.class);
+
+        int count = 10000;
+        
+        Composite1 c1 = new Composite1("Arielle", "Landau", 6);
+        
+        long startTime, runTime;
+        
+        for (int j = 0; j < 3; j++) {
+            System.out.println("-----");
+            
+            startTime = System.nanoTime();
+            for (int i = 0; i < count; i++) {
+                ByteBuffer bb = ByteBuffer.allocate(8092);
+                bb.putShort((short) c1.firstName.length());
+                bb.put(ByteBuffer.wrap(c1.firstName.getBytes()));
+                bb.put((byte) 0x00);
+                
+                bb.putShort((short) c1.lastName.length());
+                bb.put(ByteBuffer.wrap(c1.lastName.getBytes()));
+                bb.put((byte) 0x00);
+        
+                bb.putShort((short)4);
+                bb.putInt(c1.age);
+                bb.put((byte) 0x00);
+                
+                bb.flip();
+            }
+            runTime = System.nanoTime() - startTime;
+            System.out.println("Raw Time in msec : " + runTime/1000000);
+            
+            StringSerializer sser = StringSerializer.get();
+            
+            Field fFirstName = Composite1.class.getField("firstName");
+            Field fLastName  = Composite1.class.getField("lastName");
+            Field fAge       = Composite1.class.getField("age");
+            
+            startTime = System.nanoTime();
+            for (int i = 0; i < count; i++) {
+                ByteBuffer bb = ByteBuffer.allocate(8092);
+                
+                String firstName = (String)fFirstName.get(c1);
+                bb.putShort((short) firstName.length());
+                bb.put(firstName.getBytes());
+                bb.put((byte) 0x00);
+                
+                String lastName = (String)fLastName.get(c1);
+                bb.putShort((short) lastName.length());
+                bb.put(lastName.getBytes());
+                bb.put((byte) 0x00);
+        
+                int age = (Integer)fAge.get(c1);
+                bb.putShort((short)4);
+                bb.putInt(age);
+                bb.put((byte) 0x00);
+                
+                bb.flip();
+            }
+            runTime = System.nanoTime() - startTime;
+            System.out.println("Reflection Time in msec : " + runTime/1000000);
+            
+            startTime = System.nanoTime();
+            for (int i = 0; i < count; i++) {
+                ByteBuffer bb = ser.toByteBuffer(c1);
+    //            Composite1 c2 = ser.fromByteBuffer(bytes);
+    //            System.out.println(Hex.encodeHexString(bb.array()));
+            }
+            
+            runTime = System.nanoTime() - startTime;
+            System.out.println("toByteBuffer Time in msec : " + runTime/1000000);
+        }
 	}
 
 	@Test

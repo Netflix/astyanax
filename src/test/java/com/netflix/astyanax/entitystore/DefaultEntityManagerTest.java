@@ -66,6 +66,8 @@ public class DefaultEntityManagerTest {
 
 		if (cassandra != null)
 			cassandra.stop();
+		
+        Thread.sleep(1000 * 10);
 	}
 
 	private static void createKeyspace() throws Exception {

@@ -260,12 +260,14 @@ public class ThrifeKeyspaceImplTest {
     }
 
     @AfterClass
-    public static void teardown() {
+    public static void teardown() throws Exception {
         if (keyspaceContext != null)
             keyspaceContext.shutdown();
         
         if (cassandra != null)
             cassandra.stop();
+        
+        Thread.sleep(CASSANDRA_WAIT_TIME);
     }
 
     public static void createKeyspace() throws Exception {

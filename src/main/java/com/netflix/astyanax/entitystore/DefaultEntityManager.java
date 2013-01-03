@@ -9,6 +9,9 @@ import com.google.common.base.Preconditions;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.entitystore.EntityAnnotation.ColumnMapper;
+import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ConsistencyLevel;
@@ -174,6 +177,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 	/**
 	 * @inheritDoc
 	 */
+	@SuppressWarnings("unchecked")
 	public void put(T entity) throws PersistenceException {
 		try {
 			MutationBatch mb = keyspace.prepareMutationBatch();
@@ -187,9 +191,17 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 			K rowKey = (K) idField.get(entity);
 			ColumnListMutation<String> clm = mb.withRow(columnFamily, rowKey);
 
-			Map<String, Field> columns = entityAnnotation.getColumns();
-			for (Map.Entry<String, Field> entry : columns.entrySet()) {
-				Coercions.setColumnMutationFromField(entity, entry.getValue(), entry.getKey(), clm, getTTL(entry.getValue()));
+			Map<String, ColumnMapper> columnMappers = entityAnnotation.getColumnMappers();
+			for (Map.Entry<String, ColumnMapper> entry : columnMappers.entrySet()) {
+				final String columnName = entry.getKey();
+				final Field field = entry.getValue().getField();
+				final Object value = field.get(entity);
+				@SuppressWarnings("rawtypes")
+				final Serializer valueSerializer = entry.getValue().getSerializer();
+				final Integer ttl = getTTL(field);
+				// TODO: suppress the unchecked raw type now.
+				// we have to use the raw type to avoid compiling error
+				clm.putColumn(columnName, value, valueSerializer, ttl);
 			}
 
 			mb.execute();
@@ -215,12 +227,17 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 			Field idField = entityAnnotation.getId();
 			idField.set(entity, id);
 
-			Map<String, Field> columns = entityAnnotation.getColumns();
-			for (com.netflix.astyanax.model.Column<String> c : cl) {
-				Field field = columns.get(c.getName());
-				if (field != null) {
-					Coercions.setFieldFromColumn(entity, field, c);
-				}
+			Map<String, ColumnMapper> columnMappers = entityAnnotation.getColumnMappers();
+			for (Column<String> c : cl) {
+				final ColumnMapper columnMapper = columnMappers.get(c.getName());
+				@SuppressWarnings("rawtypes")
+				final Serializer valueSerializer = columnMapper.getSerializer();
+				// TODO: suppress the unchecked raw type now.
+				// we have to use the raw type to avoid compiling error
+				@SuppressWarnings("unchecked")
+				final Object fieldValue = c.getValue(valueSerializer);
+				final Field field = columnMapper.getField();
+				field.set(entity, fieldValue);
 			}
 			return entity;
 		} catch(Exception e) {

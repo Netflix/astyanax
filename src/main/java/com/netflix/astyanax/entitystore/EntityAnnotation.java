@@ -10,6 +10,8 @@ import javax.persistence.Id;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.serializers.SerializerTypeInferer;
 
 /**
  * utility class to map btw Entity annotations and cassandra data model
@@ -17,16 +19,35 @@ import com.google.common.collect.Sets;
  * @param <K> rowKey type
  */
 class EntityAnnotation {
+	
+	// default/package visibility
+	static class ColumnMapper {
+		private final Field field;
+		private final Serializer<?> serializer;
+		
+		ColumnMapper(Field field, Serializer<?> serializer) {
+			this.field = field;
+			this.serializer = serializer;
+		}
+		
+		Field getField() {
+			return field;
+		}
+		
+		Serializer<?> getSerializer() {
+			return serializer;
+		}
+	}
 
 	private final Class<?> clazz;
 	private final Field idField;
-	private final ImmutableMap<String, Field> columns;
+	private final ImmutableMap<String, ColumnMapper> columnMappers;
 
 	EntityAnnotation(Class<?> clazz) {
 		this.clazz = clazz;
 
 		Field tmpIdField = null;
-		ImmutableMap.Builder<String, Field> builder = ImmutableMap.builder();
+		ImmutableMap.Builder<String, ColumnMapper> builder = ImmutableMap.builder();
 		Set<String> usedColumnNames = Sets.newHashSet();
 		for (Field field : clazz.getDeclaredFields()) {
 			Id idAnnotation = field.getAnnotation(Id.class);
@@ -47,7 +68,8 @@ class EntityAnnotation {
 				Preconditions.checkArgument(!usedColumnNames.contains(columnName), String.format("duplicate case-insensitive column name: %s", columnName));
 				usedColumnNames.add(columnName);
 				field.setAccessible(true);
-				builder.put(columnName, field);
+				Serializer<?> serializer = SerializerTypeInferer.getSerializer(field.getType());
+				builder.put(columnName, new ColumnMapper(field, serializer));
 			}
 		}
 
@@ -55,7 +77,7 @@ class EntityAnnotation {
 		//Preconditions.checkArgument(tmpIdField.getClass().equals(K.getClass()), String.format("@Id field type (%s) doesn't match generic type K (%s)", tmpIdField.getClass(), K.getClass()));
 		idField = tmpIdField;
 
-		this.columns = builder.build();
+		this.columnMappers = builder.build();
 	}
 	
 	private String getColumnName(Column annotation, Field field) {
@@ -69,8 +91,8 @@ class EntityAnnotation {
 		return idField;
 	}
 
-	Map<String, Field> getColumns() {
-		return columns;
+	Map<String, ColumnMapper> getColumnMappers() {
+		return columnMappers;
 	}
 	
 	@Override

@@ -7,7 +7,7 @@ import junit.framework.Assert;
 
 import org.junit.Test;
 
-import com.netflix.astyanax.entitystore.EntityAnnotation;
+import com.netflix.astyanax.entitystore.EntityAnnotation.ColumnMapper;
 
 public class EntityAnnotationTest {
 	
@@ -18,7 +18,7 @@ public class EntityAnnotationTest {
 		Field idField = ea.getId();
 		Assert.assertEquals("id", idField.getName());
 		
-		Map<String, Field> cols = ea.getColumns();
+		Map<String, ColumnMapper> cols = ea.getColumnMappers();
 		System.out.println(cols);
 		Assert.assertEquals(18, cols.size());
 		

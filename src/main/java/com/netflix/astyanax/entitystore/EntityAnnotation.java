@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.Id;
 
 import com.google.common.base.Preconditions;
@@ -44,8 +45,18 @@ class EntityAnnotation {
 	private final Field idField;
 	private final ImmutableMap<String, ColumnMapper> columnMappers;
 
+	/**
+	 * 
+	 * @param clazz
+	 * @throws IllegalArgumentException if clazz is annotated with @Entity
+	 */
 	EntityAnnotation(Class<?> clazz) {
 		this.clazz = clazz;
+		
+		// clazz should be annotated with @Entity
+		Entity entityAnnotation = clazz.getAnnotation(Entity.class);
+		if(entityAnnotation == null)
+			throw new IllegalArgumentException("entity class is NOT annotated with @Entity: " + clazz.getName());
 
 		Field tmpIdField = null;
 		ImmutableMap.Builder<String, ColumnMapper> builder = ImmutableMap.builder();

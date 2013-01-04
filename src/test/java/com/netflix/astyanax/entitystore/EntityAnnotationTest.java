@@ -25,5 +25,10 @@ public class EntityAnnotationTest {
 		Assert.assertNull(cols.get("UUID"));
 		Assert.assertNotNull(cols.get("uuid"));
 	}
+	
+	@Test(expected = IllegalArgumentException.class) 
+	public void missingEntityAnnotation() {
+		new EntityAnnotation(String.class);
+	}
 
 }

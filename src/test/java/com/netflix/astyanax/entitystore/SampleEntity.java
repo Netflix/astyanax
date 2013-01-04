@@ -7,6 +7,7 @@ import java.util.Date;
 import java.util.UUID;
 
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.Id;
 
 import org.apache.cassandra.db.marshal.UTF8Type;
@@ -21,6 +22,7 @@ import com.netflix.astyanax.serializers.ComparatorType;
  * id is not counted as column
  * 17 columns
  */
+@Entity
 public class SampleEntity {
 
 	public static class Foo {

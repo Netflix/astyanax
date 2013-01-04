@@ -1,5 +1,7 @@
 package com.netflix.astyanax.entitystore;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.UUID;
@@ -7,14 +9,108 @@ import java.util.UUID;
 import javax.persistence.Column;
 import javax.persistence.Id;
 
+import org.apache.cassandra.db.marshal.UTF8Type;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
+
 import com.google.common.base.Charsets;
-import com.netflix.astyanax.entitystore.TTL;
+import com.netflix.astyanax.serializers.AbstractSerializer;
+import com.netflix.astyanax.serializers.ComparatorType;
 
 /**
  * id is not counted as column
  * 17 columns
  */
 public class SampleEntity {
+	
+	public static class Foo {
+		
+		public int i;
+		public String s;
+		
+		public Foo(int i, String s) {
+			this.i = i;
+			this.s = s;
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			Foo other = (Foo) obj;
+			if(i == other.i && s.equals(other.s))
+				return true;
+			else
+				return false;
+		}
+		
+		@Override
+		public String toString() {		
+			try {
+				JSONObject jsonObj = new JSONObject();
+				jsonObj.put("i", i);
+				jsonObj.put("s", s);
+				return jsonObj.toString();
+			} catch (JSONException e) {
+				throw new RuntimeException("failed to construct JSONObject for toString", e);
+			}
+		}
+		
+		public static Foo fromString(String str) {
+			try {
+				JSONObject jsonObj = new JSONObject(str);
+				return new Foo(jsonObj.getInt("i"), jsonObj.getString("s"));
+			} catch (JSONException e) {
+				throw new RuntimeException("failed to construct JSONObject for toString", e);
+			}			
+		}
+	}
+	
+	public static class FooSerializer extends AbstractSerializer<Foo> {
+		
+	    private static final String UTF_8 = "UTF-8";
+	    private static final Charset charset = Charset.forName(UTF_8);
+	    private static final FooSerializer instance = new FooSerializer();
+
+	    public static FooSerializer get() {
+	        return instance;
+	    }
+
+	    @Override
+	    public ByteBuffer toByteBuffer(Foo obj) {
+	        if (obj == null) {
+	            return null;
+	        }
+	        return ByteBuffer.wrap(obj.toString().getBytes(charset));
+	    }
+
+	    @Override
+	    public Foo fromByteBuffer(ByteBuffer byteBuffer) {
+	        if (byteBuffer == null) {
+	            return null;
+	        }
+	        return Foo.fromString(charset.decode(byteBuffer).toString());
+	    }
+
+	    @Override
+	    public ComparatorType getComparatorType() {
+	        return ComparatorType.UTF8TYPE;
+	    }
+
+	    @Override
+	    public ByteBuffer fromString(String str) {
+	        return UTF8Type.instance.fromString(str);
+	    }
+
+	    @Override
+	    public String getString(ByteBuffer byteBuffer) {
+	        return UTF8Type.instance.getString(byteBuffer);
+	    }
+	}
 	
 	@Id
 	private String id;
@@ -74,6 +170,10 @@ public class SampleEntity {
 	// name should default to field name
 	@Column()
 	private UUID uuid;
+	
+	@Column(name="FOO")
+	@Serializer(FooSerializer.class)
+	private Foo foo;
 
 	public String getId() {
 		return id;
@@ -227,18 +327,28 @@ public class SampleEntity {
 		this.uuid = uuid;
 	}
 	
+	public Foo getFoo() {
+		return foo;
+	}
+
+	public void setFoo(Foo foo) {
+		this.foo = foo;
+	}
+	
 	@Override
 	public String toString() {
 		return String.format("SampleEntity(id = %s, booleanPrimitive = %b, booleanObject = %b, " +
 				"bytePrimitive = %d, byteObject = %d, shortPrimitive = %d, shortObject = %d, " +
 				"intPrimitive = %d, intObject = %d, longPrimitive = %d, longObject = %d, " +
 				"floatPrimitive = %f, floatObject = %f, doublePrimitive = %f, doubleObject = %f, " +
-				"string = %s, byteArray = %s, date = %s, uuid = %s)", 
+				"string = %s, byteArray = %s, date = %s, uuid = %s, " +
+				"foo = %s)", 
 				id, booleanPrimitive, booleanObject, 
 				bytePrimitive, byteObject, shortPrimitive, shortObject, 
 				intPrimitive, intObject, longPrimitive, longObject,
 				floatPrimitive, floatObject, doublePrimitive, doubleObject,
-				string, new String(byteArray, Charsets.UTF_8), date, uuid);
+				string, new String(byteArray, Charsets.UTF_8), date, uuid, 
+				foo);
 	}
 
 	@Override
@@ -271,7 +381,8 @@ public class SampleEntity {
 				string.equals(other.string) &&
 				Arrays.equals(byteArray, other.byteArray) &&
 				date.equals(other.date) &&
-				uuid.equals(other.uuid)
+				uuid.equals(other.uuid) &&
+				foo.equals(other.foo)
 				)
 			return true;
 		else

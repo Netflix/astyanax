@@ -19,7 +19,7 @@ import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
-import com.netflix.astyanax.entitystore.DefaultEntityManager;
+import com.netflix.astyanax.entitystore.SampleEntity.Foo;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
@@ -131,6 +131,8 @@ public class DefaultEntityManagerTest {
 		entity.setByteArray(RandomStringUtils.randomAlphanumeric(16).getBytes(Charsets.UTF_8));
 		entity.setDate(new Date());
 		entity.setUuid(TimeUUIDUtils.getUniqueTimeUUIDinMicros());
+		Foo foo = new Foo(prng.nextInt(), RandomStringUtils.randomAlphanumeric(4));
+		entity.setFoo(foo);
 		return entity;
 	}
 
@@ -149,7 +151,7 @@ public class DefaultEntityManagerTest {
 		// use low-level astyanax API to confirm the write
 		{
 			ColumnList<String> cl = keyspace.prepareQuery(CF_SAMPLE_ENTITY).getKey(id).execute().getResult();
-			Assert.assertEquals(18, cl.size());
+			Assert.assertEquals(19, cl.size());
 			// more field-level check
 			Assert.assertEquals(origEntity.getString(), cl.getColumnByName("string").getStringValue());
 			Assert.assertArrayEquals(origEntity.getByteArray(), cl.getColumnByName("byte_array").getByteArrayValue());

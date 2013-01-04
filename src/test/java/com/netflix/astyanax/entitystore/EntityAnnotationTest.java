@@ -20,7 +20,7 @@ public class EntityAnnotationTest {
 		
 		Map<String, ColumnMapper> cols = ea.getColumnMappers();
 		System.out.println(cols);
-		Assert.assertEquals(18, cols.size());
+		Assert.assertEquals(19, cols.size());
 		
 		Assert.assertNull(cols.get("UUID"));
 		Assert.assertNotNull(cols.get("uuid"));

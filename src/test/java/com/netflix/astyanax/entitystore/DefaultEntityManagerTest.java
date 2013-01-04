@@ -27,6 +27,7 @@ import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.test.EmbeddedCassandra;
 import com.netflix.astyanax.thrift.ThrifeKeyspaceImplTest;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
+import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
 import com.netflix.astyanax.util.TimeUUIDUtils;
 
 public class DefaultEntityManagerTest {
@@ -35,7 +36,6 @@ public class DefaultEntityManagerTest {
 
 	private static Keyspace                  keyspace;
 	private static AstyanaxContext<Keyspace> keyspaceContext;
-	private static EmbeddedCassandra         cassandra;
 
 	private static String TEST_CLUSTER_NAME  = "junit_cass_sandbox";
 	private static String TEST_KEYSPACE_NAME = "EntityPersisterTestKeyspace";
@@ -49,8 +49,7 @@ public class DefaultEntityManagerTest {
 	@BeforeClass
 	public static void setup() throws Exception {
 
-		cassandra = new EmbeddedCassandra();
-		cassandra.start();
+        SingletonEmbeddedCassandra.getInstance();
 
 		Thread.sleep(1000 * 3);
 
@@ -64,8 +63,7 @@ public class DefaultEntityManagerTest {
 		if (keyspaceContext != null)
 			keyspaceContext.shutdown();
 
-		if (cassandra != null)
-			cassandra.stop();
+        Thread.sleep(1000 * 10);
 	}
 
 	private static void createKeyspace() throws Exception {

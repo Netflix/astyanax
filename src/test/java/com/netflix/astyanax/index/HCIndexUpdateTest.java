@@ -34,7 +34,7 @@ import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 public class HCIndexUpdateTest {
 
 	static AstyanaxContext<Keyspace> context;
-	private static EmbeddedCassandra cassandra;
+	
 	
 	static IndexCoordination indexCoordination;
 	static Keyspace keyspace;
@@ -46,8 +46,7 @@ public class HCIndexUpdateTest {
 	@BeforeClass
 	public static void setup() throws Exception {
 		
-		cassandra = new EmbeddedCassandra();
-		cassandra.start();
+		SetupUtil.startCassandra();
 		//this seems primitive??
 		Thread.sleep(SetupUtil.SERVER_START_TIME);
 
@@ -63,8 +62,7 @@ public class HCIndexUpdateTest {
         if (context != null)
             context.shutdown();
         
-        if (cassandra != null)
-            cassandra.stop();
+       SetupUtil.stopCassandra();
     }
 		
 	

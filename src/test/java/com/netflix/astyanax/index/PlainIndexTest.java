@@ -11,31 +11,18 @@ import org.junit.Test;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
-import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
-import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
-import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
-import com.netflix.astyanax.model.ColumnFamily;
-import com.netflix.astyanax.model.Composite;
-import com.netflix.astyanax.serializers.CompositeSerializer;
-import com.netflix.astyanax.test.EmbeddedCassandra;
-import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 
 public class PlainIndexTest {
 
 	static AstyanaxContext<Keyspace> context;
 	static Keyspace keyspace;
 	
-	static EmbeddedCassandra cassandra;
+	//static EmbeddedCassandra cassandra;
 	
 	@BeforeClass
 	public static void beforeClass() throws Exception {
-		cassandra = new EmbeddedCassandra();
-		cassandra.start();
-		//this seems primitive??
-		Thread.sleep(SetupUtil.SERVER_START_TIME);
-
+		
+		SetupUtil.startCassandra();
 		context = SetupUtil.initKeySpace();
 		keyspace = context.getEntity();
 		
@@ -48,8 +35,7 @@ public class PlainIndexTest {
         if (context != null)
             context.shutdown();
         
-        if (cassandra != null)
-            cassandra.stop();
+       SetupUtil.stopCassandra();
     }
 	@Test
 	public void testPutStringIndex() throws Exception {

@@ -42,8 +42,7 @@ public class HCIndexQueryTest {
 	@BeforeClass
 	public static void setup() throws Exception {
 		
-		cassandra = new EmbeddedCassandra();
-		cassandra.start();
+		SetupUtil.startCassandra();
 		//this seems primitive??
 		Thread.sleep(SetupUtil.SERVER_START_TIME);
 
@@ -59,8 +58,7 @@ public class HCIndexQueryTest {
         if (context != null)
             context.shutdown();
         
-        if (cassandra != null)
-            cassandra.stop();
+       SetupUtil.stopCassandra();
     }
 		
 	

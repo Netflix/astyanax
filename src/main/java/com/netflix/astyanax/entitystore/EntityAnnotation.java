@@ -48,7 +48,9 @@ class EntityAnnotation {
 	/**
 	 * 
 	 * @param clazz
-	 * @throws IllegalArgumentException if clazz is annotated with @Entity
+	 * @throws IllegalArgumentException 
+	 * 		if clazz is NOT annotated with @Entity
+	 * 		if column name contains illegal char (like dot)
 	 */
 	EntityAnnotation(Class<?> clazz) {
 		this.clazz = clazz;
@@ -119,6 +121,8 @@ class EntityAnnotation {
 	private String getColumnName(Column annotation, Field field) {
 		// use field name if annotation name is not set
 		String name = annotation.name().isEmpty() ? field.getName() : annotation.name();
+		if(name.indexOf(".") >= 0)
+			throw new IllegalArgumentException("illegal column name containing reserved dot (.) char: " + name);
 		// standardize to lower case. make column names case insensitive
 		return name.toLowerCase();
 	}

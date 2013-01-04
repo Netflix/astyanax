@@ -1,6 +1,9 @@
 package com.netflix.astyanax.index;
 
+import java.io.IOException;
 import java.util.Date;
+
+import org.apache.thrift.transport.TTransportException;
 
 import com.google.common.collect.ImmutableMap;
 import com.netflix.astyanax.AstyanaxContext;
@@ -14,6 +17,7 @@ import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.serializers.BytesArraySerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
+import com.netflix.astyanax.test.EmbeddedCassandra;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 
 public class SetupUtil {
@@ -21,6 +25,25 @@ public class SetupUtil {
 	public static long SERVER_START_TIME = 3000;
 	public static String DEF_KEYSPACE_NAME = "icrskeyspace";
 
+	
+	static EmbeddedCassandra cassandra;
+	
+	public static synchronized EmbeddedCassandra startCassandra() throws IOException, TTransportException,InterruptedException {
+		if (cassandra == null) {
+			cassandra = new EmbeddedCassandra();
+			cassandra.start();
+			Thread.sleep(SERVER_START_TIME);
+		}
+		return cassandra;
+		
+	}
+	public static synchronized void stopCassandra() {
+		//can't stop it as other tests may be relying on it.
+		//it will be cleaned on vm exit
+		//if (cassandra != null)
+		//cassandra.stop();
+	}
+	
 	public static AstyanaxContext<Keyspace> initKeySpace() throws ConnectionException   {
 		return initKeySpace(DEF_KEYSPACE_NAME);
 
@@ -44,7 +67,7 @@ public class SetupUtil {
 		try {
 			keyspace.dropKeyspace();
 		} catch (Exception e) {
-
+			e.printStackTrace();
 		}
 
 		keyspace.createKeyspace(ImmutableMap
@@ -62,7 +85,12 @@ public class SetupUtil {
 		ColumnFamily<byte[], byte[]> index_cf = ColumnFamily.newColumnFamily(
 				"index_cf", BytesArraySerializer.get(),
 				BytesArraySerializer.get());
-
+		
+		try {
+			keyspace.dropColumnFamily(index_cf);
+		}catch (Exception e) {
+			e.printStackTrace();
+		}
 		keyspace.createColumnFamily(index_cf, ImmutableMap
 				.<String, Object> builder().put("caching", "ALL").build());
 

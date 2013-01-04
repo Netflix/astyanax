@@ -22,17 +22,17 @@ import com.netflix.astyanax.serializers.ComparatorType;
  * 17 columns
  */
 public class SampleEntity {
-	
+
 	public static class Foo {
-		
+
 		public int i;
 		public String s;
-		
+
 		public Foo(int i, String s) {
 			this.i = i;
 			this.s = s;
 		}
-		
+
 		@Override
 		public boolean equals(Object obj) {
 			if (this == obj)
@@ -47,7 +47,7 @@ public class SampleEntity {
 			else
 				return false;
 		}
-		
+
 		@Override
 		public String toString() {		
 			try {
@@ -59,7 +59,7 @@ public class SampleEntity {
 				throw new RuntimeException("failed to construct JSONObject for toString", e);
 			}
 		}
-		
+
 		public static Foo fromString(String str) {
 			try {
 				JSONObject jsonObj = new JSONObject(str);
@@ -69,108 +69,108 @@ public class SampleEntity {
 			}			
 		}
 	}
-	
+
 	public static class FooSerializer extends AbstractSerializer<Foo> {
-		
-	    private static final String UTF_8 = "UTF-8";
-	    private static final Charset charset = Charset.forName(UTF_8);
-	    private static final FooSerializer instance = new FooSerializer();
 
-	    public static FooSerializer get() {
-	        return instance;
-	    }
+		private static final String UTF_8 = "UTF-8";
+		private static final Charset charset = Charset.forName(UTF_8);
+		private static final FooSerializer instance = new FooSerializer();
 
-	    @Override
-	    public ByteBuffer toByteBuffer(Foo obj) {
-	        if (obj == null) {
-	            return null;
-	        }
-	        return ByteBuffer.wrap(obj.toString().getBytes(charset));
-	    }
+		public static FooSerializer get() {
+			return instance;
+		}
 
-	    @Override
-	    public Foo fromByteBuffer(ByteBuffer byteBuffer) {
-	        if (byteBuffer == null) {
-	            return null;
-	        }
-	        return Foo.fromString(charset.decode(byteBuffer).toString());
-	    }
+		@Override
+		public ByteBuffer toByteBuffer(Foo obj) {
+			if (obj == null) {
+				return null;
+			}
+			return ByteBuffer.wrap(obj.toString().getBytes(charset));
+		}
 
-	    @Override
-	    public ComparatorType getComparatorType() {
-	        return ComparatorType.UTF8TYPE;
-	    }
+		@Override
+		public Foo fromByteBuffer(ByteBuffer byteBuffer) {
+			if (byteBuffer == null) {
+				return null;
+			}
+			return Foo.fromString(charset.decode(byteBuffer).toString());
+		}
 
-	    @Override
-	    public ByteBuffer fromString(String str) {
-	        return UTF8Type.instance.fromString(str);
-	    }
+		@Override
+		public ComparatorType getComparatorType() {
+			return ComparatorType.UTF8TYPE;
+		}
 
-	    @Override
-	    public String getString(ByteBuffer byteBuffer) {
-	        return UTF8Type.instance.getString(byteBuffer);
-	    }
+		@Override
+		public ByteBuffer fromString(String str) {
+			return UTF8Type.instance.fromString(str);
+		}
+
+		@Override
+		public String getString(ByteBuffer byteBuffer) {
+			return UTF8Type.instance.getString(byteBuffer);
+		}
 	}
-	
+
 	@Id
 	private String id;
-	
+
 	@Column(name="BOOLEAN_PRIMITIVE")
 	private boolean booleanPrimitive;
-	
+
 	@Column(name="BOOLEAN_OBJECT")
 	private Boolean booleanObject;
-	
+
 	@Column(name="BYTE_PRIMITIVE")
 	private byte bytePrimitive;
-	
+
 	@Column(name="BYTE_OBJECT")
 	private Byte byteObject;
-	
+
 	@Column(name="SHORT_PRIMITIVE")
 	private short shortPrimitive;
-	
+
 	@Column(name="SHORT_OBJECT")
 	private Short shortObject;
-	
+
 	@Column(name="INT_PRIMITIVE")
 	private int intPrimitive;
-	
+
 	@Column(name="INT_OBJECT")
 	private Integer intObject;
-	
+
 	@Column(name="LONG_PRIMITIVE")
 	private long longPrimitive;
-	
+
 	@Column(name="LONG_OBJECT")
 	private Long longObject;
-	
+
 	@Column(name="FLOAT_PRIMITIVE")
 	private float floatPrimitive;
-	
+
 	@Column(name="FLOAT_OBJECT")
 	private Float floatObject;
-	
+
 	@Column(name="DOUBLE_PRIMITIVE")
 	private double doublePrimitive;
-	
+
 	@Column(name="DOUBLE_OBJECT")
 	private Double doubleObject;
-	
+
 	@Column(name="STRING")
 	private String string;
-	
+
 	@Column(name="BYTE_ARRAY")
 	@TTL(123456)
-    private byte[] byteArray;
-	
+	private byte[] byteArray;
+
 	@Column(name="DATE")
 	private Date date;
-	
+
 	// name should default to field name
 	@Column()
 	private UUID uuid;
-	
+
 	@Column(name="FOO")
 	@Serializer(FooSerializer.class)
 	private Foo foo;
@@ -310,7 +310,7 @@ public class SampleEntity {
 	public void setByteArray(byte[] byteArray) {
 		this.byteArray = byteArray;
 	}
-	
+
 	public Date getDate() {
 		return date;
 	}
@@ -326,7 +326,7 @@ public class SampleEntity {
 	public void setUuid(UUID uuid) {
 		this.uuid = uuid;
 	}
-	
+
 	public Foo getFoo() {
 		return foo;
 	}
@@ -334,7 +334,7 @@ public class SampleEntity {
 	public void setFoo(Foo foo) {
 		this.foo = foo;
 	}
-	
+
 	@Override
 	public String toString() {
 		return String.format("SampleEntity(id = %s, booleanPrimitive = %b, booleanObject = %b, " +
@@ -355,7 +355,7 @@ public class SampleEntity {
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
-		
+
 		if (obj == null)
 			return false;
 

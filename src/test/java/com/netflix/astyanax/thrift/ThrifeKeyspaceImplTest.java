@@ -66,6 +66,7 @@ import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.impl.FilteringHostSupplier;
 import com.netflix.astyanax.impl.RingDescribeHostSupplier;
+import com.netflix.astyanax.index.SetupUtil;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
@@ -251,10 +252,9 @@ public class ThrifeKeyspaceImplTest {
     public static void setup() throws Exception {
         System.out.println("TESTING THRIFT KEYSPACE");
 
-        cassandra = new EmbeddedCassandra();
-        cassandra.start();
+        cassandra =SetupUtil.startCassandra();
         
-        Thread.sleep(CASSANDRA_WAIT_TIME);
+        //Thread.sleep(CASSANDRA_WAIT_TIME);
         
         createKeyspace();
     }
@@ -264,8 +264,7 @@ public class ThrifeKeyspaceImplTest {
         if (keyspaceContext != null)
             keyspaceContext.shutdown();
         
-        if (cassandra != null)
-            cassandra.stop();
+        SetupUtil.stopCassandra();
     }
 
     public static void createKeyspace() throws Exception {

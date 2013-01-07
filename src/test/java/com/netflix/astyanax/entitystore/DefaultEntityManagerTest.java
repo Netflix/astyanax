@@ -8,8 +8,6 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
@@ -19,20 +17,18 @@ import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
-import com.netflix.astyanax.entitystore.DefaultEntityManager;
+import com.netflix.astyanax.entitystore.SampleEntity.Bar;
+import com.netflix.astyanax.entitystore.SampleEntity.Bar.BarBar;
+import com.netflix.astyanax.entitystore.SampleEntity.Foo;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.serializers.StringSerializer;
-import com.netflix.astyanax.test.EmbeddedCassandra;
-import com.netflix.astyanax.thrift.ThrifeKeyspaceImplTest;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
 import com.netflix.astyanax.util.TimeUUIDUtils;
 
 public class DefaultEntityManagerTest {
-
-	private static Logger logger = LoggerFactory.getLogger(ThrifeKeyspaceImplTest.class);
 
 	private static Keyspace                  keyspace;
 	private static AstyanaxContext<Keyspace> keyspaceContext;
@@ -129,6 +125,16 @@ public class DefaultEntityManagerTest {
 		entity.setByteArray(RandomStringUtils.randomAlphanumeric(16).getBytes(Charsets.UTF_8));
 		entity.setDate(new Date());
 		entity.setUuid(TimeUUIDUtils.getUniqueTimeUUIDinMicros());
+		Foo foo = new Foo(prng.nextInt(), RandomStringUtils.randomAlphanumeric(4));
+		entity.setFoo(foo);
+		BarBar barbar = new BarBar();
+		barbar.i = prng.nextInt();
+		barbar.s = RandomStringUtils.randomAlphanumeric(4);
+		Bar bar = new Bar();
+		bar.i = prng.nextInt();
+		bar.s = RandomStringUtils.randomAlphanumeric(4);
+		bar.barbar = barbar;
+		entity.setBar(bar);
 		return entity;
 	}
 
@@ -147,11 +153,24 @@ public class DefaultEntityManagerTest {
 		// use low-level astyanax API to confirm the write
 		{
 			ColumnList<String> cl = keyspace.prepareQuery(CF_SAMPLE_ENTITY).getKey(id).execute().getResult();
-			Assert.assertEquals(18, cl.size());
-			// more field-level check
+			
+			// 19 simple columns
+			// 2 one-level-deep nested columns from Bar
+			// 2 two-level-deep nested columns from BarBar
+			Assert.assertEquals(23, cl.size());
+			
+			// simple columns
 			Assert.assertEquals(origEntity.getString(), cl.getColumnByName("string").getStringValue());
 			Assert.assertArrayEquals(origEntity.getByteArray(), cl.getColumnByName("byte_array").getByteArrayValue());
+			
+			// custom ttl
 			Assert.assertEquals(123456, cl.getColumnByName("byte_array").getTtl());
+			
+			//  nested fields
+			Assert.assertEquals(origEntity.getBar().i, cl.getColumnByName("bar.i").getIntegerValue());
+			Assert.assertEquals(origEntity.getBar().s, cl.getColumnByName("bar.s").getStringValue());
+			Assert.assertEquals(origEntity.getBar().barbar.i, cl.getColumnByName("bar.barbar.i").getIntegerValue());
+			Assert.assertEquals(origEntity.getBar().barbar.s, cl.getColumnByName("bar.barbar.s").getStringValue());
 		}
 
 		SampleEntity getEntity = entityPersister.get(id);

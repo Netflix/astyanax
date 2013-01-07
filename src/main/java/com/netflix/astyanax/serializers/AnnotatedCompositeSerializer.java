@@ -139,7 +139,6 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
                 bb.putShort((short) cb.remaining());
                 bb.put(cb.slice());
                 bb.put(END_OF_COMPONENT);
-				System.err.println("Field: "+serializer.field.getName()+" "+bb.array().length);
             }
             catch (Exception e) {
 				e.printStackTrace();

@@ -25,6 +25,9 @@ import com.netflix.astyanax.serializers.ComparatorType;
 @Entity
 public class SampleEntity {
 
+	////////////////////////////////////////////////////////
+	// custom serializer 
+	
 	public static class Foo {
 
 		public int i;
@@ -113,6 +116,91 @@ public class SampleEntity {
 			return UTF8Type.instance.getString(byteBuffer);
 		}
 	}
+	
+	////////////////////////////////////////////////////////
+	// nested entity
+	
+	@Entity
+	public static class Bar {
+		
+		@Entity
+		public static class BarBar {
+			
+			@Column(name="i")
+			public int i;
+			
+			@Column(name="s")
+			public String s;
+		
+			@Override
+			public boolean equals(Object obj) {
+				if (this == obj)
+					return true;
+				if (obj == null)
+					return false;
+				if (getClass() != obj.getClass())
+					return false;
+				BarBar other = (BarBar) obj;
+				if(i == other.i && s.equals(other.s))
+					return true;
+				else
+					return false;
+			}
+
+			@Override
+			public String toString() {		
+				try {
+					JSONObject jsonObj = new JSONObject();
+					jsonObj.put("i", i);
+					jsonObj.put("s", s);
+					return jsonObj.toString();
+				} catch (JSONException e) {
+					throw new RuntimeException("failed to construct JSONObject for toString", e);
+				}
+			}
+		}
+		
+		@Column(name="i")
+		public int i;
+		
+		@Column(name="s")
+		public String s;
+		
+		@Column(name="barbar")
+		public BarBar barbar;
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			Bar other = (Bar) obj;
+			if(i == other.i && s.equals(other.s) && barbar.equals(other.barbar))
+				return true;
+			else
+				return false;
+		}
+
+		@Override
+		public String toString() {		
+			try {
+				JSONObject jsonObj = new JSONObject();
+				jsonObj.put("i", i);
+				jsonObj.put("s", s);
+				JSONObject barbarObj = new JSONObject(barbar.toString());
+				jsonObj.put("barbar", barbarObj);
+				return jsonObj.toString();
+			} catch (JSONException e) {
+				throw new RuntimeException("failed to construct JSONObject for toString", e);
+			}
+		}
+	}
+	
+	////////////////////////////////////////////////////////
+	// root fields
 
 	@Id
 	private String id;
@@ -176,6 +264,9 @@ public class SampleEntity {
 	@Column(name="FOO")
 	@Serializer(FooSerializer.class)
 	private Foo foo;
+	
+	@Column(name="BAR")
+	private Bar bar;
 
 	public String getId() {
 		return id;
@@ -336,6 +427,14 @@ public class SampleEntity {
 	public void setFoo(Foo foo) {
 		this.foo = foo;
 	}
+	
+	public Bar getBar() {
+		return bar;
+	}
+
+	public void setBar(Bar bar) {
+		this.bar = bar;
+	}
 
 	@Override
 	public String toString() {
@@ -344,13 +443,13 @@ public class SampleEntity {
 				"intPrimitive = %d, intObject = %d, longPrimitive = %d, longObject = %d, " +
 				"floatPrimitive = %f, floatObject = %f, doublePrimitive = %f, doubleObject = %f, " +
 				"string = %s, byteArray = %s, date = %s, uuid = %s, " +
-				"foo = %s)", 
+				"foo = %s, bar = %s)", 
 				id, booleanPrimitive, booleanObject, 
 				bytePrimitive, byteObject, shortPrimitive, shortObject, 
 				intPrimitive, intObject, longPrimitive, longObject,
 				floatPrimitive, floatObject, doublePrimitive, doubleObject,
 				string, new String(byteArray, Charsets.UTF_8), date, uuid, 
-				foo);
+				foo, bar);
 	}
 
 	@Override
@@ -384,7 +483,8 @@ public class SampleEntity {
 				Arrays.equals(byteArray, other.byteArray) &&
 				date.equals(other.date) &&
 				uuid.equals(other.uuid) &&
-				foo.equals(other.foo)
+				foo.equals(other.foo) &&
+				bar.equals(other.bar)
 				)
 			return true;
 		else

@@ -3098,6 +3098,36 @@ public class ThrifeKeyspaceImplTest {
         Assert.assertEquals(value, columns.getStringValue(dataColumn, null));
     }
     
+    // This test confirms the fix for https://github.com/Netflix/astyanax/issues/170
+    @Test
+    public void columnAutoPaginateTest() throws Exception {
+        final ColumnFamily<String, UUID> CF1 = ColumnFamily.newColumnFamily("CF1", StringSerializer.get(),
+                TimeUUIDSerializer.get());
+        final ColumnFamily<String, String> CF2 = ColumnFamily.newColumnFamily("CF2", StringSerializer.get(),
+                StringSerializer.get());
+        
+        keyspace.createColumnFamily(CF1, null);
+        Thread.sleep(3000);
+        keyspace.createColumnFamily(CF2, null);
+        Thread.sleep(3000);
+    
+        // query on another column family with different column key type
+        // does not seem to work after the first query
+        keyspace.prepareQuery(CF2).getKey("anything").execute();
+
+        MutationBatch m = keyspace.prepareMutationBatch();
+        m.withRow(CF1, "test").putColumn(TimeUUIDUtils.getUniqueTimeUUIDinMillis(), "value1", null);
+        m.execute();
+    
+        RowQuery<String, UUID> query = keyspace.prepareQuery(CF1).getKey("test").autoPaginate(true);
+    
+        // Adding a column range removes the problem
+        // query.withColumnRange(new RangeBuilder().build());
+    
+        ColumnList<UUID> columns = query.execute().getResult();
+        
+        keyspace.prepareQuery(CF2).getKey("anything").execute();
+    }
     @Test
     public void testQueue() throws Exception {
         final CountingQueueStats stats = new CountingQueueStats();

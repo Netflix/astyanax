@@ -6,16 +6,13 @@ import java.nio.ByteBuffer;
 
 import junit.framework.Assert;
 
-import org.apache.cassandra.config.ConfigurationException;
 import org.apache.cassandra.db.marshal.AbstractType;
 import org.apache.cassandra.db.marshal.CompositeType;
 import org.apache.cassandra.db.marshal.TypeParser;
-import org.apache.commons.codec.binary.Hex;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Stopwatch;
 import com.netflix.astyanax.annotations.Component;
 import com.netflix.astyanax.model.Composite;
 
@@ -465,7 +462,7 @@ public class SerializersTest {
 			} else {
 				Assert.fail();
 			}
-		} catch (ConfigurationException e) {
+		} catch (Exception e) {
 			Assert.fail();
 			LOG.error(e.getMessage());
 		}

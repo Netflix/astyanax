@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Or, provide an {@link AnnotationSet} that defines IDs and Columns in your
  * bean.
  * 
- * @deprecated please use EntityPersister instead
+ * @deprecated please use DefaultEntityManager instead
  */
 @Deprecated
 @SuppressWarnings({ "SuspiciousMethodCalls" })

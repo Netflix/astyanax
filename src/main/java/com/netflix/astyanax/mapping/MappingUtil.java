@@ -27,7 +27,7 @@ import java.util.List;
 /**
  * Higher level mapping functions. Methods that behave similar to a Map.
  * 
- * @deprecated  please use EntityPersister
+ * @deprecated  please use DefaultEntityManager
  */
 @Deprecated
 public class MappingUtil {

@@ -19,6 +19,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -27,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.CounterColumn;
 import org.apache.cassandra.thrift.Cassandra.Client;
+import org.cliffc.high_scale_lib.NonBlockingHashMap;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -42,6 +44,7 @@ import com.netflix.astyanax.WriteAheadEntry;
 import com.netflix.astyanax.WriteAheadLog;
 import com.netflix.astyanax.SerializerPackage;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
+import com.netflix.astyanax.connectionpool.ConnectionContext;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.TokenRange;
@@ -68,7 +71,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     private final ExecutorService       executor;
     private final KeyspaceTracerFactory tracerFactory;
     private final Cache<String, Object> cache;
-
+    
     public ThriftKeyspaceImpl(String ksName, ConnectionPool<Cassandra.Client> pool, AstyanaxConfiguration config,
             final KeyspaceTracerFactory tracerFactory) {
         this.connectionPool = pool;
@@ -101,7 +104,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                     tracerFactory.newTracer(CassandraOperationType.BATCH_MUTATE), getPinnedHost(),
                                     getKeyspaceName()) {
                                 @Override
-                                public Void internalExecute(Client client) throws Exception {
+                                public Void internalExecute(Client client, ConnectionContext context) throws Exception {
                                     client.batch_mutate(getMutationMap(),
                                             ThriftConverter.ToThriftConsistencyLevel(getConsistencyLevel()));
                                     discardMutations();
@@ -158,7 +161,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                 new AbstractKeyspaceOperationImpl<List<TokenRange>>(tracerFactory
                         .newTracer(CassandraOperationType.DESCRIBE_RING), getKeyspaceName()) {
                     @Override
-                    public List<TokenRange> internalExecute(Cassandra.Client client) throws Exception {
+                    public List<TokenRange> internalExecute(Cassandra.Client client, ConnectionContext context) throws Exception {
                         List<org.apache.cassandra.thrift.TokenRange> trs = client.describe_ring(getKeyspaceName());
                         List<TokenRange> range = Lists.newArrayList();
                         
@@ -213,15 +216,21 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                 new AbstractKeyspaceOperationImpl<KeyspaceDefinition>(
                         tracerFactory.newTracer(CassandraOperationType.DESCRIBE_KEYSPACE), getKeyspaceName()) {
                     @Override
-                    public KeyspaceDefinition internalExecute(Cassandra.Client client) throws Exception {
+                    public KeyspaceDefinition internalExecute(Cassandra.Client client, ConnectionContext context) throws Exception {
                         return new ThriftKeyspaceDefinitionImpl(client.describe_keyspace(getKeyspaceName()));
                     }
                 }, getConfig().getRetryPolicy().duplicate()).getResult();
     }
     
     public <K, C> ColumnFamilyQuery<K, C> prepareQuery(ColumnFamily<K, C> cf) {
-        return new ThriftColumnFamilyQueryImpl<K, C>(executor, tracerFactory, this, connectionPool, cf,
-                config.getDefaultReadConsistencyLevel(), config.getRetryPolicy());
+        return new ThriftColumnFamilyQueryImpl<K, C>(
+                executor, 
+                tracerFactory, 
+                this, 
+                connectionPool, 
+                cf,
+                config.getDefaultReadConsistencyLevel(), 
+                config.getRetryPolicy());
     }
 
     @Override
@@ -241,7 +250,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                         tracerFactory.newTracer(CassandraOperationType.COUNTER_MUTATE),
                                         getKeyspaceName()) {
                                     @Override
-                                    public Void internalExecute(Client client) throws Exception {
+                                    public Void internalExecute(Client client, ConnectionContext context) throws Exception {
                                         client.add(key, ThriftConverter.getColumnParent(columnFamily, null),
                                                 new CounterColumn().setValue(amount).setName(column),
                                                 ThriftConverter.ToThriftConsistencyLevel(writeConsistencyLevel));
@@ -278,7 +287,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                         tracerFactory.newTracer(CassandraOperationType.COLUMN_DELETE),
                                         getKeyspaceName()) {
                                     @Override
-                                    public Void internalExecute(Client client) throws Exception {
+                                    public Void internalExecute(Client client, ConnectionContext context) throws Exception {
                                         client.remove(key, new org.apache.cassandra.thrift.ColumnPath()
                                                 .setColumn_family(columnFamily.getName()).setColumn(column), config
                                                 .getClock().getCurrentTime(), ThriftConverter
@@ -315,7 +324,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                         tracerFactory.newTracer(CassandraOperationType.COLUMN_INSERT),
                                         getKeyspaceName()) {
                                     @Override
-                                    public Void internalExecute(Client client) throws Exception {
+                                    public Void internalExecute(Client client, ConnectionContext context) throws Exception {
                                         org.apache.cassandra.thrift.Column c = new org.apache.cassandra.thrift.Column();
                                         c.setName(column).setValue(value).setTimestamp(clock.getCurrentTime());
                                         if (ttl != null) {
@@ -356,7 +365,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                         tracerFactory.newTracer(CassandraOperationType.COLUMN_DELETE),
                                         getKeyspaceName()) {
                                     @Override
-                                    public Void internalExecute(Client client) throws Exception {
+                                    public Void internalExecute(Client client, ConnectionContext context) throws Exception {
                                         client.remove_counter(key, new org.apache.cassandra.thrift.ColumnPath()
                                                 .setColumn_family(columnFamily.getName()).setColumn(column),
                                                 ThriftConverter.ToThriftConsistencyLevel(writeConsistencyLevel));
@@ -407,8 +416,8 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                 new AbstractKeyspaceOperationImpl<Void>(tracerFactory.newTracer(CassandraOperationType.TEST),
                         operation.getPinnedHost(), getKeyspaceName()) {
                     @Override
-                    public Void internalExecute(Client client) throws Exception {
-                        operation.execute(null);
+                    public Void internalExecute(Client client, ConnectionContext context) throws Exception {
+                        operation.execute(null, context);
                         return null;
                     }
                 }, retry);
@@ -430,7 +439,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                 new AbstractKeyspaceOperationImpl<Void>(tracerFactory.newTracer(CassandraOperationType.TRUNCATE),
                         getKeyspaceName()) {
                     @Override
-                    public Void internalExecute(Cassandra.Client client) throws Exception {
+                    public Void internalExecute(Cassandra.Client client, ConnectionContext context) throws Exception {
                         client.truncate(columnFamily);
                         return null;
                     }
@@ -449,7 +458,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                         new AbstractOperationImpl<String>(
                                 tracerFactory.newTracer(CassandraOperationType.DESCRIBE_PARTITIONER)) {
                             @Override
-                            public String internalExecute(Client client) throws Exception {
+                            public String internalExecute(Client client, ConnectionContext context) throws Exception {
                                 return client.describe_partitioner();
                             }
                         }, config.getRetryPolicy().duplicate()).getResult();
@@ -462,7 +471,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                         new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
                                 tracerFactory.newTracer(CassandraOperationType.ADD_COLUMN_FAMILY), getKeyspaceName()) {
                             @Override
-                            public SchemaChangeResult internalExecute(Client client) throws Exception {
+                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
                                 ThriftColumnFamilyDefinitionImpl def = new ThriftColumnFamilyDefinitionImpl();
                                 
                                 Map<String, Object> internalOptions = Maps.newHashMap();
@@ -486,7 +495,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                         new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
                                 tracerFactory.newTracer(CassandraOperationType.ADD_COLUMN_FAMILY), getKeyspaceName()) {
                             @Override
-                            public SchemaChangeResult internalExecute(Client client) throws Exception {
+                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
                                 ThriftColumnFamilyDefinitionImpl def = new ThriftColumnFamilyDefinitionImpl();
                                 
                                 Map<String, Object> internalOptions = Maps.newHashMap();
@@ -517,7 +526,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                         new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
                                 tracerFactory.newTracer(CassandraOperationType.UPDATE_COLUMN_FAMILY), getKeyspaceName()) {
                             @Override
-                            public SchemaChangeResult internalExecute(Client client) throws Exception {
+                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
                                 ThriftColumnFamilyDefinitionImpl def = new ThriftColumnFamilyDefinitionImpl();
                                 
                                 Map<String, Object> internalOptions = Maps.newHashMap();
@@ -543,7 +552,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                         new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
                                 tracerFactory.newTracer(CassandraOperationType.DROP_COLUMN_FAMILY), getKeyspaceName()) {
                             @Override
-                            public SchemaChangeResult internalExecute(Client client) throws Exception {
+                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
                                 return new SchemaChangeResponseImpl()
                                     .setSchemaId(client.system_drop_column_family(columnFamilyName));
                             }
@@ -557,7 +566,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                         new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
                                 tracerFactory.newTracer(CassandraOperationType.DROP_COLUMN_FAMILY), getKeyspaceName()) {
                             @Override
-                            public SchemaChangeResult internalExecute(Client client) throws Exception {
+                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
                                 return new SchemaChangeResponseImpl()
                                     .setSchemaId(client.system_drop_column_family(columnFamily.getName()));
                             }
@@ -571,7 +580,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                         new AbstractOperationImpl<SchemaChangeResult>(
                                 tracerFactory.newTracer(CassandraOperationType.ADD_KEYSPACE)) {
                             @Override
-                            public SchemaChangeResult internalExecute(Client client) throws Exception {
+                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
                                 ThriftKeyspaceDefinitionImpl def = new ThriftKeyspaceDefinitionImpl();
                                 
                                 Map<String, Object> internalOptions = Maps.newHashMap();
@@ -595,7 +604,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                         new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
                                 tracerFactory.newTracer(CassandraOperationType.UPDATE_KEYSPACE), getKeyspaceName()) {
                             @Override
-                            public SchemaChangeResult internalExecute(Client client) throws Exception {
+                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
                                 ThriftKeyspaceDefinitionImpl def = new ThriftKeyspaceDefinitionImpl();
                                 
                                 Map<String, Object> internalOptions = Maps.newHashMap();
@@ -618,11 +627,10 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                         new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
                                 tracerFactory.newTracer(CassandraOperationType.DROP_KEYSPACE), getKeyspaceName()) {
                             @Override
-                            public SchemaChangeResult internalExecute(Client client) throws Exception {
+                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
                                 return new SchemaChangeResponseImpl()
                                     .setSchemaId(client.system_drop_keyspace(getKeyspaceName()));
                             }
                         }, RunOnce.get());
     }
-
 }

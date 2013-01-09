@@ -1,7 +1,5 @@
 package com.netflix.astyanax.thrift;
 
-import java.util.UUID;
-
 import junit.framework.Assert;
 
 import org.junit.AfterClass;
@@ -13,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableMap;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
-import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
@@ -21,16 +18,13 @@ import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
-import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.model.Row;
-import com.netflix.astyanax.query.RowQuery;
+import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
-import com.netflix.astyanax.serializers.TimeUUIDSerializer;
 import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
-import com.netflix.astyanax.util.TimeUUIDUtils;
 
 public class CqlTest {
 
@@ -48,9 +42,9 @@ public class CqlTest {
     private static final int    TTL                 = 20;
     private static final int    TIMEOUT             = 10;
     
-    static ColumnFamily<String, String> CQL3_CF = ColumnFamily.newColumnFamily(
+    static ColumnFamily<Integer, String> CQL3_CF = ColumnFamily.newColumnFamily(
             "Cql3CF", 
-            StringSerializer.get(), 
+            IntegerSerializer.get(), 
             StringSerializer.get());
     
     @BeforeClass
@@ -85,7 +79,7 @@ public class CqlTest {
                                 + "_" + TEST_KEYSPACE_NAME)
                                 .setSocketTimeout(30000)
                                 .setMaxTimeoutWhenExhausted(2000)
-                                .setMaxConnsPerHost(20)
+                                .setMaxConnsPerHost(10)
                                 .setInitConnsPerHost(10)
                                 .setSeeds(SEEDS))
                 .withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
@@ -113,7 +107,7 @@ public class CqlTest {
         
         Thread.sleep(CASSANDRA_WAIT_TIME);
         
-        OperationResult<CqlResult<String, String>> result;
+        OperationResult<CqlResult<Integer, String>> result;
 
         result = keyspace.prepareQuery(CQL3_CF)
             .withCql("CREATE TABLE employees (empID int, deptID int, first_name varchar, last_name varchar, PRIMARY KEY (empID, deptID));")
@@ -122,13 +116,13 @@ public class CqlTest {
         Thread.sleep(CASSANDRA_WAIT_TIME);
         
         KeyspaceDefinition ki = keyspaceContext.getEntity().describeKeyspace();
-        System.out.println("Describe Keyspace: " + ki.getName());
+        LOG.info("Describe Keyspace: " + ki.getName());
         
     }
     
     @Test
     public void testCompoundKey() throws Exception {
-        OperationResult<CqlResult<String, String>> result;
+        OperationResult<CqlResult<Integer, String>> result;
         result = keyspace
                 .prepareQuery(CQL3_CF)
                 .withCql("INSERT INTO employees (empID, deptID, first_name, last_name) VALUES ('111', '222', 'eran', 'landau');")
@@ -144,7 +138,8 @@ public class CqlTest {
                 .withCql("SELECT * FROM employees WHERE empId='111';")
                 .execute();
 
-        for (Row<String, String> row : result.getResult().getRows()) {
+        Assert.assertTrue(!result.getResult().getRows().isEmpty());
+        for (Row<Integer, String> row : result.getResult().getRows()) {
             LOG.info("CQL Key: " + row.getKey());
 
             ColumnList<String> columns = row.getColumns();
@@ -154,6 +149,39 @@ public class CqlTest {
             LOG.info("   first_name : " + columns.getStringValue ("first_name", null));
             LOG.info("   last_name  : " + columns.getStringValue ("last_name",  null));
         }   
+    }
+    
+    @Test
+    public void testPreparedCql() throws Exception {
+        OperationResult<CqlResult<Integer, String>> result;
+        
+        final String INSERT_STATEMENT = "INSERT INTO employees (empID, deptID, first_name, last_name) VALUES (?, ?, ?, ?);";
+        
+        result = keyspace
+                .prepareQuery(CQL3_CF)
+                    .withCql(INSERT_STATEMENT)
+                .asPreparedStatement()
+                    .withIntegerValue(222)
+                    .withIntegerValue(333)
+                    .withStringValue("Netta")
+                    .withStringValue("Landau")
+                .execute();
+        
+        result = keyspace
+                .prepareQuery(CQL3_CF)
+                .withCql("SELECT * FROM employees WHERE empId='222';")
+                .execute();
+        Assert.assertTrue(!result.getResult().getRows().isEmpty());
+        for (Row<Integer, String> row : result.getResult().getRows()) {
+            LOG.info("CQL Key: " + row.getKey());
+
+            ColumnList<String> columns = row.getColumns();
+            
+            LOG.info("   empid      : " + columns.getIntegerValue("empid",      null));
+            LOG.info("   deptid     : " + columns.getIntegerValue("deptid",     null));
+            LOG.info("   first_name : " + columns.getStringValue ("first_name", null));
+            LOG.info("   last_name  : " + columns.getStringValue ("last_name",  null));
+        }           
     }
 
 }

@@ -56,6 +56,7 @@ import com.netflix.astyanax.KeyspaceTracerFactory;
 import com.netflix.astyanax.RowCallback;
 import com.netflix.astyanax.RowCopier;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
+import com.netflix.astyanax.connectionpool.ConnectionContext;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.TokenRange;
@@ -67,12 +68,14 @@ import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.model.Rows;
+import com.netflix.astyanax.query.AbstractPreparedCqlQuery;
 import com.netflix.astyanax.query.AllRowsQuery;
 import com.netflix.astyanax.query.ColumnCountQuery;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.query.ColumnQuery;
 import com.netflix.astyanax.query.CqlQuery;
 import com.netflix.astyanax.query.IndexQuery;
+import com.netflix.astyanax.query.PreparedCqlQuery;
 import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.query.RowSliceColumnCountQuery;
 import com.netflix.astyanax.query.RowSliceQuery;
@@ -130,7 +133,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                 tracerFactory.newTracer(CassandraOperationType.GET_COLUMN, columnFamily), pinnedHost,
                                 keyspace.getKeyspaceName()) {
                             @Override
-                            public Column<C> internalExecute(Client client) throws Exception {
+                            public Column<C> internalExecute(Client client, ConnectionContext context) throws Exception {
                                 ColumnOrSuperColumn cosc = client.get(
                                         columnFamily.getKeySerializer().toByteBuffer(rowKey),
                                         new org.apache.cassandra.thrift.ColumnPath().setColumn_family(
@@ -192,16 +195,16 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                 CassandraOperationType.GET_ROW, columnFamily), pinnedHost, keyspace.getKeyspaceName()) {
 
                             @Override
-                            public ColumnList<C> execute(Client client) throws ConnectionException {
+                            public ColumnList<C> execute(Client client, ConnectionContext context) throws ConnectionException {
                                 if (isPaginating && paginateNoMore) {
                                     return new EmptyColumnList<C>();
                                 }
 
-                                return super.execute(client);
+                                return super.execute(client, context);
                             }
 
                             @Override
-                            public ColumnList<C> internalExecute(Client client) throws Exception {
+                            public ColumnList<C> internalExecute(Client client, ConnectionContext context) throws Exception {
                                 List<ColumnOrSuperColumn> columnList = client.get_slice(columnFamily.getKeySerializer()
                                         .toByteBuffer(rowKey), new ColumnParent().setColumn_family(columnFamily
                                         .getName()), predicate, ThriftConverter
@@ -258,7 +261,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                 tracerFactory.newTracer(CassandraOperationType.GET_COLUMN_COUNT, columnFamily),
                                 pinnedHost, keyspace.getKeyspaceName()) {
                             @Override
-                            public Integer internalExecute(Client client) throws Exception {
+                            public Integer internalExecute(Client client, ConnectionContext context) throws Exception {
                                 return client.get_count(columnFamily.getKeySerializer().toByteBuffer(rowKey),
                                         new ColumnParent().setColumn_family(columnFamily.getName()), predicate,
                                         ThriftConverter.ToThriftConsistencyLevel(consistencyLevel));
@@ -305,7 +308,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                         CassandraOperationType.COPY_TO, columnFamily), pinnedHost, keyspace
                                         .getKeyspaceName()) {
                                     @Override
-                                    public Void internalExecute(Client client) throws Exception {
+                                    public Void internalExecute(Client client, ConnectionContext context) throws Exception {
                                         
                                         long currentTime = keyspace.getConfig().getClock().getCurrentTime();
                                         
@@ -393,7 +396,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                 CassandraOperationType.GET_ROWS_RANGE, columnFamily), pinnedHost, keyspace
                                 .getKeyspaceName()) {
                             @Override
-                            public Rows<K, C> internalExecute(Client client) throws Exception {
+                            public Rows<K, C> internalExecute(Client client, ConnectionContext context) throws Exception {
                                 // This is a sorted list
                                 // Same call for standard and super columns via
                                 // the ColumnParent
@@ -453,7 +456,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                 CassandraOperationType.GET_ROWS_SLICE, columnFamily), pinnedHost, keyspace
                                 .getKeyspaceName()) {
                             @Override
-                            public Rows<K, C> internalExecute(Client client) throws Exception {
+                            public Rows<K, C> internalExecute(Client client, ConnectionContext context) throws Exception {
                                 Map<ByteBuffer, List<ColumnOrSuperColumn>> cfmap = client.multiget_slice(columnFamily
                                         .getKeySerializer().toBytesList(keys), new ColumnParent()
                                         .setColumn_family(columnFamily.getName()), predicate, ThriftConverter
@@ -489,7 +492,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                         CassandraOperationType.GET_ROWS_SLICE, columnFamily), pinnedHost, keyspace
                                         .getKeyspaceName()) {
                                     @Override
-                                    public Map<K, Integer> internalExecute(Client client) throws Exception {
+                                    public Map<K, Integer> internalExecute(Client client, ConnectionContext context) throws Exception {
                                         Map<ByteBuffer, Integer> cfmap = client.multiget_count(
                                                 columnFamily.getKeySerializer().toBytesList(keys), 
                                                 new ColumnParent().setColumn_family(columnFamily.getName()), 
@@ -534,7 +537,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                 CassandraOperationType.GET_ROWS_SLICE, columnFamily), pinnedHost, keyspace
                                 .getKeyspaceName()) {
                             @Override
-                            public Rows<K, C> internalExecute(Client client) throws Exception {
+                            public Rows<K, C> internalExecute(Client client, ConnectionContext context) throws Exception {
                                 Map<ByteBuffer, List<ColumnOrSuperColumn>> cfmap = client.multiget_slice(columnFamily
                                         .getKeySerializer().toBytesList(keys), new ColumnParent()
                                         .setColumn_family(columnFamily.getName()), predicate, ThriftConverter
@@ -577,7 +580,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                         CassandraOperationType.GET_ROWS_SLICE, columnFamily), pinnedHost, keyspace
                                         .getKeyspaceName()) {
                                     @Override
-                                    public Map<K, Integer> internalExecute(Client client) throws Exception {
+                                    public Map<K, Integer> internalExecute(Client client, ConnectionContext context) throws Exception {
                                         Map<ByteBuffer, Integer> cfmap = client.multiget_count(columnFamily
                                                 .getKeySerializer().toBytesList(keys), new ColumnParent()
                                                 .setColumn_family(columnFamily.getName()), predicate, ThriftConverter
@@ -629,16 +632,16 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                 CassandraOperationType.GET_ROWS_BY_INDEX, columnFamily), pinnedHost, keyspace
                                 .getKeyspaceName()) {
                             @Override
-                            public Rows<K, C> execute(Client client) throws ConnectionException {
+                            public Rows<K, C> execute(Client client, ConnectionContext context) throws ConnectionException {
                                 if (isPaginating && paginateNoMore) {
                                     return new EmptyRowsImpl<K, C>();
                                 }
 
-                                return super.execute(client);
+                                return super.execute(client, context);
                             }
 
                             @Override
-                            public Rows<K, C> internalExecute(Client client) throws Exception {
+                            public Rows<K, C> internalExecute(Client client, ConnectionContext context) throws Exception {
                                 List<org.apache.cassandra.thrift.KeySlice> cfmap;
                                 cfmap = client.get_indexed_slices(
                                         new ColumnParent().setColumn_family(columnFamily.getName()), indexClause,
@@ -695,9 +698,10 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                         new AbstractKeyspaceOperationImpl<CqlResult<K, C>>(tracerFactory.newTracer(
                                 CassandraOperationType.CQL, columnFamily), pinnedHost, keyspace.getKeyspaceName()) {
                             @Override
-                            public CqlResult<K, C> internalExecute(Client client) throws Exception {
-                                org.apache.cassandra.thrift.CqlResult res = client.execute_cql_query(StringSerializer
-                                        .get().toByteBuffer(cql), useCompression ? Compression.GZIP : Compression.NONE);
+                            public CqlResult<K, C> internalExecute(Client client, ConnectionContext context) throws Exception {
+                                org.apache.cassandra.thrift.CqlResult res = client.execute_cql_query(
+                                        StringSerializer.get().toByteBuffer(cql), 
+                                        useCompression ? Compression.GZIP : Compression.NONE);
                                 switch (res.getType()) {
                                 case ROWS:
                                     return new ThriftCqlResultImpl<K, C>(new ThriftCqlRowsImpl<K, C>(res.getRows(),
@@ -726,9 +730,54 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                 useCompression = true;
                 return this;
             }
+
+            @Override
+            public PreparedCqlQuery<K, C> asPreparedStatement() {
+                return new AbstractPreparedCqlQuery<K, C>() {
+                    @Override
+                    public OperationResult<CqlResult<K, C>> execute() throws ConnectionException {
+                        return connectionPool.executeWithFailover(
+                                new AbstractKeyspaceOperationImpl<CqlResult<K, C>>(tracerFactory.newTracer(
+                                        CassandraOperationType.CQL, columnFamily), pinnedHost, keyspace.getKeyspaceName()) {
+                                    @Override
+                                    public CqlResult<K, C> internalExecute(Client client, ConnectionContext state) throws Exception {
+                                        Integer id = (Integer)state.getMetadata(cql);
+                                        if (id == null) {
+                                            org.apache.cassandra.thrift.CqlPreparedResult res = client.prepare_cql_query(
+                                                    StringSerializer.get().toByteBuffer(cql), Compression.NONE);
+                                            id = res.getItemId();
+                                            state.setMetadata(cql, id);
+                                        }
+
+                                        org.apache.cassandra.thrift.CqlResult res = client.execute_prepared_cql_query(id,
+                                                getValues());
+                                        switch (res.getType()) {
+                                        case ROWS:
+                                            return new ThriftCqlResultImpl<K, C>(new ThriftCqlRowsImpl<K, C>(res.getRows(),
+                                                    columnFamily.getKeySerializer(), columnFamily.getColumnSerializer()));
+                                        case INT:
+                                            return new ThriftCqlResultImpl<K, C>(res.getNum());
+                                        default:
+                                            return null;
+                                        }
+                                    }
+                                }, retry);
+                    }
+
+                    @Override
+                    public Future<OperationResult<CqlResult<K, C>>> executeAsync() throws ConnectionException {
+                        return executor.submit(new Callable<OperationResult<CqlResult<K, C>>>() {
+                            @Override
+                            public OperationResult<CqlResult<K, C>> call() throws Exception {
+                                return execute();
+                            }
+                        });
+                    }
+                };
+            }
         };
     }
-
+    
     @Override
     public AllRowsQuery<K, C> getAllRows() {
         return new AbstractThriftAllRowsQueryImpl<K, C>(columnFamily) {
@@ -744,7 +793,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                         tracerFactory.newTracer(CassandraOperationType.GET_ROWS_RANGE, columnFamily),
                                         pinnedHost, keyspace.getKeyspaceName()) {
                                     @Override
-                                    public List<org.apache.cassandra.thrift.KeySlice> internalExecute(Client client)
+                                    public List<org.apache.cassandra.thrift.KeySlice> internalExecute(Client client, ConnectionContext context)
                                             throws Exception {
                                         return client.get_range_slices(
                                                 new ColumnParent().setColumn_family(columnFamily.getName()), predicate,
@@ -869,7 +918,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                                         columnFamily), pinnedHost, keyspace
                                                 .getKeyspaceName()) {
                                             @Override
-                                            public List<KeySlice> internalExecute(Client client)
+                                            public List<KeySlice> internalExecute(Client client, ConnectionContext context)
                                                     throws Exception {
                                                 return client.get_range_slices(new ColumnParent()
                                                         .setColumn_family(columnFamily.getName()),

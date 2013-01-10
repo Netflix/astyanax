@@ -1,11 +1,13 @@
 package com.netflix.astyanax.entitystore;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Set;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.PersistenceException;
 
@@ -102,6 +104,10 @@ class EntityMapper<T, K> {
 		} catch(Exception e) {
 			throw new PersistenceException("failed to construct entity", e);
 		}
+	}
+	
+	K getEntityId(T entity) throws Exception {
+	    return (K)idField.get(entity);
 	}
 	
 	@VisibleForTesting

@@ -6,6 +6,8 @@ import java.util.List;
 import javax.annotation.Nullable;
 import javax.persistence.PersistenceException;
 
+import org.apache.commons.lang.StringUtils;
+
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -14,6 +16,7 @@ import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ConsistencyLevel;
+import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
@@ -39,6 +42,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 		private ConsistencyLevel writeConsistency = null;
 		private Integer ttl = null;
 		private RetryPolicy retryPolicy = null;
+		private LifecycleEvents<T> lifecycleHandler = null;
 
 		public Builder() {
 
@@ -135,6 +139,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 			// TODO: check @Id type compatibility
 			// TODO: do we need to require @Entity annotation
 			this.entityMapper = new EntityMapper<T,K>(clazz, ttl);
+			this.lifecycleHandler = new LifecycleEvents<T>(clazz);
 			
 			// build object
 			return new DefaultEntityManager<T, K>(this);
@@ -150,7 +155,8 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 	private final ConsistencyLevel readConsitency;
 	private final ConsistencyLevel writeConsistency;
 	private final RetryPolicy retryPolicy;
-
+	private final LifecycleEvents<T> lifecycleHandler;
+	
 	private DefaultEntityManager(Builder<T, K> builder) {
 		entityMapper = builder.entityMapper;
 		keyspace = builder.keyspace;
@@ -158,6 +164,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 		readConsitency = builder.readConsitency;
 		writeConsistency = builder.writeConsistency;
 		retryPolicy = builder.retryPolicy;
+		lifecycleHandler = builder.lifecycleHandler;
 	}
 
 	//////////////////////////////////////////////////////////////////
@@ -168,9 +175,11 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 	 */
 	public void put(T entity) throws PersistenceException {
 		try {
+		    lifecycleHandler.onPrePersist(entity);
             MutationBatch mb = newMutationBatch();
 			entityMapper.fillMutationBatch(mb, columnFamily, entity);			
 			mb.execute();
+            lifecycleHandler.onPostPersist(entity);
 		} catch(Exception e) {
 			throw new PersistenceException("failed to put entity ", e);
 		}
@@ -185,6 +194,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 			ColumnList<String> cl = cfq.getKey(id).execute().getResult();
 
 			T entity = entityMapper.constructEntity(id, cl);
+            lifecycleHandler.onPostLoad(entity);
 			return entity;
 		} catch(Exception e) {
 			throw new PersistenceException("failed to get entity " + id, e);
@@ -204,6 +214,21 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 			throw new PersistenceException("failed to delete entity " + id, e);
 		}
 	}
+	
+    @Override
+    public void remove(T entity) throws PersistenceException {
+        K id = null;
+        try {
+            lifecycleHandler.onPreRemove(entity);
+            id = entityMapper.getEntityId(entity);
+            MutationBatch mb = newMutationBatch();
+            mb.withRow(columnFamily, id).delete();
+            mb.execute();
+            lifecycleHandler.onPostRemove(entity);
+        } catch(Exception e) {
+            throw new PersistenceException("failed to delete entity " + id, e);
+        }
+    }
 
     /**
      * @inheritDoc
@@ -215,6 +240,11 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
             @Override
             public synchronized Boolean apply(@Nullable T entity) {
                 entities.add(entity);
+                try {
+                    lifecycleHandler.onPostLoad(entity);
+                } catch (Exception e) {
+                    // TODO
+                }
                 return true;
             }
         });
@@ -232,8 +262,11 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 
             List<T> entities = Lists.newArrayList();
             for (Row<K, String> row : rows) {
-                if (!row.getColumns().isEmpty()) 
-                    entities.add(entityMapper.constructEntity(row.getKey(), row.getColumns()));
+                if (!row.getColumns().isEmpty()) { 
+                    T entity = entityMapper.constructEntity(row.getKey(), row.getColumns());
+                    lifecycleHandler.onPostLoad(entity);
+                    entities.add(entity);
+                }
             }
             return entities;
         } catch(Exception e) {
@@ -257,6 +290,24 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
         }
     }
 
+    @Override
+    public void remove(Collection<T> entities) throws PersistenceException {
+        MutationBatch mb = newMutationBatch();        
+        try {
+            for (T entity : entities) {
+                lifecycleHandler.onPreRemove(entity);
+                K id = entityMapper.getEntityId(entity);
+                mb.withRow(columnFamily, id).delete();
+            }
+            mb.execute();
+            for (T entity : entities) {
+                lifecycleHandler.onPostRemove(entity);
+            }
+        } catch(Exception e) {
+            throw new PersistenceException("failed to delete entities ", e);
+        }
+    }
+
     /**
      * @inheritDoc
      */
@@ -265,9 +316,15 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
         MutationBatch mb = newMutationBatch();        
         try {
             for (T entity : entities) {
+                lifecycleHandler.onPrePersist(entity);
                 entityMapper.fillMutationBatch(mb, columnFamily, entity);           
             }
             mb.execute();
+            
+            for (T entity : entities) {
+                lifecycleHandler.onPostPersist(entity);
+            }
+
         } catch(Exception e) {
             throw new PersistenceException("failed to put entities ", e);
         }
@@ -286,13 +343,39 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
                         public Boolean apply(@Nullable Row<K, String> row) {
                             if (row.getColumns().isEmpty())
                                 return true;
-                            return callback.apply(entityMapper.constructEntity(row.getKey(), row.getColumns()));
+                            T entity = entityMapper.constructEntity(row.getKey(), row.getColumns());
+                            try {
+                                lifecycleHandler.onPostLoad(entity);
+                            } catch (Exception e) {
+                                // TODO:
+                            }
+                            return callback.apply(entity);
                         }
                     })
                     .build()
                     .call();
         } catch (Exception e) {
             throw new PersistenceException("Failed to fetch all entites", e);
+        }
+    }
+    
+    @Override
+    public Collection<T> find(String cql) throws PersistenceException {
+        Preconditions.checkArgument(StringUtils.left(cql, 6).equalsIgnoreCase("SELECT"), "CQL must be SELECT statement");
+        
+        try {
+            CqlResult<K, String> results = newQuery().withCql(cql).execute().getResult();
+            List<T> entities = Lists.newArrayList();
+            for (Row<K, String> row : results.getRows()) {
+                if (!row.getColumns().isEmpty()) { 
+                    T entity = entityMapper.constructEntity(row.getKey(), row.getColumns());
+                    lifecycleHandler.onPostLoad(entity);
+                    entities.add(entity);
+                }
+            }
+            return entities;
+        } catch (Exception e) {
+            throw new PersistenceException("Failed to execute cql query", e);
         }
     }
     
@@ -313,6 +396,5 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
             cfq.withRetryPolicy(retryPolicy);
         return cfq;
     }
-
 
 }

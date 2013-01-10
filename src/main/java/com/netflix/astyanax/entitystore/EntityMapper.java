@@ -104,6 +104,10 @@ class EntityMapper<T, K> {
 		}
 	}
 	
+	K getEntityId(T entity) throws Exception {
+	    return (K)idField.get(entity);
+	}
+	
 	@VisibleForTesting
 	Field getId() {
 		return idField;

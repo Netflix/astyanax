@@ -25,12 +25,18 @@ public interface EntityManager<T, K> {
 	 */
 	public T get(K id) throws PersistenceException;
 	
-	/**
-	 * delete the whole row
-	 * @param id row key
-	 */
-	public void delete(K id) throws PersistenceException;
-	
+    /**
+     * delete the whole row by id
+     * @param id row key
+     */
+    public void delete(K id) throws PersistenceException;
+    
+    /**
+     * remove an entire entity
+     * @param id row key
+     */
+    public void remove(T entity) throws PersistenceException;
+    
 	/**
 	 * Return all entities.  
 	 * 
@@ -48,11 +54,18 @@ public interface EntityManager<T, K> {
 	public Collection<T> get(Collection<K> ids) throws PersistenceException;
 	
 	/**
-	 * Delete a set of entities
+	 * Delete a set of entities by their id
 	 * @param ids
 	 * @throws PersistenceException
 	 */
 	public void delete(Collection<K> ids) throws PersistenceException;
+	
+    /**
+     * Delete a set of entities 
+     * @param ids
+     * @throws PersistenceException
+     */
+	public void remove(Collection<T> entities) throws PersistenceException;
 	
 	/**
 	 * Store a set of entities.
@@ -69,4 +82,12 @@ public interface EntityManager<T, K> {
 	 * @throws PersistenceException
 	 */
 	public void visitAll(Function<T, Boolean> callback) throws PersistenceException;
+	
+	/**
+	 * Execute a CQL query and return the found entites
+	 * @param cql
+	 * @return
+	 * @throws PersistenceException
+	 */
+	public Collection<T> find(String cql) throws PersistenceException;
 }

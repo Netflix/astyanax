@@ -325,10 +325,10 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
                             // Created a new connection successfully.
                             try {
                                 retryContext.success();
-                                monitor .onHostReactivated(host, SimpleHostConnectionPool.this);
-                                listener.onHostUp(SimpleHostConnectionPool.this);
-                                
-                                isReconnecting.set(false);
+                                if (isReconnecting.compareAndSet(true, false)) {
+                                    monitor .onHostReactivated(host, SimpleHostConnectionPool.this);
+                                    listener.onHostUp(SimpleHostConnectionPool.this);
+                                }
                             }
                             catch (Throwable t) {
                                 LOG.error("Error reconnecting client", t);
@@ -346,9 +346,6 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
                         }
                     }
                 }, delay, TimeUnit.MILLISECONDS);
-            }
-            catch (RejectedExecutionException e) {
-                throw new RuntimeException(e);
             }
             catch (Exception e) {
                 LOG.error("Failed to schedule retry task for " + host.getHostName(), e);

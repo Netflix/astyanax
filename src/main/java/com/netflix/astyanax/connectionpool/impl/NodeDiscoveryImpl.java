@@ -41,6 +41,7 @@ import com.netflix.astyanax.connectionpool.NodeDiscovery;
 public class NodeDiscoveryImpl implements NodeDiscovery {
     private final ConnectionPool<?> connectionPool;
     private final ScheduledExecutorService executor;
+    private boolean bOwnedExecutor = false;
     private final int interval;
     private final String name;
     private final Supplier<List<Host>> hostSupplier;
@@ -56,6 +57,8 @@ public class NodeDiscoveryImpl implements NodeDiscovery {
             ConnectionPool<?> connectionPool) {
         this(name, interval, hostSupplier, connectionPool, 
               Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setDaemon(true).build()));
+        
+        bOwnedExecutor = true;
     }
     
     public NodeDiscoveryImpl(
@@ -91,7 +94,8 @@ public class NodeDiscoveryImpl implements NodeDiscovery {
 
     @Override
     public void shutdown() {
-        executor.shutdown();
+        if (bOwnedExecutor)
+            executor.shutdown();
         NodeDiscoveryMonitorManager.getInstance().unregisterMonitor(name, this);
     }
 

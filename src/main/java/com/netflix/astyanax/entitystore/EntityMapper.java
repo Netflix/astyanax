@@ -47,15 +47,12 @@ class EntityMapper<T, K> {
 		Field tmpIdField = null;
 		for (Field field : declaredFields) {
 			Id idAnnotation = field.getAnnotation(Id.class);
-			Column columnAnnotation = field.getAnnotation(Column.class);
-			if ((idAnnotation != null) && (columnAnnotation != null)) {
-				throw new IllegalArgumentException("field cannot be annotated with @Id and @Column: " + field.getName());
-			}
 			if(idAnnotation != null) {
 				Preconditions.checkArgument(tmpIdField == null, "there are multiple fields with @Id annotation");
 				field.setAccessible(true);
 				tmpIdField = field;
 			}
+			Column columnAnnotation = field.getAnnotation(Column.class);
 			if ((columnAnnotation != null)) {
 				field.setAccessible(true);
 				ColumnMapper columnMapper = null;

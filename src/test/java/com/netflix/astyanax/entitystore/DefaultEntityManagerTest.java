@@ -114,7 +114,7 @@ public class DefaultEntityManagerTest {
         keyspace.createColumnFamily(CF_SIMPLE_ENTITY, null);
 	}
 
-	private SampleEntity createRandomEntity(String id) {
+	private SampleEntity createSampleEntity(String id) {
 		Random prng = new Random();
 		SampleEntity entity = new SampleEntity();
 		entity.setId(id);
@@ -157,7 +157,7 @@ public class DefaultEntityManagerTest {
 				.withKeyspace(keyspace)
 				.withColumnFamily(CF_SAMPLE_ENTITY)
 				.build();
-		SampleEntity origEntity = createRandomEntity(id);
+		SampleEntity origEntity = createSampleEntity(id);
 
 		entityPersister.put(origEntity);
 
@@ -249,5 +249,49 @@ public class DefaultEntityManagerTest {
 	        map.put(entity.getId(),  entity);
 	    }
 	    return map;
+	}
+	
+	private DoubleIdColumnEntity createDoubleIdColumnEntity(String id) {
+		Random prng = new Random();
+		DoubleIdColumnEntity entity = new DoubleIdColumnEntity();
+		entity.setId(id);
+		entity.setNum(prng.nextInt());
+		entity.setStr(RandomStringUtils.randomAlphanumeric(4));
+		return entity;
+	}
+	
+	@Test
+	public void doubleIdColumnAnnotation() throws Exception {
+		final String id = "doubleIdColumnAnnotation";
+		EntityManager<DoubleIdColumnEntity, String> entityPersister = new DefaultEntityManager.Builder<DoubleIdColumnEntity, String>()
+				.withEntityType(DoubleIdColumnEntity.class)
+				.withKeyspace(keyspace)
+				.withColumnFamily(CF_SAMPLE_ENTITY)
+				.build();
+		DoubleIdColumnEntity origEntity = createDoubleIdColumnEntity(id);
+
+		entityPersister.put(origEntity);
+
+		// use low-level astyanax API to confirm the write
+		{
+			ColumnList<String> cl = keyspace.prepareQuery(CF_SAMPLE_ENTITY).getKey(id).execute().getResult();
+			// test column number
+			Assert.assertEquals(3, cl.size());
+			// test column value
+			Assert.assertEquals(origEntity.getId(), cl.getColumnByName("id").getStringValue());
+			Assert.assertEquals(origEntity.getNum(), cl.getColumnByName("num").getIntegerValue());
+			Assert.assertEquals(origEntity.getStr(), cl.getColumnByName("str").getStringValue());
+		}
+
+		DoubleIdColumnEntity getEntity = entityPersister.get(id);
+		Assert.assertEquals(origEntity, getEntity);
+
+		entityPersister.delete(id);
+
+		// use low-level astyanax API to confirm the delete
+		{
+			ColumnList<String> cl = keyspace.prepareQuery(CF_SAMPLE_ENTITY).getKey(id).execute().getResult();
+			Assert.assertEquals(0, cl.size());
+		}
 	}
 }

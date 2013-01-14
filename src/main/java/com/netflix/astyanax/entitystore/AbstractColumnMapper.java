@@ -17,9 +17,6 @@ public abstract class AbstractColumnMapper implements ColumnMapper {
 		if(name.indexOf(".") >= 0)
 			throw new IllegalArgumentException("illegal column name containing reserved dot (.) char: " + name);
 		
-		// standardize to lower case. make column names case insensitive
-		name = name.toLowerCase();
-		
 		// prepend prefix if not empty with dot separator
 		if(!Strings.isNullOrEmpty(prefix))
 			name = prefix + "." + name;

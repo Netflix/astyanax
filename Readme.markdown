@@ -8,7 +8,7 @@ Astyanax is currently in use at [Netflix](http://movies.netflix.com). Issues gen
 
 Features
 --------
-A quick overview can be found at the [Netfilx Tech Blog](http://techblog.netflix.com/2012/01/announcing-astyanax.html). Some features provided by this client:
+A quick overview can be found at the [Netflix Tech Blog](http://techblog.netflix.com/2012/01/announcing-astyanax.html). Some features provided by this client:
 
 * High level, simple object oriented interface to Cassandra.
 * Fail-over behavior on the client side.

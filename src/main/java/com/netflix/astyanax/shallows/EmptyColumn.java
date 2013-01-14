@@ -124,4 +124,5 @@ public class EmptyColumn<C> implements Column<C> {
     public boolean hasValue() {
         return false;
     }
+
 }

@@ -26,7 +26,7 @@ class Coercions {
     @SuppressWarnings("unchecked")
     static <T> void setFieldFromColumn(T instance, Field field,
             Column<String> column) {
-        Object objValue;
+        Object objValue = null;
         if ((field.getType() == Byte.class) || (field.getType() == Byte.TYPE)) {
             objValue = (byte) (column.getIntegerValue() & 0xff);
         } else if ((field.getType() == Boolean.class)
@@ -57,8 +57,10 @@ class Coercions {
             objValue = column.getUUIDValue();
         } else if (field.getType().isEnum()) {
             objValue = Enum.valueOf((Class<? extends Enum>)field.getType(), column.getStringValue());
-        } else {
-            throw new UnsupportedOperationException();
+        } 
+		if (objValue == null) {
+			throw new UnsupportedOperationException(
+				"Field datatype not supported: " + field.getType().getCanonicalName());
         }
 
         try {
@@ -107,7 +109,8 @@ class Coercions {
                 } else if (objValue.getClass().isEnum()) {
                     mutation.putColumn(columnName, objValue.toString(), null);
                 } else {
-                    throw new UnsupportedOperationException();
+                    throw new UnsupportedOperationException(
+						"Column datatype not supported: " + objValue.getClass().getCanonicalName());
                 }
             }
         } catch (IllegalAccessException e) {

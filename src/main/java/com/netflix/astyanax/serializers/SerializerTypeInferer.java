@@ -61,6 +61,7 @@ public class SerializerTypeInferer {
         else if (value instanceof Date) {
             serializer = DateSerializer.get();
         }
+		// TODO: need what to select StringCoercibleSerilizer here?
         else {
             serializer = ObjectSerializer.get();
         }
@@ -108,11 +109,10 @@ public class SerializerTypeInferer {
         else if (valueClass.equals(Date.class)) {
             serializer = DateSerializer.get();
         }
-        else {
-            serializer = ObjectSerializer.get();
-        }
+		if (serializer == null) {
+           	serializer = ObjectSerializer.get();
+		}
         // Add other serializers here
-
         return serializer;
     }
 }

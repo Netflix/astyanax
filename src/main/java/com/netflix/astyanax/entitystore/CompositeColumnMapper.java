@@ -45,10 +45,10 @@ class CompositeColumnMapper extends AbstractColumnMapper {
 				} else {
 					columnMapper = new CompositeColumnMapper(childField, columnName);
 				}
-				Preconditions.checkArgument(!usedColumnNames.contains(columnMapper.getColumnName()), 
+				Preconditions.checkArgument(!usedColumnNames.contains(columnMapper.getColumnName().toLowerCase()), 
 						String.format("duplicate case-insensitive column name: %s", columnMapper.getColumnName()));
 				columnList.add(columnMapper);
-				usedColumnNames.add(columnMapper.getColumnName());
+				usedColumnNames.add(columnMapper.getColumnName().toLowerCase());
 			}
 		}
 	}

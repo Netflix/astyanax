@@ -46,7 +46,7 @@ import com.netflix.astyanax.serializers.UUIDSerializer;
 
 public abstract class AbstractIndexQueryImpl<K, C> implements IndexQuery<K, C> {
     protected final org.apache.cassandra.thrift.IndexClause indexClause = new org.apache.cassandra.thrift.IndexClause();
-    protected SlicePredicate predicate = new SlicePredicate().setSlice_range(ThriftUtils.RANGE_ALL);
+    protected SlicePredicate predicate = new SlicePredicate().setSlice_range(ThriftUtils.createAllInclusiveSliceRange());
     protected boolean isPaginating = false;
     protected boolean paginateNoMore = false;
     protected boolean firstPage = true;

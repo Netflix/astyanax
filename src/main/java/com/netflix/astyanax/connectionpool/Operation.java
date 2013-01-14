@@ -18,7 +18,6 @@ package com.netflix.astyanax.connectionpool;
 import java.nio.ByteBuffer;
 
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 
 /**
  * Callback interface to perform an operation on a client associated with a
@@ -31,14 +30,14 @@ import com.netflix.astyanax.connectionpool.exceptions.OperationException;
  */
 public interface Operation<CL, R> {
     /**
-     * Execute the operation on the client object and return the results
+     * Execute the operation on the client object and return the results.
      * 
-     * @param client
+     * @param client - The client object
+     * @param state  - State and metadata specific to the connection
      * @return
-     * @throws OperationException
-     * @throws NetflixCassandraException
+     * @throws ConnectionException
      */
-    R execute(CL client) throws ConnectionException;
+    R execute(CL client, ConnectionContext state) throws ConnectionException;
 
     /**
      * Return the unique key on which the operation is performed or null if the

@@ -15,14 +15,19 @@
  ******************************************************************************/
 package com.netflix.astyanax.mapping;
 
-import java.lang.annotation.*;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 @Documented
 @Target({ ElementType.FIELD })
 @Retention(RetentionPolicy.RUNTIME)
+@Deprecated
 /**
- * This is a marker annotation for the field that should act as the
- * ID column
+ * This is a marker annotation for the field that should act as the ID column
+ * @deprecated please use javax.persistence.Id instead
  */
 public @interface Id {
     /**

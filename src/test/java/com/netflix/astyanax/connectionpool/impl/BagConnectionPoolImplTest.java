@@ -1,6 +1,7 @@
 package com.netflix.astyanax.connectionpool.impl;
 
 import com.netflix.astyanax.connectionpool.ConnectionPool;
+import com.netflix.astyanax.connectionpool.ConnectionContext;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.Operation;
@@ -62,7 +63,7 @@ public class BagConnectionPoolImplTest extends BaseConnectionPoolTest {
             result = pool.executeWithFailover(new TestOperation() {
 
                 @Override
-                public String execute(TestClient client)
+                public String execute(TestClient client, ConnectionContext context)
                         throws ConnectionException, OperationException {
                     throw new RuntimeException("Unkecked Exception");
                 }

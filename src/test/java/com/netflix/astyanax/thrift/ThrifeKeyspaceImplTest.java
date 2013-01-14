@@ -122,6 +122,7 @@ import com.netflix.astyanax.util.JsonRowsWriter;
 import com.netflix.astyanax.util.RangeBuilder;
 import com.netflix.astyanax.util.RecordReader;
 import com.netflix.astyanax.util.RecordWriter;
+import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
 import com.netflix.astyanax.util.TimeUUIDUtils;
 
 public class ThrifeKeyspaceImplTest {
@@ -130,7 +131,6 @@ public class ThrifeKeyspaceImplTest {
 
     private static Keyspace                  keyspace;
     private static AstyanaxContext<Keyspace> keyspaceContext;
-    private static EmbeddedCassandra         cassandra;
 
     private static String TEST_CLUSTER_NAME  = "cass_sandbox";
     private static String TEST_KEYSPACE_NAME = "AstyanaxUnitTests";
@@ -251,8 +251,7 @@ public class ThrifeKeyspaceImplTest {
     public static void setup() throws Exception {
         System.out.println("TESTING THRIFT KEYSPACE");
 
-        cassandra = new EmbeddedCassandra();
-        cassandra.start();
+        SingletonEmbeddedCassandra.getInstance();
         
         Thread.sleep(CASSANDRA_WAIT_TIME);
         
@@ -260,12 +259,11 @@ public class ThrifeKeyspaceImplTest {
     }
 
     @AfterClass
-    public static void teardown() {
+    public static void teardown() throws Exception {
         if (keyspaceContext != null)
             keyspaceContext.shutdown();
         
-        if (cassandra != null)
-            cassandra.stop();
+        Thread.sleep(CASSANDRA_WAIT_TIME);
     }
 
     public static void createKeyspace() throws Exception {
@@ -3100,6 +3098,36 @@ public class ThrifeKeyspaceImplTest {
         Assert.assertEquals(value, columns.getStringValue(dataColumn, null));
     }
     
+    // This test confirms the fix for https://github.com/Netflix/astyanax/issues/170
+    @Test
+    public void columnAutoPaginateTest() throws Exception {
+        final ColumnFamily<String, UUID> CF1 = ColumnFamily.newColumnFamily("CF1", StringSerializer.get(),
+                TimeUUIDSerializer.get());
+        final ColumnFamily<String, String> CF2 = ColumnFamily.newColumnFamily("CF2", StringSerializer.get(),
+                StringSerializer.get());
+        
+        keyspace.createColumnFamily(CF1, null);
+        Thread.sleep(3000);
+        keyspace.createColumnFamily(CF2, null);
+        Thread.sleep(3000);
+    
+        // query on another column family with different column key type
+        // does not seem to work after the first query
+        keyspace.prepareQuery(CF2).getKey("anything").execute();
+
+        MutationBatch m = keyspace.prepareMutationBatch();
+        m.withRow(CF1, "test").putColumn(TimeUUIDUtils.getUniqueTimeUUIDinMillis(), "value1", null);
+        m.execute();
+    
+        RowQuery<String, UUID> query = keyspace.prepareQuery(CF1).getKey("test").autoPaginate(true);
+    
+        // Adding a column range removes the problem
+        // query.withColumnRange(new RangeBuilder().build());
+    
+        ColumnList<UUID> columns = query.execute().getResult();
+        
+        keyspace.prepareQuery(CF2).getKey("anything").execute();
+    }
     @Test
     public void testQueue() throws Exception {
         final CountingQueueStats stats = new CountingQueueStats();

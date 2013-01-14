@@ -36,7 +36,7 @@ import com.netflix.astyanax.util.TokenGenerator;
 
 public abstract class AbstractThriftAllRowsQueryImpl<K, C> implements AllRowsQuery<K, C> {
 
-    protected SlicePredicate predicate = new SlicePredicate().setSlice_range(ThriftUtils.RANGE_ALL);
+    protected SlicePredicate predicate = new SlicePredicate().setSlice_range(ThriftUtils.createAllInclusiveSliceRange());
     protected CheckpointManager checkpointManager = new EmptyCheckpointManager();
     
     // protected KeyRange range = new

@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.connectionpool.BadHostDetector;
 import com.netflix.astyanax.connectionpool.Connection;
@@ -118,6 +119,8 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
         this.monitor         = monitor;
         this.availableConnections = new LinkedBlockingQueue<Connection<CL>>();
         this.executor        = config.getHostReconnectExecutor();
+        
+        Preconditions.checkNotNull(config.getHostReconnectExecutor(), "HostReconnectExecutor cannot be null");
     }
 
     @Override
@@ -297,6 +300,7 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
     public void markAsDown(ConnectionException reason) {
         // Make sure we're not triggering the reconnect process more than once
         if (isReconnecting.compareAndSet(false, true)) {
+            
             markedDownCount.incrementAndGet();
             
             if (reason != null && !(reason instanceof TimeoutException)) {
@@ -327,7 +331,7 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
                                 }
                             }
                             catch (Throwable t) {
-                                // t.printStackTrace();
+                                LOG.error("Error reconnecting client", t);
                             }
                             return;
                         }
@@ -343,8 +347,8 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
                     }
                 }, delay, TimeUnit.MILLISECONDS);
             }
-            catch (RejectedExecutionException e) {
-                throw new RuntimeException(e);
+            catch (Exception e) {
+                LOG.error("Failed to schedule retry task for " + host.getHostName(), e);
             }
         }
     }

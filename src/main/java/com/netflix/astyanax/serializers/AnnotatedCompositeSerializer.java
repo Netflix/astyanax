@@ -10,6 +10,7 @@ import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.annotations.Component;
 import com.netflix.astyanax.model.Equality;
 import com.netflix.astyanax.model.RangeEndpoint;
+import java.util.Arrays;
 
 /**
  * Serializer for a Pojo annotated with Component field annotations
@@ -55,7 +56,7 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
         }
 
         public void deserialize(Object obj, ByteBuffer value) throws IllegalArgumentException, IllegalAccessException {
-            field.set(obj, serializer.fromByteBuffer(value));
+           	field.set(obj, serializer.fromByteBuffer(value));
         }
 
         public ByteBuffer serializeValue(Object value) {
@@ -73,25 +74,44 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
     private final Class<T> clazz;
     private final int bufferSize;
     
+    public AnnotatedCompositeSerializer(Class<T> clazz, boolean includeParentFields) {
+        this(clazz, DEFAULT_BUFFER_SIZE, includeParentFields);
+	}
+
     public AnnotatedCompositeSerializer(Class<T> clazz) {
-        this(clazz, DEFAULT_BUFFER_SIZE);
+        this(clazz, DEFAULT_BUFFER_SIZE, false);
     }
     
     public AnnotatedCompositeSerializer(Class<T> clazz, int bufferSize) {
+		this(clazz, bufferSize, false);
+	}
+
+    public AnnotatedCompositeSerializer(Class<T> clazz, int bufferSize, boolean includeParentFields) {
         this.clazz      = clazz;
         this.components = new ArrayList<ComponentSerializer<?>>();
         this.bufferSize = bufferSize;
 
-        for (Field field : clazz.getDeclaredFields()) {
+        for (Field field : getFields(clazz, includeParentFields)) {
             Component annotation = field.getAnnotation(Component.class);
             if (annotation != null) {
-                components.add(makeComponent(field, SerializerTypeInferer.getSerializer(field.getType()),
-                        annotation.ordinal()));
+				Serializer s = SerializerTypeInferer.getSerializer(field.getType());
+                components.add(makeComponent(field, s, annotation.ordinal()));
             }
         }
 
         Collections.sort(this.components);
     }
+
+	private List<Field> getFields(Class clazz, boolean recursuvely) {
+		List<Field> allFields = new ArrayList<Field>();
+		if (clazz.getDeclaredFields() != null && clazz.getDeclaredFields().length > 0) {
+			allFields.addAll(Arrays.asList(clazz.getDeclaredFields()));
+			if (recursuvely && clazz.getSuperclass() != null) {
+				allFields.addAll(getFields(clazz.getSuperclass(), true));
+			}
+		}
+		return allFields;
+	}
 
     @Override
     public ByteBuffer toByteBuffer(T obj) {
@@ -117,6 +137,7 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
                 bb.put(END_OF_COMPONENT);
             }
             catch (Exception e) {
+				e.printStackTrace();
                 throw new RuntimeException(e);
             }
         }

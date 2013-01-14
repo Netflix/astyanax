@@ -153,5 +153,4 @@ public class ThriftColumnImpl<C> implements Column<C> {
     public boolean hasValue() {
         return column.value != null && column.value.remaining() != 0;
     }
-
 }

@@ -3128,6 +3128,7 @@ public class ThrifeKeyspaceImplTest {
         
         keyspace.prepareQuery(CF2).getKey("anything").execute();
     }
+    
     @Test
     public void testQueue() throws Exception {
         final CountingQueueStats stats = new CountingQueueStats();
@@ -3189,13 +3190,13 @@ public class ThrifeKeyspaceImplTest {
         
         {
             // Send another message
-            final Message m = new Message().setKey(key);
+            final Message m = new Message().setUniqueKey(key);
             System.out.println("m2: " + m);
             final String messageId2 = producer.sendMessage(m);
             System.out.println("MessageId2: " + messageId2);
     
             try {
-                final Message m2 = new Message().setKey(key);
+                final Message m2 = new Message().setUniqueKey(key);
                 producer.sendMessage(m2);
                 Assert.fail("Message should already exists");
             }
@@ -3205,8 +3206,8 @@ public class ThrifeKeyspaceImplTest {
             
             try {
                 List<Message> messages = Lists.newArrayList(
-                    new Message().setKey(key), 
-                    new Message().setKey(key2));
+                    new Message().setUniqueKey(key), 
+                    new Message().setUniqueKey(key2));
                 
                 SendMessageResponse result = producer.sendMessages(messages);
                 Assert.assertEquals(1,  result.getMessages().size());

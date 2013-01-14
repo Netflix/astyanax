@@ -6,7 +6,6 @@ import java.util.Date;
 import java.util.UUID;
 
 import com.netflix.astyanax.Serializer;
-import com.netflix.astyanax.mapping.StringCoercible;
 
 /**
  * Utility class that infers the concrete Serializer needed to turn a value into
@@ -110,16 +109,9 @@ public class SerializerTypeInferer {
         else if (valueClass.equals(Date.class)) {
             serializer = DateSerializer.get();
         }
-        else {
-			for (Class face : valueClass.getInterfaces()) {
-				if (face.equals(StringCoercible.class)) {
-					serializer = StringCoercibleSerializer.get();
-				}
-			}
-			if (serializer == null) {
-            	serializer = ObjectSerializer.get();
-			}
-        }
+		if (serializer == null) {
+           	serializer = ObjectSerializer.get();
+		}
         // Add other serializers here
         return serializer;
     }

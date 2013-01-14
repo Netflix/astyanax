@@ -22,10 +22,8 @@ import java.util.UUID;
 import org.apache.cassandra.thrift.SuperColumn;
 
 import com.netflix.astyanax.Serializer;
-import com.netflix.astyanax.mapping.StringCoercible;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.serializers.StringCoercibleSerializer;
 
 public class ThriftSuperColumnImpl<C> implements Column<C> {
     private final SuperColumn column;
@@ -136,8 +134,4 @@ public class ThriftSuperColumnImpl<C> implements Column<C> {
         return false;
     }
 
-	@Override
-	public StringCoercible getStringCoercibleValue(Class clazz) {
-        throw new UnsupportedOperationException("SuperColumn \'" + this.name + "\' has no value");
-	}
 }

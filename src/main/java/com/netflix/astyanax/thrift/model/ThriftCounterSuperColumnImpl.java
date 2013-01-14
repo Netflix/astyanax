@@ -22,7 +22,6 @@ import java.util.UUID;
 import org.apache.cassandra.thrift.CounterSuperColumn;
 
 import com.netflix.astyanax.Serializer;
-import com.netflix.astyanax.mapping.StringCoercible;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnList;
 
@@ -134,9 +133,4 @@ public class ThriftCounterSuperColumnImpl<C> implements Column<C> {
     public boolean hasValue() {
         return false;
     }
-
-	@Override
-	public StringCoercible getStringCoercibleValue(Class clazz) {
-        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no value");
-	}
 }

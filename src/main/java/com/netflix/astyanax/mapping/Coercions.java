@@ -57,18 +57,10 @@ class Coercions {
             objValue = column.getUUIDValue();
         } else if (field.getType().isEnum()) {
             objValue = Enum.valueOf((Class<? extends Enum>)field.getType(), column.getStringValue());
-        } else {
-			boolean sc = false;
-			for (Class face : field.getType().getInterfaces()) {
-				if (face.equals(StringCoercible.class)) {
-            		objValue = column.getStringCoercibleValue(field.getType());
-					break;
-				}
-			}
-			if (objValue == null) {
-				throw new UnsupportedOperationException(
-					"Field datatype not supported: " + field.getType().getCanonicalName());
-			}
+        } 
+		if (objValue == null) {
+			throw new UnsupportedOperationException(
+				"Field datatype not supported: " + field.getType().getCanonicalName());
         }
 
         try {
@@ -116,8 +108,6 @@ class Coercions {
                     mutation.putColumn(columnName, (UUID) objValue, null);
                 } else if (objValue.getClass().isEnum()) {
                     mutation.putColumn(columnName, objValue.toString(), null);
-				} else if (field.getType().isInstance(objValue)) {
-					mutation.putColumn(columnName, ((StringCoercible)objValue).serializeToString());
                 } else {
                     throw new UnsupportedOperationException(
 						"Column datatype not supported: " + objValue.getClass().getCanonicalName());

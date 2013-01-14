@@ -25,7 +25,6 @@ import com.netflix.astyanax.serializers.ByteBufferSerializer;
 import com.netflix.astyanax.serializers.ComparatorType;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.SerializerTypeInferer;
-import com.netflix.astyanax.serializers.StringCoercibleSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.UUIDSerializer;
 
@@ -127,9 +126,6 @@ public abstract class AbstractComposite extends AbstractList<Object> implements 
             if ((value == null) && (bytes != null) && (s != null)) {
                 ByteBuffer cb = bytes.duplicate();
                 if (cb.hasRemaining()) {
-					if (serializer instanceof StringCoercibleSerializer) {
-                    	return (A)((StringCoercibleSerializer)serializer).fromByteBuffer(cb, value.getClass());
-					} 
                     return s.fromByteBuffer(cb);
                 }
             }

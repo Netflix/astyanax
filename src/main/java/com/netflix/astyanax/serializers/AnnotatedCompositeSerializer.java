@@ -56,11 +56,7 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
         }
 
         public void deserialize(Object obj, ByteBuffer value) throws IllegalArgumentException, IllegalAccessException {
-			if (serializer instanceof StringCoercibleSerializer) {
-            	field.set(obj, ((StringCoercibleSerializer)serializer).fromByteBuffer(value, obj.getClass()));
-			} else {
-            	field.set(obj, serializer.fromByteBuffer(value));
-			}
+           	field.set(obj, serializer.fromByteBuffer(value));
         }
 
         public ByteBuffer serializeValue(Object value) {

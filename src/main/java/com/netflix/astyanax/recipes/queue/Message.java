@@ -9,6 +9,8 @@ import com.netflix.astyanax.recipes.queue.triggers.Trigger;
 
 public class Message {
     
+    private static final int DEFAULT_TIMEOUT        = 5;
+    
     /**
      * Last execution time, this value changes as the task state is transitioned.  
      * The token is a timeUUID and represents the next execution/expiration time
@@ -34,7 +36,7 @@ public class Message {
     /**
      * Timeout value in seconds
      */
-    private Integer timeout = 5;
+    private int timeout = DEFAULT_TIMEOUT;
     
     /**
      * Unique key for this message.
@@ -51,6 +53,11 @@ public class Message {
      */
     private boolean isKeepHistory = false;
 
+    /**
+     * True if the key is expected to be unique
+     */
+    private boolean hasUniqueKey = false;
+    
     public Message() {
         
     }
@@ -101,14 +108,12 @@ public class Message {
         return priority;
     }
 
-    public Integer getTimeout() {
-        if (timeout == null)
-            return 0;
+    public int getTimeout() {
         return timeout;
     }
     
     public boolean hasTimeout() {
-        return timeout != null;
+        return timeout != 0;
     }
 
     /**
@@ -122,12 +127,12 @@ public class Message {
         return this;
     }
 
-    public Message setTimeout(Integer timeout) {
+    public Message setTimeout(int timeout) {
         this.timeout = timeout;
         return this;
     }
     
-    public Message setTimeout(Long timeout, TimeUnit units) {
+    public Message setTimeout(long timeout, TimeUnit units) {
         this.timeout = (int)TimeUnit.SECONDS.convert(timeout, units);
         return this;
     }
@@ -141,8 +146,18 @@ public class Message {
         return this;
     }
     
+    public Message setUniqueKey(String key) {
+        this.key = key;
+        this.hasUniqueKey = true;
+        return this;
+    }
+    
     public boolean hasKey() {
         return this.key != null;
+    }
+
+    public boolean hasUniqueKey() {
+        return this.key != null && this.hasUniqueKey;
     }
 
     public String getTaskClass() {
@@ -158,7 +173,7 @@ public class Message {
         return this.taskClass != null;
     }
     
-    public Boolean isKeepHistory() {
+    public boolean isKeepHistory() {
         return isKeepHistory;
     }
 

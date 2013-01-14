@@ -1145,10 +1145,13 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             }
             
             private void fillAckMutation(MessageContext context, MutationBatch mb) {
+                stats.incFinishMessageCount();
+                
                 Message message = context.getMessage();
+                // Token refers to the timeout event.  If 0 (i.e. no) timeout was specified
+                // then the token will not exist
                 if (message.getToken() != null) {
                     MessageQueueEntry entry = getBusyEntry(message);
-                    stats.incFinishMessageCount();
                     
                     // Remove timeout entry from the queue
                     mb.withRow(queueColumnFamily, getShardKey(entry))
@@ -1209,6 +1212,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 try {
                     mb.execute();
                 } catch (ConnectionException e) {
+                    stats.incPersistError();
                     throw new MessageQueueException("Failed to ack messages", e);
                 }
             }
@@ -1229,30 +1233,30 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             
             @Override
             public SendMessageResponse sendMessages(Collection<Message> messages) throws MessageQueueException {
-                Map<String, Message> keys = Maps.newHashMap();
-                Set<String> notUniqueKeys = Sets.newHashSet();
-                List<Message> notUniqueMessages = Lists.newArrayList();
+                Map<String, Message> uniqueKeys        = Maps.newHashMap();
+                Set<String>          notUniqueKeys     = Sets.newHashSet();
+                List<Message>        notUniqueMessages = Lists.newArrayList();
 
                 MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
                 MessageMetadataEntry lockColumn = MessageMetadataEntry.newUnique();
                 
                 // Get list of keys that must be unique and prepare the mutation for phase 1
                 for (Message message : messages) {
-                    if (message.hasKey()) {
+                    if (message.hasUniqueKey()) {
                         String groupKey = getCompositeKey(queueName, message.getKey());
-                        keys.put(groupKey, message);
+                        uniqueKeys.put(groupKey, message);
                         mb.withRow(keyIndexColumnFamily, groupKey)
                             .putEmptyColumn(lockColumn, (Integer)lockTtl);
                     }
                 }
 
                 // We have some keys that need to be unique
-                if (!keys.isEmpty()) {
+                if (!uniqueKeys.isEmpty()) {
                     // Submit phase 1: Create a unique column for ALL of the unique keys
                     try {
                         mb.execute();
                     } catch (ConnectionException e) {
-                        throw new MessageQueueException("Failed to check keys for uniqueness (1): " + keys, e);
+                        throw new MessageQueueException("Failed to check keys for uniqueness (1): " + uniqueKeys, e);
                     }
                     
                     // Phase 2: Read back ALL the lock columms
@@ -1261,7 +1265,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     try {
                         result = keyspace.prepareQuery(keyIndexColumnFamily)
                             .setConsistencyLevel(consistencyLevel)
-                            .getRowSlice(keys.keySet())
+                            .getRowSlice(uniqueKeys.keySet())
                             .withColumnRange(metadataSerializer.buildRange()
                                     .greaterThanEquals((byte)MessageMetadataEntryType.Unique.ordinal())
                                     .lessThanEquals((byte)MessageMetadataEntryType.Unique.ordinal())
@@ -1269,7 +1273,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                             .execute()
                             .getResult();
                     } catch (ConnectionException e) {
-                        throw new MessageQueueException("Failed to check keys for uniqueness (2): " + keys, e);
+                        throw new MessageQueueException("Failed to check keys for uniqueness (2): " + uniqueKeys, e);
                     }
                     
                     for (Row<String, MessageMetadataEntry> row : result) {
@@ -1278,7 +1282,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                             String messageKey = splitCompositeKey(row.getKey())[1];
                             
                             notUniqueKeys.add(messageKey);
-                            notUniqueMessages.add(keys.get(messageKey));
+                            notUniqueMessages.add(uniqueKeys.get(messageKey));
                             mb.withRow(keyIndexColumnFamily, row.getKey())
                                 .deleteColumn(lockColumn);
                         }
@@ -1348,7 +1352,6 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             
         // Write the lookup from queue key to queue entry
         if (message.hasKey()) {
-            // TODO: Check for uniqueness
             mb.withRow(keyIndexColumnFamily, getCompositeKey(queueName, message.getKey()))
                 .putEmptyColumn(MessageMetadataEntry.newMessageId(getCompositeKey(shardKey, entry.getMessageId())),
                                 settings.getRetentionTimeout());

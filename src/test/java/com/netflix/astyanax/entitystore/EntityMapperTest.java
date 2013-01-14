@@ -27,11 +27,6 @@ public class EntityMapperTest {
 		// 19 simple + 1 nested Bar
 		Assert.assertEquals(20, cols.size());
 
-		// test column name is normalized to lower cases
-		for(ColumnMapper mapper: cols) {
-			Assert.assertEquals(mapper.getColumnName().toLowerCase(), mapper.getColumnName());
-		}
-
 		// test field without explicit column name
 		// simple field name is used
 		boolean foundUUID = false;

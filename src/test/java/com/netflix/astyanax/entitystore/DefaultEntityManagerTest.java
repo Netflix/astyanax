@@ -171,17 +171,17 @@ public class DefaultEntityManagerTest {
 			Assert.assertEquals(23, cl.size());
 			
 			// simple columns
-			Assert.assertEquals(origEntity.getString(), cl.getColumnByName("string").getStringValue());
-			Assert.assertArrayEquals(origEntity.getByteArray(), cl.getColumnByName("byte_array").getByteArrayValue());
+			Assert.assertEquals(origEntity.getString(), cl.getColumnByName("STRING").getStringValue());
+			Assert.assertArrayEquals(origEntity.getByteArray(), cl.getColumnByName("BYTE_ARRAY").getByteArrayValue());
 			
 			// custom ttl
-			Assert.assertEquals(123456, cl.getColumnByName("byte_array").getTtl());
+			Assert.assertEquals(123456, cl.getColumnByName("BYTE_ARRAY").getTtl());
 			
 			//  nested fields
-			Assert.assertEquals(origEntity.getBar().i, cl.getColumnByName("bar.i").getIntegerValue());
-			Assert.assertEquals(origEntity.getBar().s, cl.getColumnByName("bar.s").getStringValue());
-			Assert.assertEquals(origEntity.getBar().barbar.i, cl.getColumnByName("bar.barbar.i").getIntegerValue());
-			Assert.assertEquals(origEntity.getBar().barbar.s, cl.getColumnByName("bar.barbar.s").getStringValue());
+			Assert.assertEquals(origEntity.getBar().i, cl.getColumnByName("BAR.i").getIntegerValue());
+			Assert.assertEquals(origEntity.getBar().s, cl.getColumnByName("BAR.s").getStringValue());
+			Assert.assertEquals(origEntity.getBar().barbar.i, cl.getColumnByName("BAR.barbar.i").getIntegerValue());
+			Assert.assertEquals(origEntity.getBar().barbar.s, cl.getColumnByName("BAR.barbar.s").getStringValue());
 		}
 
 		SampleEntity getEntity = entityPersister.get(id);

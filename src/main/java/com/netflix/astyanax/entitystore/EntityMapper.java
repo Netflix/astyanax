@@ -63,9 +63,9 @@ class EntityMapper<T, K> {
 					columnMapper = new CompositeColumnMapper(field, "");
 				}
 				Preconditions.checkArgument(!usedColumnNames.contains(columnMapper.getColumnName()), 
-						String.format("duplicate case-insensitive column name: %s", columnMapper.getColumnName()));
+						String.format("duplicate case-insensitive column name: %s", columnMapper.getColumnName().toLowerCase()));
 				columnList.add(columnMapper);
-				usedColumnNames.add(columnMapper.getColumnName());
+				usedColumnNames.add(columnMapper.getColumnName().toLowerCase());
 			}
 		}
 		Preconditions.checkNotNull(tmpIdField, "there are no field with @Id annotation");

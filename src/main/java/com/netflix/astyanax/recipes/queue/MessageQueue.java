@@ -1,6 +1,7 @@
 package com.netflix.astyanax.recipes.queue;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -72,6 +73,14 @@ public interface MessageQueue {
     Message peekMessage(String messageId) throws MessageQueueException;
 
     /**
+     * Peek into messages from the queue.  The queue state is not altered by this operation.
+     * @param itemsToPeek
+     * @return
+     * @throws MessageQueueException
+     */
+    Collection<Message> peekMessages(int itemsToPeek) throws MessageQueueException;
+
+    /**
      * Read a specific message from the queue.  The message isn't modified or removed from the queue.
      * This operation will require a lookup of key to messageId
      * 
@@ -80,6 +89,15 @@ public interface MessageQueue {
      * @throws MessageQueueException
      */
     Message peekMessageByKey(String key) throws MessageQueueException;
+    
+    /**
+     * Return list of pending associated with the key.  
+     * 
+     * @param key
+     * @return
+     * @throws MessageQueueException
+     */
+    Collection<Message> peekMessagesByKey(String key) throws MessageQueueException;
     
     /**
      * Read history for the specified key

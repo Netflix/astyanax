@@ -14,7 +14,7 @@ public interface MessageQueueStats {
 
     void incSendMessageCount();
     
-    void incFinishMessageCount();
+    void incAckMessageCount();
 
     void incInvalidMessageCount();
     

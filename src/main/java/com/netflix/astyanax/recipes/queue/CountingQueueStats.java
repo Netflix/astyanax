@@ -44,7 +44,7 @@ public class CountingQueueStats implements MessageQueueStats {
     }
 
     @Override
-    public void incFinishMessageCount() {
+    public void incAckMessageCount() {
         ackMessageCount.incrementAndGet();
     }
 

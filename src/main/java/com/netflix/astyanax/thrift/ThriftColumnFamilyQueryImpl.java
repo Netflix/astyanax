@@ -218,7 +218,8 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                         predicate.getSlice_range().setCount(predicate.getSlice_range().getCount() + 1);
                                     }
                                     else {
-                                        if (!columnList.isEmpty())
+                                        if (!columnList.isEmpty() && 
+                                              columnList.get(0).getColumn().getName().equals(predicate.getSlice_range().getStart()))
                                             columnList.remove(0);
                                     }
 
@@ -530,7 +531,8 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                 }
                                 else {
                                     if (isPaginating) {
-                                        if (!firstPage) {
+                                        if (!firstPage && !cfmap.isEmpty() && 
+                                              cfmap.get(0).bufferForKey().equals(indexClause.bufferForStart_key())) {
                                             cfmap.remove(0);
                                         }
 

@@ -226,4 +226,12 @@ public interface Keyspace {
      * Drop this keyspace from cassandra
      */
     OperationResult<SchemaChangeResult> dropKeyspace() throws ConnectionException ;
+
+    /**
+     * List all schema versions in the cluster.  Under normal conditions there
+     * should only be one schema.  
+     * @return
+     * @throws ConnectionException
+     */
+    Map<String, List<String>> describeSchemaVersions() throws ConnectionException;
 }

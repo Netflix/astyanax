@@ -24,4 +24,8 @@ public class SchemaDisagreementException extends OperationException {
     public SchemaDisagreementException(Throwable t) {
         super(t);
     }
+
+    public SchemaDisagreementException(String str) {
+        super(str);
+    }
 }

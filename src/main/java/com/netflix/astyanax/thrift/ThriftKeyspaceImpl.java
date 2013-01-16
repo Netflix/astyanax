@@ -50,6 +50,7 @@ import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
+import com.netflix.astyanax.connectionpool.exceptions.SchemaDisagreementException;
 import com.netflix.astyanax.connectionpool.impl.TokenRangeImpl;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
@@ -221,7 +222,19 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                     }
                 }, getConfig().getRetryPolicy().duplicate()).getResult();
     }
-    
+
+    @Override
+    public Map<String, List<String>> describeSchemaVersions() throws ConnectionException {
+        return connectionPool.executeWithFailover(
+                new AbstractOperationImpl<Map<String, List<String>>>(
+                        tracerFactory.newTracer(CassandraOperationType.DESCRIBE_SCHEMA_VERSION)) {
+                    @Override
+                    public Map<String, List<String>> internalExecute(Client client, ConnectionContext context) throws Exception {
+                        return client.describe_schema_versions();
+                    }
+                }, config.getRetryPolicy().duplicate()).getResult();
+    }
+
     public <K, C> ColumnFamilyQuery<K, C> prepareQuery(ColumnFamily<K, C> cf) {
         return new ThriftColumnFamilyQueryImpl<K, C>(
                 executor, 
@@ -472,6 +485,11 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                 tracerFactory.newTracer(CassandraOperationType.ADD_COLUMN_FAMILY), getKeyspaceName()) {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                                Map<String, List<String>> schemas = client.describe_schema_versions();
+                                if (schemas.size() > 1) {
+                                    throw new SchemaDisagreementException("Can't create column family when there is a schema disagreement");
+                                }
+                                
                                 ThriftColumnFamilyDefinitionImpl def = new ThriftColumnFamilyDefinitionImpl();
                                 
                                 Map<String, Object> internalOptions = Maps.newHashMap();
@@ -496,6 +514,11 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                 tracerFactory.newTracer(CassandraOperationType.ADD_COLUMN_FAMILY), getKeyspaceName()) {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                                Map<String, List<String>> schemas = client.describe_schema_versions();
+                                if (schemas.size() > 1) {
+                                    throw new SchemaDisagreementException("Can't create column family when there is a schema disagreement");
+                                }
+                                
                                 ThriftColumnFamilyDefinitionImpl def = new ThriftColumnFamilyDefinitionImpl();
                                 
                                 Map<String, Object> internalOptions = Maps.newHashMap();
@@ -527,6 +550,11 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                 tracerFactory.newTracer(CassandraOperationType.UPDATE_COLUMN_FAMILY), getKeyspaceName()) {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                                Map<String, List<String>> schemas = client.describe_schema_versions();
+                                if (schemas.size() > 1) {
+                                    throw new SchemaDisagreementException("Can't update column family when there is a schema disagreement");
+                                }
+                                
                                 ThriftColumnFamilyDefinitionImpl def = new ThriftColumnFamilyDefinitionImpl();
                                 
                                 Map<String, Object> internalOptions = Maps.newHashMap();
@@ -553,6 +581,10 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                 tracerFactory.newTracer(CassandraOperationType.DROP_COLUMN_FAMILY), getKeyspaceName()) {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                                Map<String, List<String>> schemas = client.describe_schema_versions();
+                                if (schemas.size() > 1) {
+                                    throw new SchemaDisagreementException("Can't drop column family when there is a schema disagreement");
+                                }
                                 return new SchemaChangeResponseImpl()
                                     .setSchemaId(client.system_drop_column_family(columnFamilyName));
                             }
@@ -567,6 +599,10 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                 tracerFactory.newTracer(CassandraOperationType.DROP_COLUMN_FAMILY), getKeyspaceName()) {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                                Map<String, List<String>> schemas = client.describe_schema_versions();
+                                if (schemas.size() > 1) {
+                                    throw new SchemaDisagreementException("Can't drop column family when there is a schema disagreement");
+                                }
                                 return new SchemaChangeResponseImpl()
                                     .setSchemaId(client.system_drop_column_family(columnFamily.getName()));
                             }
@@ -581,6 +617,11 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                 tracerFactory.newTracer(CassandraOperationType.ADD_KEYSPACE)) {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                                Map<String, List<String>> schemas = client.describe_schema_versions();
+                                if (schemas.size() > 1) {
+                                    throw new SchemaDisagreementException("Can't create keyspace when there is a schema disagreement");
+                                }
+                                
                                 ThriftKeyspaceDefinitionImpl def = new ThriftKeyspaceDefinitionImpl();
                                 
                                 Map<String, Object> internalOptions = Maps.newHashMap();
@@ -605,6 +646,11 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                 tracerFactory.newTracer(CassandraOperationType.UPDATE_KEYSPACE), getKeyspaceName()) {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                                Map<String, List<String>> schemas = client.describe_schema_versions();
+                                if (schemas.size() > 1) {
+                                    throw new SchemaDisagreementException("Can't update keyspace when there is a schema disagreement");
+                                }
+                                
                                 ThriftKeyspaceDefinitionImpl def = new ThriftKeyspaceDefinitionImpl();
                                 
                                 Map<String, Object> internalOptions = Maps.newHashMap();
@@ -628,6 +674,11 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                 tracerFactory.newTracer(CassandraOperationType.DROP_KEYSPACE), getKeyspaceName()) {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                                Map<String, List<String>> schemas = client.describe_schema_versions();
+                                if (schemas.size() > 1) {
+                                    throw new SchemaDisagreementException("Can't drop keyspace when there is a schema disagreement");
+                                }
+                                
                                 return new SchemaChangeResponseImpl()
                                     .setSchemaId(client.system_drop_keyspace(getKeyspaceName()));
                             }

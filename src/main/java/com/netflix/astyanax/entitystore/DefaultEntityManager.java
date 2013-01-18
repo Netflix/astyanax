@@ -264,7 +264,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
             ColumnFamilyQuery<K, String> cfq = newQuery();            
             Rows<K, String> rows = cfq.getRowSlice(ids).execute().getResult();
 
-            List<T> entities = Lists.newArrayList();
+            List<T> entities = Lists.newArrayListWithExpectedSize(rows.size());
             for (Row<K, String> row : rows) {
                 if (!row.getColumns().isEmpty()) { 
                     T entity = entityMapper.constructEntity(row.getKey(), row.getColumns());
@@ -369,7 +369,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
         
         try {
             CqlResult<K, String> results = newQuery().withCql(cql).execute().getResult();
-            List<T> entities = Lists.newArrayList();
+            List<T> entities = Lists.newArrayListWithExpectedSize(results.getRows().size());
             for (Row<K, String> row : results.getRows()) {
                 if (!row.getColumns().isEmpty()) { 
                     T entity = entityMapper.constructEntity(row.getKey(), row.getColumns());

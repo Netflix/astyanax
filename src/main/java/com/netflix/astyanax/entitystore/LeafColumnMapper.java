@@ -54,14 +54,21 @@ class LeafColumnMapper extends AbstractColumnMapper {
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public void fillMutationBatch(Object entity, ColumnListMutation<String> clm) throws Exception {
+	public boolean fillMutationBatch(Object entity, ColumnListMutation<String> clm) throws Exception {
 		Object value = field.get(entity);
+		if(value == null) {
+			if(columnAnnotation.nullable())
+				return false; // skip
+			else
+				throw new IllegalArgumentException("cannot write non-nullable column with null value: " + columnName);
+		}
 		@SuppressWarnings("rawtypes")
 		final Serializer valueSerializer = serializer;
 		final Integer ttl = getTTL(field);
 		// TODO: suppress the unchecked raw type now.
 		// we have to use the raw type to avoid compiling error
 		clm.putColumn(columnName, value, valueSerializer, ttl);
+		return true;
 	}
 	
 	private Integer getTTL(Field field) {
@@ -76,15 +83,16 @@ class LeafColumnMapper extends AbstractColumnMapper {
 	}
 	
 	@Override
-	public void setField(Object entity, ColumnList<String> cl) throws Exception {
+	public boolean setField(Object entity, ColumnList<String> cl) throws Exception {
 		final com.netflix.astyanax.model.Column<String> c = cl.getColumnByName(columnName);
 		if(c == null) {
 			if(columnAnnotation.nullable())
-				return;
+				return false;
 			else
-				throw new RuntimeException("cannot find non-nullable column: " + columnName);
+				throw new IllegalArgumentException("cannot find non-nullable column: " + columnName);
 		}
 		final Object fieldValue = c.getValue(serializer);
 		field.set(entity, fieldValue);
+		return true;
 	}
 }

@@ -1,12 +1,17 @@
 package com.netflix.astyanax.entitystore;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+
 import java.util.Collection;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import javax.persistence.PersistenceException;
+
 import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -14,7 +19,6 @@ import org.junit.Test;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
@@ -22,6 +26,8 @@ import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
+import com.netflix.astyanax.entitystore.NullableEntity.AllMandatoryNestedEntity;
+import com.netflix.astyanax.entitystore.NullableEntity.AllOptionalNestedEntity;
 import com.netflix.astyanax.entitystore.SampleEntity.Bar;
 import com.netflix.astyanax.entitystore.SampleEntity.Bar.BarBar;
 import com.netflix.astyanax.entitystore.SampleEntity.Foo;
@@ -42,25 +48,25 @@ public class DefaultEntityManagerTest {
 	private static String TEST_KEYSPACE_NAME = "EntityPersisterTestKeyspace";
 	private static final String SEEDS = "localhost:9160";
 
-    public static ColumnFamily<String, String> CF_SAMPLE_ENTITY = ColumnFamily.newColumnFamily(
-            "SampleEntityColumnFamily", 
-            StringSerializer.get(),
-            StringSerializer.get());
+	public static ColumnFamily<String, String> CF_SAMPLE_ENTITY = ColumnFamily.newColumnFamily(
+			"SampleEntityColumnFamily", 
+			StringSerializer.get(),
+			StringSerializer.get());
 
-    public static ColumnFamily<String, String> CF_SIMPLE_ENTITY = ColumnFamily.newColumnFamily(
-            "SimpleEntityColumnFamily", 
-            StringSerializer.get(),
-            StringSerializer.get());
+	public static ColumnFamily<String, String> CF_SIMPLE_ENTITY = ColumnFamily.newColumnFamily(
+			"SimpleEntityColumnFamily", 
+			StringSerializer.get(),
+			StringSerializer.get());
 
 	@BeforeClass
 	public static void setup() throws Exception {
 
-        SingletonEmbeddedCassandra.getInstance();
+		SingletonEmbeddedCassandra.getInstance();
 
 		Thread.sleep(1000 * 3);
 
 		createKeyspace();
-		
+
 		Thread.sleep(1000 * 3);
 	}
 
@@ -69,7 +75,7 @@ public class DefaultEntityManagerTest {
 		if (keyspaceContext != null)
 			keyspaceContext.shutdown();
 
-        Thread.sleep(1000 * 10);
+		Thread.sleep(1000 * 10);
 	}
 
 	private static void createKeyspace() throws Exception {
@@ -110,8 +116,8 @@ public class DefaultEntityManagerTest {
 						.build()
 				);
 
-        keyspace.createColumnFamily(CF_SAMPLE_ENTITY, null);
-        keyspace.createColumnFamily(CF_SIMPLE_ENTITY, null);
+		keyspace.createColumnFamily(CF_SAMPLE_ENTITY, null);
+		keyspace.createColumnFamily(CF_SIMPLE_ENTITY, null);
 	}
 
 	private SampleEntity createSampleEntity(String id) {
@@ -164,19 +170,19 @@ public class DefaultEntityManagerTest {
 		// use low-level astyanax API to confirm the write
 		{
 			ColumnList<String> cl = keyspace.prepareQuery(CF_SAMPLE_ENTITY).getKey(id).execute().getResult();
-			
+
 			// 19 simple columns
 			// 2 one-level-deep nested columns from Bar
 			// 2 two-level-deep nested columns from BarBar
 			Assert.assertEquals(23, cl.size());
-			
+
 			// simple columns
 			Assert.assertEquals(origEntity.getString(), cl.getColumnByName("STRING").getStringValue());
 			Assert.assertArrayEquals(origEntity.getByteArray(), cl.getColumnByName("BYTE_ARRAY").getByteArrayValue());
-			
+
 			// custom ttl
 			Assert.assertEquals(123456, cl.getColumnByName("BYTE_ARRAY").getTtl());
-			
+
 			//  nested fields
 			Assert.assertEquals(origEntity.getBar().i, cl.getColumnByName("BAR.i").getIntegerValue());
 			Assert.assertEquals(origEntity.getBar().s, cl.getColumnByName("BAR.s").getStringValue());
@@ -195,62 +201,62 @@ public class DefaultEntityManagerTest {
 			Assert.assertEquals(0, cl.size());
 		}
 	}
-	
+
 	@Test
 	public void testMultiCalls() throws Exception {
-        EntityManager<SimpleEntity, String> entityPersister = new DefaultEntityManager.Builder<SimpleEntity, String>()
-                .withEntityType(SimpleEntity.class)
-                .withKeyspace(keyspace)
-                .withColumnFamily(CF_SIMPLE_ENTITY)
-                .build();
-        
-        final Map<String, SimpleEntity> entities = Maps.newHashMap();
-        for (int i = 0; i < 10; i++) {
-            String str = Integer.toString(i);
-            entities.put(str, new SimpleEntity(str, str));
-        }
-        
-        // Add multiple
-        entityPersister.put(entities.values());
-        
-        {
-            final Map<String, SimpleEntity> entities2 = collectionToMap(entityPersister.get(entities.keySet()));
-            
-            Assert.assertEquals(entities.keySet(), entities2.keySet());
-        }
+		EntityManager<SimpleEntity, String> entityPersister = new DefaultEntityManager.Builder<SimpleEntity, String>()
+				.withEntityType(SimpleEntity.class)
+				.withKeyspace(keyspace)
+				.withColumnFamily(CF_SIMPLE_ENTITY)
+				.build();
 
-        // Read all
-        {
-            final Map<String, SimpleEntity> entities2 = collectionToMap(entityPersister.getAll());
-            
-            Assert.assertEquals(entities.keySet(), entities2.keySet());
-        }
-        
-        // Delete multiple
-        {
-            System.out.println(entities.keySet());
-            entityPersister.delete(entities.keySet());
-            
-            final Map<String, SimpleEntity> entities3 = collectionToMap(entityPersister.get(entities.keySet()));
-            
-            System.out.println(entities3);
-            Assert.assertTrue(entities3.isEmpty());
+		final Map<String, SimpleEntity> entities = Maps.newHashMap();
+		for (int i = 0; i < 10; i++) {
+			String str = Integer.toString(i);
+			entities.put(str, new SimpleEntity(str, str));
+		}
 
-            final Map<String, SimpleEntity> entities4 = collectionToMap(entityPersister.getAll());
-            
-            System.out.println(entities4);
-            Assert.assertTrue(entities4.isEmpty());
-        }        
+		// Add multiple
+		entityPersister.put(entities.values());
+
+		{
+			final Map<String, SimpleEntity> entities2 = collectionToMap(entityPersister.get(entities.keySet()));
+
+			Assert.assertEquals(entities.keySet(), entities2.keySet());
+		}
+
+		// Read all
+		{
+			final Map<String, SimpleEntity> entities2 = collectionToMap(entityPersister.getAll());
+
+			Assert.assertEquals(entities.keySet(), entities2.keySet());
+		}
+
+		// Delete multiple
+		{
+			System.out.println(entities.keySet());
+			entityPersister.delete(entities.keySet());
+
+			final Map<String, SimpleEntity> entities3 = collectionToMap(entityPersister.get(entities.keySet()));
+
+			System.out.println(entities3);
+			Assert.assertTrue(entities3.isEmpty());
+
+			final Map<String, SimpleEntity> entities4 = collectionToMap(entityPersister.getAll());
+
+			System.out.println(entities4);
+			Assert.assertTrue(entities4.isEmpty());
+		}        
 	}
-	
+
 	private static Map<String, SimpleEntity> collectionToMap(Collection<SimpleEntity> entities) {
-	    Map<String, SimpleEntity> map = Maps.newHashMap();
-	    for (SimpleEntity entity : entities) {
-	        map.put(entity.getId(),  entity);
-	    }
-	    return map;
+		Map<String, SimpleEntity> map = Maps.newHashMap();
+		for (SimpleEntity entity : entities) {
+			map.put(entity.getId(),  entity);
+		}
+		return map;
 	}
-	
+
 	private DoubleIdColumnEntity createDoubleIdColumnEntity(String id) {
 		Random prng = new Random();
 		DoubleIdColumnEntity entity = new DoubleIdColumnEntity();
@@ -259,7 +265,7 @@ public class DefaultEntityManagerTest {
 		entity.setStr(RandomStringUtils.randomAlphanumeric(4));
 		return entity;
 	}
-	
+
 	@Test
 	public void doubleIdColumnAnnotation() throws Exception {
 		final String id = "doubleIdColumnAnnotation";
@@ -294,4 +300,5 @@ public class DefaultEntityManagerTest {
 			Assert.assertEquals(0, cl.size());
 		}
 	}
+
 }

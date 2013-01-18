@@ -190,11 +190,15 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 	 */
 	public T get(K id) throws PersistenceException {
 		try {
-            ColumnFamilyQuery<K, String> cfq = newQuery();            
+			ColumnFamilyQuery<K, String> cfq = newQuery();            
 			ColumnList<String> cl = cfq.getKey(id).execute().getResult();
-
+			// when a row is deleted in cassandra,
+			// the row key remains (without any columns) until the next compaction.
+			// simply return null (as non exist)
+			if(cl.isEmpty())
+				return null;
 			T entity = entityMapper.constructEntity(id, cl);
-            lifecycleHandler.onPostLoad(entity);
+			lifecycleHandler.onPostLoad(entity);
 			return entity;
 		} catch(Exception e) {
 			throw new PersistenceException("failed to get entity " + id, e);
@@ -234,7 +238,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
      * @inheritDoc
      */
     @Override
-    public Collection<T> getAll() throws PersistenceException {
+    public List<T> getAll() throws PersistenceException {
         final List<T> entities = Lists.newArrayList();
         visitAll(new Function<T, Boolean>() {
             @Override
@@ -255,12 +259,12 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
      * @inheritDoc
      */
     @Override
-    public Collection<T> get(Collection<K> ids) throws PersistenceException {
+    public List<T> get(Collection<K> ids) throws PersistenceException {
         try {
             ColumnFamilyQuery<K, String> cfq = newQuery();            
             Rows<K, String> rows = cfq.getRowSlice(ids).execute().getResult();
 
-            List<T> entities = Lists.newArrayList();
+            List<T> entities = Lists.newArrayListWithExpectedSize(rows.size());
             for (Row<K, String> row : rows) {
                 if (!row.getColumns().isEmpty()) { 
                     T entity = entityMapper.constructEntity(row.getKey(), row.getColumns());
@@ -360,12 +364,12 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
     }
     
     @Override
-    public Collection<T> find(String cql) throws PersistenceException {
+    public List<T> find(String cql) throws PersistenceException {
         Preconditions.checkArgument(StringUtils.left(cql, 6).equalsIgnoreCase("SELECT"), "CQL must be SELECT statement");
         
         try {
             CqlResult<K, String> results = newQuery().withCql(cql).execute().getResult();
-            List<T> entities = Lists.newArrayList();
+            List<T> entities = Lists.newArrayListWithExpectedSize(results.getRows().size());
             for (Row<K, String> row : results.getRows()) {
                 if (!row.getColumns().isEmpty()) { 
                     T entity = entityMapper.constructEntity(row.getKey(), row.getColumns());

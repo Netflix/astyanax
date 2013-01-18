@@ -1,6 +1,7 @@
 package com.netflix.astyanax.entitystore;
 
 import java.util.Collection;
+import java.util.List;
 
 import javax.persistence.PersistenceException;
 
@@ -21,7 +22,7 @@ public interface EntityManager<T, K> {
 	/**
 	 * fetch whole row and construct entity object mapping from columns
 	 * @param id row key
-	 * @return entity object
+	 * @return entity object. null if not exist
 	 */
 	public T get(K id) throws PersistenceException;
 	
@@ -43,7 +44,7 @@ public interface EntityManager<T, K> {
 	 * @return
 	 * @throws PersistenceException
 	 */
-	public Collection<T> getAll() throws PersistenceException;
+	public List<T> getAll() throws PersistenceException;
 	
 	/**
 	 * Get a set of entities
@@ -51,7 +52,7 @@ public interface EntityManager<T, K> {
 	 * @return
 	 * @throws PersistenceException
 	 */
-	public Collection<T> get(Collection<K> ids) throws PersistenceException;
+	public List<T> get(Collection<K> ids) throws PersistenceException;
 	
 	/**
 	 * Delete a set of entities by their id
@@ -89,5 +90,5 @@ public interface EntityManager<T, K> {
 	 * @return
 	 * @throws PersistenceException
 	 */
-	public Collection<T> find(String cql) throws PersistenceException;
+	public List<T> find(String cql) throws PersistenceException;
 }

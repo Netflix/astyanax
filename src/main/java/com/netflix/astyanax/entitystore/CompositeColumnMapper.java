@@ -64,20 +64,48 @@ class CompositeColumnMapper extends AbstractColumnMapper {
 	}
 
 	@Override
-	public void fillMutationBatch(Object entity, ColumnListMutation<String> clm) throws Exception {
+	public boolean fillMutationBatch(Object entity, ColumnListMutation<String> clm) throws Exception {
 		Object childEntity = field.get(entity);
-		for (ColumnMapper mapper : columnList) {
-			mapper.fillMutationBatch(childEntity, clm);
+		if(childEntity == null) {
+			if(columnAnnotation.nullable()) {
+				return false; // skip. cannot write null column
+			} else {
+				throw new IllegalArgumentException("cannot write non-nullable column with null value: " + columnName);
+			}
 		}
+		boolean hasNonNullChildField = false;
+		for (ColumnMapper mapper : columnList) {
+			boolean childFilled = mapper.fillMutationBatch(childEntity, clm);
+			if(childFilled)
+				hasNonNullChildField = true;
+		}
+		return hasNonNullChildField;
 	}
 
 	@Override
-	public void setField(Object entity, ColumnList<String> cl) throws Exception {
+	public boolean setField(Object entity, ColumnList<String> cl) throws Exception {
 		Object childEntity = clazz.newInstance();
+		boolean hasNonNullChildField = false;
 		for (ColumnMapper mapper : columnList) {
-			mapper.setField(childEntity, cl);
+			boolean childSet = mapper.setField(childEntity, cl);
+			if(childSet)
+				hasNonNullChildField = true;
+		}	
+		if(hasNonNullChildField) {
+			field.set(entity, childEntity);
+			return true;
+		} else {
+			if(columnAnnotation.nullable()) {
+				return false; // skip. keep it null
+			} else {
+				// if not-nullable nested entity has all null child fields 
+				// then we didn't write any columns to cassandra.
+				// but since it's non-nullable,
+				// we should still set the constructed default object
+				field.set(entity, childEntity);
+				return true;
+			}
 		}
-		field.set(entity, childEntity);
 	}
 
 }

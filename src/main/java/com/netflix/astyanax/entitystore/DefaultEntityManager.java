@@ -238,7 +238,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
      * @inheritDoc
      */
     @Override
-    public Collection<T> getAll() throws PersistenceException {
+    public List<T> getAll() throws PersistenceException {
         final List<T> entities = Lists.newArrayList();
         visitAll(new Function<T, Boolean>() {
             @Override
@@ -259,7 +259,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
      * @inheritDoc
      */
     @Override
-    public Collection<T> get(Collection<K> ids) throws PersistenceException {
+    public List<T> get(Collection<K> ids) throws PersistenceException {
         try {
             ColumnFamilyQuery<K, String> cfq = newQuery();            
             Rows<K, String> rows = cfq.getRowSlice(ids).execute().getResult();
@@ -364,7 +364,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
     }
     
     @Override
-    public Collection<T> find(String cql) throws PersistenceException {
+    public List<T> find(String cql) throws PersistenceException {
         Preconditions.checkArgument(StringUtils.left(cql, 6).equalsIgnoreCase("SELECT"), "CQL must be SELECT statement");
         
         try {

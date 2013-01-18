@@ -190,11 +190,15 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 	 */
 	public T get(K id) throws PersistenceException {
 		try {
-            ColumnFamilyQuery<K, String> cfq = newQuery();            
+			ColumnFamilyQuery<K, String> cfq = newQuery();            
 			ColumnList<String> cl = cfq.getKey(id).execute().getResult();
-
+			// when a row is deleted in cassandra,
+			// the row key remains (without any columns) until the next compaction.
+			// simply return null (as non exist)
+			if(cl.isEmpty())
+				return null;
 			T entity = entityMapper.constructEntity(id, cl);
-            lifecycleHandler.onPostLoad(entity);
+			lifecycleHandler.onPostLoad(entity);
 			return entity;
 		} catch(Exception e) {
 			throw new PersistenceException("failed to get entity " + id, e);

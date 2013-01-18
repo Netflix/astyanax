@@ -21,7 +21,7 @@ public interface EntityManager<T, K> {
 	/**
 	 * fetch whole row and construct entity object mapping from columns
 	 * @param id row key
-	 * @return entity object
+	 * @return entity object. null if not exist
 	 */
 	public T get(K id) throws PersistenceException;
 	

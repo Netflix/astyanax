@@ -41,7 +41,7 @@ public class EntityMapperTest {
 		Assert.assertTrue(founduuid);
 	}
 
-	@Test(expected = NullPointerException.class) 
+	@Test(expected = IllegalArgumentException.class) 
 	public void missingEntityAnnotation() {
 		new EntityMapper<String, String>(String.class, null);
 	}

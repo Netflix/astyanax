@@ -29,7 +29,7 @@ class CompositeColumnMapper extends AbstractColumnMapper {
 		// clazz should be annotated with @Entity
 		Entity entityAnnotation = clazz.getAnnotation(Entity.class);
 		if(entityAnnotation == null)
-			throw new IllegalArgumentException("class is NOT annotated with @Entity: " + clazz.getName());
+			throw new IllegalArgumentException("class is NOT annotated with @java.persistence.Entity: " + clazz.getName());
 
 		columnList = Lists.newArrayListWithCapacity(clazz.getDeclaredFields().length);
 		Set<String> usedColumnNames = Sets.newHashSet();

@@ -251,7 +251,6 @@ public class SampleEntity {
 	private String string;
 
 	@Column(name="BYTE_ARRAY")
-	@TTL(123456)
 	private byte[] byteArray;
 
 	@Column(name="DATE")

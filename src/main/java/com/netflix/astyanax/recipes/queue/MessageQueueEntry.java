@@ -34,20 +34,22 @@ public class MessageQueueEntry {
     @Component(ordinal=3)
     private Byte state;
     
+    @Component(ordinal=4)
+    private UUID random = TimeUUIDUtils.getUniqueTimeUUIDinMicros();
 
     public MessageQueueEntry() {
-        
     }
     
     public MessageQueueEntry(String id) {
         String[] parts = StringUtils.split(id, ID_DELIMITER);
-        if (parts.length != 4)
+        if (parts.length != 5)
             throw new RuntimeException("Invalid message ID.  Expection <type>:<priority>:<timestamp>:<state> but got " + id);
         
         type      = Byte.parseByte(parts[0]);
         priority  = Byte.parseByte(parts[1]);
         timestamp = UUID.fromString (parts[2]);
         state     = Byte.parseByte(parts[3]);
+        random    = UUID.fromString (parts[4]);
     }
     
     private MessageQueueEntry(MessageQueueEntryType type, byte priority, UUID timestamp, MessageQueueEntryState state) {
@@ -115,7 +117,8 @@ public class MessageQueueEntry {
                 .append(type)                .append(ID_DELIMITER)
                 .append(priority)            .append(ID_DELIMITER)
                 .append(timestamp.toString()).append(ID_DELIMITER)
-                .append(state)
+                .append(state)               .append(ID_DELIMITER)
+                .append(random.toString())
                 .toString();
         
     }

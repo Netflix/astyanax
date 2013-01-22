@@ -3,6 +3,7 @@ package com.netflix.astyanax.thrift;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -41,6 +42,7 @@ import com.netflix.astyanax.recipes.queue.MessageQueueException;
 import com.netflix.astyanax.recipes.queue.SendMessageResponse;
 import com.netflix.astyanax.recipes.queue.ShardedDistributedMessageQueue;
 import com.netflix.astyanax.recipes.queue.triggers.RepeatingTrigger;
+import com.netflix.astyanax.recipes.queue.triggers.RunOnceTrigger;
 import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
 
 public class QueueTest {
@@ -304,7 +306,6 @@ public class QueueTest {
         
     }
     
-
     @Test
     @Ignore
     public void testStressQueue() throws Exception {
@@ -312,7 +313,7 @@ public class QueueTest {
         
         final AtomicLong counter = new AtomicLong(0);
         final AtomicLong insertCount = new AtomicLong(0);
-        final int max_count = 100000;
+        final long max_count = 1000000;
 
         final CountingQueueStats stats = new CountingQueueStats();
         
@@ -322,8 +323,8 @@ public class QueueTest {
             .withKeyspace(keyspace)
             .withConsistencyLevel(cl)
             .withStats(stats)
-//            .withTimeBuckets(50,  30,  TimeUnit.SECONDS)
-            .withShardCount(20)
+            .withTimeBuckets(10,  30,  TimeUnit.SECONDS)
+            .withShardCount(100)
             .withPollInterval(100L,  TimeUnit.MILLISECONDS)
             .build();
         
@@ -334,54 +335,93 @@ public class QueueTest {
         final ConcurrentMap<String, Boolean> lookup = Maps.newConcurrentMap();
         
         final int batchSize = 50;
-        // Producer
-        final AtomicLong iCounter = new AtomicLong(0);
-        for (int j = 0; j < 1; j++) {
-            executor.submit(new Runnable() {
-                @Override
-                public void run() {
-                    MessageProducer producer = scheduler.createProducer();
-                    
-                    List<Message> tasks = Lists.newArrayList();
-                    while (true) {
-                        long count = insertCount.incrementAndGet();
-                        if (count > max_count) {
-                            insertCount.decrementAndGet();
-                            break;
-                        }
-                        try {
-                            tasks.add(new Message()
-                                .setKey("" + count)
-                                .addParameter("data", "The quick brown fox jumped over the lazy cow " + count)
-    //                            .setNextTriggerTime(TimeUnit.SECONDS.convert(tm, TimeUnit.MILLISECONDS))
-//                                .setTimeout(1L, TimeUnit.MINUTES)
-                                );
-                            
-                            if (tasks.size() == batchSize) {
-                                producer.sendMessages(tasks);
-                                tasks.clear();
-                            }
-                        } catch (Exception e) {
-                            LOG.error(e.getMessage());
-                            try {
-                                Thread.sleep(1000);
-                            } catch (InterruptedException e1) {
-                                e1.printStackTrace();
-                            }
-                        }
+        
+        Executors.newSingleThreadExecutor().execute(new Runnable() {
+            @Override
+            public void run() {
+                MessageProducer producer = scheduler.createProducer();
+                for (int i = 0; i < max_count / batchSize; i++) {
+                    long tm = System.currentTimeMillis();
+                    List<Message> messages = Lists.newArrayList();
+                    for (int j = 0; j < batchSize; j++) {
+                        long id = insertCount.incrementAndGet();
+                        messages.add(new Message()
+                            .setKey("" + id)
+                            .addParameter("data", "The quick brown fox jumped over the lazy cow " + id)
+                            .setTimeout(0)
+                            .setTrigger(new RunOnceTrigger.Builder()
+                                .withDelay(j, TimeUnit.SECONDS)
+                                .build())
+                            );
+                    }
+                    try {
+                        producer.sendMessages(messages);
+                    } catch (MessageQueueException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
                     }
                     
-                    if (tasks.size() == batchSize) {
+                    long sleep = 1000 - System.currentTimeMillis() - tm;
+                    if (sleep > 0) {
                         try {
-                            producer.sendMessages(tasks);
-                        } catch (MessageQueueException e) {
+                            Thread.sleep(sleep);
+                        } catch (InterruptedException e) {
+                            // TODO Auto-generated catch block
                             e.printStackTrace();
                         }
-                        tasks.clear();
                     }
                 }
-            });
-        }
+            }
+        });
+        
+//        // Producer
+//        final AtomicLong iCounter = new AtomicLong(0);
+//        for (int j = 0; j < 1; j++) {
+//            executor.submit(new Runnable() {
+//                @Override
+//                public void run() {
+//                    MessageProducer producer = scheduler.createProducer();
+//                    
+//                    List<Message> tasks = Lists.newArrayList();
+//                    while (true) {
+//                        long count = insertCount.incrementAndGet();
+//                        if (count > max_count) {
+//                            insertCount.decrementAndGet();
+//                            break;
+//                        }
+//                        try {
+//                            tasks.add(new Message()
+//                                .setKey("" + count)
+//                                .addParameter("data", "The quick brown fox jumped over the lazy cow " + count)
+//    //                            .setNextTriggerTime(TimeUnit.SECONDS.convert(tm, TimeUnit.MILLISECONDS))
+////                                .setTimeout(1L, TimeUnit.MINUTES)
+//                                );
+//                            
+//                            if (tasks.size() == batchSize) {
+//                                producer.sendMessages(tasks);
+//                                tasks.clear();
+//                            }
+//                        } catch (Exception e) {
+//                            LOG.error(e.getMessage());
+//                            try {
+//                                Thread.sleep(1000);
+//                            } catch (InterruptedException e1) {
+//                                e1.printStackTrace();
+//                            }
+//                        }
+//                    }
+//                    
+//                    if (tasks.size() == batchSize) {
+//                        try {
+//                            producer.sendMessages(tasks);
+//                        } catch (MessageQueueException e) {
+//                            e.printStackTrace();
+//                        }
+//                        tasks.clear();
+//                    }
+//                }
+//            });
+//        }
         
         // Status
         final AtomicLong prevCount = new AtomicLong(0);
@@ -389,14 +429,33 @@ public class QueueTest {
             @Override
             public void run() {
                 try {
-                    long newCount = counter.get();
-                    System.out.println("#### Processed : " + (newCount - prevCount.get()) + " of " + newCount + " (" + (insertCount.get() - newCount) + ")");
+                    long newCount = insertCount.get();
+//                    long newCount = counter.get();
+//                    System.out.println("#### Processed : " + (newCount - prevCount.get()) + " of " + newCount + " (" + (insertCount.get() - newCount) + ")");
 //                        System.out.println("#### Pending   : " + scheduler.getTaskCount());
 //                        for (Entry<String, Integer> shard : producer.getShardCounts().entrySet()) {
 //                            LOG.info("  " + shard.getKey() + " : " + shard.getValue());
 //                        }
                     System.out.println(stats.toString());
+                    System.out.println("" + (newCount - prevCount.get()) + " /sec  (" + newCount + ")");
                     prevCount.set(newCount);
+                    
+//                    if (insertCount.get() >= max_count) {
+//                        Map<String, Integer> counts;
+//                        try {
+//                            counts = scheduler.getShardCounts();
+//                            long total = 0;
+//                            for (Entry<String, Integer> shard : counts.entrySet()) {
+//                                total += shard.getValue();
+//                            }
+//                            
+//                            System.out.println("Total: " + total + " " + counts.toString());
+//                        } catch (MessageQueueException e) {
+//                            // TODO Auto-generated catch block
+//                            e.printStackTrace();
+//                        }
+//                    }
+
                 } 
                 catch (Exception e) {
                     // TODO Auto-generated catch block
@@ -407,7 +466,7 @@ public class QueueTest {
         
         // Consumer
         MessageQueueDispatcher dispatcher = new MessageQueueDispatcher.Builder()
-            .withBatchSize(50)
+            .withBatchSize(500)
             .withCallback(new Function<MessageContext, Boolean>() {
                 @Override
                 public Boolean apply(MessageContext message) {

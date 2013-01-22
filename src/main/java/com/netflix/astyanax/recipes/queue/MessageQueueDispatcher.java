@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
 import com.netflix.astyanax.recipes.locks.BusyLockException;
@@ -119,7 +118,7 @@ public class MessageQueueDispatcher {
          * @param factory
          * @return
          */
-        public Builder withMessageHandlerSupplier(MessageHandlerFactory factory) {
+        public Builder withMessageHandlerFactory(MessageHandlerFactory factory) {
             dispatcher.handlerFactory = factory;
             return this;
         }
@@ -186,15 +185,20 @@ public class MessageQueueDispatcher {
                 Thread.currentThread().setName(name);
                 
                 while (!terminate) {
-                    List<MessageContext> messages = Lists.newArrayList();
-                    toAck.drainTo(messages);
-                    if (!messages.isEmpty()) {
-                        try {
-                            ackConsumer.ackMessages(messages);
-                        } catch (MessageQueueException e) {
-                            toAck.addAll(messages);
-                            LOG.warn("Failed to ack consumer", e);
+                    try {
+                        List<MessageContext> messages = Lists.newArrayList();
+                        toAck.drainTo(messages);
+                        if (!messages.isEmpty()) {
+                            try {
+                                ackConsumer.ackMessages(messages);
+                            } catch (MessageQueueException e) {
+                                toAck.addAll(messages);
+                                LOG.warn("Failed to ack consumer", e);
+                            }
                         }
+                    }
+                    catch (Throwable t) {
+                        LOG.info("Error acking messages", t);
                     }
                     
                     try {
@@ -235,8 +239,8 @@ public class MessageQueueDispatcher {
                             return;
                         }
                     }
-                    catch (Exception e) {
-                        LOG.warn("Error consuming messages ", e);
+                    catch (Throwable t) {
+                        LOG.warn("Error consuming messages ", t);
                     }
                 }
             }

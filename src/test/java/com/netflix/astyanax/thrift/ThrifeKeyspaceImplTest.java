@@ -488,6 +488,38 @@ public class ThrifeKeyspaceImplTest {
     }
     
     @Test
+    public void testNonExistentKeyspace()  {
+        AstyanaxContext<Keyspace> ctx = new AstyanaxContext.Builder()
+            .forCluster(TEST_CLUSTER_NAME)
+            .forKeyspace(TEST_KEYSPACE_NAME + "_NonExistent")
+            .withAstyanaxConfiguration(
+                    new AstyanaxConfigurationImpl()
+                            .setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
+                            .setConnectionPoolType(ConnectionPoolType.TOKEN_AWARE)
+                            .setDiscoveryDelayInSeconds(60000))
+            .withConnectionPoolConfiguration(
+                    new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME
+                            + "_" + TEST_KEYSPACE_NAME)
+                            .setSocketTimeout(30000)
+                            .setMaxTimeoutWhenExhausted(2000)
+                            .setMaxConnsPerHost(20)
+                            .setInitConnsPerHost(10)
+                            .setSeeds(SEEDS))
+            .withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
+            .buildKeyspace(ThriftFamilyFactory.getInstance());        
+        
+        ctx.start();
+        
+        try {
+            KeyspaceDefinition keyspaceDef = ctx.getEntity().describeKeyspace();
+        } catch (ConnectionException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        
+    }
+    
+    @Test
     public void testDescribeRing() throws Exception {
         // [TokenRangeImpl [startToken=0, endToken=0, endpoints=[127.0.0.1]]]
         List<TokenRange> ring = keyspaceContext.getEntity().describeRing();

@@ -10,7 +10,7 @@ import java.util.Map;
  * Common use pattern
  * 
  *  MessageQueue queue = ...;
- *  Collection<Message> messages = queue.readMessages(10);
+ *  List<Message> messages = queue.readMessages(10);
  *  for (Message message : messages) {
  *      try {
  *          // Do something with this message
@@ -78,7 +78,7 @@ public interface MessageQueue {
      * @return
      * @throws MessageQueueException
      */
-    Collection<Message> peekMessages(int itemsToPeek) throws MessageQueueException;
+    List<Message> peekMessages(int itemsToPeek) throws MessageQueueException;
 
     /**
      * Read a specific message from the queue.  The message isn't modified or removed from the queue.
@@ -97,7 +97,7 @@ public interface MessageQueue {
      * @return
      * @throws MessageQueueException
      */
-    Collection<Message> peekMessagesByKey(String key) throws MessageQueueException;
+    List<Message> peekMessagesByKey(String key) throws MessageQueueException;
     
     /**
      * Read history for the specified key
@@ -105,7 +105,7 @@ public interface MessageQueue {
      * @return
      * @throws MessageQueueException
      */
-    Collection<MessageHistory> getKeyHistory(String key, Long startTime, Long endTime, int count) throws MessageQueueException;
+    List<MessageHistory> getKeyHistory(String key, Long startTime, Long endTime, int count) throws MessageQueueException;
     
     /**
      * Delete a specific message from the queue.  

@@ -1,6 +1,7 @@
 package com.netflix.astyanax.recipes.queue;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import com.netflix.astyanax.recipes.locks.BusyLockException;
@@ -16,7 +17,7 @@ public interface MessageConsumer {
      * @throws InterruptedException 
      * @throws Exception 
      */
-    Collection<MessageContext> readMessages(int itemsToRead) throws MessageQueueException, BusyLockException, InterruptedException;
+    List<MessageContext> readMessages(int itemsToRead) throws MessageQueueException, BusyLockException, InterruptedException;
 
     /**
      * Acquire up to N items from the queue.  Each item must be released by calling ackMessage.
@@ -26,7 +27,18 @@ public interface MessageConsumer {
      * @param units
      * @return
      */
-    Collection<MessageContext> readMessages(int itemsToRead, long timeout, TimeUnit units) throws MessageQueueException, BusyLockException, InterruptedException;
+    List<MessageContext> readMessages(int itemsToRead, long timeout, TimeUnit units) throws MessageQueueException, BusyLockException, InterruptedException;
+    
+    /**
+     * Read messages from a known shard
+     * 
+     * @param shard
+     * @param itemsToRead
+     * @return
+     * @throws BusyLockException 
+     * @throws MessageQueueException 
+     */
+    List<MessageContext> readMessagesFromShard(String shard, int itemsToRead) throws MessageQueueException, BusyLockException;
     
     /**
      * Peek into messages from the queue.  The queue state is not altered by this operation.

@@ -64,22 +64,10 @@ class LeafColumnMapper extends AbstractColumnMapper {
 		}
 		@SuppressWarnings("rawtypes")
 		final Serializer valueSerializer = serializer;
-		final Integer ttl = getTTL(field);
 		// TODO: suppress the unchecked raw type now.
 		// we have to use the raw type to avoid compiling error
-		clm.putColumn(columnName, value, valueSerializer, ttl);
+		clm.putColumn(columnName, value, valueSerializer, null);
 		return true;
-	}
-	
-	private Integer getTTL(Field field) {
-		// if there is no field level @TTL annotation, return null.
-		// then the default global value (which could also be valid null).
-		TTL ttlAnnotation = field.getAnnotation(TTL.class);
-		if(ttlAnnotation != null) {
-			return ttlAnnotation.value();
-		} else {
-			return null;
-		}
 	}
 	
 	@Override

@@ -26,7 +26,7 @@ import com.netflix.astyanax.model.ColumnList;
 class EntityMapper<T, K> {
 
 	private final Class<T> clazz;
-	private final Integer defaultTtl;
+	private final Integer ttl;
 	private final Field idField;
 	private final List<ColumnMapper> columnList;
 
@@ -37,9 +37,25 @@ class EntityMapper<T, K> {
 	 * 		if clazz is NOT annotated with @Entity
 	 * 		if column name contains illegal char (like dot)
 	 */
-	EntityMapper(Class<T> clazz, Integer defaultTtl) {
+	EntityMapper(Class<T> clazz, Integer ttl) {
 		this.clazz = clazz;
-		this.defaultTtl = defaultTtl;
+		
+		// clazz should be annotated with @Entity
+		Entity entityAnnotation = clazz.getAnnotation(Entity.class);
+		if(entityAnnotation == null)
+			throw new IllegalArgumentException("class is NOT annotated with @java.persistence.Entity: " + clazz.getName());
+		
+		if(ttl == null) {
+			// try @TTL annotation at entity/row level.
+			// it doesn't make sense to support @TTL annotation at individual column level.
+			TTL ttlAnnotation = clazz.getAnnotation(TTL.class);
+			if(ttlAnnotation == null)
+				this.ttl = null;
+			else
+				this.ttl = ttlAnnotation.value();
+		} else {
+			this.ttl = ttl;
+		}
 
 		Field[] declaredFields = clazz.getDeclaredFields();
 		columnList = Lists.newArrayListWithCapacity(declaredFields.length);
@@ -78,7 +94,7 @@ class EntityMapper<T, K> {
 			@SuppressWarnings("unchecked")
 			K rowKey = (K) idField.get(entity);
 			ColumnListMutation<String> clm = mb.withRow(columnFamily, rowKey);
-			clm.setDefaultTtl(defaultTtl);
+			clm.setDefaultTtl(ttl);
 			
 			for (ColumnMapper mapper : columnList) {
 				mapper.fillMutationBatch(entity, clm);
@@ -101,6 +117,7 @@ class EntityMapper<T, K> {
 		}
 	}
 	
+	@SuppressWarnings("unchecked")
 	K getEntityId(T entity) throws Exception {
 	    return (K)idField.get(entity);
 	}

@@ -1,6 +1,7 @@
 package com.netflix.astyanax.entitystore;
 
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.Id;
 
 /**
@@ -8,6 +9,7 @@ import javax.persistence.Id;
  * @author stevenwu
  *
  */
+@Entity
 public class DoubleIdColumnEntity {
 
 	@Id

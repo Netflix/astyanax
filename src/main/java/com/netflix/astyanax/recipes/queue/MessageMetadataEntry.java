@@ -56,7 +56,7 @@ public class MessageMetadataEntry {
     public static MessageMetadataEntry newLock() {
         return new MessageMetadataEntry(MessageMetadataEntryType.Unique, TimeUUIDUtils.getUniqueTimeUUIDinMicros().toString());
     }
-
+    
     @Override
     public String toString() {
         return "MessageMetadata [type=" + type + ", name=" + name + "]";

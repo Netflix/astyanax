@@ -292,10 +292,6 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         shardStrategy = new TimePartitionedShardStrategy(settings);
     }
 
-    protected MessageQueueEntry getBusyEntry(Message message) {
-        return MessageQueueEntry.newMessageEntry(message.getPriority(), message.getToken(), MessageQueueEntryState.Busy);
-    }
-    
     /**
      * Return the shard for this message
      * @param message
@@ -622,7 +618,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             public Void call() throws Exception {
                 keyspace.createColumnFamily(queueColumnFamily, ImmutableMap.<String, Object>builder()
                         .put("key_validation_class",     "UTF8Type")
-                        .put("comparator_type",          "CompositeType(BytesType, BytesType(reversed=true), TimeUUIDType, BytesType, TimeUUIDType)")
+                        .put("comparator_type",          "CompositeType(BytesType, BytesType(reversed=true), TimeUUIDType, TimeUUIDType, BytesType)")
                         .put("read_repair_chance",       1.0)
                         .put("gc_grace_period",          0)     // TODO: Calculate gc_grace_period
                         .put("compaction_strategy",      "LeveledCompactionStrategy")
@@ -937,6 +933,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                                                 MessageQueueEntryState.Busy);
                                         
                                         message.setToken(timeoutEntry.getTimestamp());
+                                        message.setRandom(timeoutEntry.getRandom());
                                         
                                         m.withRow(queueColumnFamily, getShardKey(timeoutEntry))
                                          .putColumn(timeoutEntry, column.getStringValue(), settings.getRetentionTimeout());
@@ -1047,7 +1044,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 // Token refers to the timeout event.  If 0 (i.e. no) timeout was specified
                 // then the token will not exist
                 if (message.getToken() != null) {
-                    MessageQueueEntry entry = getBusyEntry(message);
+                    MessageQueueEntry entry = MessageQueueEntry.newBusyEntry(message);
                     
                     // Remove timeout entry from the queue
                     mb.withRow(queueColumnFamily, getShardKey(entry))

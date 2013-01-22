@@ -19,6 +19,11 @@ public class Message {
     private UUID  token;
     
     /**
+     * Random number associated with this message
+     */
+    private UUID  random;
+    
+    /**
      * Execution time for the task in milliseconds
      */
     private Trigger trigger;
@@ -62,8 +67,9 @@ public class Message {
         
     }
     
-    public Message(UUID token) {
+    public Message(UUID token, UUID random) {
         this.token = token;
+        this.random = random;
     }
     
     public UUID getToken() {
@@ -72,6 +78,15 @@ public class Message {
 
     public Message setToken(UUID token) {
         this.token = token;
+        return this;
+    }
+
+    public UUID getRandom() {
+        return random;
+    }
+
+    public Message setRandom(UUID random) {
+        this.random = random;
         return this;
     }
 
@@ -197,7 +212,9 @@ public class Message {
 
     @Override
     public String toString() {
-        return "Message [token=" + token + ", trigger=" + trigger + ", parameters=" + parameters + ", priority=" + priority
-                + ", timeout=" + timeout + ", key=" + key + ", taskClass=" + taskClass + "]";
+        return "Message [token=" + token + ", random=" + random + ", trigger=" + trigger + ", parameters=" + parameters
+                + ", priority=" + priority + ", timeout=" + timeout + ", key=" + key + ", taskClass=" + taskClass
+                + ", isKeepHistory=" + isKeepHistory + ", hasUniqueKey=" + hasUniqueKey + "]";
     }
+
 }

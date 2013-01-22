@@ -215,7 +215,7 @@ public class QueueTest {
             scheduler.deleteMessageByKey(key2);
 
             // Read the message
-            final Collection<MessageContext> lm2 = consumer.readMessages(1, 1, TimeUnit.SECONDS);
+            final Collection<MessageContext> lm2 = consumer.readMessages(10, 10, TimeUnit.SECONDS);
             System.out.println("Read message: " + lm2);
             Assert.assertEquals(1,  lm2.size());
             System.out.println(lm2);

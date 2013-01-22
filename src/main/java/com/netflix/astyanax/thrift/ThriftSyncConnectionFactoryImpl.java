@@ -60,10 +60,10 @@ import java.util.concurrent.atomic.AtomicLong;
 public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassandra.Client> {
     private static final String NAME_FORMAT = "ThriftConnection<%s-%d>";
     private static final Logger LOG = LoggerFactory.getLogger(ThriftSyncConnectionFactoryImpl.class);
+    private final static ExecutorService executor = Executors.newCachedThreadPool(new ThreadFactoryBuilder().setDaemon(true)
+            .build());
     
     private final AtomicLong idCounter = new AtomicLong(0);
-    private final ExecutorService executor = Executors.newCachedThreadPool(new ThreadFactoryBuilder().setDaemon(true)
-            .build());
     private final RateLimiter limiter;
     private final ConnectionPoolConfiguration cpConfig;
     private final KeyspaceTracerFactory tracerFactory;

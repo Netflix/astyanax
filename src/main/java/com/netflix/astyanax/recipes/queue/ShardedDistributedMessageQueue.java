@@ -1076,6 +1076,14 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                         hook.beforeAckMessage(message, mb);
                     }
                 }
+                
+                if (context.getNextMessage() != null) {
+                    try {
+                        fillMessageMutation(mb, context.getNextMessage());
+                    } catch (MessageQueueException e) {
+                        LOG.warn("Error filling nextMessage for " + message.getKey(), e);
+                    }
+                }
             }
 
             @Override

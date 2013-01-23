@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 
 import org.apache.cassandra.cql.jdbc.JdbcDecimal;
-import org.apache.cassandra.db.marshal.IntegerType;
+import org.apache.cassandra.db.marshal.DecimalType;
 
 public class BigDecimalSerializer extends AbstractSerializer<BigDecimal> {
 
@@ -26,17 +26,17 @@ public class BigDecimalSerializer extends AbstractSerializer<BigDecimal> {
 
     @Override
     public ComparatorType getComparatorType() {
-        return ComparatorType.INTEGERTYPE;
+        return ComparatorType.DECIMALTYPE;
     }
 
     @Override
     public ByteBuffer fromString(String str) {
-        return IntegerType.instance.fromString(str);
+        return DecimalType.instance.fromString(str);
     }
 
     @Override
     public String getString(ByteBuffer byteBuffer) {
-        return IntegerType.instance.getString(byteBuffer);
+        return DecimalType.instance.getString(byteBuffer);
     }
 
     @Override

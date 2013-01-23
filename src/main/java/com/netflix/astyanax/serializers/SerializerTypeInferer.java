@@ -1,5 +1,6 @@
 package com.netflix.astyanax.serializers;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Date;
@@ -49,6 +50,9 @@ public class SerializerTypeInferer {
         else if (value instanceof BigInteger) {
             serializer = BigIntegerSerializer.get();
         }
+        else if (value instanceof BigDecimal) {
+            serializer = BigDecimalSerializer.get();
+        }
         else if (value instanceof Boolean) {
             serializer = BooleanSerializer.get();
         }
@@ -96,6 +100,12 @@ public class SerializerTypeInferer {
         }
         else if (valueClass.equals(Double.class) || valueClass.equals(double.class)) {
             serializer = DoubleSerializer.get();
+        }
+        else if (valueClass.equals(BigInteger.class)) {
+            serializer = BigIntegerSerializer.get();
+        }
+        else if (valueClass.equals(BigDecimal.class)) {
+            serializer = BigDecimalSerializer.get();
         }
         else if (valueClass.equals(Boolean.class) || valueClass.equals(boolean.class)) {
             serializer = BooleanSerializer.get();

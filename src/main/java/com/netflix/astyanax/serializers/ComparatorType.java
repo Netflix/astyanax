@@ -9,8 +9,9 @@ public enum ComparatorType {
 
     ASCIITYPE("org.apache.cassandra.db.marshal.AsciiType", AsciiSerializer.get()), 
     BYTESTYPE("org.apache.cassandra.db.marshal.BytesType", ByteBufferSerializer.get()), 
-    INTEGERTYPE("org.apache.cassandra.db.marshal.IntegerType", IntegerSerializer.get()), 
+    INTEGERTYPE("org.apache.cassandra.db.marshal.IntegerType", BigIntegerSerializer.get()), 
     INT32TYPE("org.apache.cassandra.db.marshal.Int32Type", Int32Serializer.get()), 
+    DECIMALTYPE("org.apache.cassandra.db.marshal.DecimalType", BigDecimalSerializer.get()),
     LEXICALUUIDTYPE("org.apache.cassandra.db.marshal.LexicalUUIDType", UUIDSerializer.get()), 
     LOCALBYPARTITIONERTYPE("org.apache.cassandra.db.marshal.LocalByPartionerType", ByteBufferSerializer.get()), // FIXME
     LONGTYPE("org.apache.cassandra.db.marshal.LongType", LongSerializer.get()), 

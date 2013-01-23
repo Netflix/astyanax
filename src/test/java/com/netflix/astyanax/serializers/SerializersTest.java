@@ -1,6 +1,7 @@
 package com.netflix.astyanax.serializers;
 
 import java.lang.reflect.Field;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 
@@ -252,15 +253,23 @@ public class SerializersTest {
 
 		@Component
 		public Integer age;
+		
+		@Component
+		public BigDecimal decimal;
+		
+		@Component
+		public BigInteger integer;
 
 		public Composite1() {
 
 		}
 
-		public Composite1(String firstName, String lastName, Integer age) {
+		public Composite1(String firstName, String lastName, Integer age, BigInteger bi, BigDecimal bd) {
 			this.firstName = firstName;
 			this.lastName = lastName;
 			this.age = age;
+			this.decimal = bd;
+			this.integer = bi;
 		}
 
 		public String toString() {
@@ -275,8 +284,11 @@ public class SerializersTest {
 				return false;
 			}
 			Composite1 other = (Composite1) arg0;
-			return (String.valueOf(firstName).equals(String.valueOf(other.firstName))
-					&& String.valueOf(lastName).equals(String.valueOf(other.lastName)) && age == other.age);
+			return (   String.valueOf(firstName).equals(String.valueOf(other.firstName))
+                    && String.valueOf(lastName).equals(String.valueOf(other.lastName)) 
+                    && String.valueOf(decimal).equals(String.valueOf(other.decimal)) 
+                    && String.valueOf(integer).equals(String.valueOf(other.integer)) 
+					&& age == other.age);
 		}
 	}
 
@@ -286,7 +298,7 @@ public class SerializersTest {
 			AnnotatedCompositeSerializer<Composite1> ser = new AnnotatedCompositeSerializer<Composite1>(
 					Composite1.class);
 
-			Composite1 c1 = new Composite1("Arielle", "Landau", 6);
+			Composite1 c1 = new Composite1("Arielle", "Landau", 6, new BigInteger("1"), new BigDecimal(1));
 
 			ByteBuffer bytes = ser.toByteBuffer(c1);
 			Composite1 c2 = ser.fromByteBuffer(bytes);
@@ -304,7 +316,7 @@ public class SerializersTest {
 
         int count = 10000;
         
-        Composite1 c1 = new Composite1("Arielle", "Landau", 6);
+        Composite1 c1 = new Composite1("Arielle", "Landau", 6, new BigInteger("1"), new BigDecimal(2));
         
         long startTime, runTime;
         
@@ -379,7 +391,7 @@ public class SerializersTest {
 			AnnotatedCompositeSerializer<Composite1> ser = new AnnotatedCompositeSerializer<Composite1>(
 					Composite1.class);
 
-			Composite1 c1 = new Composite1("Arielle", null, null);
+			Composite1 c1 = new Composite1("Arielle", null, null, null, null);
 
 			ByteBuffer bytes = ser.toByteBuffer(c1);
 			Composite1 c2 = ser.fromByteBuffer(bytes);

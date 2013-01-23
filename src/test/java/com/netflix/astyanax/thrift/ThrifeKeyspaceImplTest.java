@@ -147,6 +147,12 @@ public class ThrifeKeyspaceImplTest {
                     LongSerializer.get(),
                     StringSerializer.get());
 
+    private static ColumnFamily<String, String> CF_TTL = ColumnFamily
+            .newColumnFamily(
+                    "ttl", 
+                    StringSerializer.get(),
+                    StringSerializer.get());
+
     public static ColumnFamily<String, String> CF_STANDARD1 = ColumnFamily
             .newColumnFamily(
                     "Standard1", 
@@ -320,7 +326,8 @@ public class ThrifeKeyspaceImplTest {
                          .build())
                      .build());
         
-        keyspace.createColumnFamily(CF_STANDARD2, null);
+        keyspace.createColumnFamily(CF_TTL,        null);
+        keyspace.createColumnFamily(CF_STANDARD2,  null);
         keyspace.createColumnFamily(CF_LONGCOLUMN, null);
         keyspace.createColumnFamily(CF_COUNTER1, ImmutableMap.<String, Object>builder()
                 .put("default_validation_class", "CounterColumnType")
@@ -2594,6 +2601,27 @@ public class ThrifeKeyspaceImplTest {
         }
     }
 
+    @Test
+    public void testTtlValues() throws Exception {
+        MutationBatch mb = keyspace.prepareMutationBatch();
+        mb.withRow(CF_TTL, "row")
+          .putColumn("TTL0", "TTL0", 0)
+          .putColumn("TTLNULL", "TTLNULL", null)
+          .putColumn("TTL1", "TTL1", 1);
+        
+        mb.execute();
+        
+        Thread.sleep(2000);
+        
+        ColumnList<String> result = keyspace.prepareQuery(CF_TTL)
+            .getRow("row")
+            .execute().getResult();
+       
+        Assert.assertEquals(2,  result.size());
+        Assert.assertNotNull(result.getColumnByName("TTL0"));
+        Assert.assertNotNull(result.getColumnByName("TTLNULL"));
+    }
+    
     @Test
     public void testCluster() {
         AstyanaxContext<Cluster> clusterContext = new AstyanaxContext.Builder()

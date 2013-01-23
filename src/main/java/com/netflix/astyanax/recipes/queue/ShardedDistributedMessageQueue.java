@@ -35,6 +35,7 @@ import com.google.common.collect.Sets;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.connectionpool.exceptions.BadRequestException;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 import com.netflix.astyanax.model.Column;
@@ -236,7 +237,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             return this;
         }
         
-        public ShardedDistributedMessageQueue build() {
+        public ShardedDistributedMessageQueue build() throws MessageQueueException {
             queue.queueColumnFamily    = ColumnFamily.newColumnFamily(columnFamilyName + DEFAULT_QUEUE_SUFFIX,    StringSerializer.get(), entrySerializer); 
             queue.keyIndexColumnFamily = ColumnFamily.newColumnFamily(columnFamilyName + DEFAULT_METADATA_SUFFIX, StringSerializer.get(), metadataSerializer); 
             queue.historyColumnFamily  = ColumnFamily.newColumnFamily(columnFamilyName + DEFAULT_HISTORY_SUFFIX,  StringSerializer.get(), TimeUUIDSerializer.get()); 
@@ -269,7 +270,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                                                                         }
                                                                     };
     
-    private void initialize() {
+    private void initialize() throws MessageQueueException {
         Preconditions.checkArgument(
                 TimeUnit.SECONDS.convert(lockTimeout, TimeUnit.MICROSECONDS) < lockTtl, 
                 "Timeout " + lockTtl + " seconds must be less than TTL " + TimeUnit.SECONDS.convert(lockTtl, TimeUnit.MICROSECONDS) + " seconds");
@@ -277,6 +278,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         
         try {
             Column<MessageQueueEntry> column = keyspace.prepareQuery(queueColumnFamily)
+                    .setConsistencyLevel(consistencyLevel)
                     .getRow(settings.getQueueName())
                     .getColumn(MessageQueueEntry.newMetadataEntry())
                     .execute()
@@ -285,8 +287,19 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             ByteArrayInputStream bais = new ByteArrayInputStream(column.getByteArrayValue());
             settings = mapper.readValue(bais, MessageQueueSettings.class);
         } 
+        catch (NotFoundException e) {
+            LOG.info("Message queue metadata not found.  Queue does not exist in CF and will be created now.");
+        }
+        catch (BadRequestException e) { 
+            if (e.isUnconfiguredColumnFamilyError()) {
+                LOG.info("Column family does not exist.  Call createStorage() to create column family.");
+            }
+            else {
+                throw new MessageQueueException("Error getting message queue metadata", e);
+            }
+        }
         catch (Exception e) {
-            LOG.error("Error initializing cluster", e);
+            throw new MessageQueueException("Error getting message queue metadata", e);
         }
         
         shardStrategy = new TimePartitionedShardStrategy(settings);
@@ -484,6 +497,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         String groupRowKey = getCompositeKey(settings.getQueueName(), key);
         try {
             ColumnList<MessageMetadataEntry> columns = keyspace.prepareQuery(keyIndexColumnFamily)
+                .setConsistencyLevel(consistencyLevel)
                 .getRow(groupRowKey)
                 .withColumnRange(metadataSerializer.buildRange()
                     .greaterThanEquals((byte)MessageMetadataEntryType.MessageId.ordinal())
@@ -507,7 +521,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
     @Override
     public boolean deleteMessageByKey(String key) throws MessageQueueException {
-        MutationBatch mb = keyspace.prepareMutationBatch();
+        MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
         
         String groupRowKey = getCompositeKey(settings.getQueueName(), key);
         try {
@@ -565,8 +579,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     
     @Override
     public void deleteMessages(Collection<String> messageIds) throws MessageQueueException {
-        MutationBatch mb = keyspace.prepareMutationBatch()
-            .setConsistencyLevel(consistencyLevel);
+        MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
         
         for (String messageId : messageIds) {
             String[] parts = splitCompositeKey(messageId);
@@ -1256,6 +1269,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         ColumnList<UUID> columns;
         try {
             columns = keyspace.prepareQuery(historyColumnFamily)
+                .setConsistencyLevel(consistencyLevel)
                 .getRow(key)
                 .execute()
                 .getResult();

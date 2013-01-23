@@ -60,8 +60,11 @@ public class ThriftColumnFamilyMutationImpl<C> extends AbstractColumnListMutatio
         column.setName(columnSerializer.toByteBuffer(columnName));
         column.setValue(valueSerializer.toByteBuffer(value));
         column.setTimestamp(timestamp);
-        if (ttl != null)
-            column.setTtl(ttl);
+        if (ttl != null) {
+            // Treat TTL of 0 or -1 as no TTL
+            if (ttl == 0 || ttl == -1)
+                column.setTtl(ttl);
+        }
         else if (defaultTtl != null)
             column.setTtl(defaultTtl);
 
@@ -79,8 +82,11 @@ public class ThriftColumnFamilyMutationImpl<C> extends AbstractColumnListMutatio
         column.setName(columnSerializer.toByteBuffer(columnName));
         column.setValue(ThriftUtils.EMPTY_BYTE_BUFFER);
         column.setTimestamp(timestamp);
-        if (ttl != null)
-            column.setTtl(ttl);
+        if (ttl != null) {
+            // Treat TTL of 0 or -1 as no TTL
+            if (ttl == 0 || ttl == -1)
+                column.setTtl(ttl);
+        }
         else if (defaultTtl != null)
             column.setTtl(defaultTtl);
 

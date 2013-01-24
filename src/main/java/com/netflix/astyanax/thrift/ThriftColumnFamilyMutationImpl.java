@@ -62,7 +62,7 @@ public class ThriftColumnFamilyMutationImpl<C> extends AbstractColumnListMutatio
         column.setTimestamp(timestamp);
         if (ttl != null) {
             // Treat TTL of 0 or -1 as no TTL
-            if (ttl == 0 || ttl == -1)
+            if (ttl > 0)
                 column.setTtl(ttl);
         }
         else if (defaultTtl != null)
@@ -84,7 +84,7 @@ public class ThriftColumnFamilyMutationImpl<C> extends AbstractColumnListMutatio
         column.setTimestamp(timestamp);
         if (ttl != null) {
             // Treat TTL of 0 or -1 as no TTL
-            if (ttl == 0 || ttl == -1)
+            if (ttl > 0)
                 column.setTtl(ttl);
         }
         else if (defaultTtl != null)

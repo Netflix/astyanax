@@ -54,7 +54,7 @@ public class Message {
     private String  taskClass;
 
     /**
-     * 
+     * Set to true if history should be maintained for each handling of the message
      */
     private boolean isKeepHistory = false;
 
@@ -62,6 +62,12 @@ public class Message {
      * True if the key is expected to be unique
      */
     private boolean hasUniqueKey = false;
+    
+    /**
+     * Set to true if next trigger should be committed when the messages is
+     * popped as opposed to being sent when a messages is acked.
+     */
+    private boolean isAutoCommitTrigger = false;
     
     public Message() {
         
@@ -208,6 +214,14 @@ public class Message {
         message.taskClass   = taskClass;
         message.isKeepHistory = isKeepHistory;
         return message;
+    }
+
+    public boolean isAutoCommitTrigger() {
+        return isAutoCommitTrigger;
+    }
+
+    public void setAutoCommitTrigger(boolean isAutoCommitTrigger) {
+        this.isAutoCommitTrigger = isAutoCommitTrigger;
     }
 
     @Override

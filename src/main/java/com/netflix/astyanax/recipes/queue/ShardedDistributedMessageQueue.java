@@ -970,7 +970,9 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                                             nextMessage = message.clone();
                                             nextMessage.setTrigger(trigger);
                                             context.setNextMessage(nextMessage);
-                                            fillMessageMutation(m, nextMessage);
+                                            
+                                            if (message.isAutoCommitTrigger())
+                                                fillMessageMutation(m, nextMessage);
                                         }
                                     }
                                     

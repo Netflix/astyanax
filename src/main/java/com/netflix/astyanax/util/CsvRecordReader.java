@@ -76,7 +76,7 @@ public class CsvRecordReader implements RecordReader {
                 // Ignore past size of names
                 break;
             }
-            columns.add(new Pair<String, String>(names[i], row[i]));
+            columns.add(Pair.create(names[i], row[i]));
         }
         return columns;
     }

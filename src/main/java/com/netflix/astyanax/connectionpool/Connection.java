@@ -24,7 +24,7 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
  * 
  * @param <CL>
  */
-public interface Connection<CL> {
+public interface Connection<CL> extends ConnectionContext {
     public interface AsyncOpenCallback<CL> {
         void success(Connection<CL> conn);
 

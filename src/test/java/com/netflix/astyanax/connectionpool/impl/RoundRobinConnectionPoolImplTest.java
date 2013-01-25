@@ -35,6 +35,7 @@ import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
+import com.netflix.astyanax.connectionpool.ConnectionContext;
 
 public class RoundRobinConnectionPoolImplTest extends BaseConnectionPoolTest {
     private static Logger LOG = Logger
@@ -75,7 +76,7 @@ public class RoundRobinConnectionPoolImplTest extends BaseConnectionPoolTest {
         try {
             result = pool.executeWithFailover(new TestOperation() {
                 @Override
-                public String execute(TestClient client)
+                public String execute(TestClient client, ConnectionContext context)
                         throws ConnectionException, OperationException {
                     throw new RuntimeException("Unkecked Exception");
                 }

@@ -33,9 +33,13 @@ public class MappingCache {
      *            class for the mapper
      * @return mapper
      */
-    public <T> Mapping<T> getMapping(Class<T> clazz) {
-        return getMapping(clazz, new DefaultAnnotationSet());
+    public <T> Mapping<T> getMapping(Class<T> clazz, boolean includeParentFields) {
+        return getMapping(clazz, new DefaultAnnotationSet(), includeParentFields);
     }
+
+    public <T> Mapping<T> getMapping(Class<T> clazz) {
+		return getMapping(clazz, false);		
+	}
 
     /**
      * Return a new or cached mapper
@@ -48,17 +52,21 @@ public class MappingCache {
      */
     @SuppressWarnings({ "unchecked" })
     public <T> Mapping<T> getMapping(Class<T> clazz,
-            AnnotationSet<?, ?> annotationSet) {
+            AnnotationSet<?, ?> annotationSet, boolean includeParentFields) {
         Mapping<T> mapping = (Mapping<T>) cache.get(clazz); // cast is safe as
                                                             // this instance is
                                                             // the one adding to
                                                             // the map
         if (mapping == null) {
             // multiple threads can get here but that's OK
-            mapping = new Mapping<T>(clazz, annotationSet);
+            mapping = new Mapping<T>(clazz, annotationSet, includeParentFields);
             cache.put(clazz, mapping);
         }
 
         return mapping;
     }
+
+    public <T> Mapping<T> getMapping(Class<T> clazz, AnnotationSet<?, ?> annotationSet) {
+		return getMapping(clazz, annotationSet, false);
+	}
 }

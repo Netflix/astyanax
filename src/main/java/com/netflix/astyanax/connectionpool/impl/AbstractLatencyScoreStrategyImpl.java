@@ -37,6 +37,7 @@ public abstract class AbstractLatencyScoreStrategyImpl implements LatencyScoreSt
     private final int                      blockedThreshold;
     private final String                   name;
     private final double                   keepRatio;
+    private boolean                  bOwnedExecutor = false;
 
     public AbstractLatencyScoreStrategyImpl(String name, int updateInterval, int resetInterval, int blockedThreshold, double keepRatio, double scoreThreshold, ScheduledExecutorService executor) {
         this.updateInterval   = updateInterval;
@@ -58,6 +59,7 @@ public abstract class AbstractLatencyScoreStrategyImpl implements LatencyScoreSt
      */
     public AbstractLatencyScoreStrategyImpl(String name, int updateInterval, int resetInterval, int blockedThreshold, double keepRatio, double scoreThreshold) {
         this(name, updateInterval, resetInterval, blockedThreshold, keepRatio, scoreThreshold, Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder().setDaemon(true).build()));
+        bOwnedExecutor = true;
     }
 
     public AbstractLatencyScoreStrategyImpl(String name, int updateInterval, int resetInterval) {
@@ -109,7 +111,8 @@ public abstract class AbstractLatencyScoreStrategyImpl implements LatencyScoreSt
 
     @Override
     public void shutdown() {
-        executor.shutdown();
+        if (bOwnedExecutor)
+            executor.shutdown();
     }
 
     @Override

@@ -25,7 +25,7 @@ public abstract class AbstractColumnList<C> implements ColumnList<C> {
     @Override
     public String getStringValue(C columnName, String defaultValue) {
         Column<C> column = getColumnByName(columnName);
-        if (column == null)
+        if (column == null || !column.hasValue())
             return defaultValue;
         return column.getStringValue();
     }
@@ -33,7 +33,7 @@ public abstract class AbstractColumnList<C> implements ColumnList<C> {
     @Override
     public Integer getIntegerValue(C columnName, Integer defaultValue) {
         Column<C> column = getColumnByName(columnName);
-        if (column == null)
+        if (column == null || !column.hasValue())
             return defaultValue;
         return column.getIntegerValue();
     }
@@ -41,7 +41,7 @@ public abstract class AbstractColumnList<C> implements ColumnList<C> {
     @Override
     public Double getDoubleValue(C columnName, Double defaultValue) {
         Column<C> column = getColumnByName(columnName);
-        if (column == null)
+        if (column == null || !column.hasValue())
             return defaultValue;
         return column.getDoubleValue();
     }
@@ -49,7 +49,7 @@ public abstract class AbstractColumnList<C> implements ColumnList<C> {
     @Override
     public Long getLongValue(C columnName, Long defaultValue) {
         Column<C> column = getColumnByName(columnName);
-        if (column == null)
+        if (column == null || !column.hasValue())
             return defaultValue;
         return column.getLongValue();
     }
@@ -57,7 +57,7 @@ public abstract class AbstractColumnList<C> implements ColumnList<C> {
     @Override
     public byte[] getByteArrayValue(C columnName, byte[] defaultValue) {
         Column<C> column = getColumnByName(columnName);
-        if (column == null)
+        if (column == null || !column.hasValue())
             return defaultValue;
         return column.getByteArrayValue();
     }
@@ -65,7 +65,7 @@ public abstract class AbstractColumnList<C> implements ColumnList<C> {
     @Override
     public Boolean getBooleanValue(C columnName, Boolean defaultValue) {
         Column<C> column = getColumnByName(columnName);
-        if (column == null)
+        if (column == null || !column.hasValue())
             return defaultValue;
         return column.getBooleanValue();
     }
@@ -73,7 +73,7 @@ public abstract class AbstractColumnList<C> implements ColumnList<C> {
     @Override
     public ByteBuffer getByteBufferValue(C columnName, ByteBuffer defaultValue) {
         Column<C> column = getColumnByName(columnName);
-        if (column == null)
+        if (column == null || !column.hasValue())
             return defaultValue;
         return column.getByteBufferValue();
     }
@@ -81,7 +81,7 @@ public abstract class AbstractColumnList<C> implements ColumnList<C> {
     @Override
     public Date getDateValue(C columnName, Date defaultValue) {
         Column<C> column = getColumnByName(columnName);
-        if (column == null)
+        if (column == null || !column.hasValue())
             return defaultValue;
         return column.getDateValue();
     }
@@ -89,7 +89,7 @@ public abstract class AbstractColumnList<C> implements ColumnList<C> {
     @Override
     public UUID getUUIDValue(C columnName, UUID defaultValue) {
         Column<C> column = getColumnByName(columnName);
-        if (column == null)
+        if (column == null || !column.hasValue())
             return defaultValue;
         return column.getUUIDValue();
     }
@@ -97,7 +97,7 @@ public abstract class AbstractColumnList<C> implements ColumnList<C> {
     @Override
     public <T> T getValue(C columnName, Serializer<T> serializer, T defaultValue) {
         Column<C> column = getColumnByName(columnName);
-        if (column == null)
+        if (column == null || !column.hasValue())
             return defaultValue;
         return column.getValue(serializer);
     }

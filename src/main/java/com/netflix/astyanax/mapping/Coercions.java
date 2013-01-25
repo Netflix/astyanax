@@ -1,18 +1,18 @@
 /*******************************************************************************
- * Copyright 2011 Netflix
- * 
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- ******************************************************************************/
+* Copyright 2011 Netflix
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+******************************************************************************/
 package com.netflix.astyanax.mapping;
 
 import com.netflix.astyanax.ColumnListMutation;
@@ -26,7 +26,7 @@ class Coercions {
     @SuppressWarnings("unchecked")
     static <T> void setFieldFromColumn(T instance, Field field,
             Column<String> column) {
-        Object objValue;
+        Object objValue = null;
         if ((field.getType() == Byte.class) || (field.getType() == Byte.TYPE)) {
             objValue = (byte) (column.getIntegerValue() & 0xff);
         } else if ((field.getType() == Boolean.class)
@@ -57,8 +57,10 @@ class Coercions {
             objValue = column.getUUIDValue();
         } else if (field.getType().isEnum()) {
             objValue = Enum.valueOf((Class<? extends Enum>)field.getType(), column.getStringValue());
-        } else {
-            throw new UnsupportedOperationException();
+        } 
+		if (objValue == null) {
+			throw new UnsupportedOperationException(
+				"Field datatype not supported: " + field.getType().getCanonicalName());
         }
 
         try {
@@ -107,7 +109,8 @@ class Coercions {
                 } else if (objValue.getClass().isEnum()) {
                     mutation.putColumn(columnName, objValue.toString(), null);
                 } else {
-                    throw new UnsupportedOperationException();
+                    throw new UnsupportedOperationException(
+						"Column datatype not supported: " + objValue.getClass().getCanonicalName());
                 }
             }
         } catch (IllegalAccessException e) {

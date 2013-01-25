@@ -9,12 +9,19 @@ import com.netflix.astyanax.recipes.queue.triggers.Trigger;
 
 public class Message {
     
+    private static final int DEFAULT_TIMEOUT        = 5;
+    
     /**
      * Last execution time, this value changes as the task state is transitioned.  
      * The token is a timeUUID and represents the next execution/expiration time
      * within the queue.
      */
     private UUID  token;
+    
+    /**
+     * Random number associated with this message
+     */
+    private UUID  random;
     
     /**
      * Execution time for the task in milliseconds
@@ -34,7 +41,7 @@ public class Message {
     /**
      * Timeout value in seconds
      */
-    private Integer timeout = 5;
+    private int timeout = DEFAULT_TIMEOUT;
     
     /**
      * Unique key for this message.
@@ -47,16 +54,28 @@ public class Message {
     private String  taskClass;
 
     /**
-     * 
+     * Set to true if history should be maintained for each handling of the message
      */
     private boolean isKeepHistory = false;
 
+    /**
+     * True if the key is expected to be unique
+     */
+    private boolean hasUniqueKey = false;
+    
+    /**
+     * Set to true if next trigger should be committed when the messages is
+     * popped as opposed to being sent when a messages is acked.
+     */
+    private boolean isAutoCommitTrigger = false;
+    
     public Message() {
         
     }
     
-    public Message(UUID token) {
+    public Message(UUID token, UUID random) {
         this.token = token;
+        this.random = random;
     }
     
     public UUID getToken() {
@@ -65,6 +84,15 @@ public class Message {
 
     public Message setToken(UUID token) {
         this.token = token;
+        return this;
+    }
+
+    public UUID getRandom() {
+        return random;
+    }
+
+    public Message setRandom(UUID random) {
+        this.random = random;
         return this;
     }
 
@@ -101,14 +129,12 @@ public class Message {
         return priority;
     }
 
-    public Integer getTimeout() {
-        if (timeout == null)
-            return 0;
+    public int getTimeout() {
         return timeout;
     }
     
     public boolean hasTimeout() {
-        return timeout != null;
+        return timeout != 0;
     }
 
     /**
@@ -122,12 +148,12 @@ public class Message {
         return this;
     }
 
-    public Message setTimeout(Integer timeout) {
+    public Message setTimeout(int timeout) {
         this.timeout = timeout;
         return this;
     }
     
-    public Message setTimeout(Long timeout, TimeUnit units) {
+    public Message setTimeout(long timeout, TimeUnit units) {
         this.timeout = (int)TimeUnit.SECONDS.convert(timeout, units);
         return this;
     }
@@ -141,8 +167,18 @@ public class Message {
         return this;
     }
     
+    public Message setUniqueKey(String key) {
+        this.key = key;
+        this.hasUniqueKey = true;
+        return this;
+    }
+    
     public boolean hasKey() {
         return this.key != null;
+    }
+
+    public boolean hasUniqueKey() {
+        return this.key != null && this.hasUniqueKey;
     }
 
     public String getTaskClass() {
@@ -158,7 +194,7 @@ public class Message {
         return this.taskClass != null;
     }
     
-    public Boolean isKeepHistory() {
+    public boolean isKeepHistory() {
         return isKeepHistory;
     }
 
@@ -180,9 +216,19 @@ public class Message {
         return message;
     }
 
+    public boolean isAutoCommitTrigger() {
+        return isAutoCommitTrigger;
+    }
+
+    public void setAutoCommitTrigger(boolean isAutoCommitTrigger) {
+        this.isAutoCommitTrigger = isAutoCommitTrigger;
+    }
+
     @Override
     public String toString() {
-        return "Message [token=" + token + ", trigger=" + trigger + ", parameters=" + parameters + ", priority=" + priority
-                + ", timeout=" + timeout + ", key=" + key + ", taskClass=" + taskClass + "]";
+        return "Message [token=" + token + ", random=" + random + ", trigger=" + trigger + ", parameters=" + parameters
+                + ", priority=" + priority + ", timeout=" + timeout + ", key=" + key + ", taskClass=" + taskClass
+                + ", isKeepHistory=" + isKeepHistory + ", hasUniqueKey=" + hasUniqueKey + "]";
     }
+
 }

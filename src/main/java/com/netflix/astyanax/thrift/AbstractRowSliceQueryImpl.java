@@ -28,7 +28,7 @@ import com.netflix.astyanax.model.ColumnSlice;
 import com.netflix.astyanax.query.RowSliceQuery;
 
 public abstract class AbstractRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
-    protected SlicePredicate predicate = new SlicePredicate().setSlice_range(ThriftUtils.RANGE_ALL);
+    protected SlicePredicate predicate = new SlicePredicate().setSlice_range(ThriftUtils.createAllInclusiveSliceRange());
     private Serializer<C> serializer;
 
     public AbstractRowSliceQueryImpl(Serializer<C> serializer) {

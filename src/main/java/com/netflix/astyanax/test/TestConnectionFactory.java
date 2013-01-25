@@ -157,6 +157,24 @@ public class TestConnectionFactory implements ConnectionFactory<TestClient> {
             public Host getHost() {
                 return pool.getHost();
             }
+
+            @Override
+            public void setMetadata(String key, Object obj) {
+                // TODO Auto-generated method stub
+                
+            }
+
+            @Override
+            public Object getMetadata(String key) {
+                // TODO Auto-generated method stub
+                return null;
+            }
+
+            @Override
+            public boolean hasMetadata(String key) {
+                // TODO Auto-generated method stub
+                return false;
+            }
         };
     }
 }

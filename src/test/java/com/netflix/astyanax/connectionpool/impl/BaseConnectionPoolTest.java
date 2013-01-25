@@ -42,6 +42,7 @@ import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
+import com.netflix.astyanax.connectionpool.ConnectionContext;
 
 @Ignore
 public abstract class BaseConnectionPoolTest {
@@ -116,7 +117,7 @@ public abstract class BaseConnectionPoolTest {
                 OperationResult<String> result = pool.executeWithFailover(
                         new TestOperation() {
                             @Override
-                            public String execute(TestClient client)
+                            public String execute(TestClient client, ConnectionContext context)
                                     throws ConnectionException,
                                     OperationException {
                                 throw new TransportException("He's dead jim");

@@ -44,7 +44,7 @@ public class ThriftCqlResultImpl<K, C> implements CqlResult<K, C> {
 
     @Override
     public boolean hasRows() {
-        return rows != null;
+        return rows != null && !this.rows.isEmpty();
     }
 
     @Override

@@ -14,8 +14,10 @@ import com.netflix.astyanax.connectionpool.NodeDiscoveryMonitorMBean;
 public class NodeDiscoveryMonitorManager {
     private MBeanServer mbs;
 
-    private static NodeDiscoveryMonitorManager monitorInstance;
-
+    private static class LazyHolder {
+        private static final NodeDiscoveryMonitorManager instance = new NodeDiscoveryMonitorManager();
+    }
+    
     private HashMap<String, NodeDiscoveryMonitorMBean> monitors;
 
     private NodeDiscoveryMonitorManager() {
@@ -24,10 +26,7 @@ public class NodeDiscoveryMonitorManager {
     }
 
     public static NodeDiscoveryMonitorManager getInstance() {
-        if (monitorInstance == null) {
-            monitorInstance = new NodeDiscoveryMonitorManager();
-        }
-        return monitorInstance;
+        return LazyHolder.instance;
     }
 
     public synchronized void registerMonitor(String monitorName, NodeDiscovery discovery) {

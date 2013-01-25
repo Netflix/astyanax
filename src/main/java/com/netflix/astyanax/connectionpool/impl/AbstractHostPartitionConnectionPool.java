@@ -70,8 +70,6 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
 
     @Override
     public void start() {
-        config.initialize();
-        
         ConnectionPoolMBeanManager.getInstance().registerMonitor(config.getName(), this);
 
         String seeds = config.getSeeds();

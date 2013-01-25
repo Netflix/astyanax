@@ -155,13 +155,15 @@ public interface ColumnFamilyQuery<K, C> {
     AllRowsQuery<K, C> getAllRows();
 
     /**
-     * Prepare a CQL Query
+     * Execute a CQL statement.  Call this for creating a prepared CQL statements.
+     * 
+     * withCql("...").prepareStatement().execute()
      * 
      * @param cql
      * @return
      */
     CqlQuery<K, C> withCql(String cql);
-
+    
     /**
      * Search for keys matching the provided index clause
      * 

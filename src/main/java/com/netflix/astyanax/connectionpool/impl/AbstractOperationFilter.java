@@ -2,23 +2,24 @@ package com.netflix.astyanax.connectionpool.impl;
 
 import java.nio.ByteBuffer;
 
+import com.netflix.astyanax.connectionpool.ConnectionContext;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 
-public class AbstractOperationFilter<R, CL> implements Operation<R, CL>{
+public class AbstractOperationFilter<CL, R> implements Operation<CL, R>{
 
-    private Operation<R, CL> next;
+    private Operation<CL, R> next;
     
-    public AbstractOperationFilter(Operation<R, CL> next) {
+    public AbstractOperationFilter(Operation<CL, R> next) {
         this.next = next;
     }
     
     @Override
-    public CL execute(R client) throws ConnectionException {
-        return next.execute(client);
+    public R execute(CL client, ConnectionContext state) throws ConnectionException {
+        return next.execute(client, state);
     }
-
+    
     @Override
     public ByteBuffer getRowKey() {
         return next.getRowKey();

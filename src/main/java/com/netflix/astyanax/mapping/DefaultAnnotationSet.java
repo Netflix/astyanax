@@ -20,6 +20,7 @@ import java.lang.reflect.Field;
 /**
  * The default annotation set. Supports {@link Id} and {@link Column}
  */
+@Deprecated
 public class DefaultAnnotationSet implements AnnotationSet<Id, Column> {
     @Override
     public Class<Id> getIdAnnotation() {

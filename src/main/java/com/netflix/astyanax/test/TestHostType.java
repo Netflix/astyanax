@@ -105,7 +105,7 @@ public enum TestHostType {
         public <R> OperationResult<R> execute(
                 HostConnectionPool<TestClient> pool, Operation<TestClient, R> op)
                 throws ConnectionException {
-            return new OperationResultImpl<R>(pool.getHost(), op.execute(null),
+            return new OperationResultImpl<R>(pool.getHost(), op.execute(null, null),
                     0);
         }
 
@@ -124,7 +124,7 @@ public enum TestHostType {
         public <R> OperationResult<R> execute(
                 HostConnectionPool<TestClient> pool, Operation<TestClient, R> op)
                 throws ConnectionException {
-            return new OperationResultImpl<R>(pool.getHost(), op.execute(null),
+            return new OperationResultImpl<R>(pool.getHost(), op.execute(null, null),
                     0);
         }
 
@@ -160,7 +160,7 @@ public enum TestHostType {
             if (count.incrementAndGet() >= failAfter) {
                 throw new TimeoutException("TimeoutException");
             }
-            return new OperationResultImpl<R>(pool.getHost(), op.execute(null),
+            return new OperationResultImpl<R>(pool.getHost(), op.execute(null, null),
                     think(5));
         }
 
@@ -211,7 +211,7 @@ public enum TestHostType {
                 throw new TimeoutException("SocketTimeException");
             }
             else {
-                return new OperationResultImpl<R>(pool.getHost(), op.execute(null), think(0));
+                return new OperationResultImpl<R>(pool.getHost(), op.execute(null, null), think(0));
             }
         }
 
@@ -238,7 +238,7 @@ public enum TestHostType {
         public <R> OperationResult<R> execute(
                 HostConnectionPool<TestClient> pool, Operation<TestClient, R> op)
                 throws ConnectionException {
-            return new OperationResultImpl<R>(pool.getHost(), op.execute(null),
+            return new OperationResultImpl<R>(pool.getHost(), op.execute(null, null),
                     think(500));
         }
 
@@ -254,7 +254,7 @@ public enum TestHostType {
         public <R> OperationResult<R> execute(
                 HostConnectionPool<TestClient> pool, Operation<TestClient, R> op)
                 throws ConnectionException {
-            return new OperationResultImpl<R>(pool.getHost(), op.execute(null),
+            return new OperationResultImpl<R>(pool.getHost(), op.execute(null, null),
                     think(5));
         }
 
@@ -269,7 +269,7 @@ public enum TestHostType {
         public <R> OperationResult<R> execute(
                 HostConnectionPool<TestClient> pool, Operation<TestClient, R> op)
                 throws ConnectionException {
-            return new OperationResultImpl<R>(pool.getHost(), op.execute(null),
+            return new OperationResultImpl<R>(pool.getHost(), op.execute(null, null),
                     0);
         }
 
@@ -289,7 +289,7 @@ public enum TestHostType {
                 counter.set(0);
                 throw new TransportException("TransportException");
             }
-            return new OperationResultImpl<R>(pool.getHost(), op.execute(null),
+            return new OperationResultImpl<R>(pool.getHost(), op.execute(null, null),
                     0);
         }
 
@@ -309,7 +309,7 @@ public enum TestHostType {
                 counter.set(0);
                 throw new TransportException("TransportException");
             }
-            return new OperationResultImpl<R>(pool.getHost(), op.execute(null),
+            return new OperationResultImpl<R>(pool.getHost(), op.execute(null, null),
                     0);
         }
 
@@ -365,7 +365,7 @@ public enum TestHostType {
                 throw new ConnectionAbortedException(
                         "ConnectionAbortedException");
             }
-            return new OperationResultImpl<R>(pool.getHost(), op.execute(null),
+            return new OperationResultImpl<R>(pool.getHost(), op.execute(null, null),
                     0);
         }
 
@@ -386,7 +386,7 @@ public enum TestHostType {
                 counter.set(0);
                 throw new TransportException("TransportException");
             }
-            return new OperationResultImpl<R>(pool.getHost(), op.execute(null),
+            return new OperationResultImpl<R>(pool.getHost(), op.execute(null, null),
                     0);
         }
 
@@ -415,7 +415,7 @@ public enum TestHostType {
                 think(1);
             }
             
-            return new OperationResultImpl<R>(pool.getHost(), op.execute(null),
+            return new OperationResultImpl<R>(pool.getHost(), op.execute(null, null),
                     0);
         }
 
@@ -435,7 +435,7 @@ public enum TestHostType {
         public <R> OperationResult<R> execute(
                 HostConnectionPool<TestClient> pool, Operation<TestClient, R> op)
                 throws ConnectionException {
-            return new OperationResultImpl<R>(pool.getHost(), op.execute(null),
+            return new OperationResultImpl<R>(pool.getHost(), op.execute(null, null),
                     0);
         }
 

@@ -67,9 +67,9 @@ public class CsvColumnReader implements RecordReader {
 
         List<Pair<String, String>> columns = new ArrayList<Pair<String, String>>();
         // Build row mutation for all columns
-        columns.add(new Pair<String, String>("key", row[0]));
+        columns.add(Pair.create("key", row[0]));
         if (row.length == 3)
-            columns.add(new Pair<String, String>(row[1], row[2]));
+            columns.add(Pair.create(row[1], row[2]));
         return columns;
     }
 }

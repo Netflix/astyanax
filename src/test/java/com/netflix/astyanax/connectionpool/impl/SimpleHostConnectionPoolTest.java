@@ -19,6 +19,7 @@ import com.netflix.astyanax.test.TestClient;
 import com.netflix.astyanax.test.TestConnectionFactory;
 import com.netflix.astyanax.test.TestHostType;
 import com.netflix.astyanax.test.TestOperation;
+import com.netflix.astyanax.connectionpool.ConnectionContext;
 
 public class SimpleHostConnectionPoolTest {
     private static Logger LOG = LoggerFactory
@@ -468,7 +469,7 @@ public class SimpleHostConnectionPoolTest {
                     
                     connection.execute(new TestOperation() {
                         @Override
-                        public String execute(TestClient client) throws ConnectionException {
+                        public String execute(TestClient client, ConnectionContext context) throws ConnectionException {
                             throw new TimeoutException("Test");
                         }
                     });
@@ -494,7 +495,7 @@ public class SimpleHostConnectionPoolTest {
                 
                 connection.execute(new TestOperation() {
                     @Override
-                    public String execute(TestClient client) throws ConnectionException {
+                    public String execute(TestClient client, ConnectionContext context) throws ConnectionException {
                         throw new TimeoutException("Test");
                     }
                 });

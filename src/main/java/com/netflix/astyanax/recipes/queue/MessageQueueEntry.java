@@ -29,51 +29,64 @@ public class MessageQueueEntry {
     private UUID timestamp;
     
     /**
-     * 
+     * Random number to help ensure each entry is unique
      */
     @Component(ordinal=3)
+    private UUID random;
+
+    /**
+     * 
+     */
+    @Component(ordinal=4)
     private Byte state;
     
-
     public MessageQueueEntry() {
-        
     }
     
     public MessageQueueEntry(String id) {
         String[] parts = StringUtils.split(id, ID_DELIMITER);
-        if (parts.length != 4)
-            throw new RuntimeException("Invalid message ID.  Expection <type>:<priority>:<timestamp>:<state> but got " + id);
+        if (parts.length != 5)
+            throw new RuntimeException("Invalid message ID.  Expection <type>:<priority>:<timestamp>:<random>:<state> but got " + id);
         
         type      = Byte.parseByte(parts[0]);
         priority  = Byte.parseByte(parts[1]);
         timestamp = UUID.fromString (parts[2]);
-        state     = Byte.parseByte(parts[3]);
+        random    = UUID.fromString (parts[3]);
+        state     = Byte.parseByte(parts[4]);
     }
     
-    private MessageQueueEntry(MessageQueueEntryType type, byte priority, UUID timestamp, MessageQueueEntryState state) {
+    private MessageQueueEntry(MessageQueueEntryType type, byte priority, UUID timestamp, UUID random, MessageQueueEntryState state) {
         super();
         this.type       = (byte)type.ordinal();
         this.priority   = 0;
         this.timestamp  = timestamp;
         this.state      = (byte)state.ordinal();
+        if (random == null)
+            this.random     = TimeUUIDUtils.getUniqueTimeUUIDinMicros();
+        else 
+            this.random     = random;
     }
     
     public static MessageQueueEntry newLockEntry(MessageQueueEntryState state) {
-        return new MessageQueueEntry(MessageQueueEntryType.Lock, (byte)0, TimeUUIDUtils.getUniqueTimeUUIDinMicros(), state);
+        return new MessageQueueEntry(MessageQueueEntryType.Lock, (byte)0, TimeUUIDUtils.getUniqueTimeUUIDinMicros(), null, state);
     }
     
     public static MessageQueueEntry newLockEntry(UUID timestamp, MessageQueueEntryState state) {
-        return new MessageQueueEntry(MessageQueueEntryType.Lock, (byte)0, timestamp, state);
+        return new MessageQueueEntry(MessageQueueEntryType.Lock, (byte)0, timestamp, null, state);
     }
     
     public static MessageQueueEntry newMetadataEntry() {
-        return new MessageQueueEntry(MessageQueueEntryType.Metadata, (byte)0, null, MessageQueueEntryState.None);
+        return new MessageQueueEntry(MessageQueueEntryType.Metadata, (byte)0, null, null, MessageQueueEntryState.None);
     }
     
     public static MessageQueueEntry newMessageEntry(byte priority, UUID timestamp, MessageQueueEntryState state) {
-        return new MessageQueueEntry(MessageQueueEntryType.Message,  priority, timestamp, state);
+        return new MessageQueueEntry(MessageQueueEntryType.Message,  priority, timestamp, null, state);
     }
     
+    public static MessageQueueEntry newBusyEntry(Message message) {
+        return new MessageQueueEntry(MessageQueueEntryType.Message, (byte)message.getPriority(), message.getToken(), message.getRandom(), MessageQueueEntryState.Busy);
+    }
+
     public MessageQueueEntryType getType() {
         return MessageQueueEntryType.values()[type];
     }
@@ -115,13 +128,25 @@ public class MessageQueueEntry {
                 .append(type)                .append(ID_DELIMITER)
                 .append(priority)            .append(ID_DELIMITER)
                 .append(timestamp.toString()).append(ID_DELIMITER)
-                .append(state)
+                .append(random.toString())   .append(ID_DELIMITER)
+                .append(state)            
                 .toString();
         
     }
     
+    public UUID getRandom() {
+        return random;
+    }
+
+    public void setRandom(UUID random) {
+        this.random = random;
+    }
+
     @Override
     public String toString() {
-        return "MessageQueueEntry [" + getType() + " " + priority + " " + timestamp + " " + getState() + "]";
+        return "MessageQueueEntry [type=" + type + ", priority=" + priority + ", timestamp=" + timestamp + ", random=" + random
+                + ", state=" + state + "]";
     }
+    
+    
 }

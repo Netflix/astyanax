@@ -193,4 +193,10 @@ public class TestKeyspace implements Keyspace {
         
         return null;
     }
+
+    @Override
+    public Map<String, List<String>> describeSchemaVersions() throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
 }

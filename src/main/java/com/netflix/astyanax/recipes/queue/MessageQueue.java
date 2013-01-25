@@ -1,6 +1,7 @@
 package com.netflix.astyanax.recipes.queue;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -9,7 +10,7 @@ import java.util.Map;
  * Common use pattern
  * 
  *  MessageQueue queue = ...;
- *  Collection<Message> messages = queue.readMessages(10);
+ *  List<Message> messages = queue.readMessages(10);
  *  for (Message message : messages) {
  *      try {
  *          // Do something with this message
@@ -72,6 +73,14 @@ public interface MessageQueue {
     Message peekMessage(String messageId) throws MessageQueueException;
 
     /**
+     * Peek into messages from the queue.  The queue state is not altered by this operation.
+     * @param itemsToPeek
+     * @return
+     * @throws MessageQueueException
+     */
+    List<Message> peekMessages(int itemsToPeek) throws MessageQueueException;
+
+    /**
      * Read a specific message from the queue.  The message isn't modified or removed from the queue.
      * This operation will require a lookup of key to messageId
      * 
@@ -82,12 +91,21 @@ public interface MessageQueue {
     Message peekMessageByKey(String key) throws MessageQueueException;
     
     /**
+     * Return list of pending associated with the key.  
+     * 
+     * @param key
+     * @return
+     * @throws MessageQueueException
+     */
+    List<Message> peekMessagesByKey(String key) throws MessageQueueException;
+    
+    /**
      * Read history for the specified key
      * @param key
      * @return
      * @throws MessageQueueException
      */
-    Collection<MessageHistory> getKeyHistory(String key, Long startTime, Long endTime, int count) throws MessageQueueException;
+    List<MessageHistory> getKeyHistory(String key, Long startTime, Long endTime, int count) throws MessageQueueException;
     
     /**
      * Delete a specific message from the queue.  

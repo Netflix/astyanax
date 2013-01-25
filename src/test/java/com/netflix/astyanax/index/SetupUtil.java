@@ -27,7 +27,8 @@ public class SetupUtil {
 
 	
 	static EmbeddedCassandra cassandra;
-	
+	//to be removed
+	@Deprecated
 	public static synchronized EmbeddedCassandra startCassandra() throws IOException, TTransportException,InterruptedException {
 		if (cassandra == null) {
 			cassandra = new EmbeddedCassandra();

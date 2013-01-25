@@ -11,6 +11,7 @@ import org.junit.Test;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
 
 public class PlainIndexTest {
 
@@ -22,7 +23,7 @@ public class PlainIndexTest {
 	@BeforeClass
 	public static void beforeClass() throws Exception {
 		
-		SetupUtil.startCassandra();
+		SingletonEmbeddedCassandra.getInstance();
 		context = SetupUtil.initKeySpace();
 		keyspace = context.getEntity();
 		
@@ -35,7 +36,7 @@ public class PlainIndexTest {
         if (context != null)
             context.shutdown();
         
-       SetupUtil.stopCassandra();
+       //SetupUtil.stopCassandra();
     }
 	@Test
 	public void testPutStringIndex() throws Exception {

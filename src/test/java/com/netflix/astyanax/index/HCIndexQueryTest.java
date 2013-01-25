@@ -26,6 +26,7 @@ import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.test.EmbeddedCassandra;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
+import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
 
 
 public class HCIndexQueryTest {
@@ -42,7 +43,7 @@ public class HCIndexQueryTest {
 	@BeforeClass
 	public static void setup() throws Exception {
 		
-		SetupUtil.startCassandra();
+		SingletonEmbeddedCassandra.getInstance();
 		//this seems primitive??
 		Thread.sleep(SetupUtil.SERVER_START_TIME);
 
@@ -58,7 +59,7 @@ public class HCIndexQueryTest {
         if (context != null)
             context.shutdown();
         
-       SetupUtil.stopCassandra();
+       //SetupUtil.stopCassandra();
     }
 		
 	

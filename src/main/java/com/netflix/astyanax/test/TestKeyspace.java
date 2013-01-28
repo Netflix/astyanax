@@ -23,6 +23,7 @@ import com.netflix.astyanax.ColumnMutation;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.SerializerPackage;
+import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.TokenRange;
@@ -196,6 +197,12 @@ public class TestKeyspace implements Keyspace {
 
     @Override
     public Map<String, List<String>> describeSchemaVersions() throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public ConnectionPool<?> getConnectionPool() throws ConnectionException {
         // TODO Auto-generated method stub
         return null;
     }

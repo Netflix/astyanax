@@ -135,5 +135,4 @@ public class ThriftColumnFamilyMutationImpl<C> extends AbstractColumnListMutatio
         deletionPredicate.addToColumn_names(bb);
         return this;
     }
-
 }

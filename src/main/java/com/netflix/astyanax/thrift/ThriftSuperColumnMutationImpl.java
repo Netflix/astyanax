@@ -127,4 +127,24 @@ public class ThriftSuperColumnMutationImpl<C> extends AbstractColumnListMutation
         return this;
     }
 
+    @Override
+    public ColumnListMutation<C> putCompressedColumn(C columnName, String value, Integer ttl) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ColumnListMutation<C> putCompressedColumn(C columnName, String value) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ColumnListMutation<C> putCompressedColumnIfNotNull(C columnName, String value, Integer ttl) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ColumnListMutation<C> putCompressedColumnIfNotNull(C columnName, String value) {
+        throw new UnsupportedOperationException();
+    }
+
 }

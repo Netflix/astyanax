@@ -18,6 +18,7 @@ package com.netflix.astyanax;
 import java.util.List;
 import java.util.Map;
 
+import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.TokenRange;
@@ -234,4 +235,11 @@ public interface Keyspace {
      * @throws ConnectionException
      */
     Map<String, List<String>> describeSchemaVersions() throws ConnectionException;
+    
+    /**
+     * Exposes the internal connection pool to the client.  
+     * @return
+     * @throws ConnectionException
+     */
+    ConnectionPool<?> getConnectionPool() throws ConnectionException;
 }

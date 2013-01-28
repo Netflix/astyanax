@@ -16,37 +16,24 @@
 package com.netflix.astyanax.thrift.model;
 
 import java.nio.ByteBuffer;
-import java.util.Date;
-import java.util.UUID;
 
 import org.apache.cassandra.thrift.SuperColumn;
 
 import com.netflix.astyanax.Serializer;
-import com.netflix.astyanax.model.Column;
+import com.netflix.astyanax.model.AbstractColumnImpl;
 import com.netflix.astyanax.model.ColumnList;
 
-public class ThriftSuperColumnImpl<C> implements Column<C> {
+public class ThriftSuperColumnImpl<C> extends AbstractColumnImpl<C> {
     private final SuperColumn column;
-    private final C name;
 
     public ThriftSuperColumnImpl(C name, SuperColumn column) {
+        super(name);
         this.column = column;
-        this.name = name;
-    }
-
-    @Override
-    public C getName() {
-        return name;
     }
 
     @Override
     public <V> V getValue(Serializer<V> valSer) {
-        throw new UnsupportedOperationException("SuperColumn \'" + this.name + "\' has no value");
-    }
-
-    @Override
-    public String getStringValue() {
-        throw new UnsupportedOperationException("SuperColumn \'" + this.name + "\' has no value");
+        throw new UnsupportedOperationException("SuperColumn \'" + getName() + "\' has no value");
     }
 
     @Override
@@ -60,63 +47,8 @@ public class ThriftSuperColumnImpl<C> implements Column<C> {
     }
 
     @Override
-    public byte getByteValue() {
-        throw new UnsupportedOperationException("SuperColumn \'" + this.name + "\' has no value");
-    }
-    
-    @Override
-    public short getShortValue() {
-        throw new UnsupportedOperationException("SuperColumn \'" + this.name + "\' has no value");
-    }
-    
-    @Override
-    public int getIntegerValue() {
-        throw new UnsupportedOperationException("SuperColumn \'" + this.name + "\' has no value");
-    }
-
-    @Override
-    public long getLongValue() {
-        throw new UnsupportedOperationException("SuperColumn \'" + this.name + "\' has no value");
-    }
-
-    @Override
-    public byte[] getByteArrayValue() {
-        throw new UnsupportedOperationException("SuperColumn \'" + this.name + "\' has no value");
-    }
-
-    @Override
-    public boolean getBooleanValue() {
-        throw new UnsupportedOperationException("SuperColumn \'" + this.name + "\' has no value");
-    }
-
-    @Override
-    public ByteBuffer getByteBufferValue() {
-        throw new UnsupportedOperationException("SuperColumn \'" + this.name + "\' has no value");
-    }
-
-    @Override
-    public Date getDateValue() {
-        throw new UnsupportedOperationException("SuperColumn \'" + this.name + "\' has no value");
-    }
-
-    @Override
-    public UUID getUUIDValue() {
-        throw new UnsupportedOperationException("SuperColumn \'" + this.name + "\' has no value");
-    }
-
-    @Override
     public long getTimestamp() {
-        throw new UnsupportedOperationException("SuperColumn \'" + this.name + "\' has no timestamp");
-    }
-
-    @Override
-    public float getFloatValue() {
-        throw new UnsupportedOperationException("SuperColumn \'" + this.name + "\' has no value");
-    }
-    
-    @Override
-    public double getDoubleValue() {
-        throw new UnsupportedOperationException("SuperColumn \'" + this.name + "\' has no value");
+        throw new UnsupportedOperationException("SuperColumn \'" + getName() + "\' has no timestamp");
     }
 
     @Override
@@ -126,7 +58,7 @@ public class ThriftSuperColumnImpl<C> implements Column<C> {
 
     @Override
     public int getTtl() {
-        throw new UnsupportedOperationException("SuperColumn \'" + this.name + "\' has no ttl");
+        throw new UnsupportedOperationException("SuperColumn \'" + getName() + "\' has no ttl");
     }
 
     @Override

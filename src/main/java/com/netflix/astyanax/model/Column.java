@@ -73,6 +73,12 @@ public interface Column<C> {
     String getStringValue();
     
     /**
+     * Return a string that was stored as a compressed blob
+     * @return
+     */
+    String getCompressedStringValue();
+    
+    /**
      * Return value as an integer
      * 
      * @return

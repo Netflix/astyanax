@@ -436,7 +436,8 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                 }, retry);
     }
 
-    ConnectionPool<Cassandra.Client> getConnectionPool() {
+    @Override
+    public ConnectionPool<Cassandra.Client> getConnectionPool() {
         return connectionPool;
     }
 

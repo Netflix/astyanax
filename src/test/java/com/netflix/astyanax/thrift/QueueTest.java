@@ -32,6 +32,7 @@ import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.recipes.queue.CountingQueueStats;
+import com.netflix.astyanax.recipes.queue.KeyExistsException;
 import com.netflix.astyanax.recipes.queue.Message;
 import com.netflix.astyanax.recipes.queue.MessageConsumer;
 import com.netflix.astyanax.recipes.queue.MessageContext;
@@ -58,6 +59,7 @@ public class QueueTest {
     private static final long   CASSANDRA_WAIT_TIME = 3000;
     private static final int    TTL                 = 20;
     private static final int    TIMEOUT             = 10;
+    private static final ConsistencyLevel CONSISTENCY_LEVEL = ConsistencyLevel.CL_ONE;
 
     @BeforeClass
     public static void setup() throws Exception {
@@ -109,6 +111,21 @@ public class QueueTest {
                 .build()
                 );
         
+        final CountingQueueStats stats = new CountingQueueStats();
+        
+        final ShardedDistributedMessageQueue queue = new ShardedDistributedMessageQueue.Builder()
+            .withColumnFamily(SCHEDULER_NAME_CF_NAME)
+            .withQueueName("TestQueue")
+            .withKeyspace(keyspace)
+            .withConsistencyLevel(CONSISTENCY_LEVEL)
+            .withStats(stats)
+            .withTimeBuckets(2,  30,  TimeUnit.SECONDS)
+            .withShardCount(2)
+            .withPollInterval(100L,  TimeUnit.MILLISECONDS)
+            .build();
+        
+        queue.createStorage();
+
     }
 
     @AfterClass
@@ -120,23 +137,78 @@ public class QueueTest {
     }
     
     @Test
+    @Ignore
+    // This tests for a known but that has yet to be fixed
+    public void testRepeatingMessage() throws Exception {
+        final CountingQueueStats stats = new CountingQueueStats();
+        
+        final ShardedDistributedMessageQueue queue = new ShardedDistributedMessageQueue.Builder()
+            .withColumnFamily(SCHEDULER_NAME_CF_NAME)
+            .withQueueName("RepeatingMessageQueue")
+            .withKeyspace(keyspace)
+            .withConsistencyLevel(CONSISTENCY_LEVEL)
+            .withStats(stats)
+            .withShardCount(1)
+            .withPollInterval(100L,  TimeUnit.MILLISECONDS)
+            .build();
+    
+        queue.createQueue();
+        MessageProducer producer = queue.createProducer();
+        MessageConsumer consumer = queue.createConsumer();
+
+        // Enqueue a recurring messsage
+        final String key = "MyMessage";
+        final Message message = new Message()
+            .setUniqueKey(key)
+            .setTimeout(10, TimeUnit.SECONDS)
+            .setTrigger(new RepeatingTrigger.Builder().withInterval(1, TimeUnit.SECONDS).build());
+        
+        producer.sendMessage(message);
+        
+        // Make sure it's unique by trying to submit again
+        try {
+            producer.sendMessage(message);
+            Assert.fail();
+        }
+        catch (KeyExistsException e) {
+        }
+        
+        // Confirm that the message is there
+        Assert.assertEquals(1, queue.getMessageCount());
+        List<Message> messages = queue.peekMessagesByKey(key);
+        Assert.assertEquals(1, messages.size());
+        
+        // Consume the message
+        List<MessageContext> m1 = consumer.readMessages(1);
+        Assert.assertEquals(1, m1.size());
+        
+        // Exceed the timeout
+        Thread.sleep(2000);
+        
+        // Consume the timeout event
+        List<MessageContext> m2 = consumer.readMessages(1);
+        Assert.assertEquals(1, m2.size());
+        
+        consumer.ackMessages(m1);
+        consumer.ackMessages(m2);
+        
+        // There should be only one message
+        Assert.assertEquals(1, queue.getMessageCount());
+    }
+    
+    @Test
     public void testQueue() throws Exception {
         final CountingQueueStats stats = new CountingQueueStats();
         
-        final ConsistencyLevel cl = ConsistencyLevel.CL_ONE;
         final ShardedDistributedMessageQueue scheduler = new ShardedDistributedMessageQueue.Builder()
             .withColumnFamily(SCHEDULER_NAME_CF_NAME)
             .withQueueName("TestQueue")
             .withKeyspace(keyspace)
-            .withConsistencyLevel(cl)
+            .withConsistencyLevel(CONSISTENCY_LEVEL)
             .withStats(stats)
-            .withTimeBuckets(2,  30,  TimeUnit.SECONDS)
-            .withShardCount(2)
+            .withShardCount(1)
             .withPollInterval(100L,  TimeUnit.MILLISECONDS)
             .build();
-        
-        scheduler.createStorage();
-        scheduler.createStorage();
         
         scheduler.createQueue();
         

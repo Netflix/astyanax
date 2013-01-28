@@ -164,7 +164,7 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
     }
 
     @Override
-    public <K> void deleteRow(Collection<ColumnFamily<K, ?>> columnFamilies, K rowKey) {
+    public <K> void deleteRow(Iterable<? extends ColumnFamily<K, ?>> columnFamilies, K rowKey) {
         for (ColumnFamily<K, ?> cf : columnFamilies) {
             withRow(cf, rowKey).delete();
         }

@@ -91,11 +91,11 @@ public interface MutationBatch extends Execution<Void> {
     <K, C> ColumnListMutation<C> withRow(ColumnFamily<K, C> columnFamily, K rowKey);
 
     /**
-     * Delete the row for all the specified column families
+     * Delete the row for all the specified column families.
      * 
      * @param columnFamilies
      */
-    <K> void deleteRow(Collection<ColumnFamily<K, ?>> columnFamilies, K rowKey);
+    <K> void deleteRow(Iterable<? extends ColumnFamily<K, ?>> columnFamilies, K rowKey);
 
     /**
      * Discard any pending mutations. All previous references returned by row

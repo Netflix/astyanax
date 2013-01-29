@@ -4,7 +4,7 @@
 
     <groupId>com.netflix.astyanax</groupId>
     <artifactId>astyanax</artifactId>
-    <version>1.0.2-RIM</version>
+    <version>1.56.25-RIM</version>
 
     <parent>
       <groupId>org.sonatype.oss</groupId>
@@ -137,7 +137,20 @@
         </dependency>
 
     </dependencies>
-    
+    <distributionManagement>
+    	<repository>
+	      <id>staging</id>
+	      <name>Rim Internal Releases</name>
+	      <!-- <url>http://upload-maven.rim.net/nexus/service/local/staging/deploy/maven2</url> -->
+	     <!--  <url>http://upload-maven.rim.net/nexus/content/repositories/bb10</url> -->
+	       <url>http://upload-maven.rim.net/nexus/content/repositories/ies-releases</url>
+	    </repository>
+	    <snapshotRepository>
+	      <id>ies-snapshots</id>
+	      <name>Rim Internal Snapshots</name>
+	      <url>http://upload-maven.rim.net/nexus/content/repositories/ies-snapshots</url>
+	    </snapshotRepository>
+    </distributionManagement>
     <build>
         <plugins>
             <plugin>

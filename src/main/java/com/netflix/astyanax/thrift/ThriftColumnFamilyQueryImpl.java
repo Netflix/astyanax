@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.cassandra.dht.BigIntegerToken;
@@ -50,6 +49,9 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.KeyspaceTracerFactory;
@@ -102,7 +104,8 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
     private final KeyspaceTracerFactory tracerFactory;
     private final Keyspace keyspace;
     private ConsistencyLevel consistencyLevel;
-    private final ExecutorService executor;
+    private static final RandomPartitioner partitioner = new RandomPartitioner();
+    private final ListeningExecutorService executor;
     private Host pinnedHost;
     private RetryPolicy retry;
 
@@ -114,7 +117,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
         this.consistencyLevel = consistencyLevel;
         this.columnFamily = columnFamily;
         this.tracerFactory = tracerFactory;
-        this.executor = executor;
+        this.executor = MoreExecutors.listeningDecorator(executor);
         this.retry = retry;
     }
 
@@ -177,7 +180,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                     }
 
                     @Override
-                    public Future<OperationResult<Column<C>>> executeAsync() throws ConnectionException {
+                    public ListenableFuture<OperationResult<Column<C>>> executeAsync() throws ConnectionException {
                         return executor.submit(new Callable<OperationResult<Column<C>>>() {
                             @Override
                             public OperationResult<Column<C>> call() throws Exception {
@@ -275,7 +278,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                     }
 
                     @Override
-                    public Future<OperationResult<Integer>> executeAsync() throws ConnectionException {
+                    public ListenableFuture<OperationResult<Integer>> executeAsync() throws ConnectionException {
                         return executor.submit(new Callable<OperationResult<Integer>>() {
                             @Override
                             public OperationResult<Integer> call() throws Exception {
@@ -287,7 +290,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
             }
 
             @Override
-            public Future<OperationResult<ColumnList<C>>> executeAsync() throws ConnectionException {
+            public ListenableFuture<OperationResult<ColumnList<C>>> executeAsync() throws ConnectionException {
                 return executor.submit(new Callable<OperationResult<ColumnList<C>>>() {
                     @Override
                     public OperationResult<ColumnList<C>> call() throws Exception {
@@ -366,7 +369,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                     }
 
                     @Override
-                    public Future<OperationResult<Void>> executeAsync() throws ConnectionException {
+                    public ListenableFuture<OperationResult<Void>> executeAsync() throws ConnectionException {
                         return executor.submit(new Callable<OperationResult<Void>>() {
                             @Override
                             public OperationResult<Void> call() throws Exception {
@@ -430,7 +433,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
             }
 
             @Override
-            public Future<OperationResult<Rows<K, C>>> executeAsync() throws ConnectionException {
+            public ListenableFuture<OperationResult<Rows<K, C>>> executeAsync() throws ConnectionException {
                 return executor.submit(new Callable<OperationResult<Rows<K, C>>>() {
                     @Override
                     public OperationResult<Rows<K, C>> call() throws Exception {
@@ -473,7 +476,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
             }
 
             @Override
-            public Future<OperationResult<Rows<K, C>>> executeAsync() throws ConnectionException {
+            public ListenableFuture<OperationResult<Rows<K, C>>> executeAsync() throws ConnectionException {
                 return executor.submit(new Callable<OperationResult<Rows<K, C>>>() {
                     @Override
                     public OperationResult<Rows<K, C>> call() throws Exception {
@@ -509,7 +512,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                     }
 
                     @Override
-                    public Future<OperationResult<Map<K, Integer>>> executeAsync() throws ConnectionException {
+                    public ListenableFuture<OperationResult<Map<K, Integer>>> executeAsync() throws ConnectionException {
                         return executor.submit(new Callable<OperationResult<Map<K, Integer>>>() {
                             @Override
                             public OperationResult<Map<K, Integer>> call() throws Exception {
@@ -561,7 +564,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
             }
 
             @Override
-            public Future<OperationResult<Rows<K, C>>> executeAsync() throws ConnectionException {
+            public ListenableFuture<OperationResult<Rows<K, C>>> executeAsync() throws ConnectionException {
                 return executor.submit(new Callable<OperationResult<Rows<K, C>>>() {
                     @Override
                     public OperationResult<Rows<K, C>> call() throws Exception {
@@ -603,7 +606,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                     }
 
                     @Override
-                    public Future<OperationResult<Map<K, Integer>>> executeAsync() throws ConnectionException {
+                    public ListenableFuture<OperationResult<Map<K, Integer>>> executeAsync() throws ConnectionException {
                         return executor.submit(new Callable<OperationResult<Map<K, Integer>>>() {
                             @Override
                             public OperationResult<Map<K, Integer>> call() throws Exception {
@@ -677,7 +680,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
             }
 
             @Override
-            public Future<OperationResult<Rows<K, C>>> executeAsync() throws ConnectionException {
+            public ListenableFuture<OperationResult<Rows<K, C>>> executeAsync() throws ConnectionException {
                 return executor.submit(new Callable<OperationResult<Rows<K, C>>>() {
                     @Override
                     public OperationResult<Rows<K, C>> call() throws Exception {
@@ -717,7 +720,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
             }
 
             @Override
-            public Future<OperationResult<CqlResult<K, C>>> executeAsync() throws ConnectionException {
+            public ListenableFuture<OperationResult<CqlResult<K, C>>> executeAsync() throws ConnectionException {
                 return executor.submit(new Callable<OperationResult<CqlResult<K, C>>>() {
                     @Override
                     public OperationResult<CqlResult<K, C>> call() throws Exception {
@@ -766,7 +769,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                     }
 
                     @Override
-                    public Future<OperationResult<CqlResult<K, C>>> executeAsync() throws ConnectionException {
+                    public ListenableFuture<OperationResult<CqlResult<K, C>>> executeAsync() throws ConnectionException {
                         return executor.submit(new Callable<OperationResult<CqlResult<K, C>>>() {
                             @Override
                             public OperationResult<CqlResult<K, C>> call() throws Exception {
@@ -836,7 +839,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
             }
 
             @Override
-            public Future<OperationResult<Rows<K, C>>> executeAsync() throws ConnectionException {
+            public ListenableFuture<OperationResult<Rows<K, C>>> executeAsync() throws ConnectionException {
                 throw new UnsupportedOperationException("executeAsync not supported here.  Use execute()");
             }
 

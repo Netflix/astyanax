@@ -2,6 +2,7 @@ package com.netflix.astyanax.entitystore;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import javax.annotation.Nullable;
 import javax.persistence.PersistenceException;
@@ -13,6 +14,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ConsistencyLevel;
@@ -22,6 +24,7 @@ import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.recipes.reader.AllRowsReader;
 import com.netflix.astyanax.retry.RetryPolicy;
+import com.netflix.astyanax.serializers.StringSerializer;
 
 /**
  * Manager entities in a column famliy with any key type but columns that are
@@ -43,7 +46,8 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 		private Integer ttl = null;
 		private RetryPolicy retryPolicy = null;
 		private LifecycleEvents<T> lifecycleHandler = null;
-
+		private String columnFamilyName = null;
+		
 		public Builder() {
 
 		}
@@ -69,13 +73,24 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 		}
 
 		/**
-		 * mandatory
+		 * optional
 		 * @param columnFamily column name type is fixed to String/UTF8
 		 */
 		public Builder<T, K> withColumnFamily(ColumnFamily<K, String> columnFamily) {
+		    Preconditions.checkState(this.columnFamilyName != null || columnFamily != null , "withColumnFamily called multiple times");
 			Preconditions.checkNotNull(columnFamily);
 			this.columnFamily = columnFamily;
 			return this;
+		}
+		
+		/**
+		 * optional
+		 * @param columnFamilyName Name of column family to use.  
+		 */
+		public Builder<T, K> withColumnFamily(String columnFamilyName) {
+            Preconditions.checkState(this.columnFamilyName != null || columnFamily != null , "withColumnFamily called multiple times");
+		    this.columnFamilyName = columnFamilyName;
+		    return this;
 		}
 
 		/**
@@ -130,17 +145,25 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 			return this;
 		}
 
-		public DefaultEntityManager<T, K> build() {
+		@SuppressWarnings("unchecked")
+        public DefaultEntityManager<T, K> build() {
 			// check mandatory fields
 			Preconditions.checkNotNull(clazz, "withEntityType(...) is not set");
 			Preconditions.checkNotNull(keyspace, "withKeyspace(...) is not set");
-			Preconditions.checkNotNull(columnFamily, "withColumnFamily(...) is not set");
 			
 			// TODO: check @Id type compatibility
 			// TODO: do we need to require @Entity annotation
 			this.entityMapper = new EntityMapper<T,K>(clazz, ttl);
 			this.lifecycleHandler = new LifecycleEvents<T>(clazz);
-			
+
+			if (columnFamily == null) {
+    			if (columnFamilyName == null)
+    			    columnFamilyName = entityMapper.getEntityName();
+    			columnFamily = new ColumnFamily<K, String>(
+    			        columnFamilyName, 
+    			        (com.netflix.astyanax.Serializer<K>)MappingUtils.getSerializerForField(this.entityMapper.getId()), 
+    			        StringSerializer.get());
+			}
 			// build object
 			return new DefaultEntityManager<T, K>(this);
 		}
@@ -399,6 +422,33 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
         if(retryPolicy != null)
             cfq.withRetryPolicy(retryPolicy);
         return cfq;
+    }
+
+    @Override
+    public void createStorage(Map<String, Object> options) throws PersistenceException {
+        try {
+            keyspace.createColumnFamily(this.columnFamily, options);
+        } catch (ConnectionException e) {
+            throw new PersistenceException("Unable to create column family " + this.columnFamily.getName(), e);
+        }
+    }
+
+    @Override
+    public void deleteStorage() throws PersistenceException {
+        try {
+            keyspace.dropColumnFamily(this.columnFamily);
+        } catch (ConnectionException e) {
+            throw new PersistenceException("Unable to drop column family " + this.columnFamily.getName(), e);
+        }
+    }
+
+    @Override
+    public void truncate() throws PersistenceException {
+        try {
+            keyspace.truncateColumnFamily(this.columnFamily);
+        } catch (ConnectionException e) {
+            throw new PersistenceException("Unable to drop column family " + this.columnFamily.getName(), e);
+        }
     }
 
 }

@@ -9,6 +9,8 @@ import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.PersistenceException;
 
+import org.apache.commons.lang.StringUtils;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -29,7 +31,8 @@ class EntityMapper<T, K> {
 	private final Integer ttl;
 	private final Field idField;
 	private final List<ColumnMapper> columnList;
-
+	private final String entityName;
+	
 	/**
 	 * 
 	 * @param clazz
@@ -44,6 +47,8 @@ class EntityMapper<T, K> {
 		Entity entityAnnotation = clazz.getAnnotation(Entity.class);
 		if(entityAnnotation == null)
 			throw new IllegalArgumentException("class is NOT annotated with @java.persistence.Entity: " + clazz.getName());
+		
+		entityName = MappingUtils.getEntityName(entityAnnotation, clazz);
 		
 		if(ttl == null) {
 			// try @TTL annotation at entity/row level.
@@ -89,7 +94,7 @@ class EntityMapper<T, K> {
 		idField = tmpIdField;
 	}
 
-	void fillMutationBatch(MutationBatch mb, ColumnFamily<K, String> columnFamily, T entity) {
+    void fillMutationBatch(MutationBatch mb, ColumnFamily<K, String> columnFamily, T entity) {
 		try {
 			@SuppressWarnings("unchecked")
 			K rowKey = (K) idField.get(entity);
@@ -132,6 +137,10 @@ class EntityMapper<T, K> {
 		return columnList;
 	}
 
+	String getEntityName() {
+	    return entityName;
+	}
+	
 	@Override
 	public String toString() {
 		return String.format("EntityMapper(%s)", clazz);

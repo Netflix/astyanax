@@ -21,35 +21,16 @@ class LeafColumnMapper extends AbstractColumnMapper {
 		this.field = field;
 		this.columnAnnotation = field.getAnnotation(Column.class);
 		this.columnName = deriveColumnName(columnAnnotation, field, prefix);
-		this.serializer = getSerializer(field);
-	}
-
-	private Serializer<?> getSerializer(Field field) {
-		Serializer<?> serializer = null;
-		// check if there is explicit @Serializer annotation first
-		com.netflix.astyanax.entitystore.Serializer serializerAnnotation = field.getAnnotation(com.netflix.astyanax.entitystore.Serializer.class);
-		if(serializerAnnotation != null) {
-			final Class<?> serializerClazz = serializerAnnotation.value();
-			// check type
-			if(!(Serializer.class.isAssignableFrom(serializerClazz)))
-				throw new RuntimeException("annotated serializer class is not a subclass of com.netflix.astyanax.Serializer");
-			// invoke public static get() method
-			try {
-				Method getInstanceMethod = serializerClazz.getMethod("get");
-				serializer = (Serializer<?>) getInstanceMethod.invoke(null);
-			} catch(Exception e) {
-				throw new RuntimeException("Failed to get or invoke public static get() method", e);
-			}
-		} else {
-			// otherwise automatically infer the Serializer type from field object type
-			serializer = SerializerTypeInferer.getSerializer(field.getType());
-		}
-		return serializer;
+		this.serializer = MappingUtils.getSerializerForField(field);
 	}
 
 	@Override
 	public String getColumnName() {
 		return columnName;
+	}
+	
+	Serializer<?> getSerializer() {
+	    return serializer;
 	}
 	
 	@SuppressWarnings("unchecked")

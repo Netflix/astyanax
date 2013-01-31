@@ -49,12 +49,12 @@ public class DefaultEntityManagerTest {
 	private static final String SEEDS = "localhost:9160";
 
 	public static ColumnFamily<String, String> CF_SAMPLE_ENTITY = ColumnFamily.newColumnFamily(
-			"SampleEntityColumnFamily", 
+			"sampleentity", 
 			StringSerializer.get(),
 			StringSerializer.get());
 
 	public static ColumnFamily<String, String> CF_SIMPLE_ENTITY = ColumnFamily.newColumnFamily(
-			"SimpleEntityColumnFamily", 
+			"simpleentity", 
 			StringSerializer.get(),
 			StringSerializer.get());
 
@@ -68,6 +68,7 @@ public class DefaultEntityManagerTest {
 		createKeyspace();
 
 		Thread.sleep(1000 * 3);
+		
 	}
 
 	@AfterClass
@@ -116,8 +117,24 @@ public class DefaultEntityManagerTest {
 						.build()
 				);
 
-		keyspace.createColumnFamily(CF_SAMPLE_ENTITY, null);
-		keyspace.createColumnFamily(CF_SIMPLE_ENTITY, null);
+//		keyspace.createColumnFamily(CF_SAMPLE_ENTITY, null);
+//		keyspace.createColumnFamily(CF_SIMPLE_ENTITY, null);
+		{
+		    EntityManager<SampleEntity, String> entityPersister = new DefaultEntityManager.Builder<SampleEntity, String>()
+                        .withEntityType(SampleEntity.class)
+                        .withKeyspace(keyspace)
+                        .build();
+            entityPersister.createStorage(null);
+        }
+
+        {
+            EntityManager<SimpleEntity, String> entityPersister = new DefaultEntityManager.Builder<SimpleEntity, String>()
+                        .withEntityType(SimpleEntity.class)
+                        .withKeyspace(keyspace)
+                        .build();
+            entityPersister.createStorage(null);
+        }
+
 	}
 
 	private SampleEntity createSampleEntity(String id) {
@@ -161,7 +178,6 @@ public class DefaultEntityManagerTest {
 		EntityManager<SampleEntity, String> entityPersister = new DefaultEntityManager.Builder<SampleEntity, String>()
 				.withEntityType(SampleEntity.class)
 				.withKeyspace(keyspace)
-				.withColumnFamily(CF_SAMPLE_ENTITY)
 				.build();
 		SampleEntity origEntity = createSampleEntity(id);
 
@@ -204,9 +220,8 @@ public class DefaultEntityManagerTest {
 		EntityManager<SimpleEntity, String> entityPersister = new DefaultEntityManager.Builder<SimpleEntity, String>()
 				.withEntityType(SimpleEntity.class)
 				.withKeyspace(keyspace)
-				.withColumnFamily(CF_SIMPLE_ENTITY)
 				.build();
-
+        
 		final Map<String, SimpleEntity> entities = Maps.newHashMap();
 		for (int i = 0; i < 10; i++) {
 			String str = Integer.toString(i);

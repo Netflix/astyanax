@@ -150,6 +150,38 @@ public interface ConnectionPoolMonitor {
     long getInterruptedCount();
     
     /**
+     * Return the number of hosts in the pool
+     * @return
+     */
+    long getHostCount();
+    
+    /**
+     * Return the number of times a host was added to the pool.  This
+     * number will be incremented multiple times if the same hosts is 
+     * added and removed multiple times.  
+     * A constantly increating number of host added and host removed
+     * may indicate a problem with the host discovery service
+     * @return
+     */
+    long getHostAddedCount();
+    
+    /**
+     * Return the number of times any host was removed to the pool.  This
+     * number will be incremented multiple times if the same hosts is 
+     * added and removed multiple times.  
+     * A constantly increating number of host added and host removed
+     * may indicate a problem with the host discovery service
+     * @return
+     */
+    long getHostRemovedCount();
+    
+    /**
+     * Return the number of times any host was marked as down.
+     * @return
+     */
+    long getHostDownCount();
+    
+    /**
      * A host was added and given the associated pool. The pool is immutable and
      * can be used to get info about the number of open connections
      * 
@@ -189,4 +221,5 @@ public interface ConnectionPoolMonitor {
      * @return
      */
     Map<Host, HostStats> getHostStats();
+
 }

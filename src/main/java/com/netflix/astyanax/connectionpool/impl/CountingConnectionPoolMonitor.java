@@ -171,6 +171,7 @@ public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
         trackError(host, reason);
     }
 
+    @Override
     public long getFailoverCount() {
         return this.operationFailoverCount.get();
     }
@@ -181,6 +182,7 @@ public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
         this.hostAddedCount.incrementAndGet();
     }
 
+    @Override
     public long getHostAddedCount() {
         return this.hostAddedCount.get();
     }
@@ -191,6 +193,7 @@ public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
         this.hostRemovedCount.incrementAndGet();
     }
 
+    @Override
     public long getHostRemovedCount() {
         return this.hostRemovedCount.get();
     }
@@ -200,6 +203,7 @@ public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
         this.hostDownCount.incrementAndGet();
     }
 
+    @Override
     public long getHostDownCount() {
         return this.hostDownCount.get();
     }
@@ -247,6 +251,10 @@ public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
         return this.notFoundCounter.get();
     }
 
+    @Override
+    public long getHostCount() {
+        return getHostAddedCount() - getHostRemovedCount();
+    }
 
     public String toString() {
         // Build the complete status string

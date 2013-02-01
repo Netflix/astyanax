@@ -128,6 +128,8 @@ import com.netflix.astyanax.util.TimeUUIDUtils;
 public class ShardedDistributedMessageQueue implements MessageQueue {
     private static final Logger LOG = LoggerFactory.getLogger(ShardedDistributedMessageQueue.class);
     
+    public static final char             COMPOSITE_ID_DELIMITER          = ':';
+    public static final char             COMPOSITE_KEY_DELIMITER         = '$';
     public static final String           DEFAULT_COLUMN_FAMILY_NAME      = "Queues";
     public static final ConsistencyLevel DEFAULT_CONSISTENCY_LEVEL       = ConsistencyLevel.CL_LOCAL_QUORUM;
     public static final RetryPolicy      DEFAULT_RETRY_POLICY            = RunOnce.get();
@@ -330,11 +332,11 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     }
     
     private String getCompositeKey(String name, String key) {
-        return name + "$" + key;
+        return name + COMPOSITE_KEY_DELIMITER + key;
     }
     
     private static String[] splitCompositeKey(String key) throws MessageQueueException {
-        String[] parts = StringUtils.split(key, "$");
+        String[] parts = StringUtils.split(key, COMPOSITE_KEY_DELIMITER);
         
         if (parts.length != 2) {
             throw new MessageQueueException("Invalid key '" + key + "'.  Expected format <queue|shard>$<name>. ");

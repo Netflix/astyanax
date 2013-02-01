@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Future;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.connectionpool.OperationResult;
@@ -188,7 +189,7 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 		
 		
 		@Override
-		public Future<OperationResult<Rows<K, C>>> executeAsync()
+		public ListenableFuture<OperationResult<Rows<K, C>>> executeAsync()
 				throws ConnectionException {
 			//not supported at this time
 			//we won't support this until we move away from 

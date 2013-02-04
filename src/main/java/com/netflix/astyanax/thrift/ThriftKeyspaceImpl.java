@@ -19,15 +19,12 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.CounterColumn;
 import org.apache.cassandra.thrift.Cassandra.Client;
-import org.cliffc.high_scale_lib.NonBlockingHashMap;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -54,6 +51,7 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.connectionpool.exceptions.SchemaDisagreementException;
 import com.netflix.astyanax.connectionpool.impl.TokenRangeImpl;
+import com.netflix.astyanax.cql.CqlStatement;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
 import com.netflix.astyanax.ddl.impl.SchemaChangeResponseImpl;
@@ -68,12 +66,12 @@ import com.netflix.astyanax.thrift.ddl.*;
 
 public final class ThriftKeyspaceImpl implements Keyspace {
 
-    private final ConnectionPool<Cassandra.Client> connectionPool;
-    private final AstyanaxConfiguration config;
-    private final String                ksName;
-    private final ListeningExecutorService executor;
-    private final KeyspaceTracerFactory tracerFactory;
-    private final Cache<String, Object> cache;
+    final ConnectionPool<Cassandra.Client> connectionPool;
+    final AstyanaxConfiguration config;
+    final String                ksName;
+    final ListeningExecutorService executor;
+    final KeyspaceTracerFactory tracerFactory;
+    final Cache<String, Object> cache;
 
     public ThriftKeyspaceImpl(String ksName, ConnectionPool<Cassandra.Client> pool, AstyanaxConfiguration config,
             final KeyspaceTracerFactory tracerFactory) {
@@ -686,5 +684,10 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                     .setSchemaId(client.system_drop_keyspace(getKeyspaceName()));
                             }
                         }, RunOnce.get());
+    }
+
+    @Override
+    public CqlStatement prepareCqlStatement() {
+        return new ThriftCqlStatement(this);
     }
 }

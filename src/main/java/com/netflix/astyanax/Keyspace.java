@@ -24,6 +24,7 @@ import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
+import com.netflix.astyanax.cql.CqlStatement;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
 import com.netflix.astyanax.model.ColumnFamily;
@@ -235,6 +236,12 @@ public interface Keyspace {
      * @throws ConnectionException
      */
     Map<String, List<String>> describeSchemaVersions() throws ConnectionException;
+    
+    /**
+     * Prepare a CQL Statement on the keyspace
+     * @return
+     */
+    CqlStatement prepareCqlStatement();
     
     /**
      * Exposes the internal connection pool to the client.  

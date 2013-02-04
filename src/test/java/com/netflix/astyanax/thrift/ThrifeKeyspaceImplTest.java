@@ -60,6 +60,7 @@ import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
+import com.netflix.astyanax.cql.CqlStatementResult;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.FieldMetadata;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
@@ -455,6 +456,17 @@ public class ThrifeKeyspaceImplTest {
         }
     }
 
+    @Test
+    public void testCqlComposite() throws Exception {
+        CqlStatementResult result = keyspace.prepareCqlStatement()
+            .withCql("SELECT * FROM " + CF_COMPOSITE_CSV.getName())
+            .execute()
+            .getResult();
+        
+        result.getSchema();
+        result.getRows(CF_COMPOSITE_CSV);
+    }
+    
     @Test
     public void testHasValue() throws Exception {
         ColumnList<String> response = keyspace.prepareQuery(CF_USER_INFO).getRow("acct1234").execute().getResult();

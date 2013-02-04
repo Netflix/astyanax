@@ -73,7 +73,7 @@ public class DefaultEntityManagerNullableTest {
 		.withAstyanaxConfiguration(
 				new AstyanaxConfigurationImpl()
 				.setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
-				.setConnectionPoolType(ConnectionPoolType.TOKEN_AWARE))
+				.setConnectionPoolType(ConnectionPoolType.ROUND_ROBIN))
 				.withConnectionPoolConfiguration(
 						new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME
 								+ "_" + TEST_KEYSPACE_NAME)

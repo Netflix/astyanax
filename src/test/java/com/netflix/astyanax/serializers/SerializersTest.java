@@ -73,7 +73,21 @@ public class SerializersTest {
 	    String str2 = ser.fromByteBuffer(compressed);
 	    Assert.assertEquals(str,  str2);
 	    LOG.info(String.format("Compressed at ratio: %2f", (double)(origLength - compLength) / (double)origLength));
-	    
+	}
+	
+	@Test
+	public void testSnappyCompressedSerializer() {
+	    SnappyStringSerializer ser = new SnappyStringSerializer();
+        String str = StringUtils.repeat("{The : 'quick', brown : 'fox', jumped : 'over', the : 'lazy cow'}", 100);
+
+        int origLength = str.length();
+        
+        ByteBuffer compressed = ser.toByteBuffer(str);
+        int compLength = compressed.limit();
+
+        String str2 = ser.fromByteBuffer(compressed);
+        Assert.assertEquals(str,  str2);
+        LOG.info(String.format("Compressed at ratio: %2f", (double)(origLength - compLength) / (double)origLength));
 	}
 	
 	@Test

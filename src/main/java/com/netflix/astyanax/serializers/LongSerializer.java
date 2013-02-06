@@ -49,7 +49,7 @@ public final class LongSerializer extends AbstractSerializer<Long> {
     public ByteBuffer fromString(String str) {
         return LongType.instance.fromString(str);
     }
-
+    
     @Override
     public String getString(ByteBuffer byteBuffer) {
         return LongType.instance.getString(byteBuffer);

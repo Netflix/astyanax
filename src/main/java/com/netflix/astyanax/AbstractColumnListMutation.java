@@ -37,6 +37,10 @@ public abstract class AbstractColumnListMutation<C> implements ColumnListMutatio
     protected long timestamp;
     protected Integer defaultTtl = null;
 
+    public AbstractColumnListMutation(long timestamp) {
+        this.timestamp = timestamp;
+    }
+    
     @Override
     public ColumnListMutation<C> putColumn(C columnName, String value, Integer ttl) {
         return putColumn(columnName, value, StringSerializer.get(), ttl);

@@ -5,18 +5,18 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
 
 import org.apache.cassandra.db.marshal.UTF8Type;
+import org.xerial.snappy.SnappyInputStream;
+import org.xerial.snappy.SnappyOutputStream;
 
-public class GzipStringSerializer extends AbstractSerializer<String> {
+public class SnappyStringSerializer extends AbstractSerializer<String> {
 
     private static final String UTF_8 = "UTF-8";
-    private static final GzipStringSerializer instance = new GzipStringSerializer();
+    private static final SnappyStringSerializer instance = new SnappyStringSerializer();
     private static final Charset charset = Charset.forName(UTF_8);
 
-    public static GzipStringSerializer get() {
+    public static SnappyStringSerializer get() {
         return instance;
     }
 
@@ -27,11 +27,11 @@ public class GzipStringSerializer extends AbstractSerializer<String> {
         }
         
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        GZIPOutputStream gzip;
+        SnappyOutputStream snappy;
         try {
-            gzip = new GZIPOutputStream(out);
-            gzip.write(obj.getBytes());
-            gzip.close();
+            snappy = new SnappyOutputStream(out);
+            snappy.write(obj.getBytes());
+            snappy.close();
             return ByteBuffer.wrap(out.toByteArray());
         } catch (IOException e) {
             throw new RuntimeException("Error compressing column data", e);
@@ -44,29 +44,29 @@ public class GzipStringSerializer extends AbstractSerializer<String> {
             return null;
         }
         
-        GZIPInputStream gzipInputStream = null;
+        SnappyInputStream snappy = null;
         ByteArrayOutputStream baos = null;
         try {
-            gzipInputStream = new GZIPInputStream(
+            snappy = new SnappyInputStream(
                     new ByteArrayInputStream(byteBuffer.array(), 0,
                             byteBuffer.limit()));
             
             baos = new ByteArrayOutputStream();
             for (int value = 0; value != -1;) {
-                value = gzipInputStream.read();
+                value = snappy.read();
                 if (value != -1) {
                     baos.write(value);
                 }
             }
-            gzipInputStream.close();
+            snappy.close();
             baos.close();
             return new String(baos.toByteArray(), charset);
         } catch (IOException e) {
             throw new RuntimeException("Error decompressing column data", e);
         } finally {
-            if (gzipInputStream != null) {
+            if (snappy != null) {
                 try {
-                    gzipInputStream.close();
+                    snappy.close();
                 } catch (IOException e) {
                 }
             }

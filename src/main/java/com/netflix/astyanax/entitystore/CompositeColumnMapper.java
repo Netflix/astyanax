@@ -104,12 +104,15 @@ class CompositeColumnMapper extends AbstractColumnMapper {
 
     @Override
     public void validate(Object entity) throws Exception {
-        if (field.get(entity) == null && !(columnAnnotation.nullable())) {
-            throw new IllegalArgumentException("cannot find non-nullable column: " + columnName);
+        Object objForThisField = field.get(entity);
+        if (objForThisField == null) {
+            if (!columnAnnotation.nullable())
+                throw new IllegalArgumentException("cannot find non-nullable column: " + columnName);
         }
-        
-        for (ColumnMapper field : this.nonNullableFields) {
-            field.validate(entity);
+        else {
+            for (ColumnMapper childField : this.nonNullableFields) {
+                childField.validate(objForThisField);
+            }
         }
     }
 

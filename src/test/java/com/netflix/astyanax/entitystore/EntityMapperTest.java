@@ -26,7 +26,7 @@ public class EntityMapperTest {
 		Collection<ColumnMapper> cols = entityMapper.getColumnList();
 		System.out.println(cols);
 		// 19 simple + 1 nested Bar
-		Assert.assertEquals(20, cols.size());
+		Assert.assertEquals(24, cols.size());
 
 		// test field without explicit column name
 		// simple field name is used

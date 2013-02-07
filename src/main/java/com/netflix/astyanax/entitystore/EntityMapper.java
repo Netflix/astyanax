@@ -111,6 +111,7 @@ class EntityMapper<T, K> {
 			
 			for (ColumnMapper mapper : columnList.values()) {
 				mapper.fillMutationBatch(entity, clm, "");
+				mapper.validate(entity);
 			}
 		} catch(Exception e) {
 			throw new PersistenceException("failed to fill mutation batch", e);
@@ -125,6 +126,10 @@ class EntityMapper<T, K> {
 			for (com.netflix.astyanax.model.Column<String> column : cl) {
 			    List<String> name = Lists.newArrayList(StringUtils.split(column.getName(), "."));
 			    setField(entity, name.iterator(), column);
+			}
+			
+			for (ColumnMapper column : columnList.values()) {
+			    column.validate(this);
 			}
 			return entity;
 		} catch(Exception e) {

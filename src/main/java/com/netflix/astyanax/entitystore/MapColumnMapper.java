@@ -65,4 +65,9 @@ public class MapColumnMapper extends AbstractColumnMapper {
         return true;
     }
 
+    @Override
+    public void validate(Object entity) throws Exception {
+        // TODO Auto-generated method stub
+    }
+
 }

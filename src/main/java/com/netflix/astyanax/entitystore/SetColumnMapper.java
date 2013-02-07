@@ -63,4 +63,10 @@ public class SetColumnMapper extends AbstractColumnMapper {
         set.add(serializer.fromByteBuffer(serializer.fromString(value)));
         return true;
     }
+
+    @Override
+    public void validate(Object entity) throws Exception {
+        // TODO Auto-generated method stub
+        
+    }
 }

@@ -35,6 +35,11 @@ final class NullableEntity {
 			else
 				return false;
 		}
+
+        @Override
+        public String toString() {
+            return "AllOptionalNestedEntity [nullable=" + nullable + "]";
+        }
 	}
 	
 	@Entity
@@ -65,6 +70,11 @@ final class NullableEntity {
 			else
 				return false;
 		}
+
+        @Override
+        public String toString() {
+            return "AllMandatoryNestedEntity [notnullable=" + notnullable + "]";
+        }
 	}
 	
     @Id
@@ -180,6 +190,11 @@ final class NullableEntity {
 
     @Override
     public String toString() {
-        return "SimpleEntity [id=" + id + ", notnullable=" + notnullable + ", nullable=" + nullable + "]";
+        return "NullableEntity [id=" + id + ", notnullable=" + notnullable + ", nullable=" + nullable
+                + ", notnullableAllOptionalNestedEntity=" + notnullableAllOptionalNestedEntity
+                + ", nullableAllOptionalNestedEntity=" + nullableAllOptionalNestedEntity + ", notnullableAllMandatoryNestedEntity="
+                + notnullableAllMandatoryNestedEntity + ", nullableAllMandatoryNestedEntity=" + nullableAllMandatoryNestedEntity
+                + "]";
     }
+
 }

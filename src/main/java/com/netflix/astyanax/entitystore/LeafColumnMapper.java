@@ -42,20 +42,6 @@ class LeafColumnMapper extends AbstractColumnMapper {
 		return true;
 	}
 	
-//	@Override
-//	public boolean setField(Object entity, ColumnList<String> cl) throws Exception {
-//		final com.netflix.astyanax.model.Column<String> c = cl.getColumnByName(columnName);
-//		if(c == null) {
-//			if(columnAnnotation.nullable())
-//				return false;
-//			else
-//				throw new IllegalArgumentException("cannot find non-nullable column: " + columnName);
-//		}
-//		final Object fieldValue = c.getValue(serializer);
-//		field.set(entity, fieldValue);
-//		return true;
-//	}
-
     @Override
     public boolean setField(Object entity, Iterator<String> name, com.netflix.astyanax.model.Column<String> column) throws Exception {
         if (name.hasNext()) 
@@ -63,5 +49,11 @@ class LeafColumnMapper extends AbstractColumnMapper {
         final Object fieldValue = column.getValue(serializer);
         field.set(entity, fieldValue);
         return true;
+    }
+
+    @Override
+    public void validate(Object entity) throws Exception {
+        if (field.get(entity) == null && !columnAnnotation.nullable())
+            throw new IllegalArgumentException("cannot find non-nullable column: " + columnName);
     }
 }

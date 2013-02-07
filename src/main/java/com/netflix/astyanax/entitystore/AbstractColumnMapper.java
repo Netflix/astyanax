@@ -23,5 +23,7 @@ public abstract class AbstractColumnMapper implements ColumnMapper {
         this.columnName       = name;
 	}
 
-    
+    public Field getField() {
+        return this.field;
+    }
 }

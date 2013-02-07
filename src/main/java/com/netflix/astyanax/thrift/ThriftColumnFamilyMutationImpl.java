@@ -40,12 +40,12 @@ import com.netflix.astyanax.model.ColumnPath;
 public class ThriftColumnFamilyMutationImpl<C> extends AbstractColumnListMutation<C> {
     private final Serializer<C> columnSerializer;
     private final List<Mutation> mutationList;
-    private SlicePredicate deletionPredicate;
-
+    private Deletion lastDeletion;
+    
     public ThriftColumnFamilyMutationImpl(Long timestamp, List<Mutation> mutationList, Serializer<C> columnSerializer) {
+        super(timestamp);
         this.mutationList = mutationList;
         this.columnSerializer = columnSerializer;
-        this.timestamp = timestamp;
     }
 
     @Override
@@ -126,13 +126,13 @@ public class ThriftColumnFamilyMutationImpl<C> extends AbstractColumnListMutatio
     @Override
     public ColumnListMutation<C> deleteColumn(C columnName) {
         // Create a reusable predicate for deleting columns and insert only once
-        if (null == deletionPredicate) {
-            deletionPredicate = new SlicePredicate();
-            Deletion d = new Deletion().setPredicate(deletionPredicate).setTimestamp(timestamp);
-            mutationList.add(new Mutation().setDeletion(d));
+        if (null == lastDeletion || lastDeletion.getTimestamp() != timestamp) {
+            lastDeletion = new Deletion().setPredicate(new SlicePredicate()).setTimestamp(timestamp);
+            mutationList.add(new Mutation().setDeletion(lastDeletion));
         }
+        
         ByteBuffer bb = this.columnSerializer.toByteBuffer(columnName);
-        deletionPredicate.addToColumn_names(bb);
+        lastDeletion.getPredicate().addToColumn_names(bb);
         return this;
     }
 

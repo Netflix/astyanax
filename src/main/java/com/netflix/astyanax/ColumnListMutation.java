@@ -54,6 +54,11 @@ public interface ColumnListMutation<C> {
     ColumnListMutation<C> putColumnIfNotNull(C columnName, String value, Integer ttl);
     ColumnListMutation<C> putColumnIfNotNull(C columnName, String value);
 
+    ColumnListMutation<C> putCompressedColumn(C columnName, String value, Integer ttl);
+    ColumnListMutation<C> putCompressedColumn(C columnName, String value);
+    ColumnListMutation<C> putCompressedColumnIfNotNull(C columnName, String value, Integer ttl);
+    ColumnListMutation<C> putCompressedColumnIfNotNull(C columnName, String value);
+    
     ColumnListMutation<C> putColumn(C columnName, byte[] value, Integer ttl);
     ColumnListMutation<C> putColumn(C columnName, byte[] value);
     ColumnListMutation<C> putColumnIfNotNull(C columnName, byte[] value, Integer ttl);

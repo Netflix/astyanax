@@ -2,6 +2,7 @@ package com.netflix.astyanax.entitystore;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import javax.persistence.PersistenceException;
 
@@ -91,4 +92,25 @@ public interface EntityManager<T, K> {
 	 * @throws PersistenceException
 	 */
 	public List<T> find(String cql) throws PersistenceException;
+	
+	/**
+	 * Create the underlying storage for this entity.  This should only be called
+	 * once when first creating store and not part of the normal startup sequence.
+	 * @throws PersistenceException
+	 */
+    public void createStorage(Map<String, Object> options) throws PersistenceException;
+    
+    /**
+     * Delete the underlying storage for this entity.  
+     * @param options
+     * @throws PersistenceException
+     */
+    public void deleteStorage() throws PersistenceException;
+    
+    /**
+     * Truncate all data in the underlying
+     * @param options
+     * @throws PersistenceException
+     */
+    public void truncate() throws PersistenceException;
 }

@@ -141,12 +141,12 @@ public abstract class AbstractSerializer<T> implements Serializer<T> {
 
     @Override
     public ByteBuffer fromString(String string) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException(this.getClass().getCanonicalName());
     }
 
     @Override
     public String getString(ByteBuffer byteBuffer) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException(this.getClass().getCanonicalName());
     }
 
     @Override

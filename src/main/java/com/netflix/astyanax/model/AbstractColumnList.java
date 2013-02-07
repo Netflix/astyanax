@@ -102,4 +102,12 @@ public abstract class AbstractColumnList<C> implements ColumnList<C> {
         return column.getValue(serializer);
     }
 
+    @Override
+    public String getCompressedStringValue(C columnName, String defaultValue) {
+        Column<C> column = getColumnByName(columnName);
+        if (column == null || !column.hasValue())
+            return defaultValue;
+        return column.getCompressedStringValue();
+    }
+
 }

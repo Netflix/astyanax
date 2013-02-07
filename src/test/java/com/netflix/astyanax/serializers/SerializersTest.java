@@ -10,6 +10,7 @@ import junit.framework.Assert;
 import org.apache.cassandra.db.marshal.AbstractType;
 import org.apache.cassandra.db.marshal.CompositeType;
 import org.apache.cassandra.db.marshal.TypeParser;
+import org.apache.commons.lang.StringUtils;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,6 +59,37 @@ public class SerializersTest {
 		ByteBufferSerializer ser = new ByteBufferSerializer();
 	}
 
+	@Test
+	public void testCompressedSerializer() {
+	    GzipStringSerializer ser = new GzipStringSerializer();
+	    
+	    String str = StringUtils.repeat("{The : 'quick', brown : 'fox', jumped : 'over', the : 'lazy cow'}", 100);
+
+	    int origLength = str.length();
+	    
+	    ByteBuffer compressed = ser.toByteBuffer(str);
+	    int compLength = compressed.limit();
+
+	    String str2 = ser.fromByteBuffer(compressed);
+	    Assert.assertEquals(str,  str2);
+	    LOG.info(String.format("Compressed at ratio: %2f", (double)(origLength - compLength) / (double)origLength));
+	}
+	
+	@Test
+	public void testSnappyCompressedSerializer() {
+	    SnappyStringSerializer ser = new SnappyStringSerializer();
+        String str = StringUtils.repeat("{The : 'quick', brown : 'fox', jumped : 'over', the : 'lazy cow'}", 100);
+
+        int origLength = str.length();
+        
+        ByteBuffer compressed = ser.toByteBuffer(str);
+        int compLength = compressed.limit();
+
+        String str2 = ser.fromByteBuffer(compressed);
+        Assert.assertEquals(str,  str2);
+        LOG.info(String.format("Compressed at ratio: %2f", (double)(origLength - compLength) / (double)origLength));
+	}
+	
 	@Test
 	public void testBytesArraySerializer() {
 		BytesArraySerializer ser = new BytesArraySerializer();

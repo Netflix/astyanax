@@ -178,4 +178,24 @@ public class EmptyConnectionPoolMonitor implements ConnectionPoolMonitor {
     public long getInterruptedCount() {
         return 0;
     }
+
+    @Override
+    public long getHostCount() {
+        return 0;
+    }
+
+    @Override
+    public long getHostAddedCount() {
+        return 0;
+    }
+
+    @Override
+    public long getHostRemovedCount() {
+        return 0;
+    }
+
+    @Override
+    public long getHostDownCount() {
+        return 0;
+    }
 }

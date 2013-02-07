@@ -4,6 +4,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.persistence.Column;
@@ -11,6 +13,8 @@ import javax.persistence.Entity;
 import javax.persistence.Id;
 
 import org.apache.cassandra.db.marshal.UTF8Type;
+import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 
@@ -31,6 +35,7 @@ public class SampleEntity {
 	public static class Foo {
 
 		public int i;
+		
 		public String s;
 
 		public Foo(int i, String s) {
@@ -119,7 +124,7 @@ public class SampleEntity {
 	
 	////////////////////////////////////////////////////////
 	// nested entity
-	
+
 	@Entity
 	public static class Bar {
 		
@@ -267,6 +272,18 @@ public class SampleEntity {
 	@Column(name="BAR")
 	private Bar bar;
 
+    @Column
+	private Map<String, String> stringMap;
+	
+	@Column
+	private Set<String> stringSet;
+	
+	@Column
+	private Map<Long, Long> longMap;
+	
+	@Column
+	private Set<Long> longSet;
+	
 	public String getId() {
 		return id;
 	}
@@ -434,21 +451,26 @@ public class SampleEntity {
 	public void setBar(Bar bar) {
 		this.bar = bar;
 	}
+	
+    public Map<String, String> getStringMap() {
+        return stringMap;
+    }
+
+    public void setStringMap(Map<String, String> stringMap) {
+        this.stringMap = stringMap;
+    }
+
+    public Set<String> getStringSet() {
+        return stringSet;
+    }
+
+    public void setStringSet(Set<String> stringSet) {
+        this.stringSet = stringSet;
+    }
 
 	@Override
 	public String toString() {
-		return String.format("SampleEntity(id = %s, booleanPrimitive = %b, booleanObject = %b, " +
-				"bytePrimitive = %d, byteObject = %d, shortPrimitive = %d, shortObject = %d, " +
-				"intPrimitive = %d, intObject = %d, longPrimitive = %d, longObject = %d, " +
-				"floatPrimitive = %f, floatObject = %f, doublePrimitive = %f, doubleObject = %f, " +
-				"string = %s, byteArray = %s, date = %s, uuid = %s, " +
-				"foo = %s, bar = %s)", 
-				id, booleanPrimitive, booleanObject, 
-				bytePrimitive, byteObject, shortPrimitive, shortObject, 
-				intPrimitive, intObject, longPrimitive, longObject,
-				floatPrimitive, floatObject, doublePrimitive, doubleObject,
-				string, new String(byteArray, Charsets.UTF_8), date, uuid, 
-				foo, bar);
+	    return ReflectionToStringBuilder.toString(this);
 	}
 
 	@Override
@@ -462,31 +484,23 @@ public class SampleEntity {
 		if (getClass() != obj.getClass())
 			return false;
 
-		SampleEntity other = (SampleEntity) obj;
-		if(id.equals(other.id) &&
-				booleanPrimitive == other.booleanPrimitive &&
-				booleanObject.equals(other.booleanObject) &&
-				bytePrimitive == other.bytePrimitive &&
-				byteObject.equals(other.byteObject) &&
-				shortPrimitive == other.shortPrimitive &&
-				shortObject.equals(other.shortObject) &&
-				intPrimitive == other.intPrimitive &&
-				intObject.equals(other.intObject) &&
-				longPrimitive == other.longPrimitive &&
-				longObject.equals(other.longObject) &&
-				floatPrimitive == other.floatPrimitive &&
-				floatObject.equals(other.floatObject) &&
-				doublePrimitive == other.doublePrimitive &&
-				doubleObject.equals(other.doubleObject) &&
-				string.equals(other.string) &&
-				Arrays.equals(byteArray, other.byteArray) &&
-				date.equals(other.date) &&
-				uuid.equals(other.uuid) &&
-				foo.equals(other.foo) &&
-				bar.equals(other.bar)
-				)
-			return true;
-		else
-			return false;
+		return EqualsBuilder.reflectionEquals(this, obj);
 	}
+
+    public Map<Long, Long> getLongMap() {
+        return longMap;
+    }
+
+    public void setLongMap(Map<Long, Long> longMap) {
+        this.longMap = longMap;
+    }
+
+    public Set<Long> getLongSet() {
+        return longSet;
+    }
+
+    public void setLongSet(Set<Long> longSet) {
+        this.longSet = longSet;
+    }
+
 }

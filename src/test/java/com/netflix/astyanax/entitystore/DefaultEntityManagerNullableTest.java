@@ -73,7 +73,7 @@ public class DefaultEntityManagerNullableTest {
 		.withAstyanaxConfiguration(
 				new AstyanaxConfigurationImpl()
 				.setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
-				.setConnectionPoolType(ConnectionPoolType.TOKEN_AWARE))
+				.setConnectionPoolType(ConnectionPoolType.ROUND_ROBIN))
 				.withConnectionPoolConfiguration(
 						new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME
 								+ "_" + TEST_KEYSPACE_NAME)
@@ -208,6 +208,8 @@ public class DefaultEntityManagerNullableTest {
 		
 		entityPersister.put(origEntity);
 		
+        System.out.println("Orig: " + origEntity);
+        
 		// use low-level astyanax API to confirm the null column
 		// is not written as empty column
 		{
@@ -225,6 +227,7 @@ public class DefaultEntityManagerNullableTest {
 		}
 
 		NullableEntity getEntity = entityPersister.get(id);
+		System.out.println("Get: " + getEntity);
 		Assert.assertNull(getEntity.getNullableAllOptionalNestedEntity());
 		// note this is special. it is NOT null
 		Assert.assertNotNull(getEntity.getNotnullableAllOptionalNestedEntity());
@@ -302,7 +305,7 @@ public class DefaultEntityManagerNullableTest {
 			// catch expected exception and verify the cause
 			Throwable rootCause = ExceptionUtils.getRootCause(e);
 			assertEquals(IllegalArgumentException.class, rootCause.getClass());
-			assertEquals("cannot write non-nullable column with null value: nullableAllMandatoryNestedEntity.notnullable", rootCause.getMessage());
+			assertEquals("cannot write non-nullable column with null value: notnullable", rootCause.getMessage());
 		}
 	}
 

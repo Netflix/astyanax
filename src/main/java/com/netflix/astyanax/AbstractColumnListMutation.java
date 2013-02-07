@@ -16,11 +16,15 @@
 package com.netflix.astyanax;
 
 
+import com.google.common.base.Preconditions;
 import com.netflix.astyanax.serializers.*;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.UUID;
+import java.util.zip.GZIPOutputStream;
 
 /**
  * Abstract implementation of a row mutation
@@ -33,6 +37,10 @@ public abstract class AbstractColumnListMutation<C> implements ColumnListMutatio
     protected long timestamp;
     protected Integer defaultTtl = null;
 
+    public AbstractColumnListMutation(long timestamp) {
+        this.timestamp = timestamp;
+    }
+    
     @Override
     public ColumnListMutation<C> putColumn(C columnName, String value, Integer ttl) {
         return putColumn(columnName, value, StringSerializer.get(), ttl);
@@ -368,4 +376,43 @@ public abstract class AbstractColumnListMutation<C> implements ColumnListMutatio
         this.defaultTtl = ttl;
         return this;
     }
+    
+    @Override
+    public ColumnListMutation<C> putCompressedColumn(C columnName, String value, Integer ttl) {
+        Preconditions.checkNotNull(value, "Can't insert null value");
+        
+        if (value == null) {
+            putEmptyColumn(columnName, ttl);
+            return this;
+        }
+        
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        GZIPOutputStream gzip;
+        try {
+            gzip = new GZIPOutputStream(out);
+            gzip.write(value.getBytes());
+            gzip.close();
+            return this.putColumn(columnName, ByteBuffer.wrap(out.toByteArray()), ttl);
+        } catch (IOException e) {
+            throw new RuntimeException("Error compressing column " + columnName, e);
+        }
+    }
+
+    @Override
+    public ColumnListMutation<C> putCompressedColumn(C columnName, String value) {
+        return putCompressedColumn(columnName, value, null);
+    }
+
+    @Override
+    public ColumnListMutation<C> putCompressedColumnIfNotNull(C columnName, String value, Integer ttl) {
+        if (value == null)
+            return this;
+        return putCompressedColumn(columnName, value, ttl);
+    }
+
+    @Override
+    public ColumnListMutation<C> putCompressedColumnIfNotNull(C columnName, String value) {
+        return putCompressedColumnIfNotNull(columnName, value);
+    }
+
 }

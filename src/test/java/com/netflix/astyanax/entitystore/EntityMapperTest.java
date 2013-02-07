@@ -1,6 +1,7 @@
 package com.netflix.astyanax.entitystore;
 
 import java.lang.reflect.Field;
+import java.util.Collection;
 import java.util.List;
 
 import javax.persistence.Column;
@@ -22,7 +23,7 @@ public class EntityMapperTest {
 		Assert.assertEquals("id", idField.getName());
 
 		// test column number
-		List<ColumnMapper> cols = entityMapper.getColumnList();
+		Collection<ColumnMapper> cols = entityMapper.getColumnList();
 		System.out.println(cols);
 		// 19 simple + 1 nested Bar
 		Assert.assertEquals(20, cols.size());
@@ -71,7 +72,7 @@ public class EntityMapperTest {
 		Assert.assertEquals("id", idField.getName());
 
 		// test column number
-		List<ColumnMapper> cols = entityMapper.getColumnList();
+		Collection<ColumnMapper> cols = entityMapper.getColumnList();
 		System.out.println(cols);
 		// 3 cols: id, num, str
 		Assert.assertEquals(3, cols.size());

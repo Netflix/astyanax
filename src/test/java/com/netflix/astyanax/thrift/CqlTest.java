@@ -16,12 +16,15 @@ import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
+import com.netflix.astyanax.cql.CqlSchema;
+import com.netflix.astyanax.cql.CqlStatementResult;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.model.Row;
+import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
@@ -73,7 +76,8 @@ public class CqlTest {
                                 .setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
                                 .setConnectionPoolType(ConnectionPoolType.TOKEN_AWARE)
                                 .setDiscoveryDelayInSeconds(60000)
-                                .setCqlVersion("3.0.0"))
+                                .setCqlVersion("3.0.0")
+                                )
                 .withConnectionPoolConfiguration(
                         new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME
                                 + "_" + TEST_KEYSPACE_NAME)
@@ -182,6 +186,25 @@ public class CqlTest {
             LOG.info("   first_name : " + columns.getStringValue ("first_name", null));
             LOG.info("   last_name  : " + columns.getStringValue ("last_name",  null));
         }           
+    }
+    
+    @Test
+    public void testKeyspaceCql() throws Exception {
+        keyspace.prepareCqlStatement()
+                .withCql("INSERT INTO employees (empID, deptID, first_name, last_name) VALUES ('999', '233', 'arielle', 'landau');")
+                .execute();
+        
+        CqlStatementResult result = keyspace.prepareCqlStatement()
+                .withCql("SELECT * FROM employees WHERE empID = '999';")
+                .execute()
+                .getResult();
+        
+        CqlSchema schema = result.getSchema();
+        Rows<Integer, String> rows = result.getRows(CQL3_CF);
+        
+        Assert.assertEquals(1,  rows.size());
+        Assert.assertTrue(999 == rows.getRowByIndex(0).getKey());
+        
     }
 
 }

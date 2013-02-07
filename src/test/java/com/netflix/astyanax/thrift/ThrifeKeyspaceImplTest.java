@@ -60,6 +60,7 @@ import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
+import com.netflix.astyanax.cql.CqlStatementResult;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.FieldMetadata;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
@@ -138,6 +139,12 @@ public class ThrifeKeyspaceImplTest {
             StringSerializer.get(), // Key Serializer
             StringSerializer.get()); // Column Serializer
 
+    private static ColumnFamily<Long, Long> CF_DELETE = ColumnFamily
+            .newColumnFamily(
+                    "delete", 
+                    LongSerializer.get(),
+                    LongSerializer.get());
+    
     private static ColumnFamily<Long, String> CF_USERS = ColumnFamily
             .newColumnFamily(
                     "users", 
@@ -326,6 +333,7 @@ public class ThrifeKeyspaceImplTest {
         keyspace.createColumnFamily(CF_TTL,        null);
         keyspace.createColumnFamily(CF_STANDARD2,  null);
         keyspace.createColumnFamily(CF_LONGCOLUMN, null);
+        keyspace.createColumnFamily(CF_DELETE,     null);
         keyspace.createColumnFamily(CF_COUNTER1, ImmutableMap.<String, Object>builder()
                 .put("default_validation_class", "CounterColumnType")
                 .build());
@@ -455,6 +463,68 @@ public class ThrifeKeyspaceImplTest {
         }
     }
 
+    @Test
+    public void testMultiColumnDelete() throws Exception {
+        MutationBatch mb = keyspace.prepareMutationBatch();
+        mb.withRow(CF_DELETE, 1L)
+            .setTimestamp(1).putEmptyColumn(1L, null)
+            .setTimestamp(10).putEmptyColumn(2L, null)
+            ;
+        mb.execute();
+        
+        ColumnList<Long> result1 = keyspace.prepareQuery(CF_DELETE).getRow(1L).execute().getResult();
+        Assert.assertEquals(2, result1.size());
+        Assert.assertNotNull(result1.getColumnByName(1L));
+        Assert.assertNotNull(result1.getColumnByName(2L));
+        
+        logColumnList("Insert", result1);
+        
+        mb = keyspace.prepareMutationBatch();
+        mb.withRow(CF_DELETE,  1L)
+            .setTimestamp(result1.getColumnByName(1L).getTimestamp()-1)
+            .deleteColumn(1L)
+            .setTimestamp(result1.getColumnByName(2L).getTimestamp()-1)
+            .deleteColumn(2L)
+            .putEmptyColumn(3L, null);
+        
+        mb.execute();
+        
+        result1 = keyspace.prepareQuery(CF_DELETE).getRow(1L).execute().getResult();
+        logColumnList("Delete with older timestamp", result1);
+        Assert.assertEquals(3, result1.size());
+        
+        LOG.info("Delete L2 with TS: " + (result1.getColumnByName(2L).getTimestamp()+1));
+        mb.withRow(CF_DELETE,  1L)
+            .setTimestamp(result1.getColumnByName(1L).getTimestamp()+1)
+            .deleteColumn(1L)
+            .setTimestamp(result1.getColumnByName(2L).getTimestamp()+1)
+            .deleteColumn(2L);
+        mb.execute();
+        
+        result1 = keyspace.prepareQuery(CF_DELETE).getRow(1L).execute().getResult();
+        logColumnList("Delete with newer timestamp", result1);
+        Assert.assertEquals(1, result1.size());
+    }
+    
+    <T> void logColumnList(String label, ColumnList<T> cl) {
+        LOG.info(">>>>>> " + label);
+        for (Column<T> c : cl) {
+            LOG.info(c.getName() + " " + c.getTimestamp());
+        }
+        LOG.info("<<<<<<");
+    }
+    
+    @Test
+    public void testCqlComposite() throws Exception {
+        CqlStatementResult result = keyspace.prepareCqlStatement()
+            .withCql("SELECT * FROM " + CF_COMPOSITE_CSV.getName())
+            .execute()
+            .getResult();
+        
+        result.getSchema();
+        result.getRows(CF_COMPOSITE_CSV);
+    }
+    
     @Test
     public void testHasValue() throws Exception {
         ColumnList<String> response = keyspace.prepareQuery(CF_USER_INFO).getRow("acct1234").execute().getResult();

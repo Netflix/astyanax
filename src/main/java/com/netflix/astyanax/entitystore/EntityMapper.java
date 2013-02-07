@@ -1,7 +1,10 @@
 package com.netflix.astyanax.entitystore;
 
 import java.lang.reflect.Field;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.persistence.Column;
@@ -9,9 +12,12 @@ import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.PersistenceException;
 
+import org.apache.commons.lang.StringUtils;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.MutationBatch;
@@ -28,8 +34,9 @@ class EntityMapper<T, K> {
 	private final Class<T> clazz;
 	private final Integer ttl;
 	private final Field idField;
-	private final List<ColumnMapper> columnList;
-
+	private final Map<String, ColumnMapper> columnList;
+	private final String entityName;
+	
 	/**
 	 * 
 	 * @param clazz
@@ -45,6 +52,8 @@ class EntityMapper<T, K> {
 		if(entityAnnotation == null)
 			throw new IllegalArgumentException("class is NOT annotated with @java.persistence.Entity: " + clazz.getName());
 		
+		entityName = MappingUtils.getEntityName(entityAnnotation, clazz);
+		
 		if(ttl == null) {
 			// try @TTL annotation at entity/row level.
 			// it doesn't make sense to support @TTL annotation at individual column level.
@@ -58,7 +67,7 @@ class EntityMapper<T, K> {
 		}
 
 		Field[] declaredFields = clazz.getDeclaredFields();
-		columnList = Lists.newArrayListWithCapacity(declaredFields.length);
+		columnList = Maps.newHashMapWithExpectedSize(declaredFields.length);
 		Set<String> usedColumnNames = Sets.newHashSet();
 		Field tmpIdField = null;
 		for (Field field : declaredFields) {
@@ -73,14 +82,18 @@ class EntityMapper<T, K> {
 				field.setAccessible(true);
 				ColumnMapper columnMapper = null;
 				Entity compositeAnnotation = field.getType().getAnnotation(Entity.class);
-				if(compositeAnnotation == null) {
-					columnMapper = new LeafColumnMapper(field, "");
+			    if (Map.class.isAssignableFrom(field.getType())) {
+                    columnMapper = new MapColumnMapper(field);
+                } else if (Set.class.isAssignableFrom(field.getType())) {
+                    columnMapper = new SetColumnMapper(field);
+                } else if(compositeAnnotation == null) {
+	                columnMapper = new LeafColumnMapper(field);
 				} else {
-					columnMapper = new CompositeColumnMapper(field, "");
+	                columnMapper = new CompositeColumnMapper(field);
 				}
 				Preconditions.checkArgument(!usedColumnNames.contains(columnMapper.getColumnName()), 
 						String.format("duplicate case-insensitive column name: %s", columnMapper.getColumnName().toLowerCase()));
-				columnList.add(columnMapper);
+				columnList.put(columnMapper.getColumnName(), columnMapper);
 				usedColumnNames.add(columnMapper.getColumnName().toLowerCase());
 			}
 		}
@@ -89,15 +102,16 @@ class EntityMapper<T, K> {
 		idField = tmpIdField;
 	}
 
-	void fillMutationBatch(MutationBatch mb, ColumnFamily<K, String> columnFamily, T entity) {
+    void fillMutationBatch(MutationBatch mb, ColumnFamily<K, String> columnFamily, T entity) {
 		try {
 			@SuppressWarnings("unchecked")
 			K rowKey = (K) idField.get(entity);
 			ColumnListMutation<String> clm = mb.withRow(columnFamily, rowKey);
 			clm.setDefaultTtl(ttl);
 			
-			for (ColumnMapper mapper : columnList) {
-				mapper.fillMutationBatch(entity, clm);
+			for (ColumnMapper mapper : columnList.values()) {
+				mapper.fillMutationBatch(entity, clm, "");
+				mapper.validate(entity);
 			}
 		} catch(Exception e) {
 			throw new PersistenceException("failed to fill mutation batch", e);
@@ -106,15 +120,28 @@ class EntityMapper<T, K> {
 
 	T constructEntity(K id, ColumnList<String> cl) {
 		try {
-			T entity = clazz.newInstance();
+		    T entity = clazz.newInstance();
 			idField.set(entity, id);
-			for (ColumnMapper mapper : columnList) {
-				mapper.setField(entity, cl);
+			
+			for (com.netflix.astyanax.model.Column<String> column : cl) {
+			    List<String> name = Lists.newArrayList(StringUtils.split(column.getName(), "."));
+			    setField(entity, name.iterator(), column);
+			}
+			
+			for (ColumnMapper column : columnList.values()) {
+			    column.validate(this);
 			}
 			return entity;
 		} catch(Exception e) {
 			throw new PersistenceException("failed to construct entity", e);
 		}
+	}
+	
+	void setField(T entity, Iterator<String> name, com.netflix.astyanax.model.Column<String> column) throws Exception {
+	    String fieldName = name.next();
+	    ColumnMapper mapper = this.columnList.get(fieldName);
+        if (mapper != null)
+            mapper.setField(entity, name, column);
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -128,10 +155,14 @@ class EntityMapper<T, K> {
 	}
 	
 	@VisibleForTesting
-	List<ColumnMapper> getColumnList() {
-		return columnList;
+	Collection<ColumnMapper> getColumnList() {
+		return columnList.values();
 	}
 
+	String getEntityName() {
+	    return entityName;
+	}
+	
 	@Override
 	public String toString() {
 		return String.format("EntityMapper(%s)", clazz);

@@ -2755,6 +2755,48 @@ public class ThrifeKeyspaceImplTest {
     }
     
     @Test
+    public void testTtlWithPartialUpdate() throws Exception {
+    	 MutationBatch mb = keyspace.prepareMutationBatch();
+         mb.withRow(CF_TTL, "row")
+           .putColumn("c1", "v1", 5)
+           .putColumn("c2", "v2", 5);
+         mb.execute();
+         
+         Thread.sleep(3000);
+         
+         // both columns should be alive
+         ColumnList<String> result = keyspace.prepareQuery(CF_TTL)
+             .getRow("row")
+             .execute().getResult();
+         Assert.assertEquals(2,  result.size());
+         Assert.assertEquals("v1", result.getColumnByName("c1").getStringValue());
+         Assert.assertEquals("v2", result.getColumnByName("c2").getStringValue());
+         
+    	 mb = keyspace.prepareMutationBatch();
+         mb.withRow(CF_TTL, "row")
+           .putColumn("c1", "v1", 5);
+         mb.execute();
+         
+         Thread.sleep(3000);
+         
+         // only c1 should be alive since udpate extended its life
+         result = keyspace.prepareQuery(CF_TTL)
+             .getRow("row")
+             .execute().getResult();
+         Assert.assertEquals(1,  result.size());
+         Assert.assertEquals("v1", result.getColumnByName("c1").getStringValue());
+         Assert.assertNull(result.getColumnByName("c2"));
+         
+         Thread.sleep(3000);
+         
+         // both columns should be dead now
+         result = keyspace.prepareQuery(CF_TTL)
+                 .getRow("row")
+                 .execute().getResult();
+         Assert.assertEquals(0,  result.size());
+    }
+    
+    @Test
     public void testTtlString() throws Exception {
         ColumnPrefixDistributedRowLock<String> lock = 
             new ColumnPrefixDistributedRowLock<String>(keyspace, LOCK_CF_STRING, "testTtl")

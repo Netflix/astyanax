@@ -86,7 +86,7 @@ final class NullableEntity {
 	@Column()
     private String nullable;
 
-	@Column(nullable=false)
+	@Column()
 	private AllOptionalNestedEntity notnullableAllOptionalNestedEntity;
 	
 	@Column()

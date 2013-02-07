@@ -111,7 +111,6 @@ class EntityMapper<T, K> {
 			
 			for (ColumnMapper mapper : columnList.values()) {
 				mapper.fillMutationBatch(entity, clm, "");
-				mapper.validate(entity);
 			}
 		} catch(Exception e) {
 			throw new PersistenceException("failed to fill mutation batch", e);
@@ -129,7 +128,7 @@ class EntityMapper<T, K> {
 			}
 			
 			for (ColumnMapper column : columnList.values()) {
-			    column.validate(this);
+			    column.validate(entity);
 			}
 			return entity;
 		} catch(Exception e) {

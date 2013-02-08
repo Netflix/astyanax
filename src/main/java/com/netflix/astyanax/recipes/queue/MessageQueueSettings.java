@@ -16,7 +16,6 @@ public class MessageQueueSettings {
     public static final Integer       DEFAULT_HISTORY_TTL       = null;
     public static final String        DEFAULT_QUEUE_NAME        = "Queue";
     public static final long          DEFAULT_POLL_WAIT         = TimeUnit.MILLISECONDS.convert(100, TimeUnit.MILLISECONDS);
-    public static final ModShardPolicy DEFAULT_MOD_SHARD_POLICY = TimeModShardPolicy.getInstance();
     
     private Long      partitionDuration = DEFAULT_BUCKET_DURATION;
     private int       partitionCount    = DEFAULT_BUCKET_COUNT;
@@ -25,7 +24,6 @@ public class MessageQueueSettings {
     private Integer   historyTtl        = DEFAULT_HISTORY_TTL;
     private String    queueName         = DEFAULT_QUEUE_NAME;
     private long      pollInterval      = DEFAULT_POLL_WAIT;
-    private ModShardPolicy modShardPolicy = DEFAULT_MOD_SHARD_POLICY;
     
     public Long getPartitionDuration() {
         return partitionDuration;
@@ -71,12 +69,6 @@ public class MessageQueueSettings {
     }
     public void setPollInterval(long pollInterval) {
         this.pollInterval = pollInterval;
-    }
-    public ModShardPolicy getModShardPolicy() {
-        return this.modShardPolicy;
-    }
-    public void setModShardPolicy(ModShardPolicy modShardPolicy) {
-        this.modShardPolicy = modShardPolicy;
     }
     
     @Override

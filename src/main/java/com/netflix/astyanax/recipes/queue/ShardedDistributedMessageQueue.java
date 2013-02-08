@@ -200,11 +200,6 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             return this;
         }
         
-        public Builder withModShardStrategy(ModShardPolicy policy) {
-            queue.settings.setModShardPolicy(policy);
-            return this;
-        }
-        
         public Builder withPollInterval(Long internval, TimeUnit units) {
             queue.settings.setPollInterval(TimeUnit.MILLISECONDS.convert(internval,  units));
             return this;
@@ -634,17 +629,21 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     
     @Override
     public void createStorage() throws MessageQueueException {
+        final ImmutableMap<String, Object> common = ImmutableMap.<String, Object>builder()
+                .put("read_repair_chance",       0.0)
+                .put("gc_grace_seconds",         0)     // TODO: Calculate gc_grace_seconds
+                .put("compaction_strategy",      "LeveledCompactionStrategy")
+                .put("min_compaction_threshold", 2)
+                .put("max_compaction_threshold", 4)
+                .build();
+                
         changeSchema(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
                 keyspace.createColumnFamily(queueColumnFamily, ImmutableMap.<String, Object>builder()
                         .put("key_validation_class",     "UTF8Type")
                         .put("comparator_type",          "CompositeType(BytesType, BytesType(reversed=true), TimeUUIDType, TimeUUIDType, BytesType)")
-                        .put("read_repair_chance",       0)
-                        .put("gc_grace_seconds",          0)     // TODO: Calculate gc_grace_seconds
-                        .put("compaction_strategy",      "LeveledCompactionStrategy")
-                        .put("min_compaction_threshold", 2)
-                        .put("max_compaction_threshold", 4)
+                        .putAll(common)
                         .build());
                 return null;
             }            
@@ -656,11 +655,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 keyspace.createColumnFamily(keyIndexColumnFamily, ImmutableMap.<String, Object>builder()
                         .put("key_validation_class",     "UTF8Type")
                         .put("comparator_type",          "CompositeType(BytesType, UTF8Type)")
-                        .put("read_repair_chance",       0)
-                        .put("gc_grace_seconds",          0)     // TODO: Calculate 
-                        .put("compaction_strategy",      "LeveledCompactionStrategy")
-                        .put("min_compaction_threshold", 2)
-                        .put("max_compaction_threshold", 4)
+                        .putAll(common)
                         .build());
                 return null;
             }
@@ -670,12 +665,8 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             @Override
             public Void call() throws Exception {
                 keyspace.createColumnFamily(historyColumnFamily, ImmutableMap.<String, Object>builder()
-                        .put("read_repair_chance",       1.0)
-                        .put("gc_grace_seconds",          0)     // TODO: Calculate 
                         .put("default_validation_class", "UTF8Type")
-                        .put("compaction_strategy",      "LeveledCompactionStrategy")
-                        .put("min_compaction_threshold", 2)
-                        .put("max_compaction_threshold", 4)
+                        .putAll(common)
                         .build());
                 return null;
             }

@@ -434,6 +434,46 @@ public class SerializersTest {
 			Assert.fail();
 		}
 	}
+	
+	@Test
+	public void testAnnotatedCompositeSerializerWithGenerics(){
+	    try{
+	        AnnotatedCompositeSerializer<GenericComposite> ser = new AnnotatedCompositeSerializer<GenericComposite>(GenericComposite.class);
+	        GenericComposite<String, String> c1 = new GenericComposite<String, String>("foo","bar");
+	        
+	        ByteBuffer bytes = ser.toByteBuffer(c1);
+	        GenericComposite<String, String> c2 = ser.fromByteBuffer(bytes);
+	        Assert.assertEquals(c1, c2);
+	    } catch (Exception e){
+	        e.printStackTrace();
+	        LOG.error(e.getMessage());
+	        Assert.fail();
+	    }
+	}
+	
+	static class GenericComposite<A, B>{
+	    @Component(ordinal = 0)
+	    A a;
+	    
+	    @Component(ordinal = 1)
+	    B b;
+	    
+	    public GenericComposite(){}
+	    
+	    public GenericComposite(A a, B b){
+	        this.a = a;
+	        this.b = b;
+	    }
+	    
+	    @Override
+	    public boolean equals(Object arg0){
+	        if(!(arg0 instanceof GenericComposite)){
+	            return false;
+	        }
+	        GenericComposite other = (GenericComposite)arg0;
+	        return a.equals(other.a) && b.equals(other.b); 
+	    }
+	}
 
 	static class Composite2 {
 		@Component(ordinal = 0)

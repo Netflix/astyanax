@@ -36,12 +36,12 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
     public static class ComponentSerializer<P> implements Comparable<ComponentSerializer<?>> {
         private Field field;
         private Serializer<P> serializer;
+        private Serializer<P> nullSerializer;
         private int ordinal;
 
-        public ComponentSerializer(Field field, Serializer<P> serializer, int ordinal) {
+        public ComponentSerializer(Field field, int ordinal) {
             this.field = field;
             this.field.setAccessible(true);
-            this.serializer = serializer;
             this.ordinal = ordinal;
         }
 
@@ -51,17 +51,31 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
 
         public ByteBuffer serialize(Object obj) throws IllegalArgumentException, IllegalAccessException {
             Object value = field.get(obj);
-            ByteBuffer buf = serializer.toByteBuffer((P) value);
+            ByteBuffer buf = getSerializer(value).toByteBuffer((P) value);
             return buf;
         }
 
         public void deserialize(Object obj, ByteBuffer value) throws IllegalArgumentException, IllegalAccessException {
-           	field.set(obj, serializer.fromByteBuffer(value));
+           	field.set(obj, getSerializer(obj).fromByteBuffer(value));
         }
 
         public ByteBuffer serializeValue(Object value) {
-            ByteBuffer buf = serializer.toByteBuffer((P) value);
+            ByteBuffer buf = getSerializer(value).toByteBuffer((P) value);
             return buf;
+        }
+        
+        private Serializer<P> getSerializer(Object value){
+            if(value != null){
+                if(this.serializer == null){
+                    this.serializer = SerializerTypeInferer.getSerializer(value.getClass());
+                }
+                return this.serializer;
+            } else{
+                if(this.nullSerializer == null){
+                    this.nullSerializer = SerializerTypeInferer.getSerializer(field.getType());
+                }
+                return this.nullSerializer;
+            }
         }
 
         @Override
@@ -94,8 +108,7 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
         for (Field field : getFields(clazz, includeParentFields)) {
             Component annotation = field.getAnnotation(Component.class);
             if (annotation != null) {
-				Serializer s = SerializerTypeInferer.getSerializer(field.getType());
-                components.add(makeComponent(field, s, annotation.ordinal()));
+                components.add(makeComponent(field, annotation.ordinal()));
             }
         }
 
@@ -194,8 +207,8 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
         return copy;
     }
 
-    private static <P> ComponentSerializer<P> makeComponent(Field field, Serializer<P> serializer, int ordinal) {
-        return new ComponentSerializer<P>(field, serializer, ordinal);
+    private static <P> ComponentSerializer<P> makeComponent(Field field, int ordinal) {
+        return new ComponentSerializer<P>(field, ordinal);
     }
 
     private T createContents(Class<T> clazz) throws InstantiationException, IllegalAccessException {

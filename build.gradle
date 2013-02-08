@@ -38,6 +38,7 @@ dependencies {
     compile 'org.codehaus.jackson:jackson-core-asl:1.9.2'
     compile 'org.codehaus.jackson:jackson-mapper-asl:1.9.2'
     compile 'javax.persistence:persistence-api:1.0'
+    compile 'org.xerial.snappy:snappy-java:1.0.4.1'
     testCompile 'junit:junit:4.8.1'
 }
 

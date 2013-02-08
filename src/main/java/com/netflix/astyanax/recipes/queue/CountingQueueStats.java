@@ -1,5 +1,6 @@
 package com.netflix.astyanax.recipes.queue;
 
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class CountingQueueStats implements MessageQueueStats {
@@ -8,10 +9,10 @@ public class CountingQueueStats implements MessageQueueStats {
     private AtomicLong eventProcessCount   = new AtomicLong();
     private AtomicLong eventReprocessCount = new AtomicLong();
     private AtomicLong expiredLockCount    = new AtomicLong();
-    private AtomicLong ackMessageCount = new AtomicLong();
+    private AtomicLong ackMessageCount     = new AtomicLong();
     private AtomicLong sendMessageCount    = new AtomicLong();
     private AtomicLong invalidTaskCount    = new AtomicLong();
-    private AtomicLong persistErrorCount        = new AtomicLong();
+    private AtomicLong persistErrorCount   = new AtomicLong();
     
     @Override
     public void incEmptyPartitionCount() {
@@ -114,5 +115,4 @@ public class CountingQueueStats implements MessageQueueStats {
                 + ", new="      + sendMessageCount .get()
                 + ", invalid="  + invalidTaskCount + "]";
     }
-
 }

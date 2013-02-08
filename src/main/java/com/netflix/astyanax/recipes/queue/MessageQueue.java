@@ -139,6 +139,15 @@ public interface MessageQueue {
     Map<String, Integer> getShardCounts() throws MessageQueueException;
     
     /**
+     * Return a map of shards and their stats for THIS instance of the queue.
+     * These counts are only for the lifetime of this instance and are only incremented
+     * by operations performed by this instance.  For actual shard sizes 
+     * call getShardCounts();
+     * @return
+     */
+    Map<String, MessageQueueShardStats> getShardStats();
+
+    /**
      * Create a consumer of the message queue.  The consumer will have it's own context
      * 
      * @return

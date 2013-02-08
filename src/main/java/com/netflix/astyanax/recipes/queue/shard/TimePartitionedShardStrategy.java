@@ -3,20 +3,23 @@ package com.netflix.astyanax.recipes.queue.shard;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
 import com.netflix.astyanax.recipes.queue.MessageQueueShard;
 import com.netflix.astyanax.recipes.queue.MessageQueueSettings;
+import com.netflix.astyanax.recipes.queue.MessageQueueShardStats;
 
-public class TimePartitionedShardStrategy implements ShardStrategy {
+public class TimePartitionedShardStrategy implements ShardReaderReaderStrategy {
     private static final String SEPARATOR = ":";
     
     private final MessageQueueSettings          settings;
     private final List<MessageQueueShard>       shards;
-    
+    private final Map<String, MessageQueueShardStats> shardStats;
     private LinkedBlockingQueue<MessageQueueShard> workQueue    = Queues.newLinkedBlockingQueue();
     private LinkedBlockingQueue<MessageQueueShard> idleQueue    = Queues.newLinkedBlockingQueue();
 
@@ -32,8 +35,10 @@ public class TimePartitionedShardStrategy implements ShardStrategy {
             }
         }
         
+        shardStats = Maps.newHashMapWithExpectedSize(shards.size());
         for (MessageQueueShard shard : shards) {
             idleQueue.add(shard);
+            shardStats.put(shard.getName(),  shard);
         }
     }
 
@@ -85,5 +90,10 @@ public class TimePartitionedShardStrategy implements ShardStrategy {
     @Override
     public Collection<MessageQueueShard> listShards() {
         return Collections.unmodifiableList(shards);
+    }
+
+    @Override
+    public Map<String, MessageQueueShardStats> getShardStats() {
+        return shardStats;
     }
 }

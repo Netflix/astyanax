@@ -1,8 +1,10 @@
 package com.netflix.astyanax.recipes.queue.shard;
 
 import java.util.Collection;
+import java.util.Map;
 
 import com.netflix.astyanax.recipes.queue.MessageQueueShard;
+import com.netflix.astyanax.recipes.queue.MessageQueueShardStats;
 
 /**
  * Policy for scheduling shards to be processed
@@ -10,7 +12,7 @@ import com.netflix.astyanax.recipes.queue.MessageQueueShard;
  * @author elandau
  *
  */
-public interface ShardStrategy {
+public interface ShardReaderReaderStrategy {
     /**
      * Acquire the next shard to be processed.  Must call releaseShard when done reading
      * from the shard
@@ -30,4 +32,9 @@ public interface ShardStrategy {
      * @return
      */
     Collection<MessageQueueShard> listShards();
+    
+    /**
+     * Return map of all shard stats
+     */
+    Map<String, MessageQueueShardStats> getShardStats();
 }

@@ -47,7 +47,8 @@ import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.recipes.locks.BusyLockException;
 import com.netflix.astyanax.recipes.queue.triggers.Trigger;
-import com.netflix.astyanax.recipes.queue.shard.ShardStrategy;
+import com.netflix.astyanax.recipes.queue.shard.ModShardPolicy;
+import com.netflix.astyanax.recipes.queue.shard.ShardReaderReaderStrategy;
 import com.netflix.astyanax.recipes.queue.shard.TimePartitionedShardStrategy;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.retry.RunOnce;
@@ -62,7 +63,7 @@ import com.netflix.astyanax.util.TimeUUIDUtils;
  * 
  * Key features
  * 1.  Time partition circular row key set used to time bound how much a wide row can grow.  This,
- *      along with an aggressive gc_grace_period will give cassandra a chance to clear out the row
+ *      along with an aggressive gc_grace_seconds will give cassandra a chance to clear out the row
  *      before the clients cycle back to the time partition.  Only one partition is active at any
  *      given time.
  * 2.  Mod sharding per partition based on message time.  This solves the problem of lock contention 
@@ -199,6 +200,11 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             return this;
         }
         
+        public Builder withModShardStrategy(ModShardPolicy policy) {
+            queue.settings.setModShardPolicy(policy);
+            return this;
+        }
+        
         public Builder withPollInterval(Long internval, TimeUnit units) {
             queue.settings.setPollInterval(TimeUnit.MILLISECONDS.convert(internval,  units));
             return this;
@@ -263,7 +269,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     private Collection<MessageQueueHooks>   hooks               = Lists.newArrayList();
     private MessageQueueSettings            settings            = new MessageQueueSettings();
     private Boolean                         bPoisonQueueEnabled = DEFAULT_POISON_QUEUE_ENABLED;
-    private ShardStrategy                   shardStrategy;
+    private ShardReaderReaderStrategy       shardStrategy;
     private Function<String, Message>       invalidMessageHandler  = new Function<String, Message>() {
                                                                         @Override
                                                                         public Message apply(@Nullable String input) {
@@ -634,8 +640,8 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 keyspace.createColumnFamily(queueColumnFamily, ImmutableMap.<String, Object>builder()
                         .put("key_validation_class",     "UTF8Type")
                         .put("comparator_type",          "CompositeType(BytesType, BytesType(reversed=true), TimeUUIDType, TimeUUIDType, BytesType)")
-                        .put("read_repair_chance",       1.0)
-                        .put("gc_grace_period",          0)     // TODO: Calculate gc_grace_period
+                        .put("read_repair_chance",       0)
+                        .put("gc_grace_seconds",          0)     // TODO: Calculate gc_grace_seconds
                         .put("compaction_strategy",      "LeveledCompactionStrategy")
                         .put("min_compaction_threshold", 2)
                         .put("max_compaction_threshold", 4)
@@ -650,8 +656,8 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 keyspace.createColumnFamily(keyIndexColumnFamily, ImmutableMap.<String, Object>builder()
                         .put("key_validation_class",     "UTF8Type")
                         .put("comparator_type",          "CompositeType(BytesType, UTF8Type)")
-                        .put("read_repair_chance",       1.0)
-                        .put("gc_grace_period",          0)     // TODO: Calculate gc_grace_period
+                        .put("read_repair_chance",       0)
+                        .put("gc_grace_seconds",          0)     // TODO: Calculate 
                         .put("compaction_strategy",      "LeveledCompactionStrategy")
                         .put("min_compaction_threshold", 2)
                         .put("max_compaction_threshold", 4)
@@ -665,7 +671,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             public Void call() throws Exception {
                 keyspace.createColumnFamily(historyColumnFamily, ImmutableMap.<String, Object>builder()
                         .put("read_repair_chance",       1.0)
-                        .put("gc_grace_period",          0)     // TODO: Calculate gc_grace_period
+                        .put("gc_grace_seconds",          0)     // TODO: Calculate 
                         .put("default_validation_class", "UTF8Type")
                         .put("compaction_strategy",      "LeveledCompactionStrategy")
                         .put("min_compaction_threshold", 2)
@@ -763,7 +769,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 List<MessageContext>   messages = null;
                 if (shard != null) {
                     try {
-                        if (shard.getLastCount() == 0) {
+                        if (shard.getLastReadCount() == 0) {
                             if (!hasMessages(shard.getName())) {
                                 return null;
                             }
@@ -1378,5 +1384,10 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         } catch (ConnectionException e) {
             throw new MessageQueueException("Error checking shard for messages. " + shardName, e);
         }
+    }
+
+    @Override
+    public Map<String, MessageQueueShardStats> getShardStats() {
+        return shardStrategy.getShardStats();
     }
 }

@@ -198,7 +198,7 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
          * @return
          */
         public Builder<K, C> withConcurrencyLevel(int concurrencyLevel) {
-            Preconditions.checkArgument(concurrencyLevel > 1, "Concurrency level must be > 1");
+            Preconditions.checkArgument(concurrencyLevel >= 1, "Concurrency level must be >= 1");
             this.concurrencyLevel = concurrencyLevel;
             return this;
         }
@@ -445,11 +445,11 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
         List<Callable<Boolean>> subtasks = Lists.newArrayList();
         
         // We are iterating the entire ring using an arbitrary number of threads
-        if (this.concurrencyLevel != null) {
+        if (this.concurrencyLevel != null || startToken != null|| endToken != null) {
             List<TokenRange> tokens = partitioner.splitTokenRange(
                     startToken == null ? partitioner.getMinToken() : startToken, 
                     endToken == null   ? partitioner.getMinToken() : endToken, 
-                    this.concurrencyLevel);
+                    this.concurrencyLevel == null ? 1 : this.concurrencyLevel);
             
             for (TokenRange range : tokens) {
                 subtasks.add(makeTokenRangeTask(range.getStartToken(), range.getEndToken()));

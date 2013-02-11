@@ -16,18 +16,21 @@
 package com.netflix.astyanax.shallows;
 
 import java.util.SortedMap;
+import java.util.concurrent.ConcurrentMap;
 
 import com.google.common.collect.Maps;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.query.CheckpointManager;
 
 public class EmptyCheckpointManager implements CheckpointManager {
-
+    private ConcurrentMap<String, String> tokenMap = Maps.newConcurrentMap();
+    
 	/**
 	 * Do nothing since checkpoints aren't being persisted.
 	 */
 	@Override
 	public void trackCheckpoint(String startToken, String checkpointToken) {
+	    tokenMap.put(startToken, checkpointToken);
 	}
 
 	/**
@@ -36,7 +39,7 @@ public class EmptyCheckpointManager implements CheckpointManager {
 	 */
 	@Override
 	public String getCheckpoint(String startToken) {
-		return null;
+	    return tokenMap.get(startToken);
 	}
 
 	@Override

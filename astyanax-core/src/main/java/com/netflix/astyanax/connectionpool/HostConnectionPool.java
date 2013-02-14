@@ -30,7 +30,8 @@ public interface HostConnectionPool<CL> {
      * not available.
      * 
      * @param timeout
-     * @return
+     * @return A borrowed connection.  Connection must be returned either by calling returnConnection 
+     *  or closeConnection.
      * @throws ConnectionException
      */
     Connection<CL> borrowConnection(int timeout) throws ConnectionException;
@@ -49,7 +50,6 @@ public interface HostConnectionPool<CL> {
      * Close this connection and update internal state
      * 
      * @param connection
-     * @return
      */
     boolean closeConnection(Connection<CL> connection);
 
@@ -75,73 +75,56 @@ public interface HostConnectionPool<CL> {
     int primeConnections(int numConnections) throws ConnectionException, InterruptedException;
 
     /**
-     * Get the host to which this pool is associated
-     * 
-     * @return
+     * @return Get the host to which this pool is associated
      */
     Host getHost();
 
     /**
-     * Get number of open connections including any that are currently borrowed
+     * @return Get number of open connections including any that are currently borrowed
      * and those that are currently idel
-     * 
-     * @return
      */
     int getActiveConnectionCount();
 
     /**
-     * Get the number of pending connection open attempts
-     * 
-     * @return
+     * @return Get the number of pending connection open attempts
      */
     int getPendingConnectionCount();
 
     /**
-     * Get number of threads blocked waiting for a free connection
-     * 
-     * @return
+     * @return Get number of threads blocked waiting for a free connection
      */
     int getBlockedThreadCount();
 
     /**
-     * Return the number of idle active connections. These are connections that
+     * @return Return the number of idle active connections. These are connections that
      * can be borrowed immediatley without having to make a new connection to
      * the remote server.
-     * 
-     * @return
      */
     int getIdleConnectionCount();
 
     /**
-     * Get number of currently borrowed connections
-     * 
-     * @return
+     * @return Get number of currently borrowed connections
      */
     int getBusyConnectionCount();
 
     /**
-     * Return true if the pool is marked as down and is trying to reconnect
-     * @return
+     * @return Return true if the pool is marked as down and is trying to reconnect
      */
     boolean isReconnecting();
 
     /**
-     * Return true if the pool is active.
-     * @return
+     * @return Return true if the pool is active.
      */
     boolean isActive();
     
     /**
-     * Return true if the has been shut down and is no longer accepting traffic.
-     * @return
+     * @return Return true if the has been shut down and is no longer accepting traffic.
      */
     boolean isShutdown();
     
     /**
-     * Return implementation specific score to be used by weighted pool
+     * @return Return implementation specific score to be used by weighted pool
      * selection algorithms
-     * 
-     * @return
      */
     double getScore();
 

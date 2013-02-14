@@ -13,19 +13,17 @@ import com.netflix.astyanax.connectionpool.TokenRange;
  */
 public interface Partitioner {
     /**
-     * Return the smallest token in the token space
-     * @return
+     * @return Return the smallest token in the token space
      */
     String getMinToken();
     
     /**
-     * Return the largest token in the token space
-     * @return
+     * @return Return the largest token in the token space
      */
     String getMaxToken();
     
     /**
-     * Return the token immediately before this one
+     * @return Return the token immediately before this one
      */
     String getTokenMinusOne(String token);
     
@@ -36,21 +34,18 @@ public interface Partitioner {
      * @param first
      * @param last
      * @param count
-     * @return
      */
     List<TokenRange> splitTokenRange(String first, String last, int count);
     
     /**
      * Split the entire token range into 'count' equal size segments
      * @param count
-     * @return
      */
     List<TokenRange> splitTokenRange(int count);
     
     /**
      * Return the token for the specifie key
      * @param key
-     * @return
      */
     String getTokenForKey(ByteBuffer key);
     

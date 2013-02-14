@@ -12,7 +12,7 @@ public interface Topology<CL> {
      * Refresh the internal topology structure
      * 
      * @param ring
-     * @return
+     * @return True if anything changed in the internal state
      */
     boolean setPools(Collection<HostConnectionPool<CL>> ring);
 
@@ -54,7 +54,6 @@ public interface Topology<CL> {
      * Get the partition best suited to handle a row key
      * 
      * @param token
-     * @return
      */
     TokenHostConnectionPoolPartition<CL> getPartition(ByteBuffer rowkey);
     
@@ -69,34 +68,27 @@ public interface Topology<CL> {
 
     /**
      * Return a partition that represents all hosts in the ring
-     * 
-     * @return
      */
     TokenHostConnectionPoolPartition<CL> getAllPools();
 
     /**
-     * Get total number of tokens in the topology
-     * 
-     * @return
+     * @return Get total number of tokens in the topology
      */
     int getPartitionCount();
 
     /**
-     * Return a list of all unqiue ids or first token for partitions in the topology
-     * @return
+     * @return Return a list of all unqiue ids or first token for partitions in the topology
      */
     List<String> getPartitionNames();
 
     /**
-     * Return a mapping of partition ids to partition details
-     * @return
+     * @return Return a mapping of partition ids to partition details
      */
     Map<String, TokenHostConnectionPoolPartition<CL>> getPartitions();
     
     /**
      * Return the partition for a specific token
      * @param token
-     * @return
      */
     TokenHostConnectionPoolPartition<CL> getPartition(String token);
 }

@@ -39,9 +39,7 @@ public interface RetryBackoffStrategy {
         void success();
 
         /**
-         * Return the next backoff delay in the strategy
-         * 
-         * @return
+         * @return Return the next backoff delay in the strategy
          */
         long getNextDelay();
 
@@ -50,13 +48,14 @@ public interface RetryBackoffStrategy {
          */
         void suspend();
 
+        /**
+         * @return Number of failed attempts
+         */
         int getAttemptCount();
     };
 
     /**
      * Create an instance of the strategy for a single host
-     * 
-     * @return
      */
     Instance createInstance();
 }

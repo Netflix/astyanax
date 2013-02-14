@@ -68,7 +68,7 @@ public class HostConnectionPoolPartition<CL> {
      * Add a new pool to the partition.  Checks to see if the pool already
      * existed.  If so then there is no need to refresh the pool.
      * @param pool
-     * @return
+     * @return True if anything changed
      */
     public synchronized boolean addPool(HostConnectionPool<CL> pool) {
         if (this.pools.add(pool)) {
@@ -87,9 +87,8 @@ public class HostConnectionPoolPartition<CL> {
     }
     
     /**
-     * Return the list of active hosts.  Active hosts are those deemed by the 
+     * @return Return the list of active hosts.  Active hosts are those deemed by the 
      * latency score strategy to be alive and responsive.  
-     * @return
      */
     public List<HostConnectionPool<CL>> getPools() {
         return activePools.get();
@@ -98,7 +97,6 @@ public class HostConnectionPoolPartition<CL> {
     /**
      * If true the the hosts are sorted by order of priority where the 
      * first host gives the best performance
-     * @return
      */
     public boolean isSorted() {
         return prioritize.get();
@@ -107,7 +105,6 @@ public class HostConnectionPoolPartition<CL> {
     /**
      * Returns true if a pool is contained in this partition
      * @param pool
-     * @return
      */
     public boolean hasPool(HostConnectionPool<CL> pool) {
         return pools.contains(pool);

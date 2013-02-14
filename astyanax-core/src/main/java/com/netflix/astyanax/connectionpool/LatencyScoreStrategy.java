@@ -23,9 +23,7 @@ public interface LatencyScoreStrategy {
         void addSample(long sample);
 
         /**
-         * Get the cached score for this endpoint
-         * 
-         * @return
+         * @return Get the cached score for this endpoint
          */
         double getScore();
 
@@ -41,33 +39,28 @@ public interface LatencyScoreStrategy {
     }
 
     /**
-     * Return interval for updating the scores
-     * @return
+     * @return Return interval for updating the scores
      */
     int getUpdateInterval();
     
     /**
-     * Return interval for clearing scores
-     * @return
+     * @return Return interval for clearing scores
      */
     int getResetInterval();
     
     /**
-     * Return threshold after which hosts will be excluded if their score 
+     * @return Return threshold after which hosts will be excluded if their score 
      * is getScoreThreshold() times larger than the best performing node
-     * @return
      */
     double getScoreThreshold();
     
     /**
-     * Return threshold of blocked connections after which a host is excluded
-     * @return
+     * @return Return threshold of blocked connections after which a host is excluded
      */
     int getBlockedThreshold();
     
     /**
-     * Get ratio for calculating minimum number of hosts that most remain in the pool
-     * @return
+     * @return  Get ratio for calculating minimum number of hosts that most remain in the pool
      */
     double getKeepRatio();
 

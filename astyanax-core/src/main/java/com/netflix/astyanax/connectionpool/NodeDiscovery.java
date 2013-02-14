@@ -36,37 +36,27 @@ public interface NodeDiscovery {
     void shutdown();
 
     /**
-     * Get the last refresh time in the discovery thread
-     * 
-     * @return
+     * @return Get the last refresh time in the discovery thread
      */
     DateTime getLastRefreshTime();
 
     /**
-     * Get the number of refreshes
-     * 
-     * @return
+     * @return Get the number of refreshes
      */
     long getRefreshCount();
 
     /**
-     * Get total number of errors encountered during a refresh
-     * 
-     * @return
+     * @return Get total number of errors encountered during a refresh
      */
     long getErrorCount();
 
     /**
-     * Get the last exception that was encountered
-     * 
-     * @return
+     * @return Get the last exception that was encountered
      */
     Exception getLastException();
 
     /**
-     * Get the raw list of nodes from the underlying refresh mechanism
-     * 
-     * @return
+     * @return Get the raw list of nodes from the underlying refresh mechanism
      */
     String getRawHostList();
 }

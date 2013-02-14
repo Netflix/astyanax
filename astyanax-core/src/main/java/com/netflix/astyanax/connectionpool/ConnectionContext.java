@@ -15,16 +15,14 @@ public interface ConnectionContext {
     public void    setMetadata(String key, Object obj);
     
     /**
-     * Get metadata stored by calling setMetadata
+     * @return Get metadata stored by calling setMetadata
      * @param key
-     * @return
      */
     public Object  getMetadata(String key);
     
     /**
-     * Determine if metadata exists
+     * @return Return true if the metadata with the specified key exists.
      * @param key
-     * @return
      */
     public boolean hasMetadata(String key);
 }

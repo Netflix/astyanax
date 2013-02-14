@@ -86,7 +86,6 @@ public interface MutationBatch extends Execution<Void> {
      * discardMutations is called.
      * 
      * @param rowKey
-     * @return
      */
     <K, C> ColumnListMutation<C> withRow(ColumnFamily<K, C> columnFamily, K rowKey);
 
@@ -112,25 +111,19 @@ public interface MutationBatch extends Execution<Void> {
     void mergeShallow(MutationBatch other);
 
     /**
-     * Returns true if there are no rows in the mutation. May return a false
+     * @return true if there are no rows in the mutation. May return a false
      * true if a row() was added by calling the above row() method but no
      * mutations were created.
-     * 
-     * @return
      */
     boolean isEmpty();
 
     /**
-     * Returns the number of rows being mutated
-     * 
-     * @return
+     * @return Returns the number of rows being mutated
      */
     int getRowCount();
 
     /**
-     * Return a mapping of column families to rows being modified
-     * 
-     * @return
+     * @return Return a mapping of column families to rows being modified
      */
     Map<ByteBuffer, Set<String>> getRowKeys();
 
@@ -138,7 +131,6 @@ public interface MutationBatch extends Execution<Void> {
      * Pin this operation to a specific host
      * 
      * @param host
-     * @return
      */
     MutationBatch pinToHost(Host host);
 
@@ -153,7 +145,6 @@ public interface MutationBatch extends Execution<Void> {
      * Set the consistency level for this mutation (same as setConsistencyLevel)
      * 
      * @param consistencyLevel
-     * @return
      */
     MutationBatch withConsistencyLevel(ConsistencyLevel consistencyLevel);
 
@@ -162,7 +153,6 @@ public interface MutationBatch extends Execution<Void> {
      * configuration
      * 
      * @param retry
-     * @return
      */
     MutationBatch withRetryPolicy(RetryPolicy retry);
 
@@ -170,7 +160,6 @@ public interface MutationBatch extends Execution<Void> {
      * Specify a write ahead log implementation to use for this mutation
      * 
      * @param manager
-     * @return
      */
     MutationBatch usingWriteAheadLog(WriteAheadLog manager);
 
@@ -178,14 +167,11 @@ public interface MutationBatch extends Execution<Void> {
      * Force all future mutations to have the same timestamp. Make sure to call
      * lockTimestamp before doing any other operations otherwise previously
      * created withRow mutations will use the previous timestamp.
-     * 
-     * @return
      */
     MutationBatch lockCurrentTimestamp();
 
     /**
      * This never really did anything :)
-     * 
      * @param
      */
     @Deprecated
@@ -196,7 +182,6 @@ public interface MutationBatch extends Execution<Void> {
      * (same as withTimestamp)
      * 
      * @param timestamp in microseconds
-     * @return
      */
     MutationBatch setTimestamp(long timestamp);
 
@@ -204,14 +189,11 @@ public interface MutationBatch extends Execution<Void> {
      * Set the timestamp for all subsequent operations on this mutation.
      * 
      * @param timestamp in microsecond
-     * @return
      */
     MutationBatch withTimestamp(long timestamp);
     
     /**
-     * Serialize the entire mutation batch into a ByteBuffer.
-     * 
-     * @return
+     * @return Serialize the entire mutation batch into a ByteBuffer.
      * @throws Exception
      */
     ByteBuffer serialize() throws Exception;

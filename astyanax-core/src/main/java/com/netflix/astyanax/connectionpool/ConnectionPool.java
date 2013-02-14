@@ -50,31 +50,24 @@ public interface ConnectionPool<CL> {
     boolean removeHost(Host host, boolean refresh);
 
     /**
-     * Return true if the host is up
-     * 
+     * @return Return true if the host is up
      * @param host
-     * @return
      */
     boolean isHostUp(Host host);
 
     /**
-     * Return true if host is contained within the connection pool
-     * 
+     * @return Return true if host is contained within the connection pool
      * @param host
-     * @return
      */
     boolean hasHost(Host host);
 
     /**
-     * Return list of active hosts on which connections can be created
-     * 
-     * @return
+     * @return Return list of active hosts on which connections can be created
      */
     List<HostConnectionPool<CL>> getActivePools();
 
     /**
-     * Get all pools
-     * @return
+     * @return Get all pools
      */
     List<HostConnectionPool<CL>> getPools();
     
@@ -85,10 +78,8 @@ public interface ConnectionPool<CL> {
     void setHosts(Collection<Host> hosts);
 
     /**
-     * Return an immutable connection pool for this host
-     * 
+     * @return Return an immutable connection pool for this host
      * @param host
-     * @return
      */
     HostConnectionPool<CL> getHostPool(Host host);
 
@@ -100,7 +91,6 @@ public interface ConnectionPool<CL> {
      * @param <R>
      * @param op
      * @param token
-     * @return
      * @throws ConnectionException
      * @throws OperationException
      */
@@ -118,8 +108,7 @@ public interface ConnectionPool<CL> {
     void start();
     
     /**
-     * Return the internal topology which represents the partitioning of data across hosts in the pool
-     * @return
+     * @return Return the internal topology which represents the partitioning of data across hosts in the pool
      */
     Topology<CL> getTopology();
 }

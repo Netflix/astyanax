@@ -113,45 +113,37 @@ public interface ConnectionPoolMonitor {
     long getOperationTimeoutCount();
 
     /**
-     * Count of socket timeouts trying to execute an operation
-     * @return
+     * @return Count of socket timeouts trying to execute an operation
      */
     long getSocketTimeoutCount();
     
     /**
-     * Get number of unknown errors
-     * @return
+     * @return Get number of unknown errors
      */
     long getUnknownErrorCount();
     
     /**
-     * Get number of invalid requests (i.e. bad argument values)
-     * @return
+     * @return Get number of invalid requests (i.e. bad argument values)
      */
     long getBadRequestCount();
     
     /**
-     * Count of times no hosts at all were available to execute an operation.
-     * 
-     * @return
+     * @return Count of times no hosts at all were available to execute an operation.
      */
     long getNoHostCount();
     
     /**
-     * Tracks the number of column not found error
-     * @return
+     * @return  Tracks the number of column not found error
      */
     long notFoundCount();
 
     /**
-     * Number of times operations were cancelled 
-     * @return
+     * @return Number of times operations were cancelled 
      */
     long getInterruptedCount();
     
     /**
-     * Return the number of hosts in the pool
-     * @return
+     * @return Return the number of hosts in the pool
      */
     long getHostCount();
     
@@ -161,7 +153,6 @@ public interface ConnectionPoolMonitor {
      * added and removed multiple times.  
      * A constantly increating number of host added and host removed
      * may indicate a problem with the host discovery service
-     * @return
      */
     long getHostAddedCount();
     
@@ -171,13 +162,11 @@ public interface ConnectionPoolMonitor {
      * added and removed multiple times.  
      * A constantly increating number of host added and host removed
      * may indicate a problem with the host discovery service
-     * @return
      */
     long getHostRemovedCount();
     
     /**
-     * Return the number of times any host was marked as down.
-     * @return
+     * @return Return the number of times any host was marked as down.
      */
     long getHostDownCount();
     
@@ -216,9 +205,7 @@ public interface ConnectionPoolMonitor {
     void onHostReactivated(Host host, HostConnectionPool<?> pool);
 
     /**
-     * Return a mapping of all hosts and their statistics
-     * 
-     * @return
+     * @return Return a mapping of all hosts and their statistics
      */
     Map<Host, HostStats> getHostStats();
 

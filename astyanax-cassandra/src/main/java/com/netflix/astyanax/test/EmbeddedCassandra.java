@@ -24,7 +24,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.apache.cassandra.thrift.CassandraDaemon;
-import org.apache.thrift.transport.TTransportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -102,7 +101,7 @@ public class EmbeddedCassandra {
         LOG.info("Started cassandra deamon");
     }
 
-    public void start() throws IOException, TTransportException {
+    public void start()  {
         service.submit(new Callable<Object>(){ 
                 @Override
                 public Object call() throws Exception

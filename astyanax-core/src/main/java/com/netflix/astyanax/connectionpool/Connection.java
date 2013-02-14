@@ -36,7 +36,6 @@ public interface Connection<CL> extends ConnectionContext {
      * 
      * @param <R>
      * @param op
-     * @return
      * @throws ConnectionException
      */
     <R> OperationResult<R> execute(Operation<CL, R> op) throws ConnectionException;
@@ -47,23 +46,17 @@ public interface Connection<CL> extends ConnectionContext {
     void close();
 
     /**
-     * Get the parent host connection pool.
-     * 
-     * @return
+     * @return Get the parent host connection pool.
      */
     HostConnectionPool<CL> getHostConnectionPool();
 
     /**
-     * Get the host for this connection
-     * 
-     * @return
+     * @return Get the host for this connection
      */
     Host getHost();
 
     /**
-     * Get the last exception that caused the connection to be closed
-     * 
-     * @return
+     * @return Get the last exception that caused the connection to be closed
      */
     ConnectionException getLastException();
 
@@ -83,9 +76,7 @@ public interface Connection<CL> extends ConnectionContext {
     void openAsync(AsyncOpenCallback<CL> callback);
 
     /**
-     * Number of operations performed on this connections since it was opened
-     * 
-     * @return
+     * @return Number of operations performed on this connections since it was opened
      */
     long getOperationCount();
 }

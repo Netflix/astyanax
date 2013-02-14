@@ -19,47 +19,37 @@ import java.util.concurrent.TimeUnit;
 
 public interface OperationResult<R> {
     /**
-     * Get the host on which the operation was performed
-     * 
-     * @return
+     * @return Get the host on which the operation was performed
      */
     Host getHost();
 
     /**
-     * Get the result data
-     * 
-     * @return
+     * @return Get the result data
      */
     R getResult();
 
     /**
-     * Return the length of time to perform the operation. Does not include
+     * @return Return the length of time to perform the operation. Does not include
      * connection pool overhead. This time is in nanoseconds
-     * 
-     * @return
      */
     long getLatency();
 
     /**
-     * Return the length of time to perform the operation to the remote service. Does not include
+     * @return Return the length of time to perform the operation to the remote service. Does not include
      * connection pool overhead.
      * 
      * @param units
-     * @return
      */
     long getLatency(TimeUnit units);
 
     /**
-     * Return the number of times the operation had to be retried. This includes
+     * @return Return the number of times the operation had to be retried. This includes
      * retries for aborted connections.
-     * 
-     * @return
      */
     int getAttemptsCount();
 
     /**
      * Set the number of attempts executing this connection
-     * 
      * @param count
      */
     void setAttemptsCount(int count);

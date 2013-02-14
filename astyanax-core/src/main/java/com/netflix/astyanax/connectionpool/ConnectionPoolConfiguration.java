@@ -24,57 +24,43 @@ import com.netflix.astyanax.partitioner.Partitioner;
 public interface ConnectionPoolConfiguration {
     /**
      * TODO
-     * 
-     * @return
      */
     LatencyScoreStrategy getLatencyScoreStrategy();
 
     /**
      * TODO
-     * 
-     * @return
      */
     BadHostDetector getBadHostDetector();
 
     /**
-     * Data port to be used when no port is specified to a list of seeds or when
+     * @return Data port to be used when no port is specified to a list of seeds or when
      * doing a ring describe since the ring describe does not include a host
-     * 
-     * @return
      */
     int getPort();
 
     /**
-     * Unique name assigned to this connection pool
-     * 
-     * @return
+     * @return Unique name assigned to this connection pool
      */
     String getName();
 
     /**
-     * Maximum number of connections to allocate for a single host's pool
-     * 
-     * @return
+     * @return Maximum number of connections to allocate for a single host's pool
      */
     int getMaxConnsPerHost();
 
     /**
-     * Initial number of connections created when a connection pool is started
-     * 
-     * @return
+     * @return Initial number of connections created when a connection pool is started
      */
     int getInitConnsPerHost();
 
     /**
-     * Maximum number of connections in the pool, not used by all connection
+     * @return Maximum number of connections in the pool, not used by all connection
      * pool implementations
-     * 
-     * @return
      */
     int getMaxConns();
 
     /**
-     * Maximum amount of time to wait for a connection to free up when a
+     * @return Maximum amount of time to wait for a connection to free up when a
      * connection pool is exhausted.
      * 
      * @return
@@ -82,219 +68,168 @@ public interface ConnectionPoolConfiguration {
     int getMaxTimeoutWhenExhausted();
 
     /**
-     * Get the max number of failover attempts
-     * 
-     * @return
+     * @return Get the max number of failover attempts
      */
     int getMaxFailoverCount();
 
     /**
-     * Return the backoff strategy to use.
+     * @return Return the backoff strategy to use.
      * 
      * @see com.netflix.astyanax.connectionpool.RetryBackoffStrategy
-     * @return
      */
     RetryBackoffStrategy getRetryBackoffStrategy();
 
     /**
-     * List of comma delimited host:port combinations. If port is not provided
+     * @return List of comma delimited host:port combinations. If port is not provided
      * then getPort() will be used by default. This list must contain at least
      * one valid host other it would not be possible to do a ring describe.
-     * 
-     * @return
      */
     String getSeeds();
 
     /**
-     * Return a list of Host objects from the list of seeds returned by
+     * @return  Return a list of Host objects from the list of seeds returned by
      * getSeeds(). This list must contain at least one valid host other it would
      * not be possible to do a ring describe.
-     * 
-     * @return
      */
     List<Host> getSeedHosts();
 
     /**
-     * Return local datacenter name.
-     * 
-     * @return
+     * @return Return local datacenter name.
      */
     public String getLocalDatacenter();
 
     /**
-     * Socket read/write timeout
-     * 
-     * @return
+     * @return Socket read/write timeout
      */
     int getSocketTimeout();
 
     /**
-     * Socket connect timeout
-     * 
-     * @return
+     * @return Socket connect timeout
      */
     int getConnectTimeout();
 
     /**
-     * Window size for limiting the number of connection open requests
-     * 
-     * @return
+     * @return Window size for limiting the number of connection open requests
      */
     int getConnectionLimiterWindowSize();
 
     /**
-     * Maximum number of connection attempts in a given window
-     * 
-     * @return
+     * @return Maximum number of connection attempts in a given window
      */
     int getConnectionLimiterMaxPendingCount();
 
     /**
-     * Latency samples window size for scoring algorithm
-     * 
-     * @return
+     * @return Latency samples window size for scoring algorithm
      */
     int getLatencyAwareWindowSize();
 
     /**
-     * Sentinel compare value for Phi Accrual
-     * 
-     * @return
+     * @return Sentinel compare value for Phi Accrual
      */
     float getLatencyAwareSentinelCompare();
 
     /**
-     * Return the threshold after which a host will not be considered good
+     * @return  Return the threshold after which a host will not be considered good
      * enough for executing operations.
-     * 
-     * @return Valid values are 0 to 1
      */
     float getLatencyAwareBadnessThreshold();
 
     /**
-     * Return the threshold for disabling hosts that have nBlockedThreads more than
+     * @return  Return the threshold for disabling hosts that have nBlockedThreads more than
      * the least blocked host.  The idea here is to quarantine hosts that are slow to respond
      * and free up connections.
-     * 
-     * @return
      */
     int getBlockedThreadThreshold();
     
     /**
-     * Return the ratio for keeping a minimum number of hosts in the pool even if they are slow
+     * @return Return the ratio for keeping a minimum number of hosts in the pool even if they are slow
      * or are blocked.  For example, a ratio of 0.75 with a connection pool of 12 hosts will 
      * ensure that no more than 4 hosts can be quaratined.
-     * 
-     * @return
      */
     float getMinHostInPoolRatio();
     
     /**
-     * 
-     * @return
+     * TODO
      */
     int getLatencyAwareUpdateInterval();
 
     /**
-     * 
-     * @return
+     * TODO
      */
     int getLatencyAwareResetInterval();
 
     /**
-     * Maximum number of pending connect attempts per host
-     * 
-     * @return
+     * @return Maximum number of pending connect attempts per host
      */
     int getMaxPendingConnectionsPerHost();
 
     /**
-     * Get max number of blocked clients for a host.
-     * 
-     * @return
+     * @return Get max number of blocked clients for a host.
      */
     int getMaxBlockedThreadsPerHost();
 
     /**
-     * Shut down a host if it times out too many time within this window
-     * 
-     * @return
+     * @return  Shut down a host if it times out too many time within this window
      */
     int getTimeoutWindow();
 
     /**
-     * Number of allowed timeouts within getTimeoutWindow() milliseconds
-     * 
-     * @return
+     * @return Number of allowed timeouts within getTimeoutWindow() milliseconds
      */
     int getMaxTimeoutCount();
 
     /**
      * TODO
-     * 
-     * @return
      */
     int getRetrySuspendWindow();
 
     /**
      * TODO
-     * 
-     * @return
      */
     int getRetryMaxDelaySlice();
 
     /**
      * TODO
-     * 
-     * @return
      */
     int getRetryDelaySlice();
 
     /**
-     * Maximum allowed operations per connections before forcing the connection
+     * @return  Maximum allowed operations per connections before forcing the connection
      * to close
-     * 
-     * @return
      */
     int getMaxOperationsPerConnection();
 
     /**
-     * Can return null if no login required
-     * 
-     * @return
+     * @return Can return null if no login required
      */
     AuthenticationCredentials getAuthenticationCredentials();
     
     /**
-     * Return factory that will wrap an operation with filters, such as logging filters
+     * @return Return factory that will wrap an operation with filters, such as logging filters
      * and simulation filters
-     * @return
      */
     OperationFilterFactory getOperationFilterFactory();
     
     /**
-     * Get the partitioner used to convert row keys to TOKEN
-     * @return
+     * @return Get the partitioner used to convert row keys to TOKEN
      */
     Partitioner getPartitioner();
 
     /**
-     * Retrieve a context to determine if connections should be made using SSL.
+     * @return Retrieve a context to determine if connections should be made using SSL.
      */
     SSLConnectionContext getSSLConnectionContext();
 
     /**
-     * Return executor service used for maintenance tasks.  This pool is used for internal
+     * @return Return executor service used for maintenance tasks.  This pool is used for internal
      * operations that update stats such as token aware scores.  Threads in this pool 
      * and not expected to block on I/O and the pool can therefore be very small
-     * @return
      */
     ScheduledExecutorService getMaintainanceScheduler();
 
     /**
-     * Return executor service used to reconnect hosts.  Keep in mind that the threads 
+     * @return Return executor service used to reconnect hosts.  Keep in mind that the threads 
      * may be blocked for an extended duration while trying to reconnect to a downed host
-     * @return
      */
     ScheduledExecutorService getHostReconnectExecutor();
 

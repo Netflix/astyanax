@@ -15,6 +15,7 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.HostDownException;
 import com.netflix.astyanax.connectionpool.exceptions.PoolTimeoutException;
 import com.netflix.astyanax.connectionpool.exceptions.TimeoutException;
+import com.netflix.astyanax.shallows.EmptyPartitioner;
 import com.netflix.astyanax.test.TestClient;
 import com.netflix.astyanax.test.TestConnectionFactory;
 import com.netflix.astyanax.test.TestHostType;
@@ -525,12 +526,15 @@ public class SimpleHostConnectionPoolTest {
     }
 
     public ConnectionPoolConfigurationImpl createConfig() {
-        ConnectionPoolConfigurationImpl config = new ConnectionPoolConfigurationImpl(
-                "cluster_keyspace");
+        ConnectionPoolConfigurationImpl config = new ConnectionPoolConfigurationImpl("cluster_keyspace");
+        
         config.setMaxConnsPerHost(2);
         config.setInitConnsPerHost(1);
         config.setConnectTimeout(200);
+        config.setPartitioner(new EmptyPartitioner());
+        
         config.initialize();
+        
         return config;
     }
 

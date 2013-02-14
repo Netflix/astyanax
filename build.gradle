@@ -42,6 +42,9 @@ subprojects {
 
 project(':astyanax-core') {
     apply plugin: 'java'
+    dependencies {
+        testCompile 'junit:junit:4.8.1'
+    }
 }
 
 project(':astyanax-thrift') {

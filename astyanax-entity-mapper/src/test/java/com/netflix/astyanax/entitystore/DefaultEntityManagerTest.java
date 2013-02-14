@@ -1,17 +1,11 @@
 package com.netflix.astyanax.entitystore;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-
 import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
 import java.util.Random;
 
-import javax.persistence.PersistenceException;
-
 import org.apache.commons.lang.RandomStringUtils;
-import org.apache.commons.lang.exception.ExceptionUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -21,15 +15,12 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
-import com.netflix.astyanax.entitystore.NullableEntity.AllMandatoryNestedEntity;
-import com.netflix.astyanax.entitystore.NullableEntity.AllOptionalNestedEntity;
 import com.netflix.astyanax.entitystore.SampleEntity.Bar;
 import com.netflix.astyanax.entitystore.SampleEntity.Bar.BarBar;
 import com.netflix.astyanax.entitystore.SampleEntity.Foo;

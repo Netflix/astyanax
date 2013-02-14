@@ -17,8 +17,8 @@ public class MappingUtils {
         if(serializerAnnotation != null) {
             final Class<?> serializerClazz = serializerAnnotation.value();
             // check type
-            if(!(Serializer.class.isAssignableFrom(serializerClazz)))
-                throw new RuntimeException("annotated serializer class is not a subclass of com.netflix.astyanax.Serializer");
+            if(!(com.netflix.astyanax.Serializer.class.isAssignableFrom(serializerClazz)))
+                throw new RuntimeException("annotated serializer class is not a subclass of com.netflix.astyanax.Serializer. " + serializerClazz.getCanonicalName());
             // invoke public static get() method
             try {
                 Method getInstanceMethod = serializerClazz.getMethod("get");

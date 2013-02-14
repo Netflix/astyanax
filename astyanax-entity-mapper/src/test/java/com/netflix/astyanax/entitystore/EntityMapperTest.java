@@ -2,7 +2,6 @@ package com.netflix.astyanax.entitystore;
 
 import java.lang.reflect.Field;
 import java.util.Collection;
-import java.util.List;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;

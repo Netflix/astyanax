@@ -8,18 +8,17 @@ package com.netflix.astyanax;
  */
 public interface AuthenticationCredentials {
     /**
-     * The username
+     * @return The username
      */
     String getUsername();
 
     /**
-     * The password
+     * @return The password
      */
     String getPassword();
 
     /**
-     * Array of all custom attribute names
-     * @return
+     * @return Array of all custom attribute names
      */
     String[] getAttributeNames();
 

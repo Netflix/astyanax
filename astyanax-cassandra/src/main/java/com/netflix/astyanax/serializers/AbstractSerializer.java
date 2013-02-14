@@ -152,8 +152,17 @@ public abstract class AbstractSerializer<T> implements Serializer<T> {
     @Override
     public ByteBuffer getNext(ByteBuffer byteBuffer) {
         ByteBufferOutputStream next = new ByteBufferOutputStream();
-        next.write(byteBuffer);
-        next.write((byte) 0);
-        return next.getByteBuffer();
+        try {
+            next.write(byteBuffer);
+            next.write((byte) 0);
+            return next.getByteBuffer();
+        }
+        finally {
+            try {
+                next.close();
+            }
+            catch (Throwable t) {
+            }
+        }
     }
 }

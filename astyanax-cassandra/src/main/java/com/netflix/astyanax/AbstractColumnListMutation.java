@@ -26,6 +26,8 @@ import java.util.Date;
 import java.util.UUID;
 import java.util.zip.GZIPOutputStream;
 
+import org.apache.commons.codec.binary.StringUtils;
+
 /**
  * Abstract implementation of a row mutation
  *
@@ -390,7 +392,7 @@ public abstract class AbstractColumnListMutation<C> implements ColumnListMutatio
         GZIPOutputStream gzip;
         try {
             gzip = new GZIPOutputStream(out);
-            gzip.write(value.getBytes());
+            gzip.write(StringUtils.getBytesUtf8(value));
             gzip.close();
             return this.putColumn(columnName, ByteBuffer.wrap(out.toByteArray()), ttl);
         } catch (IOException e) {
@@ -412,7 +414,16 @@ public abstract class AbstractColumnListMutation<C> implements ColumnListMutatio
 
     @Override
     public ColumnListMutation<C> putCompressedColumnIfNotNull(C columnName, String value) {
-        return putCompressedColumnIfNotNull(columnName, value);
+        if (value == null)
+            return this;
+        return putCompressedColumn(columnName, value);
     }
 
+    public Integer getDefaultTtl() {
+        return defaultTtl;
+    }
+    
+    public long getTimestamp() {
+        return timestamp;
+    }
 }

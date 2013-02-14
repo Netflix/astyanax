@@ -28,53 +28,53 @@ import com.netflix.astyanax.serializers.TimeUUIDSerializer;
 
 public class TestConstants {
 
-    public static ColumnFamily<String, String> CF_STANDARD1 = new ColumnFamily<String, String>(
+    public static final ColumnFamily<String, String> CF_STANDARD1 = new ColumnFamily<String, String>(
             "Standard1", StringSerializer.get(), StringSerializer.get());
 
-    public static ColumnFamily<String, Long> CF_LONGCOLUMN = new ColumnFamily<String, Long>(
+    public static final ColumnFamily<String, Long> CF_LONGCOLUMN = new ColumnFamily<String, Long>(
             "LongColumn1", StringSerializer.get(), LongSerializer.get());
 
-    public static ColumnFamily<String, String> CF_STANDARD2 = new ColumnFamily<String, String>(
+    public static final ColumnFamily<String, String> CF_STANDARD2 = new ColumnFamily<String, String>(
             "Standard2", StringSerializer.get(), StringSerializer.get());
 
-    public static ColumnFamily<String, String> CF_SUPER1 = new ColumnFamily<String, String>(
+    public static final ColumnFamily<String, String> CF_SUPER1 = new ColumnFamily<String, String>(
             "Super1", StringSerializer.get(), StringSerializer.get(),
             ColumnType.SUPER);
 
-    public static ColumnFamily<String, String> CF_COUNTER1 = new ColumnFamily<String, String>(
+    public static final ColumnFamily<String, String> CF_COUNTER1 = new ColumnFamily<String, String>(
             "Counter1", StringSerializer.get(), StringSerializer.get());
 
-    public static ColumnFamily<String, String> CF_COUNTER_SUPER1 = new ColumnFamily<String, String>(
+    public static final ColumnFamily<String, String> CF_COUNTER_SUPER1 = new ColumnFamily<String, String>(
             "CounterSuper1", StringSerializer.get(), StringSerializer.get(),
             ColumnType.SUPER);
 
-    public static ColumnFamily<String, String> CF_NOT_DEFINED = new ColumnFamily<String, String>(
+    public static final ColumnFamily<String, String> CF_NOT_DEFINED = new ColumnFamily<String, String>(
             "NotDefined", StringSerializer.get(), StringSerializer.get());
 
-    public static ColumnFamily<String, String> CF_EMPTY = new ColumnFamily<String, String>(
+    public static final ColumnFamily<String, String> CF_EMPTY = new ColumnFamily<String, String>(
             "NotDefined", StringSerializer.get(), StringSerializer.get());
 
-    public static ColumnFamily<String, TestCompositeType> CF_COMPOSITE = new ColumnFamily<String, TestCompositeType>(
+    public static final ColumnFamily<String, TestCompositeType> CF_COMPOSITE = new ColumnFamily<String, TestCompositeType>(
             "CompositeColumn", StringSerializer.get(),
             new AnnotatedCompositeSerializer<TestCompositeType>(
                     TestCompositeType.class));
 
-    public static ColumnFamily<ByteBuffer, ByteBuffer> CF_COMPOSITE_CSV = new ColumnFamily<ByteBuffer, ByteBuffer>(
+    public static final ColumnFamily<ByteBuffer, ByteBuffer> CF_COMPOSITE_CSV = new ColumnFamily<ByteBuffer, ByteBuffer>(
             "CompositeCsv", ByteBufferSerializer.get(),
             ByteBufferSerializer.get());
 
-    public static ColumnFamily<TestCompositeType, String> CF_COMPOSITE_KEY = new ColumnFamily<TestCompositeType, String>(
+    public static final ColumnFamily<TestCompositeType, String> CF_COMPOSITE_KEY = new ColumnFamily<TestCompositeType, String>(
             "CompositeKey",
             new AnnotatedCompositeSerializer<TestCompositeType>(
                     TestCompositeType.class), StringSerializer.get());
 
-    public static ColumnFamily<String, UUID> CF_TIME_UUID = new ColumnFamily<String, UUID>(
+    public static final ColumnFamily<String, UUID> CF_TIME_UUID = new ColumnFamily<String, UUID>(
             "TimeUUID1", StringSerializer.get(), TimeUUIDSerializer.get());
 
-    public static AnnotatedCompositeSerializer<SessionEvent> SE_SERIALIZER = new AnnotatedCompositeSerializer<SessionEvent>(
+    public static final AnnotatedCompositeSerializer<SessionEvent> SE_SERIALIZER = new AnnotatedCompositeSerializer<SessionEvent>(
             SessionEvent.class);
 
-    public static ColumnFamily<String, SessionEvent> CF_CLICK_STREAM = new ColumnFamily<String, SessionEvent>(
+    public static final ColumnFamily<String, SessionEvent> CF_CLICK_STREAM = new ColumnFamily<String, SessionEvent>(
             "ClickStream", StringSerializer.get(), SE_SERIALIZER);
 
     public static final String CLUSTER_NAME = "TestCluster1";

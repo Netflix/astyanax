@@ -15,6 +15,8 @@
  ******************************************************************************/
 package com.netflix.astyanax;
 
+import java.util.concurrent.Callable;
+
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 
@@ -23,15 +25,16 @@ import com.google.common.util.concurrent.ListenableFuture;
 /**
  * Interface for an operation that can be executed on the cluster.
  *
+ * @param <R> - The return type for the concrete operation
+ * 
  * @author elandau
- *
- * @param <R>
  */
-public interface Execution<R> {
+public interface Execution<R>  {
     /**
      * Block while executing the operations
      *
-     * @return
+     * @return Result object that wraps the actual result and provides information about
+     *          how the operation was executed.
      * @throws ConnectionException
      */
     OperationResult<R> execute() throws ConnectionException;
@@ -41,7 +44,7 @@ public interface Execution<R> {
      * executed in a separate thread where both the connection pool logic as
      * well as the actual operation will be executed.
      *
-     * @return
+     * @return A listenable future 
      * @throws ConnectionException
      */
     ListenableFuture<OperationResult<R>> executeAsync() throws ConnectionException;

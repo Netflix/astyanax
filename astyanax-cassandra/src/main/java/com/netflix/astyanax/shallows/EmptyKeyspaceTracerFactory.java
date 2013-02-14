@@ -21,7 +21,7 @@ import com.netflix.astyanax.KeyspaceTracerFactory;
 import com.netflix.astyanax.model.ColumnFamily;
 
 public class EmptyKeyspaceTracerFactory implements KeyspaceTracerFactory {
-    public static EmptyKeyspaceTracerFactory instance = new EmptyKeyspaceTracerFactory();
+    public static final EmptyKeyspaceTracerFactory instance = new EmptyKeyspaceTracerFactory();
 
     public static EmptyKeyspaceTracerFactory getInstance() {
         return instance;

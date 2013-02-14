@@ -49,11 +49,11 @@ public class JsonRowsWriter implements RowsWriter {
 
     private Map<Field, String> fieldNames = Maps.newHashMap();
 
-    private String TIME_FORMAT_STRING = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
+    private static final String TIME_FORMAT_STRING = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
+    
     private final PrintWriter out;
     private final SerializerPackage serializers;
     private String extra = null;
-    private String errorValueText = "???";
     private boolean rowsAsArray = true;
     private boolean ignoreExceptions = true;
     private boolean ignoreUndefinedColumns = false;
@@ -62,7 +62,6 @@ public class JsonRowsWriter implements RowsWriter {
     private List<String> fixedNamesList;
     private Set<String> ignoreNames = Sets.newHashSet();
     private Set<String> metadataNames;
-    private ExceptionCallback exceptionCallback;
     private boolean columnsAsRows = false;
     private int rowCount = 0;
     private int columnCount = 0;
@@ -118,8 +117,8 @@ public class JsonRowsWriter implements RowsWriter {
         return this;
     }
 
+    @Deprecated
     public JsonRowsWriter setErrorValueText(String text) {
-        this.errorValueText = text;
         return this;
     }
 
@@ -144,8 +143,8 @@ public class JsonRowsWriter implements RowsWriter {
         return this;
     }
 
+    @Deprecated
     public JsonRowsWriter setExceptionCallback(ExceptionCallback exceptionCallback) {
-        this.exceptionCallback = exceptionCallback;
         return this;
     }
 

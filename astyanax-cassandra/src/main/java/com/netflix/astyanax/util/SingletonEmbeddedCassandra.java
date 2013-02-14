@@ -23,7 +23,7 @@ public class SingletonEmbeddedCassandra {
         return Holder.instance;
     }
     
-    public void finalize() {
+    public void shutdown() {
         try {
             cassandra.stop();
         }

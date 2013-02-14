@@ -9,6 +9,7 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import org.apache.cassandra.db.marshal.UTF8Type;
+import org.apache.commons.codec.binary.StringUtils;
 
 public class GzipStringSerializer extends AbstractSerializer<String> {
 
@@ -30,7 +31,7 @@ public class GzipStringSerializer extends AbstractSerializer<String> {
         GZIPOutputStream gzip;
         try {
             gzip = new GZIPOutputStream(out);
-            gzip.write(obj.getBytes());
+            gzip.write(StringUtils.getBytesUtf8(obj));
             gzip.close();
             return ByteBuffer.wrap(out.toByteArray());
         } catch (IOException e) {

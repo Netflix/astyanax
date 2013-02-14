@@ -4,17 +4,15 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 
 import org.apache.cassandra.db.marshal.UTF8Type;
+import org.apache.commons.codec.binary.StringUtils;
 import org.xerial.snappy.SnappyInputStream;
 import org.xerial.snappy.SnappyOutputStream;
 
 public class SnappyStringSerializer extends AbstractSerializer<String> {
 
-    private static final String UTF_8 = "UTF-8";
     private static final SnappyStringSerializer instance = new SnappyStringSerializer();
-    private static final Charset charset = Charset.forName(UTF_8);
 
     public static SnappyStringSerializer get() {
         return instance;
@@ -30,7 +28,7 @@ public class SnappyStringSerializer extends AbstractSerializer<String> {
         SnappyOutputStream snappy;
         try {
             snappy = new SnappyOutputStream(out);
-            snappy.write(obj.getBytes());
+            snappy.write(StringUtils.getBytesUtf8(obj));
             snappy.close();
             return ByteBuffer.wrap(out.toByteArray());
         } catch (IOException e) {
@@ -60,7 +58,7 @@ public class SnappyStringSerializer extends AbstractSerializer<String> {
             }
             snappy.close();
             baos.close();
-            return new String(baos.toByteArray(), charset);
+            return StringUtils.newStringUtf8(baos.toByteArray());
         } catch (IOException e) {
             throw new RuntimeException("Error decompressing column data", e);
         } finally {

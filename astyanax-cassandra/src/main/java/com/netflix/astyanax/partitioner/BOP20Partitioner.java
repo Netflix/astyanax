@@ -13,10 +13,10 @@ import com.netflix.astyanax.connectionpool.impl.TokenRangeImpl;
 
 public class BOP20Partitioner implements Partitioner {
     
-    public static String MINIMUM = "0000000000000000000000000000000000000000";
-    public static String MAXIMUM = "ffffffffffffffffffffffffffffffffffffffff";
+    public static final String MINIMUM = "0000000000000000000000000000000000000000";
+    public static final String MAXIMUM = "ffffffffffffffffffffffffffffffffffffffff";
     public static final BigInteger ONE = new BigInteger("1", 16);
-    public static int KEY_LENGTH = 20;
+    public static final int KEY_LENGTH = 20;
     
     @Override
     public String getMinToken() {

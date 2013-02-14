@@ -1,4 +1,4 @@
-package com.netflix.astyanax.util;
+package com.netflix.astyanax.test;
 
 import java.util.ArrayList;
 import java.util.Random;

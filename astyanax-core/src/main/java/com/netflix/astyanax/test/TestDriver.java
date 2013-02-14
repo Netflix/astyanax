@@ -1,4 +1,4 @@
-package com.netflix.astyanax.util;
+package com.netflix.astyanax.test;
 
 import java.util.ArrayList;
 import java.util.Random;
@@ -13,7 +13,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.connectionpool.Host;
-import com.netflix.astyanax.test.TestHostType;
 
 public class TestDriver {
     private int                         nThreads;

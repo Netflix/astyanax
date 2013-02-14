@@ -1,4 +1,4 @@
-package com.netflix.astyanax.util;
+package com.netflix.astyanax.test;
 
 import com.google.common.base.Supplier;
 

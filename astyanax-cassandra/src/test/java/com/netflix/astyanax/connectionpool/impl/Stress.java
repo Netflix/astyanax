@@ -51,13 +51,13 @@ import com.netflix.astyanax.connectionpool.exceptions.UnknownException;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.connectionpool.impl.RoundRobinConnectionPoolImpl;
 import com.netflix.astyanax.retry.RunOnce;
+import com.netflix.astyanax.test.ProbabalisticFunction;
 import com.netflix.astyanax.test.TestClient;
 import com.netflix.astyanax.test.TestConnectionFactory;
 import com.netflix.astyanax.test.TestConstants;
+import com.netflix.astyanax.test.TestDriver;
 import com.netflix.astyanax.test.TestHostType;
 import com.netflix.astyanax.test.TestOperation;
-import com.netflix.astyanax.util.ProbabalisticFunction;
-import com.netflix.astyanax.util.TestDriver;
 
 public class Stress {
     private static Logger LOG = LoggerFactory.getLogger(Stress.class);

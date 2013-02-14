@@ -59,7 +59,6 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
      * This limit also represents the page size when paginating.
      * 
      * @param blockSize
-     * @return
      */
     AllRowsQuery<K, C> setRowLimit(int rowLimit);
 
@@ -69,14 +68,12 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
      * strategy or stop the iteration.
      * 
      * @param cb
-     * @return
      */
     AllRowsQuery<K, C> setExceptionCallback(ExceptionCallback cb);
 
     /**
      * Use this checkpoint manager to keep track of progress as all rows are being iterated
      * @param manager
-     * @return
      */
     AllRowsQuery<K, C> setCheckpointManager(CheckpointManager manager);
     
@@ -84,7 +81,6 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
      * If true will repeat the last token in the previous block.
      * 
      * @param repeatLastToken
-     * @return
      */
     AllRowsQuery<K, C> setRepeatLastToken(boolean repeatLastToken);
 
@@ -93,7 +89,6 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
      * Default is false
      * 
      * @param flag
-     * @return
      */
     AllRowsQuery<K, C> setIncludeEmptyRows(boolean flag);
     
@@ -101,7 +96,6 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
      * Specify a non-contiguous set of columns to retrieve.
      * 
      * @param columns
-     * @return
      */
     AllRowsQuery<K, C> withColumnSlice(C... columns);
 
@@ -109,7 +103,6 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
      * Specify a non-contiguous set of columns to retrieve.
      * 
      * @param columns
-     * @return
      */
     AllRowsQuery<K, C> withColumnSlice(Collection<C> columns);
 
@@ -117,7 +110,6 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
      * Use this when your application caches the column slice.
      * 
      * @param slice
-     * @return
      */
     AllRowsQuery<K, C> withColumnSlice(ColumnSlice<C> columns);
 
@@ -133,7 +125,6 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
      *            startColumn should be greater than endColumn.
      * @param count
      *            Maximum number of columns to return (similar to SQL LIMIT)
-     * @return
      */
     AllRowsQuery<K, C> withColumnRange(C startColumn, C endColumn, boolean reversed, int count);
 
@@ -145,7 +136,6 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
      * @param endColumn
      * @param reversed
      * @param count
-     * @return
      */
     AllRowsQuery<K, C> withColumnRange(ByteBuffer startColumn, ByteBuffer endColumn, boolean reversed, int count);
 
@@ -154,7 +144,6 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
      * AnnotatedCompositeSerializer.buildRange().
      * 
      * @param range
-     * @return
      */
     AllRowsQuery<K, C> withColumnRange(ByteBufferRange range);
 
@@ -165,7 +154,6 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
      * pool that was set with the AstyanaxConfiguration.
      * 
      * @param numberOfThreads
-     * @return
      */
     AllRowsQuery<K, C> setConcurrencyLevel(int numberOfThreads);
     
@@ -177,7 +165,6 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
      * provide the results in a callback.
      * 
      * @param predicate
-     * @return
      * @throws ConnectionException
      */
     void executeWithCallback(RowCallback<K, C> callback) throws ConnectionException;
@@ -191,7 +178,6 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
      * 
      * @param startToken
      * @param endToken
-     * @return
      */
 	AllRowsQuery<K, C> forTokenRange(BigInteger startToken, BigInteger endToken);
 	

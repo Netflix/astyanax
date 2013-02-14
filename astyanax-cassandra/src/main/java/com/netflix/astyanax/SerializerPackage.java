@@ -12,9 +12,7 @@ import java.util.Set;
  */
 public interface SerializerPackage {
     /**
-     * Return the serializer for keys
-     * 
-     * @return
+     * @return Return the serializer for keys
      */
     Serializer<?> getKeySerializer();
 
@@ -25,24 +23,18 @@ public interface SerializerPackage {
     Serializer<?> getColumnSerializer();
 
     /**
-     * Return serializer for column names
-     * 
-     * @author elandau
-     * @return
+     * @return Return serializer for column names
      */
     Serializer<?> getColumnNameSerializer();
 
     /**
      * @deprecated use getDefaultValueSerializer()
-     * @return
      */
     @Deprecated
     Serializer<?> getValueSerializer();
 
     /**
-     * Return the default value serializer
-     * 
-     * @return
+     * @return Return the default value serializer
      */
     Serializer<?> getDefaultValueSerializer();
 
@@ -53,10 +45,9 @@ public interface SerializerPackage {
     Serializer<?> getValueSerializer(ByteBuffer columnName);
 
     /**
-     * Return the value serializer for the specified column name
+     * @return  Return the value serializer for the specified column name
      * 
      * @param columnName
-     * @return
      */
     Serializer<?> getColumnSerializer(ByteBuffer columnName);
 
@@ -67,25 +58,21 @@ public interface SerializerPackage {
     Serializer<?> getValueSerializer(String columnName);
 
     /**
-     * Return the value serializer for the specified column name
+     * @return Return the value serializer for the specified column name
      * 
      * @param columnName
-     * @return
      */
     Serializer<?> getColumnSerializer(String columnName);
 
     /**
-     * Return the set of supported column names
-     * 
-     * @return
+     * @return Return the set of supported column names
      */
     Set<ByteBuffer> getColumnNames();
 
     /**
-     * Convert a key to a string using the package's key serializer
+     * @return Convert a key to a string using the package's key serializer
      * 
      * @param key
-     * @return
      */
     String keyAsString(ByteBuffer key);
 
@@ -93,7 +80,6 @@ public interface SerializerPackage {
      * Convert a column name to a string using the package's column serializer
      * 
      * @param key
-     * @return
      */
     String columnAsString(ByteBuffer column);
 
@@ -103,7 +89,6 @@ public interface SerializerPackage {
      * default value serializer.
      * 
      * @param key
-     * @return
      */
     String valueAsString(ByteBuffer column, ByteBuffer value);
 
@@ -111,7 +96,6 @@ public interface SerializerPackage {
      * Convert a string key to a ByteBuffer using the package's key serializer
      * 
      * @param key
-     * @return
      */
     ByteBuffer keyAsByteBuffer(String key);
 
@@ -120,7 +104,6 @@ public interface SerializerPackage {
      * serializer
      * 
      * @param key
-     * @return
      */
     ByteBuffer columnAsByteBuffer(String column);
 
@@ -128,7 +111,6 @@ public interface SerializerPackage {
      * Convert a string value to a string using the package's value serializer
      * 
      * @param key
-     * @return
      */
     ByteBuffer valueAsByteBuffer(ByteBuffer column, String value);
 
@@ -137,7 +119,6 @@ public interface SerializerPackage {
      * 
      * @param column
      * @param value
-     * @return
      */
     ByteBuffer valueAsByteBuffer(String column, String value);
 }

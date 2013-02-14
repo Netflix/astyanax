@@ -46,14 +46,12 @@ import com.netflix.astyanax.recipes.uniqueness.RowUniquenessConstraint;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.TimeUUIDSerializer;
-import com.netflix.astyanax.test.EmbeddedCassandra;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
-import com.netflix.astyanax.thrift.ThriftKeyspaceImplTest;
 import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
 import com.netflix.astyanax.util.TimeUUIDUtils;
 
 public class MiscUnitTest {
-    private static Logger LOG = LoggerFactory.getLogger(ThriftKeyspaceImplTest.class);
+    private static Logger LOG = LoggerFactory.getLogger(MiscUnitTest.class);
     
     /**
      * Constants

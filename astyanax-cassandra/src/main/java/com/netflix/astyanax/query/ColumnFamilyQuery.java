@@ -35,7 +35,6 @@ public interface ColumnFamilyQuery<K, C> {
      * Set the consistency level for this operations.
      * 
      * @param consistencyLevel
-     * @return
      */
     ColumnFamilyQuery<K, C> setConsistencyLevel(ConsistencyLevel consistencyLevel);
 
@@ -43,7 +42,6 @@ public interface ColumnFamilyQuery<K, C> {
      * Set the retry policy to use instead of the default
      * 
      * @param consistencyLevel
-     * @return
      */
     ColumnFamilyQuery<K, C> withRetryPolicy(RetryPolicy retry);
 
@@ -51,7 +49,6 @@ public interface ColumnFamilyQuery<K, C> {
      * Run the query on the specified host
      * 
      * @param host
-     * @return
      */
     ColumnFamilyQuery<K, C> pinToHost(Host host);
 
@@ -59,7 +56,6 @@ public interface ColumnFamilyQuery<K, C> {
      * Query a single key
      * 
      * @param rowKey
-     * @return
      */
     RowQuery<K, C> getKey(K rowKey);
     
@@ -67,7 +63,6 @@ public interface ColumnFamilyQuery<K, C> {
      * Query a single row
      * 
      * @param rowKey
-     * @return
      */
     RowQuery<K, C> getRow(K rowKey);
 
@@ -81,7 +76,6 @@ public interface ColumnFamilyQuery<K, C> {
      * @param endToken
      * @param count
      *            Max number of keys to return
-     * @return
      */
     RowSliceQuery<K, C> getKeyRange(K startKey, K endKey, String startToken, String endToken, int count);
     
@@ -95,7 +89,6 @@ public interface ColumnFamilyQuery<K, C> {
      * @param endToken
      * @param count
      *            Max number of keys to return
-     * @return
      */
     RowSliceQuery<K, C> getRowRange(K startKey, K endKey, String startToken, String endToken, int count);
 
@@ -103,7 +96,6 @@ public interface ColumnFamilyQuery<K, C> {
      * Query a non-contiguous set of keys.
      * 
      * @param keys
-     * @return
      */
     RowSliceQuery<K, C> getKeySlice(K... keys);
     
@@ -111,7 +103,6 @@ public interface ColumnFamilyQuery<K, C> {
      * Query a non-contiguous set of rows.
      * 
      * @param keys
-     * @return
      */
     RowSliceQuery<K, C> getRowSlice(K... keys);
 
@@ -119,7 +110,6 @@ public interface ColumnFamilyQuery<K, C> {
      * Query a non-contiguous set of keys.
      * 
      * @param keys
-     * @return
      */
     RowSliceQuery<K, C> getKeySlice(Collection<K> keys);
 
@@ -127,7 +117,6 @@ public interface ColumnFamilyQuery<K, C> {
      * Query a non-contiguous set of rows.
      * 
      * @param keys
-     * @return
      */
     RowSliceQuery<K, C> getRowSlice(Collection<K> keys);
     
@@ -135,7 +124,6 @@ public interface ColumnFamilyQuery<K, C> {
      * Query a non-contiguous set of keys.
      * 
      * @param keys
-     * @return
      */
     RowSliceQuery<K, C> getKeySlice(Iterable<K> keys);
 
@@ -143,14 +131,11 @@ public interface ColumnFamilyQuery<K, C> {
      * Query a non-contiguous set of rows.
      * 
      * @param keys
-     * @return
      */
     RowSliceQuery<K, C> getRowSlice(Iterable<K> keys);
     
     /**
      * Query to get an iterator to all rows in the column family
-     * 
-     * @return
      */
     AllRowsQuery<K, C> getAllRows();
 
@@ -160,7 +145,6 @@ public interface ColumnFamilyQuery<K, C> {
      * withCql("...").prepareStatement().execute()
      * 
      * @param cql
-     * @return
      */
     CqlQuery<K, C> withCql(String cql);
     
@@ -168,7 +152,6 @@ public interface ColumnFamilyQuery<K, C> {
      * Search for keys matching the provided index clause
      * 
      * @param indexClause
-     * @return
      */
     IndexQuery<K, C> searchWithIndex();
 

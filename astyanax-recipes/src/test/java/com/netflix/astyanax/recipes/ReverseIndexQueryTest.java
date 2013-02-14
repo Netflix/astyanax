@@ -23,7 +23,6 @@ import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.annotations.Component;
 import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.impl.BagConnectionPoolImplTest;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
@@ -39,8 +38,7 @@ import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 
 public class ReverseIndexQueryTest {
 
-    private static Logger LOG = LoggerFactory
-            .getLogger(BagConnectionPoolImplTest.class);
+    private static Logger LOG = LoggerFactory.getLogger(ReverseIndexQueryTest.class);
 
     private static AstyanaxContext<Cluster> clusterContext;
 

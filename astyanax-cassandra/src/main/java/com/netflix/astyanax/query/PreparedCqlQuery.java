@@ -23,77 +23,66 @@ public interface PreparedCqlQuery<K, C> extends Execution<CqlResult<K, C>> {
      * Specify a value of custom type for which a convenience method does not exist 
      * @param value
      * @param serializer
-     * @return
      */
     <V> PreparedCqlQuery<K, C> withByteBufferValue(V value, Serializer<V> serializer);
 
     /**
      * Set the next parameter value to this ByteBuffer
      * @param value
-     * @return
      */
     PreparedCqlQuery<K, C> withValue(ByteBuffer value);
     
     /**
      * Add a list of ByteBuffer values
      * @param value
-     * @return
      */
     PreparedCqlQuery<K, C> withValues(List<ByteBuffer> value);
     
     /**
      * Set the next parameter value to this String
      * @param value
-     * @return
      */
     PreparedCqlQuery<K, C> withStringValue(String value);
     
     /**
      * Set the next parameter value to this Integer
      * @param value
-     * @return
      */
     PreparedCqlQuery<K, C> withIntegerValue(Integer value);
     
     /**
      * Set the next parameter value to this Boolean
      * @param value
-     * @return
      */
     PreparedCqlQuery<K, C> withBooleanValue(Boolean value);
     
     /**
      * Set the next parameter value to this Double
      * @param value
-     * @return
      */
     PreparedCqlQuery<K, C> withDoubleValue(Double value);
 
     /**
      * Set the next parameter value to this Long
      * @param value
-     * @return
      */
     PreparedCqlQuery<K, C> withLongValue(Long value);
 
     /**
      * Set the next parameter value to this Float
      * @param value
-     * @return
      */
     PreparedCqlQuery<K, C> withFloatValue(Float value);
 
     /**
      * Set the next parameter value to this Short
      * @param value
-     * @return
      */
     PreparedCqlQuery<K, C> withShortValue(Short value);
     
     /**
      * Set the next parameter value to this Short
      * @param value
-     * @return
      */
     PreparedCqlQuery<K, C> withUUIDValue(UUID value);
 }

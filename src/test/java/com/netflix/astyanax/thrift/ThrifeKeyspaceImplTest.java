@@ -123,6 +123,9 @@ import com.netflix.astyanax.util.RecordWriter;
 import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
 import com.netflix.astyanax.util.TimeUUIDUtils;
 
+// BV: Disabled this test because it is very dependent on the order things run.  It sets up test data at the
+// beginning then various tests modify it and subsequent tests depend on the modifications.
+@Ignore
 public class ThrifeKeyspaceImplTest {
 
     private static Logger LOG = LoggerFactory.getLogger(ThrifeKeyspaceImplTest.class);

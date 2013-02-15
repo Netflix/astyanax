@@ -34,7 +34,6 @@ public interface ChunkedStorageProvider {
      * 
      * @param name
      * @param chunkId
-     * @return
      */
     ByteBuffer readChunk(String objectName, int chunkId) throws Exception, NotFoundException;
 
@@ -63,15 +62,12 @@ public interface ChunkedStorageProvider {
      * Retrieve information for a file
      * 
      * @param objectName
-     * @return
      * @throws Exception
      */
     ObjectMetadata readMetadata(String objectName) throws Exception, NotFoundException;
 
     /**
-     * Return the preferred chunk size for this provider
-     * 
-     * @return
+     * @return Return the preferred chunk size for this provider
      */
     int getDefaultChunkSize();
 }

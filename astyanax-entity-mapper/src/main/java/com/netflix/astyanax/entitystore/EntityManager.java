@@ -40,17 +40,15 @@ public interface EntityManager<T, K> {
     public void remove(T entity) throws PersistenceException;
     
 	/**
-	 * Return all entities.  
+	 * @return Return all entities.  
 	 * 
-	 * @return
 	 * @throws PersistenceException
 	 */
 	public List<T> getAll() throws PersistenceException;
 	
 	/**
-	 * Get a set of entities
+	 * @return Get a set of entities
 	 * @param ids
-	 * @return
 	 * @throws PersistenceException
 	 */
 	public List<T> get(Collection<K> ids) throws PersistenceException;
@@ -88,7 +86,6 @@ public interface EntityManager<T, K> {
 	/**
 	 * Execute a CQL query and return the found entites
 	 * @param cql
-	 * @return
 	 * @throws PersistenceException
 	 */
 	public List<T> find(String cql) throws PersistenceException;

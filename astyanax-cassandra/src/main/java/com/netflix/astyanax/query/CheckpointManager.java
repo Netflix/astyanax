@@ -17,26 +17,21 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
  */
 public interface CheckpointManager {
 	/**
-	 * Trac the checkpoint for a specific range
+	 * Track the checkpoint for a specific range
 	 * 
-	 * @param start
-	 * @param end
+	 * @param startToken
+	 * @param checkpointToken
 	 * @throws Exception 
 	 */
 	void trackCheckpoint(String startToken, String checkpointToken) throws Exception;
 	
 	/**
 	 * Get the next checkpoint after the specified token.  Will return null if no checkpoint was set.
-	 * 
-	 * @param start
-	 * @param end
-	 * @return 
 	 */
 	String getCheckpoint(String startToken) throws Exception ;
 	
 	/**
 	 * Return a sorted map of start tokens to their checkpoint
-	 * @return
 	 * @throws ConnectionException 
 	 */
 	SortedMap<String, String> getCheckpoints() throws Exception;

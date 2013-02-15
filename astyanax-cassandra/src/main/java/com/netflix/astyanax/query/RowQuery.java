@@ -42,7 +42,6 @@ public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
      * 
      * @param <C2>
      * @param path
-     * @return
      */
     ColumnQuery<C> getColumn(C column);
 
@@ -50,7 +49,6 @@ public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
      * Specify a non-contiguous set of columns to retrieve.
      * 
      * @param columns
-     * @return
      */
     RowQuery<K, C> withColumnSlice(Collection<C> columns);
 
@@ -58,7 +56,6 @@ public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
      * Specify a non-contiguous set of columns to retrieve.
      * 
      * @param columns
-     * @return
      */
     RowQuery<K, C> withColumnSlice(C... columns);
 
@@ -66,7 +63,6 @@ public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
      * Use this when your application caches the column slice.
      * 
      * @param slice
-     * @return
      */
     RowQuery<K, C> withColumnSlice(ColumnSlice<C> columns);
 
@@ -85,7 +81,6 @@ public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
      *            startColumn should be greater than endColumn.
      * @param count
      *            Maximum number of columns to return (similar to SQL LIMIT)
-     * @return
      */
     RowQuery<K, C> withColumnRange(C startColumn, C endColumn, boolean reversed, int count);
 
@@ -97,7 +92,6 @@ public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
      * @param endColumn
      * @param reversed
      * @param count
-     * @return
      */
     RowQuery<K, C> withColumnRange(ByteBuffer startColumn, ByteBuffer endColumn, boolean reversed, int count);
 
@@ -106,7 +100,6 @@ public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
      * AnnotatedCompositeSerializer.buildRange().
      * 
      * @param range
-     * @return
      */
     RowQuery<K, C> withColumnRange(ByteBufferRange range);
 
@@ -119,8 +112,6 @@ public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
     /**
      * When used in conjunction with a column range this will call subsequent
      * calls to execute() to get the next block of columns.
-     * 
-     * @return
      */
     RowQuery<K, C> autoPaginate(boolean enabled);
 
@@ -129,14 +120,11 @@ public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
      * 
      * @param columnFamily
      * @param otherRowKey
-     * @return
      */
     RowCopier<K, C> copyTo(ColumnFamily<K, C> columnFamily, K rowKey);
 
     /**
      * Returns the number of columns in the response without returning any data
-     * 
-     * @return
      * @throws ConnectionException
      */
     ColumnCountQuery getCount();

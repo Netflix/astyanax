@@ -14,7 +14,6 @@ public @interface TTL {
 	/**
 	 * The time-to-live in seconds with which this particular field should be persisted as. 
 	 * By default no expiration deadline (ttl) is set.
-	 * @return
 	 */
 	int value();
 }

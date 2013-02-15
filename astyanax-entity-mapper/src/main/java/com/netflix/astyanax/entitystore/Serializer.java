@@ -10,10 +10,8 @@ import java.lang.annotation.Target;
 @Target({ ElementType.FIELD })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Serializer {
-
 	/**
-	 * fully qualified class name of custom Serializer
-	 * @return
+	 * Fully qualified class name of custom Serializer
 	 */
 	Class<?> value();
 }

@@ -147,6 +147,11 @@ public class TestKeyspace implements Keyspace {
     }
 
     @Override
+    public List<String> describeSplits(String cfName, String startToken, String endToken, int keysPerSplit) throws ConnectionException {
+        return null;
+    }
+
+    @Override
     public OperationResult<SchemaChangeResult> dropColumnFamily(String columnFamilyName) throws ConnectionException {
         
         return null;

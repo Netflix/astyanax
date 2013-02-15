@@ -158,6 +158,15 @@ public interface Keyspace {
     OperationResult<Void> truncateColumnFamily(String columnFamily) throws ConnectionException;
 
     /**
+     * Experimental Cassandra API.  May change without warning.
+     *
+     * @return A list of tokens, where each range query from {@code tokens[n]} to {@code tokens[n+1]} will return
+     *    approximately {@code keysPerSplit} rows.
+     */
+    List<String> describeSplits(String cfName, String startToken, String endToken, int keysPerSplit)
+            throws ConnectionException;
+
+    /**
      * This method is used for testing purposes only. It is used to inject
      * errors in the connection pool.
      * 

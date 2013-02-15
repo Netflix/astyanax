@@ -21,8 +21,8 @@ public enum CassandraOperationType {
     DESCRIBE_VERSION    (CassandraOperationCategory.OTHER), 
     DESCRIBE_SNITCH     (CassandraOperationCategory.OTHER), 
     DESCRIBE_PARTITIONER(CassandraOperationCategory.OTHER), 
-    DESCRIBE_SCHEMA_VERSION(CassandraOperationCategory.OTHER), 
-    GET_VERSION         (CassandraOperationCategory.OTHER), 
+    DESCRIBE_SCHEMA_VERSION(CassandraOperationCategory.OTHER),
+    GET_VERSION         (CassandraOperationCategory.OTHER),
     DROP_COLUMN_FAMILY  (CassandraOperationCategory.OTHER), 
     DESCRIBE_KEYSPACES  (CassandraOperationCategory.OTHER),
     DROP_KEYSPACE       (CassandraOperationCategory.OTHER),
@@ -30,7 +30,8 @@ public enum CassandraOperationType {
     UPDATE_COLUMN_FAMILY(CassandraOperationCategory.OTHER), 
     ADD_KEYSPACE        (CassandraOperationCategory.OTHER), 
     UPDATE_KEYSPACE     (CassandraOperationCategory.OTHER), 
-    SET_KEYSPACE        (CassandraOperationCategory.OTHER), 
+    SET_KEYSPACE        (CassandraOperationCategory.OTHER),
+    DESCRIBE_SPLITS     (CassandraOperationCategory.OTHER),
     TEST                (CassandraOperationCategory.OTHER),
     
     ;

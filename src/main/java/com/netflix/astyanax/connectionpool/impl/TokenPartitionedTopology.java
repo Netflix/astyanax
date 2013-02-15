@@ -1,6 +1,6 @@
 package com.netflix.astyanax.connectionpool.impl;
 
-import java.math.BigInteger;
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -12,8 +12,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
-import javax.annotation.Nullable;
-
+import org.apache.cassandra.dht.RingPosition;
 import org.apache.commons.lang.StringUtils;
 import org.cliffc.high_scale_lib.NonBlockingHashMap;
 
@@ -45,8 +44,8 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
     /**
      * Lookup of end token to partition 
      */
-    private NonBlockingHashMap<BigInteger, TokenHostConnectionPoolPartition<CL>> tokenToPartitionMap
-    	= new NonBlockingHashMap<BigInteger, TokenHostConnectionPoolPartition<CL>>();
+    private NonBlockingHashMap<RingPosition, TokenHostConnectionPoolPartition<CL>> tokenToPartitionMap
+    	= new NonBlockingHashMap<RingPosition, TokenHostConnectionPoolPartition<CL>>();
 
     /**
      * Partition which contains all hosts.  This is the fallback partition when no tokens are provided.
@@ -72,7 +71,7 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
         @Override
         public int compare(Object arg0, Object arg1) {
             TokenHostConnectionPoolPartition<CL> partition = (TokenHostConnectionPoolPartition<CL>) arg0;
-            BigInteger token = (BigInteger) arg1;
+            RingPosition token = (RingPosition) arg1;
             return partition.id().compareTo(token);
         }
     };
@@ -97,7 +96,7 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
         this.allPools    = new TokenHostConnectionPoolPartition<CL>(null, this.strategy);
     }
 
-    protected TokenHostConnectionPoolPartition<CL> makePartition(BigInteger partition) {
+    protected TokenHostConnectionPoolPartition<CL> makePartition(RingPosition partition) {
         return new TokenHostConnectionPoolPartition<CL>(partition, strategy);
     }
 
@@ -113,14 +112,14 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
         Set<HostConnectionPool<CL>> allPools = Sets.newHashSet();
         
         // Create a mapping of end token to a list of hosts that own the token
-        Map<BigInteger, List<HostConnectionPool<CL>>> tokenHostMap = Maps.newHashMap();
+        Map<RingPosition, List<HostConnectionPool<CL>>> tokenHostMap = Maps.newHashMap();
         for (HostConnectionPool<CL> pool : ring) {
             allPools.add(pool);
             if (!this.allPools.hasPool(pool))
                 didChange = true;
           
             for (TokenRange range : pool.getHost().getTokenRanges()) {
-                BigInteger endToken = new BigInteger(range.getEndToken());
+                RingPosition endToken = partitioner.getRingPositionForToken(range.getEndToken());
                 List<HostConnectionPool<CL>> partition = tokenHostMap.get(endToken);
                 if (partition == null) {
                     partition = Lists.newArrayList();
@@ -131,11 +130,11 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
         }
 
         // Temporary list of token that will be removed if not found in the new ring
-        Set<BigInteger> tokensToRemove = Sets.newHashSet(tokenHostMap.keySet());
+        Set<RingPosition> tokensToRemove = Sets.newHashSet(tokenHostMap.keySet());
 
         // Iterate all tokens
-        for (Entry<BigInteger, List<HostConnectionPool<CL>>> entry : tokenHostMap.entrySet()) {
-            BigInteger token = entry.getKey();
+        for (Entry<RingPosition, List<HostConnectionPool<CL>>> entry : tokenHostMap.entrySet()) {
+            RingPosition token = entry.getKey();
             tokensToRemove.remove(token);
                 
             // Add a new partition or modify an existing one
@@ -150,7 +149,7 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
         }
 
         // Remove the tokens that are no longer in the ring
-        for (BigInteger token : tokensToRemove) {
+        for (RingPosition token : tokensToRemove) {
             tokenHostMap.remove(token);
             didChange = true;
         }
@@ -187,16 +186,11 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
     }
 
     @Override
-    public TokenHostConnectionPoolPartition<CL> getPartition(String token) {
-        return tokenToPartitionMap.get(new BigInteger(token));
-    }
-    
-    @Override
     public TokenHostConnectionPoolPartition<CL> getPartition(ByteBuffer rowkey) {
         if (rowkey == null)
             return getAllPools();
         
-        BigInteger token = new BigInteger(partitioner.getTokenForKey(rowkey));
+        RingPosition token = partitioner.getRingPositionForKey(rowkey);
         
         // First, get a copy of the partitions.
     	List<TokenHostConnectionPoolPartition<CL>> partitions = this.sortedRing.get();
@@ -247,9 +241,9 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
     
     @Override
     public List<String> getPartitionNames() {
-        return Lists.newArrayList(Collections2.transform(tokenToPartitionMap.keySet(), new Function<BigInteger, String>() {
+        return Lists.newArrayList(Collections2.transform(tokenToPartitionMap.keySet(), new Function<RingPosition, String>() {
             @Override
-            public String apply(@Nullable BigInteger input) {
+            public String apply(@Nullable RingPosition input) {
                 return input.toString();
             }
         }));
@@ -258,7 +252,7 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
     @Override
     public Map<String, TokenHostConnectionPoolPartition<CL>> getPartitions() {
         Map<String, TokenHostConnectionPoolPartition<CL>> result = Maps.newHashMap();
-        for (Entry<BigInteger, TokenHostConnectionPoolPartition<CL>> entry : tokenToPartitionMap.entrySet()) {
+        for (Entry<RingPosition, TokenHostConnectionPoolPartition<CL>> entry : tokenToPartitionMap.entrySet()) {
             result.put(entry.getKey().toString(), entry.getValue());
         }
         return result;

@@ -104,7 +104,6 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
     private final KeyspaceTracerFactory tracerFactory;
     private final Keyspace keyspace;
     private ConsistencyLevel consistencyLevel;
-    private static final RandomPartitioner partitioner = new RandomPartitioner();
     private final ListeningExecutorService executor;
     private Host pinnedHost;
     private RetryPolicy retry;

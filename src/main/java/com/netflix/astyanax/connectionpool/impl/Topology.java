@@ -92,11 +92,4 @@ public interface Topology<CL> {
      * @return
      */
     Map<String, TokenHostConnectionPoolPartition<CL>> getPartitions();
-    
-    /**
-     * Return the partition for a specific token
-     * @param token
-     * @return
-     */
-    TokenHostConnectionPoolPartition<CL> getPartition(String token);
 }

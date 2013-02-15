@@ -396,7 +396,7 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                                 checkpointManager.trackCheckpoint(startToken, currentToken);
                                 if (repeatLastToken) {
                                     // Start token is non-inclusive
-                                    currentToken = new BigInteger(lastToken).subtract(new BigInteger("1")).toString();
+                                    currentToken = new BigInteger(lastToken).subtract(BigInteger.ONE).toString();
                                     
                                     // Determine the number of rows to skip in the response.  Since we are repeating the
                                     // last token it's possible (although unlikely) that there is more than one key mapping to the

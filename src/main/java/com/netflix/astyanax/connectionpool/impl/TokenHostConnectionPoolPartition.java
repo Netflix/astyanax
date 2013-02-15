@@ -1,6 +1,7 @@
 package com.netflix.astyanax.connectionpool.impl;
 
-import java.math.BigInteger;
+import org.apache.cassandra.dht.RingPosition;
+
 import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
 
 /**
@@ -12,9 +13,9 @@ import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
  */
 public class TokenHostConnectionPoolPartition<CL> extends HostConnectionPoolPartition<CL> {
 
-    private final BigInteger  token;
+    private final RingPosition  token;
 
-    public TokenHostConnectionPoolPartition(BigInteger id, LatencyScoreStrategy strategy) {
+    public TokenHostConnectionPoolPartition(RingPosition id, LatencyScoreStrategy strategy) {
         super(strategy);
         this.token = id;
     }
@@ -23,7 +24,7 @@ public class TokenHostConnectionPoolPartition<CL> extends HostConnectionPoolPart
      * 
      * @return
      */
-    public BigInteger id() {
+    public RingPosition id() {
         return token;
     }
 }

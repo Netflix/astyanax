@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.cassandra.dht.RandomPartitioner;
+import org.apache.cassandra.dht.RingPosition;
 
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.Serializer;
@@ -66,9 +67,19 @@ public class BigInteger127Partitioner implements Partitioner {
     public String getTokenForKey(ByteBuffer key) {
         return partitioner.getToken(key).toString();
     }
-    
+
     public <T> String getTokenForKey(T key, Serializer<T> serializer) {
         return partitioner.getToken(serializer.toByteBuffer(key)).toString();
+    }
+
+    @Override
+    public RingPosition getRingPositionForKey(ByteBuffer key) {
+        return partitioner.getToken(key);
+    }
+
+    @Override
+    public RingPosition getRingPositionForToken(String token) {
+        return partitioner.getTokenFactory().fromString(token);
     }
 
     @Override

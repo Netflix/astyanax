@@ -3,6 +3,8 @@ package com.netflix.astyanax.partitioner;
 import java.nio.ByteBuffer;
 import java.util.List;
 
+import org.apache.cassandra.dht.RingPosition;
+
 import com.netflix.astyanax.connectionpool.TokenRange;
 
 /**
@@ -48,10 +50,23 @@ public interface Partitioner {
     List<TokenRange> splitTokenRange(int count);
     
     /**
-     * Return the token for the specifie key
+     * Return the token for the specified key
      * @param key
      * @return
      */
     String getTokenForKey(ByteBuffer key);
-    
+
+    /**
+     * Return the ring position for the specified key
+     * @param key
+     * @return
+     */
+    RingPosition getRingPositionForKey(ByteBuffer key);
+
+    /**
+     * Return the ring position for the specified token
+     * @param token
+     * @return
+     */
+    RingPosition getRingPositionForToken(String token);
 }

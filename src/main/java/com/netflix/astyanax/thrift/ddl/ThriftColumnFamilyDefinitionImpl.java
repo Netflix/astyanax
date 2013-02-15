@@ -17,15 +17,36 @@ package com.netflix.astyanax.thrift.ddl;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.cassandra.thrift.CfDef;
+import org.apache.cassandra.thrift.CfDef._Fields;
 import org.apache.cassandra.thrift.ColumnDef;
+import org.apache.thrift.meta_data.FieldMetaData;
 
+import com.google.common.collect.Maps;
 import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
+import com.netflix.astyanax.ddl.FieldMetadata;
+import com.netflix.astyanax.thrift.ThriftTypes;
 
 public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
+    private final static Map<String, FieldMetadata> fieldsMetadata = Maps.newHashMap();
+    
+    {
+        for (Entry<_Fields, FieldMetaData> field : CfDef.metaDataMap.entrySet()) {
+            fieldsMetadata.put(
+                    field.getValue().fieldName, 
+                    new FieldMetadata(
+                        field.getKey().name(), 
+                        ThriftTypes.values()[field.getValue().valueMetaData.type].name(),
+                        field.getValue().valueMetaData.isContainer()));
+        }
+    }
+    
     private final CfDef cfDef;
 
     public ThriftColumnFamilyDefinitionImpl() {
@@ -64,43 +85,44 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
 
     @Override
     @Deprecated
-    public ColumnFamilyDefinition setMemtableFlushAfterMins(int value) {
+    public ColumnFamilyDefinition setMemtableFlushAfterMins(Integer value) {
         throw new RuntimeException("API Remove in Cassandra 1.0");
     }
 
     @Override
     @Deprecated
-    public int getMemtableFlushAfterMins() {
+    public Integer getMemtableFlushAfterMins() {
         throw new RuntimeException("API Remove in Cassandra 1.0");
     }
 
     @Override
     @Deprecated
-    public ColumnFamilyDefinition setMemtableOperationsInMillions(double value) {
+    public ColumnFamilyDefinition setMemtableOperationsInMillions(Double value) {
         throw new RuntimeException("API Remove in Cassandra 1.0");
     }
 
     @Override
     @Deprecated
-    public double getMemtableOperationsInMillions() {
+    public Double getMemtableOperationsInMillions() {
         throw new RuntimeException("API Remove in Cassandra 1.0");
     }
 
     @Override
     @Deprecated
-    public ColumnFamilyDefinition setMemtableThroughputInMb(int value) {
+    public ColumnFamilyDefinition setMemtableThroughputInMb(Integer value) {
         throw new RuntimeException("API Remove in Cassandra 1.0");
     }
 
     @Override
-    public ColumnFamilyDefinition setMergeShardsChance(double value) {
+    public ColumnFamilyDefinition setMergeShardsChance(Double value) {
         cfDef.setMerge_shards_chance(value);
         return this;
     }
 
     @Override
-    public ColumnFamilyDefinition setMinCompactionThreshold(int value) {
-        cfDef.setMin_compaction_threshold(value);
+    public ColumnFamilyDefinition setMinCompactionThreshold(Integer value) {
+        if (value != null)
+            cfDef.setMin_compaction_threshold(value);
         return this;
     }
 
@@ -115,14 +137,16 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
     }
 
     @Override
-    public ColumnFamilyDefinition setReadRepairChance(double value) {
-        cfDef.setRead_repair_chance(value);
+    public ColumnFamilyDefinition setReadRepairChance(Double value) {
+        if (value != null)
+            cfDef.setRead_repair_chance(value);
         return this;
     }
 
     @Override
-    public ColumnFamilyDefinition setReplicateOnWrite(boolean value) {
-        cfDef.setReplicate_on_write(value);
+    public ColumnFamilyDefinition setReplicateOnWrite(Boolean value) {
+        if (value != null)
+            cfDef.setReplicate_on_write(value);
         return this;
     }
 
@@ -133,14 +157,16 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
     }
 
     @Override
-    public ColumnFamilyDefinition setRowCacheSavePeriodInSeconds(int value) {
-        cfDef.setRow_cache_save_period_in_seconds(value);
+    public ColumnFamilyDefinition setRowCacheSavePeriodInSeconds(Integer value) {
+        if (value != null)
+            cfDef.setRow_cache_save_period_in_seconds(value);
         return this;
     }
 
     @Override
-    public ColumnFamilyDefinition setRowCacheSize(double size) {
-        cfDef.setRow_cache_size(size);
+    public ColumnFamilyDefinition setRowCacheSize(Double size) {
+        if (size != null)
+            cfDef.setRow_cache_size(size);
         return this;
     }
 
@@ -167,13 +193,13 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
     }
 
     @Override
-    public ColumnFamilyDefinition setId(int id) {
+    public ColumnFamilyDefinition setId(Integer id) {
         cfDef.setId(id);
         return this;
     }
 
     @Override
-    public int getId() {
+    public Integer getId() {
         return cfDef.getId();
     }
 
@@ -185,23 +211,27 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
 
     @Override
     public ByteBuffer getKeyAlias() {
+        if (cfDef.getKey_alias() == null)
+            return null;
         return ByteBuffer.wrap(cfDef.getKey_alias());
     }
 
     @Override
-    public ColumnFamilyDefinition setKeyCacheSavePeriodInSeconds(int value) {
-        cfDef.setKey_cache_save_period_in_seconds(value);
+    public ColumnFamilyDefinition setKeyCacheSavePeriodInSeconds(Integer value) {
+        if (value != null)
+            cfDef.setKey_cache_save_period_in_seconds(value);
         return this;
     }
 
     @Override
-    public int getKeyCacheSavePeriodInSeconds() {
+    public Integer getKeyCacheSavePeriodInSeconds() {
         return cfDef.getKey_cache_save_period_in_seconds();
     }
 
     @Override
-    public ColumnFamilyDefinition setKeyCacheSize(double keyCacheSize) {
-        cfDef.setKey_cache_size(keyCacheSize);
+    public ColumnFamilyDefinition setKeyCacheSize(Double keyCacheSize) {
+        if (keyCacheSize != null)
+            cfDef.setKey_cache_size(keyCacheSize);
         return this;
     }
 
@@ -248,27 +278,27 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
 
     @Override
     @Deprecated
-    public int getMemtableThroughputInMb() {
+    public Integer getMemtableThroughputInMb() {
         throw new RuntimeException("API Remove in Cassandra 1.0");
     }
 
     @Override
-    public double getMergeShardsChance() {
+    public Double getMergeShardsChance() {
         return cfDef.merge_shards_chance;
     }
 
     @Override
-    public int getMinCompactionThreshold() {
+    public Integer getMinCompactionThreshold() {
         return cfDef.min_compaction_threshold;
     }
 
     @Override
-    public double getReadRepairChance() {
+    public Double getReadRepairChance() {
         return cfDef.read_repair_chance;
     }
 
     @Override
-    public boolean getReplicateOnWrite() {
+    public Boolean getReplicateOnWrite() {
         return cfDef.replicate_on_write;
     }
 
@@ -278,22 +308,157 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
     }
 
     @Override
-    public int getRowCacheSavePeriodInSeconds() {
+    public Integer getRowCacheSavePeriodInSeconds() {
         return cfDef.row_cache_save_period_in_seconds;
     }
 
     @Override
-    public double getRowCacheSize() {
+    public Double getRowCacheSize() {
         return cfDef.row_cache_size;
     }
 
     @Override
-    public double getKeyCacheSize() {
+    public Double getKeyCacheSize() {
         return cfDef.key_cache_size;
     }
 
     @Override
+    public Collection<String> getFieldNames() {
+        return fieldsMetadata.keySet();
+    }
+    
+    @Override
+    public Object getFieldValue(String name) {
+        return cfDef.getFieldValue(_Fields.valueOf(name));
+    }
+    
+    @Override
+    public ColumnFamilyDefinition setFieldValue(String name, Object value) {
+        cfDef.setFieldValue(_Fields.valueOf(name), value);
+        return this;
+    }
+    
+    @Override
     public ColumnDefinition makeColumnDefinition() {
         return new ThriftColumnDefinitionImpl();
+    }
+
+    @Override
+    public Collection<FieldMetadata> getFieldsMetadata() {
+        return fieldsMetadata.values();
+    }
+
+    @Override
+    public ColumnFamilyDefinition setMaxCompactionThreshold(Integer value) {
+        if (value != null)
+            cfDef.setMax_compaction_threshold(value);
+        return this;
+    }
+
+    @Override
+    public Integer getMaxCompactionThreshold() {
+        return cfDef.getMax_compaction_threshold();
+    }
+
+    @Override
+    public ColumnFamilyDefinition setCompactionStrategy(String strategy) {
+        cfDef.setCompaction_strategy(strategy);
+        return this;
+    }
+
+    @Override
+    public String getCompactionStrategy() {
+        return cfDef.getCompaction_strategy();
+    }
+
+    @Override
+    public ColumnFamilyDefinition setCompactionStrategyOptions(Map<String, String> options) {
+        cfDef.setCompaction_strategy_options(options);
+        return this;
+    }
+
+    @Override
+    public Map<String, String> getCompactionStrategyOptions() {
+        return cfDef.getCompaction_strategy_options();
+    }
+
+    @Override
+    public ColumnFamilyDefinition setCompressionOptions(Map<String, String> options) {
+        cfDef.setCompression_options(options);
+        return this;
+    }
+
+    @Override
+    public Map<String, String> getCompressionOptions() {
+        return cfDef.getCompression_options();
+    }
+
+    @Override
+    public ColumnFamilyDefinition setBloomFilterFpChance(Double chance) {
+        if (chance != null)
+            cfDef.setBloom_filter_fp_chance(chance);
+        return this;
+    }
+
+    @Override
+    public Double getBloomFilterFpChance() {
+        return cfDef.getBloom_filter_fp_chance();
+    }
+
+    @Override
+    public ColumnFamilyDefinition setCaching(String caching) {
+        cfDef.setCaching(caching);
+        return this;
+    }
+
+    @Override
+    public String getCaching() {
+        return cfDef.getCaching();
+    }
+
+    @Override
+    public ColumnFamilyDefinition setLocalReadRepairChance(Double value) {
+        if (value != null)
+            cfDef.setDclocal_read_repair_chance(value);
+        return this;
+    }
+
+    @Override
+    public Double getLocalReadRepairChance() {
+        return cfDef.getDclocal_read_repair_chance();
+    }
+
+    @Override
+    public ColumnFamilyDefinition setGcGraceSeconds(Integer seconds) {
+        if (seconds != null)
+            cfDef.setGc_grace_seconds(seconds);
+        return this;
+    }
+
+    @Override
+    public Integer getGcGraceSeconds() {
+        return cfDef.getGc_grace_seconds();
+    }
+
+    @Override
+    public void setFields(Map<String, Object> options) {
+        for (Entry<String, FieldMetadata> field : fieldsMetadata.entrySet()) {
+            String fieldName = field.getKey();
+            if (options.containsKey(fieldName)) {
+                if (fieldName.equals("column_metadata")) {
+                    Map<String, Object> columns = (Map<String, Object>) options.get("column_metadata");
+                    for (Entry<String, Object> column : columns.entrySet()) {
+                        ThriftColumnDefinitionImpl columnDef = new ThriftColumnDefinitionImpl();
+                        columnDef.setName(column.getKey().toString());
+                        columnDef.setFields((Map<String, Object>) column.getValue());
+                        
+                        this.addColumnDefinition(columnDef);
+                    }
+                }
+                else {
+                    setFieldValue(field.getValue().getName(), options.get(fieldName));
+                }
+            }
+        }
     }
 }

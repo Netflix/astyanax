@@ -26,7 +26,7 @@ import java.util.Map;
  */
 public interface ConnectionPoolMonitor {
     /**
-     * Errors trying to execute an operation
+     * Errors trying to execute an operation.
      * 
      * @param reason
      * @param host
@@ -34,6 +34,14 @@ public interface ConnectionPoolMonitor {
     void incOperationFailure(Host host, Exception reason);
 
     long getOperationFailureCount();
+
+    /**
+     * An operation failed but the connection pool will attempt to fail over to
+     * another host/connection.  
+     */
+    void incFailover(Host host, Exception reason);
+
+    long getFailoverCount();
 
     /**
      * Succeeded in executing an operation
@@ -97,25 +105,82 @@ public interface ConnectionPoolMonitor {
     /**
      * Timeout trying to get a connection from the pool
      */
-    void incPoolExhaustedTimeout();
-
     long getPoolExhaustedTimeoutCount();
 
     /**
      * Timeout waiting for a response from the cluster
      */
-    void incOperationTimeout();
-
     long getOperationTimeoutCount();
 
     /**
-     * An operation failed by the connection pool will attempt to fail over to
-     * another host/connection.
+     * Count of socket timeouts trying to execute an operation
+     * @return
      */
-    void incFailover(Host host, Exception reason);
+    long getSocketTimeoutCount();
+    
+    /**
+     * Get number of unknown errors
+     * @return
+     */
+    long getUnknownErrorCount();
+    
+    /**
+     * Get number of invalid requests (i.e. bad argument values)
+     * @return
+     */
+    long getBadRequestCount();
+    
+    /**
+     * Count of times no hosts at all were available to execute an operation.
+     * 
+     * @return
+     */
+    long getNoHostCount();
+    
+    /**
+     * Tracks the number of column not found error
+     * @return
+     */
+    long notFoundCount();
 
-    long getFailoverCount();
-
+    /**
+     * Number of times operations were cancelled 
+     * @return
+     */
+    long getInterruptedCount();
+    
+    /**
+     * Return the number of hosts in the pool
+     * @return
+     */
+    long getHostCount();
+    
+    /**
+     * Return the number of times a host was added to the pool.  This
+     * number will be incremented multiple times if the same hosts is 
+     * added and removed multiple times.  
+     * A constantly increating number of host added and host removed
+     * may indicate a problem with the host discovery service
+     * @return
+     */
+    long getHostAddedCount();
+    
+    /**
+     * Return the number of times any host was removed to the pool.  This
+     * number will be incremented multiple times if the same hosts is 
+     * added and removed multiple times.  
+     * A constantly increating number of host added and host removed
+     * may indicate a problem with the host discovery service
+     * @return
+     */
+    long getHostRemovedCount();
+    
+    /**
+     * Return the number of times any host was marked as down.
+     * @return
+     */
+    long getHostDownCount();
+    
     /**
      * A host was added and given the associated pool. The pool is immutable and
      * can be used to get info about the number of open connections
@@ -151,16 +216,10 @@ public interface ConnectionPoolMonitor {
     void onHostReactivated(Host host, HostConnectionPool<?> pool);
 
     /**
-     * There were no active hosts in the pool to borrow from.
-     */
-    void incNoHosts();
-
-    long getNoHostCount();
-
-    /**
      * Return a mapping of all hosts and their statistics
      * 
      * @return
      */
     Map<Host, HostStats> getHostStats();
+
 }

@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * Copyright 2011 Netflix
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ ******************************************************************************/
 package com.netflix.astyanax.impl;
 
 import java.util.concurrent.ExecutorService;
@@ -15,16 +30,18 @@ import com.netflix.astyanax.retry.RunOnce;
 import com.netflix.astyanax.util.StringUtils;
 
 public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
-    private ConsistencyLevel defaultReadConsistencyLevel = ConsistencyLevel.CL_ONE;
-    private ConsistencyLevel defaultWriteConsistencyLevel = ConsistencyLevel.CL_ONE;
-    private Clock clock = new MicrosecondsSyncClock();
-    private RetryPolicy retryPolicy = RunOnce.get();
-    private ExecutorService asyncExecutor = Executors.newFixedThreadPool(5, new ThreadFactoryBuilder().setDaemon(true)
-            .build());
-    private NodeDiscoveryType discoveryType = NodeDiscoveryType.NONE;
-    private int discoveryIntervalInSeconds = 30;
-    private ConnectionPoolType connectionPoolType = ConnectionPoolType.ROUND_ROBIN;
-    private String cqlVersion = null;
+    private ConsistencyLevel   defaultReadConsistencyLevel  = ConsistencyLevel.CL_ONE;
+    private ConsistencyLevel   defaultWriteConsistencyLevel = ConsistencyLevel.CL_ONE;
+    private Clock              clock                        = new MicrosecondsSyncClock();
+    private RetryPolicy        retryPolicy                  = RunOnce.get();
+    private ExecutorService    asyncExecutor                = Executors.newFixedThreadPool(5, 
+            new ThreadFactoryBuilder().setDaemon(true)
+                .setNameFormat("AstyanaxAsync-%d")
+                .build());
+    private NodeDiscoveryType   discoveryType               = NodeDiscoveryType.NONE;
+    private int                 discoveryIntervalInSeconds  = 30;
+    private ConnectionPoolType  connectionPoolType          = ConnectionPoolType.ROUND_ROBIN;
+    private String              cqlVersion                  = null;
 
     public AstyanaxConfigurationImpl() {
     }

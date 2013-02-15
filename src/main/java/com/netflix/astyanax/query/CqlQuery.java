@@ -33,4 +33,12 @@ public interface CqlQuery<K, C> extends Execution<CqlResult<K, C>> {
      * @return
      */
     CqlQuery<K, C> useCompression();
+    
+    /**
+     * Prepares the provided CQL statement.  The statement is not executed 
+     * here.  Call, withPreparedStatement to execute the prepared statement
+     * with variables.
+     * @return
+     */
+    PreparedCqlQuery<K,C> asPreparedStatement();
 }

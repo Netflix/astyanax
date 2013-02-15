@@ -15,10 +15,8 @@
  ******************************************************************************/
 package com.netflix.astyanax.test;
 
+import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-
-import org.apache.cassandra.dht.Token;
 
 import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.Host;
@@ -27,13 +25,14 @@ import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
+import com.netflix.astyanax.connectionpool.impl.Topology;
 import com.netflix.astyanax.retry.RetryPolicy;
 
 public class TestConnectionPool implements ConnectionPool<TestClient> {
 
-    Map<Token, List<Host>> ring;
+    Collection<Host> ring;
 
-    public Map<Token, List<Host>> getHosts() {
+    public Collection<Host> getHosts() {
         return this.ring;
     }
 
@@ -48,7 +47,7 @@ public class TestConnectionPool implements ConnectionPool<TestClient> {
     }
 
     @Override
-    public void setHosts(Map<Token, List<Host>> ring) {
+    public void setHosts(Collection<Host> ring) {
         this.ring = ring;
     }
 
@@ -56,7 +55,6 @@ public class TestConnectionPool implements ConnectionPool<TestClient> {
     public <R> OperationResult<R> executeWithFailover(
             Operation<TestClient, R> op, RetryPolicy retry)
             throws ConnectionException, OperationException {
-        // TODO Auto-generated method stub
         return null;
     }
 
@@ -85,7 +83,16 @@ public class TestConnectionPool implements ConnectionPool<TestClient> {
 
     @Override
     public List<HostConnectionPool<TestClient>> getActivePools() {
-        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public List<HostConnectionPool<TestClient>> getPools() {
+        return null;
+    }
+
+    @Override
+    public Topology<TestClient> getTopology() {
         return null;
     }
 

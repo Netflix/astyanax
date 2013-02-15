@@ -1,9 +1,9 @@
 package com.netflix.astyanax.connectionpool.impl;
 
+import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
-
-import org.apache.cassandra.dht.Token;
 
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
 
@@ -14,10 +14,10 @@ public interface Topology<CL> {
      * @param ring
      * @return
      */
-    boolean setPools(Map<Token, Collection<HostConnectionPool<CL>>> ring);
+    boolean setPools(Collection<HostConnectionPool<CL>> ring);
 
     /**
-     * Add a pool without knowing it's token. This pool will be added to the all
+     * Add a pool without knowing its token. This pool will be added to the all
      * pools partition only
      * 
      * @param pool
@@ -51,19 +51,28 @@ public interface Topology<CL> {
     void refresh();
 
     /**
-     * Search for the partition that owns this token
+     * Get the partition best suited to handle a row key
      * 
      * @param token
      * @return
      */
-    HostConnectionPoolPartition<CL> getPartition(Token token);
+    TokenHostConnectionPoolPartition<CL> getPartition(ByteBuffer rowkey);
+    
+    /**
+     * TODO 
+     * 
+     * Get the partition best suited for handling a set of row keys
+     * @param tokens
+     * @return
+     */
+    // HostConnectionPoolPartition<CL> getPartition(Collection<ByteBuffer> tokens);
 
     /**
      * Return a partition that represents all hosts in the ring
      * 
      * @return
      */
-    HostConnectionPoolPartition<CL> getAllPools();
+    TokenHostConnectionPoolPartition<CL> getAllPools();
 
     /**
      * Get total number of tokens in the topology
@@ -71,4 +80,23 @@ public interface Topology<CL> {
      * @return
      */
     int getPartitionCount();
+
+    /**
+     * Return a list of all unqiue ids or first token for partitions in the topology
+     * @return
+     */
+    List<String> getPartitionNames();
+
+    /**
+     * Return a mapping of partition ids to partition details
+     * @return
+     */
+    Map<String, TokenHostConnectionPoolPartition<CL>> getPartitions();
+    
+    /**
+     * Return the partition for a specific token
+     * @param token
+     * @return
+     */
+    TokenHostConnectionPoolPartition<CL> getPartition(String token);
 }

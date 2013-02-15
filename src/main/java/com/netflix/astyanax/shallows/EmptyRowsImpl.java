@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax.shallows;
 
+import java.util.Collection;
 import java.util.Iterator;
 
 import com.netflix.astyanax.model.Row;
@@ -45,6 +46,12 @@ public class EmptyRowsImpl<K, C> implements Rows<K, C> {
 
     @Override
     public Row<K, C> getRowByIndex(int i) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public Collection<K> getKeys() {
         // TODO Auto-generated method stub
         return null;
     }

@@ -15,10 +15,6 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.impl;
 
-import org.apache.log4j.Logger;
-import org.junit.Assert;
-import org.junit.Test;
-
 import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
 import com.netflix.astyanax.connectionpool.Host;
@@ -35,6 +31,12 @@ import com.netflix.astyanax.test.TestConstants;
 import com.netflix.astyanax.test.TestHostType;
 import com.netflix.astyanax.test.TestOperation;
 
+import org.apache.log4j.Logger;
+import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Test;
+import com.netflix.astyanax.connectionpool.ConnectionContext;
+
 public class RoundRobinConnectionPoolImplTest extends BaseConnectionPoolTest {
     private static Logger LOG = Logger
             .getLogger(RoundRobinConnectionPoolImplTest.class);
@@ -46,6 +48,7 @@ public class RoundRobinConnectionPoolImplTest extends BaseConnectionPoolTest {
 
         ConnectionPoolConfiguration config = new ConnectionPoolConfigurationImpl(
                 TestConstants.CLUSTER_NAME + "_" + TestConstants.KEYSPACE_NAME);
+        config.initialize();
 
         ConnectionPool<TestClient> pool = new RoundRobinConnectionPoolImpl<TestClient>(
                 config, new TestConnectionFactory(config, monitor), monitor);
@@ -59,6 +62,7 @@ public class RoundRobinConnectionPoolImplTest extends BaseConnectionPoolTest {
 
         ConnectionPoolConfigurationImpl config = new ConnectionPoolConfigurationImpl(
                 TestConstants.CLUSTER_NAME + "_" + TestConstants.KEYSPACE_NAME);
+        config.initialize();
 
         ConnectionPool<TestClient> pool = new RoundRobinConnectionPoolImpl<TestClient>(
                 config, new TestConnectionFactory(config, monitor), monitor);
@@ -72,7 +76,7 @@ public class RoundRobinConnectionPoolImplTest extends BaseConnectionPoolTest {
         try {
             result = pool.executeWithFailover(new TestOperation() {
                 @Override
-                public String execute(TestClient client)
+                public String execute(TestClient client, ConnectionContext context)
                         throws ConnectionException, OperationException {
                     throw new RuntimeException("Unkecked Exception");
                 }
@@ -91,6 +95,7 @@ public class RoundRobinConnectionPoolImplTest extends BaseConnectionPoolTest {
 
         ConnectionPoolConfigurationImpl config = new ConnectionPoolConfigurationImpl(
                 TestConstants.CLUSTER_NAME + "_" + TestConstants.KEYSPACE_NAME);
+        config.initialize();
 
         config.setInitConnsPerHost(0);
         ConnectionPool<TestClient> pool = new RoundRobinConnectionPoolImpl<TestClient>(
@@ -130,6 +135,7 @@ public class RoundRobinConnectionPoolImplTest extends BaseConnectionPoolTest {
         config.setRetryBackoffStrategy(new FixedRetryBackoffStrategy(200, 2000));
         config.setMaxConnsPerHost(3);
         config.setMaxPendingConnectionsPerHost(2);
+        config.initialize();
 
         ConnectionPool<TestClient> cp = new RoundRobinConnectionPoolImpl<TestClient>(
                 config, new TestConnectionFactory(config, monitor), monitor);
@@ -171,15 +177,18 @@ public class RoundRobinConnectionPoolImplTest extends BaseConnectionPoolTest {
     }
 
     @Test
+    @Ignore
     public void testAddingNewHost() {
         CountingConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
 
         ConnectionPoolConfigurationImpl config = new ConnectionPoolConfigurationImpl(
-                TestConstants.CLUSTER_NAME + "_" + TestConstants.KEYSPACE_NAME);
-        // config.setRetryBackoffStrategy(new FixedRetryBackoffStrategy(200,
-        // 2000));
-        config.setMaxConnsPerHost(3);
-        config.setMaxPendingConnectionsPerHost(2);
+                TestConstants.CLUSTER_NAME + "_" + TestConstants.KEYSPACE_NAME)
+            .setRetrySuspendWindow(1000)
+            .setRetryBackoffStrategy(new FixedRetryBackoffStrategy(3000,3000))
+            .setMaxConnsPerHost(3)
+            .setMaxPendingConnectionsPerHost(2)
+            .setInitConnsPerHost(0);
+        config.initialize();
 
         ConnectionPool<TestClient> cp = new RoundRobinConnectionPoolImpl<TestClient>(
                 config, new TestConnectionFactory(config, monitor), monitor);
@@ -190,14 +199,14 @@ public class RoundRobinConnectionPoolImplTest extends BaseConnectionPoolTest {
 
         OperationResult<String> result;
 
-        try {
-            result = cp.executeWithFailover(new TestOperation(), RunOnce.get());
-            Assert.fail();
-        } catch (ConnectionException e) {
-            LOG.info(e);
+        for (int i = 0; i < 2; i++) {
+            try {
+                result = cp.executeWithFailover(new TestOperation(), RunOnce.get());
+                Assert.fail("Failed iteration " + i);
+            } catch (ConnectionException e) {
+                LOG.info(e);
+            }
         }
-
-        think(10000);
 
         try {
             result = cp.executeWithFailover(new TestOperation(), RunOnce.get());

@@ -1,8 +1,26 @@
+/*******************************************************************************
+ * Copyright 2011 Netflix
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ ******************************************************************************/
 package com.netflix.astyanax.recipes.uniqueness;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Nullable;
+
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
@@ -108,11 +126,11 @@ public class MultiRowUniquenessConstraint implements UniquenessConstraint {
 
     @Override
     public void acquire() throws NotUniqueException, Exception {
-        acquireAndMutate(null);
+        acquireAndApplyMutation(null);
     }
     
     @Override
-    public void acquireAndMutate(MutationBatch mutation) throws NotUniqueException, Exception {
+    public void acquireAndApplyMutation(Function<MutationBatch, Boolean> callback) throws NotUniqueException, Exception {
         long now = TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS);
 
         // Insert lock check column for all rows in a single batch mutation
@@ -136,9 +154,10 @@ public class MultiRowUniquenessConstraint implements UniquenessConstraint {
             for (ColumnPrefixDistributedRowLock<String> lock : locks) {
                 lock.fillLockMutation(m, null, null);
             }
-            if (mutation != null) {
-                m.mergeShallow(mutation);
-            }
+            
+            if (callback != null)
+                callback.apply(m);
+            
             m.execute();
         }
         catch (BusyLockException e) {
@@ -152,7 +171,19 @@ public class MultiRowUniquenessConstraint implements UniquenessConstraint {
         catch (Exception e) {
             release();
             throw e;
-        }
+        }    }
+    
+    @Override
+    @Deprecated
+    public void acquireAndMutate(final MutationBatch mutation) throws NotUniqueException, Exception {
+        acquireAndApplyMutation(new Function<MutationBatch, Boolean>() {
+            @Override
+            public Boolean apply(@Nullable MutationBatch input) {
+                if (mutation != null)
+                    input.mergeShallow(mutation);
+                return true;
+            }
+        });
     }
 
     @Override
@@ -163,4 +194,5 @@ public class MultiRowUniquenessConstraint implements UniquenessConstraint {
         }
         m.execute();
     }
+
 }

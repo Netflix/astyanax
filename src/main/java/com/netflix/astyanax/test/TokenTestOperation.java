@@ -15,19 +15,31 @@
  ******************************************************************************/
 package com.netflix.astyanax.test;
 
-import org.apache.cassandra.dht.Token;
+import java.math.BigInteger;
+import java.nio.ByteBuffer;
+
+import com.netflix.astyanax.serializers.BigIntegerSerializer;
+import com.netflix.astyanax.serializers.LongSerializer;
 
 public class TokenTestOperation extends TestOperation {
 
-    private final Token token;
+    private final ByteBuffer rowKey;
 
-    public TokenTestOperation(Token token) {
-        this.token = token;
+    public TokenTestOperation(ByteBuffer rowKey) {
+        this.rowKey = rowKey;
     }
-
+    
+    public TokenTestOperation(BigInteger rowKey) {
+        this.rowKey = BigIntegerSerializer.get().toByteBuffer(rowKey);
+    }
+    
+    public TokenTestOperation(Long rowKey) {
+        this.rowKey = LongSerializer.get().toByteBuffer(rowKey);
+    }
+    
     @Override
-    public Token getToken() {
-        return token;
+    public ByteBuffer getRowKey() {
+        return rowKey.duplicate();
     }
 
 }

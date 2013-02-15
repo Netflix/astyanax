@@ -1,7 +1,25 @@
+/*******************************************************************************
+ * Copyright 2011 Netflix
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ ******************************************************************************/
 package com.netflix.astyanax.recipes.uniqueness;
 
 import java.nio.ByteBuffer;
 
+import javax.annotation.Nullable;
+
+import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
@@ -24,19 +42,19 @@ import com.netflix.astyanax.serializers.StringSerializer;
  */
 public class RowUniquenessConstraint<K, C> implements UniquenessConstraint {
     private final ColumnFamily<K, C> columnFamily;
-    private final Keyspace keyspace;
-    private Integer ttl = null;
+    private final Keyspace   keyspace;
+    private final C          uniqueColumn;
+    private final K          key;
     private ConsistencyLevel consistencyLevel = ConsistencyLevel.CL_LOCAL_QUORUM;
-    private final C uniqueColumn;
-    private final K key;
-    private ByteBuffer data = null;
+    private ByteBuffer       data             = null;
+    private Integer          ttl              = null;
 
     public RowUniquenessConstraint(Keyspace keyspace, ColumnFamily<K, C> columnFamily, K key,
             Supplier<C> uniqueColumnSupplier) {
-        this.keyspace = keyspace;
+        this.keyspace     = keyspace;
         this.columnFamily = columnFamily;
         this.uniqueColumn = uniqueColumnSupplier.get();
-        this.key = key;
+        this.key          = key;
     }
 
     public RowUniquenessConstraint<K, C> withTtl(Integer ttl) {
@@ -66,11 +84,27 @@ public class RowUniquenessConstraint<K, C> implements UniquenessConstraint {
     
     @Override
     public void acquire() throws NotUniqueException, Exception {
-        acquireAndMutate(null);
+        acquireAndApplyMutation(null);
+    }
+    
+    /**
+     * @deprecated  Use acquireAndExecuteMutation instead to avoid timestamp issues
+     */
+    @Override
+    @Deprecated
+    public void acquireAndMutate(final MutationBatch mutation) throws NotUniqueException, Exception {
+        acquireAndApplyMutation(new Function<MutationBatch, Boolean>() {
+            @Override
+            public Boolean apply(@Nullable MutationBatch input) {
+                if (mutation != null)
+                    input.mergeShallow(mutation);
+                return true;
+            }
+        });
     }
     
     @Override
-    public void acquireAndMutate(MutationBatch mutation) throws NotUniqueException, Exception {
+    public void acquireAndApplyMutation(Function<MutationBatch, Boolean> callback) throws NotUniqueException, Exception {
         try {
             // Phase 1: Write a unique column
             MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
@@ -92,9 +126,8 @@ public class RowUniquenessConstraint<K, C> implements UniquenessConstraint {
 
             // Phase 3: Persist the uniqueness with 
             m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
-            if (mutation != null) {
-                m.mergeShallow(mutation);
-            }
+            if (callback != null)
+                callback.apply(m);
             
             if (data == null) {
                 m.withRow(columnFamily, key).putEmptyColumn(uniqueColumn, null);
@@ -107,8 +140,7 @@ public class RowUniquenessConstraint<K, C> implements UniquenessConstraint {
         catch (Exception e) {
             release();
             throw e;
-        }
-    }
+        }    }
 
     @Override
     public void release() throws Exception {
@@ -152,5 +184,4 @@ public class RowUniquenessConstraint<K, C> implements UniquenessConstraint {
     public String readDataAsString() throws Exception {
         return StringSerializer.get().fromByteBuffer(readData());
     }
-    
 }

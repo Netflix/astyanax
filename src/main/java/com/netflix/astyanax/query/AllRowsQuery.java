@@ -1,5 +1,6 @@
 package com.netflix.astyanax.query;
 
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 
@@ -73,6 +74,13 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
     AllRowsQuery<K, C> setExceptionCallback(ExceptionCallback cb);
 
     /**
+     * Use this checkpoint manager to keep track of progress as all rows are being iterated
+     * @param manager
+     * @return
+     */
+    AllRowsQuery<K, C> setCheckpointManager(CheckpointManager manager);
+    
+    /**
      * If true will repeat the last token in the previous block.
      * 
      * @param repeatLastToken
@@ -80,6 +88,15 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
      */
     AllRowsQuery<K, C> setRepeatLastToken(boolean repeatLastToken);
 
+    /**
+     * If set to false all empty rows will be filtered out internally.
+     * Default is false
+     * 
+     * @param flag
+     * @return
+     */
+    AllRowsQuery<K, C> setIncludeEmptyRows(boolean flag);
+    
     /**
      * Specify a non-contiguous set of columns to retrieve.
      * 
@@ -164,4 +181,19 @@ public interface AllRowsQuery<K, C> extends Execution<Rows<K, C>> {
      * @throws ConnectionException
      */
     void executeWithCallback(RowCallback<K, C> callback) throws ConnectionException;
+
+    /**
+     * Execute the operation on a specific token range, instead of the entire range.
+     * Use this only is combination with setConcurrencyLevel being called otherwise
+     * it currently will not have any effect on the query.  When using forTokenRange
+     * the specified token range will still be split into the number of threads
+     * specified by setConcurrencyLevel
+     * 
+     * @param startToken
+     * @param endToken
+     * @return
+     */
+	AllRowsQuery<K, C> forTokenRange(BigInteger startToken, BigInteger endToken);
+	
+	AllRowsQuery<K, C> forTokenRange(String startToken, String endToken);
 }

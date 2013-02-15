@@ -18,6 +18,7 @@ package com.netflix.astyanax;
 import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
@@ -26,11 +27,23 @@ public interface ColumnMutation {
     ColumnMutation setConsistencyLevel(ConsistencyLevel consistencyLevel);
 
     ColumnMutation withRetryPolicy(RetryPolicy retry);
-
+    
+    /**
+     * Change the default timestamp from the clock with a user supplied timestamp.
+     * 
+     * @param timestamp  Timestamp in microseconds
+     * @return
+     */
+    ColumnMutation withTimestamp(long timestamp);
+    
     Execution<Void> putValue(String value, Integer ttl);
 
     Execution<Void> putValue(byte[] value, Integer ttl);
 
+    Execution<Void> putValue(byte value, Integer ttl);
+    
+    Execution<Void> putValue(short value, Integer ttl);
+    
     Execution<Void> putValue(int value, Integer ttl);
 
     Execution<Void> putValue(long value, Integer ttl);
@@ -41,6 +54,8 @@ public interface ColumnMutation {
 
     Execution<Void> putValue(Date value, Integer ttl);
 
+    Execution<Void> putValue(float value, Integer ttl);
+    
     Execution<Void> putValue(double value, Integer ttl);
 
     Execution<Void> putValue(UUID value, Integer ttl);

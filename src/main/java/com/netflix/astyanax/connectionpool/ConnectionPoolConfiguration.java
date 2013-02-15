@@ -16,8 +16,10 @@
 package com.netflix.astyanax.connectionpool;
 
 import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
 
 import com.netflix.astyanax.AuthenticationCredentials;
+import com.netflix.astyanax.partitioner.Partitioner;
 
 public interface ConnectionPoolConfiguration {
     /**
@@ -113,6 +115,13 @@ public interface ConnectionPoolConfiguration {
     List<Host> getSeedHosts();
 
     /**
+     * Return local datacenter name.
+     * 
+     * @return
+     */
+    public String getLocalDatacenter();
+
+    /**
      * Socket read/write timeout
      * 
      * @return
@@ -162,6 +171,24 @@ public interface ConnectionPoolConfiguration {
      */
     float getLatencyAwareBadnessThreshold();
 
+    /**
+     * Return the threshold for disabling hosts that have nBlockedThreads more than
+     * the least blocked host.  The idea here is to quarantine hosts that are slow to respond
+     * and free up connections.
+     * 
+     * @return
+     */
+    int getBlockedThreadThreshold();
+    
+    /**
+     * Return the ratio for keeping a minimum number of hosts in the pool even if they are slow
+     * or are blocked.  For example, a ratio of 0.75 with a connection pool of 12 hosts will 
+     * ensure that no more than 4 hosts can be quaratined.
+     * 
+     * @return
+     */
+    float getMinHostInPoolRatio();
+    
     /**
      * 
      * @return
@@ -237,4 +264,47 @@ public interface ConnectionPoolConfiguration {
      * @return
      */
     AuthenticationCredentials getAuthenticationCredentials();
+    
+    /**
+     * Return factory that will wrap an operation with filters, such as logging filters
+     * and simulation filters
+     * @return
+     */
+    OperationFilterFactory getOperationFilterFactory();
+    
+    /**
+     * Get the partitioner used to convert row keys to TOKEN
+     * @return
+     */
+    Partitioner getPartitioner();
+
+    /**
+     * Retrieve a context to determine if connections should be made using SSL.
+     */
+    SSLConnectionContext getSSLConnectionContext();
+
+    /**
+     * Return executor service used for maintenance tasks.  This pool is used for internal
+     * operations that update stats such as token aware scores.  Threads in this pool 
+     * and not expected to block on I/O and the pool can therefore be very small
+     * @return
+     */
+    ScheduledExecutorService getMaintainanceScheduler();
+
+    /**
+     * Return executor service used to reconnect hosts.  Keep in mind that the threads 
+     * may be blocked for an extended duration while trying to reconnect to a downed host
+     * @return
+     */
+    ScheduledExecutorService getHostReconnectExecutor();
+
+    /**
+     * Initialization prior to starting the connection pool 
+     */
+    void initialize();
+
+    /**
+     * Shutdown after stopping the connection pool
+     */
+    void shutdown();
 }

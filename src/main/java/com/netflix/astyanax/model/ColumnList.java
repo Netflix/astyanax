@@ -53,6 +53,14 @@ public interface ColumnList<C> extends Iterable<Column<C>> {
     String getStringValue(C columnName, String defaultValue);
 
     /**
+     * Get a string that was stored as a compressed blob
+     * @param columnName
+     * @param defaultValue
+     * @return
+     */
+    String getCompressedStringValue(C columnName, String defaultValue);
+    
+    /**
      * Return value as an integer
      * 
      * @return

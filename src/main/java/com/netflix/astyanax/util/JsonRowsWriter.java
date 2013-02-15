@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * Copyright 2011 Netflix
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ ******************************************************************************/
 package com.netflix.astyanax.util;
 
 import java.io.PrintWriter;
@@ -29,7 +44,7 @@ public class JsonRowsWriter implements RowsWriter {
     }
 
     enum Field {
-        ROW_KEY, COUNT, NAMES, ROWS, COLUMN, TIMESTAMP, VALUE,
+        ROW_KEY, COUNT, NAMES, ROWS, COLUMN, TIMESTAMP, VALUE, TTL
     }
 
     private Map<Field, String> fieldNames = Maps.newHashMap();
@@ -58,13 +73,14 @@ public class JsonRowsWriter implements RowsWriter {
         this.out = out;
         this.serializers = serializers;
 
-        fieldNames.put(Field.NAMES, "names");
-        fieldNames.put(Field.ROWS, "rows");
-        fieldNames.put(Field.COUNT, "count");
-        fieldNames.put(Field.ROW_KEY, "_key");
-        fieldNames.put(Field.COLUMN, "column");
+        fieldNames.put(Field.NAMES,     "names");
+        fieldNames.put(Field.ROWS,      "rows");
+        fieldNames.put(Field.COUNT,     "count");
+        fieldNames.put(Field.ROW_KEY,   "_key");
+        fieldNames.put(Field.COLUMN,    "column");
         fieldNames.put(Field.TIMESTAMP, "timestamp");
-        fieldNames.put(Field.VALUE, "value");
+        fieldNames.put(Field.VALUE,     "value");
+        fieldNames.put(Field.TTL,       "ttl");
     }
 
     public JsonRowsWriter setRowsName(String fieldName) {
@@ -135,7 +151,7 @@ public class JsonRowsWriter implements RowsWriter {
 
     public JsonRowsWriter setColumnsAsRows(boolean columnsAsRows) {
         this.columnsAsRows = columnsAsRows;
-        setFixedColumnNames("column", "value", "timestamp");
+        setFixedColumnNames("column", "value", "timestamp", "ttl");
         return this;
     }
 
@@ -340,13 +356,24 @@ public class JsonRowsWriter implements RowsWriter {
                     timestampString = "none";
                 }
 
+                int ttl;
+                try {
+                    ttl = column.getTtl();
+                }
+                catch (Exception e) {
+                    ttl = 0;
+                }
+                
                 columnCount++;
                 out.append(jsonifyString(this.fieldNames.get(Field.COLUMN))).append(":")
                         .append(jsonifyString(columnString)).append(",")
                         .append(jsonifyString(this.fieldNames.get(Field.VALUE))).append(":")
                         .append(jsonifyString(valueString)).append(",")
                         .append(jsonifyString(this.fieldNames.get(Field.TIMESTAMP))).append(":")
-                        .append(jsonifyString(timestampString)).append("}");
+                        .append(jsonifyString(timestampString)).append(",")
+                        .append(jsonifyString(this.fieldNames.get(Field.TTL))).append(":")
+                        .append(jsonifyString(Integer.toString(ttl))).append("}")
+                        ;
             }
             catch (Exception e) {
                 if (!ignoreExceptions) {

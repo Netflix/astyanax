@@ -15,7 +15,7 @@ public class RoundRobinExecuteWithFailover<CL, R> extends AbstractExecuteWithFai
     protected HostConnectionPool<CL> pool;
     private int retryCountdown;
     protected final List<HostConnectionPool<CL>> pools;
-    protected int size;
+    protected final int size;
     protected int waitDelta;
     protected int waitMultiplier = 1;
 
@@ -27,10 +27,9 @@ public class RoundRobinExecuteWithFailover<CL, R> extends AbstractExecuteWithFai
         this.pools = pools;
 
         if (pools == null || pools.isEmpty()) {
-            monitor.incNoHosts();
             throw new NoAvailableHostsException("No hosts to borrow from");
         }
-
+        
         size = pools.size();
         retryCountdown = Math.min(config.getMaxFailoverCount(), size);
         if (retryCountdown < 0)
@@ -42,7 +41,14 @@ public class RoundRobinExecuteWithFailover<CL, R> extends AbstractExecuteWithFai
     }
 
     public int getNextHostIndex() {
-        return index++ % size;
+        try {
+            return index % size;
+        }
+        finally {
+            index++;
+            if (index < 0)
+                index = 0;
+        }
     }
 
     public boolean canRetry() {

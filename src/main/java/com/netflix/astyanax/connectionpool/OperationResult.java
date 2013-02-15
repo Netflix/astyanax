@@ -41,7 +41,7 @@ public interface OperationResult<R> {
     long getLatency();
 
     /**
-     * Return the length of time to perform the operation. Does not include
+     * Return the length of time to perform the operation to the remote service. Does not include
      * connection pool overhead.
      * 
      * @param units

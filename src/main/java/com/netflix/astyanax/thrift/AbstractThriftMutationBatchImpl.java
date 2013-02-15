@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Maps.EntryTransformer;
@@ -37,7 +38,11 @@ import org.apache.thrift.transport.TIOStreamTransport;
 import com.netflix.astyanax.Clock;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.WriteAheadLog;
+import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.model.ColumnFamily;
+import com.netflix.astyanax.model.ConsistencyLevel;
+import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.serializers.ByteBufferOutputStream;
 
 /**
@@ -51,32 +56,115 @@ import com.netflix.astyanax.serializers.ByteBufferOutputStream;
  */
 public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
 
-    protected long timestamp;
-    private Clock clock;
+    protected long              timestamp;
+    private ConsistencyLevel    consistencyLevel;
+    private Clock               clock;
+    private Host                pinnedHost;
+    private RetryPolicy         retry;
+    private WriteAheadLog       wal;
 
     private Map<ByteBuffer, Map<String, List<Mutation>>> mutationMap = Maps.newLinkedHashMap();
+    private Map<KeyAndColumnFamily, ColumnListMutation<?>> rowLookup = Maps.newHashMap();
+    
+    private static class KeyAndColumnFamily {
+        private final String      columnFamily;
+        private final ByteBuffer  key;
+        
+        public KeyAndColumnFamily(String columnFamily, ByteBuffer key) {
+            this.columnFamily = columnFamily;
+            this.key = key;
+        }
+        
+        public int compareTo(Object obj) {
+            if (obj instanceof KeyAndColumnFamily) {
+                KeyAndColumnFamily other = (KeyAndColumnFamily)obj;
+                int result = columnFamily.compareTo(other.columnFamily);
+                if (result == 0) {
+                    result = key.compareTo(other.key);
+                }
+                return result;
+            }
+            return -1;
+        }
+        
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + ((columnFamily == null) ? 0 : columnFamily.hashCode());
+            result = prime * result + ((key == null) ? 0 : key.hashCode());
+            return result;
+        }
 
-    public AbstractThriftMutationBatchImpl(Clock clock) {
-        this.clock = clock;
-        this.timestamp = clock.getCurrentTime();
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            KeyAndColumnFamily other = (KeyAndColumnFamily) obj;
+            if (columnFamily == null) {
+                if (other.columnFamily != null)
+                    return false;
+            } else if (!columnFamily.equals(other.columnFamily))
+                return false;
+            if (key == null) {
+                if (other.key != null)
+                    return false;
+            } else if (!key.equals(other.key))
+                return false;
+            return true;
+        }
+    }
+    
+    public AbstractThriftMutationBatchImpl(Clock clock, ConsistencyLevel consistencyLevel, RetryPolicy retry) {
+        this.clock            = clock;
+        this.timestamp        = clock.getCurrentTime();
+        this.consistencyLevel = consistencyLevel;
+        this.retry            = retry;
     }
 
     @Override
     public <K, C> ColumnListMutation<C> withRow(ColumnFamily<K, C> columnFamily, K rowKey) {
+        Preconditions.checkNotNull(columnFamily, "columnFamily cannot be null");
+        Preconditions.checkNotNull(rowKey, "Row key cannot be null");
+        
         if (clock != null && mutationMap.isEmpty())
             this.timestamp = clock.getCurrentTime();
 
-        return new ThriftColumnFamilyMutationImpl<C>(timestamp, getColumnFamilyMutationList(columnFamily, rowKey),
-                columnFamily.getColumnSerializer());
+        ByteBuffer bbKey = columnFamily.getKeySerializer().toByteBuffer(rowKey);
+        
+        KeyAndColumnFamily kacf = new KeyAndColumnFamily(columnFamily.getName(), bbKey);
+        ColumnListMutation<C> clm = (ColumnListMutation<C>) rowLookup.get(kacf);
+        if (clm == null) {
+            Map<String, List<Mutation>> innerMutationMap = mutationMap.get(bbKey);
+            if (innerMutationMap == null) {
+                innerMutationMap = Maps.newHashMap();
+                mutationMap.put(bbKey, innerMutationMap);
+            }
+    
+            List<Mutation> innerMutationList = innerMutationMap.get(columnFamily.getName());
+            if (innerMutationList == null) {
+                innerMutationList = Lists.newArrayList();
+                innerMutationMap.put(columnFamily.getName(), innerMutationList);
+            }
+            
+            clm = new ThriftColumnFamilyMutationImpl<C>(timestamp, innerMutationList, columnFamily.getColumnSerializer());
+            rowLookup.put(kacf, clm);
+        }
+        return clm;
     }
 
     @Override
     public void discardMutations() {
-        this.mutationMap = Maps.newHashMap();
+        this.mutationMap.clear();
+        this.rowLookup.clear();
     }
 
     @Override
-    public <K> void deleteRow(Collection<ColumnFamily<K, ?>> columnFamilies, K rowKey) {
+    public <K> void deleteRow(Iterable<? extends ColumnFamily<K, ?>> columnFamilies, K rowKey) {
         for (ColumnFamily<K, ?> cf : columnFamilies) {
             withRow(cf, rowKey).delete();
         }
@@ -127,9 +215,9 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
             throw new Exception("Mutation is empty");
         }
 
-        ByteBufferOutputStream out = new ByteBufferOutputStream();
-        TIOStreamTransport transport = new TIOStreamTransport(out);
-        batch_mutate_args args = new batch_mutate_args();
+        ByteBufferOutputStream out       = new ByteBufferOutputStream();
+        TIOStreamTransport     transport = new TIOStreamTransport(out);
+        batch_mutate_args      args      = new batch_mutate_args();
         args.setMutation_map(mutationMap);
 
         try {
@@ -168,27 +256,6 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
                         return value.keySet();
                     }
                 });
-    }
-
-    /**
-     * Get or add a column family mutation to this row
-     * 
-     * @param colFamily
-     * @return
-     */
-    private <K, C> List<Mutation> getColumnFamilyMutationList(ColumnFamily<K, C> colFamily, K key) {
-        Map<String, List<Mutation>> innerMutationMap = mutationMap.get(colFamily.getKeySerializer().toByteBuffer(key));
-        if (innerMutationMap == null) {
-            innerMutationMap = Maps.newHashMap();
-            mutationMap.put(colFamily.getKeySerializer().toByteBuffer(key), innerMutationMap);
-        }
-
-        List<Mutation> innerMutationList = innerMutationMap.get(colFamily.getName());
-        if (innerMutationList == null) {
-            innerMutationList = Lists.newArrayList();
-            innerMutationMap.put(colFamily.getName(), innerMutationList);
-        }
-        return innerMutationList;
     }
 
     public Map<ByteBuffer, Map<String, List<Mutation>>> getMutationMap() {
@@ -238,9 +305,64 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
         this.timestamp = timestamp;
         return this;
     }
+    
+    @Override
+    public MutationBatch withTimestamp(long timestamp) {
+        this.clock = null;
+        this.timestamp = timestamp;
+        return this;
+    }
 
+    @Override
     public MutationBatch lockCurrentTimestamp() {
         this.timestamp = this.clock.getCurrentTime();
         return this;
     }
+    
+    @Override
+    public MutationBatch setConsistencyLevel(ConsistencyLevel consistencyLevel) {
+        this.consistencyLevel = consistencyLevel;
+        return this;
+    }
+    
+    @Override
+    public MutationBatch withConsistencyLevel(ConsistencyLevel consistencyLevel) {
+        this.consistencyLevel = consistencyLevel;
+        return this;
+    }
+
+    public ConsistencyLevel getConsistencyLevel() {
+        return this.consistencyLevel;
+    }
+
+    @Override
+    public MutationBatch pinToHost(Host host) {
+        this.pinnedHost = host;
+        return this;
+    }
+    
+    @Override
+    public MutationBatch withRetryPolicy(RetryPolicy retry) {
+        this.retry = retry;
+        return this;
+    }
+
+    @Override
+    public MutationBatch usingWriteAheadLog(WriteAheadLog manager) {
+        this.wal = manager;
+        return this;
+    }
+
+    public Host getPinnedHost() {
+        return this.pinnedHost;
+    }
+
+    public RetryPolicy getRetryPolicy() {
+        return this.retry;
+    }
+    
+    public WriteAheadLog getWriteAheadLog() {
+        return this.wal;
+    }
+
 }

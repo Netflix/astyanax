@@ -15,6 +15,11 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.exceptions;
 
+/**
+ * This is actually a socket timeout
+ * @author elandau
+ *
+ */
 public class TimeoutException extends ConnectionException implements IsRetryableException, IsDeadConnectionException,
         IsTimeoutException {
     /**

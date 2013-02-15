@@ -16,47 +16,24 @@
 package com.netflix.astyanax.thrift.model;
 
 import java.nio.ByteBuffer;
-import java.util.Date;
-import java.util.UUID;
 
 import org.apache.cassandra.thrift.CounterSuperColumn;
 
 import com.netflix.astyanax.Serializer;
-import com.netflix.astyanax.model.Column;
+import com.netflix.astyanax.model.AbstractColumnImpl;
 import com.netflix.astyanax.model.ColumnList;
 
-public class ThriftCounterSuperColumnImpl<C> implements Column<C> {
+public class ThriftCounterSuperColumnImpl<C> extends AbstractColumnImpl<C> {
     private final CounterSuperColumn column;
-    private final C name;
 
     public ThriftCounterSuperColumnImpl(C name, CounterSuperColumn column) {
-        this.name = name;
+        super(name);
         this.column = column;
     }
 
     @Override
-    public C getName() {
-        return name;
-    }
-
-    @Override
     public <V> V getValue(Serializer<V> valSer) {
-        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no value");
-    }
-
-    @Override
-    public String getStringValue() {
-        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no value");
-    }
-
-    @Override
-    public int getIntegerValue() {
-        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no value");
-    }
-
-    @Override
-    public long getLongValue() {
-        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no value");
+        throw new UnsupportedOperationException("CounterSuperColumn \'" + getName() + "\' has no value");
     }
 
     @Override
@@ -70,38 +47,8 @@ public class ThriftCounterSuperColumnImpl<C> implements Column<C> {
     }
 
     @Override
-    public byte[] getByteArrayValue() {
-        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no value");
-    }
-
-    @Override
-    public boolean getBooleanValue() {
-        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no value");
-    }
-
-    @Override
-    public ByteBuffer getByteBufferValue() {
-        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no value");
-    }
-
-    @Override
-    public Date getDateValue() {
-        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no value");
-    }
-
-    @Override
-    public UUID getUUIDValue() {
-        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no value");
-    }
-
-    @Override
     public long getTimestamp() {
-        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no timestamp");
-    }
-
-    @Override
-    public double getDoubleValue() {
-        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no value");
+        throw new UnsupportedOperationException("CounterSuperColumn \'" + getName() + "\' has no timestamp");
     }
 
     @Override
@@ -111,7 +58,7 @@ public class ThriftCounterSuperColumnImpl<C> implements Column<C> {
 
     @Override
     public int getTtl() {
-        throw new UnsupportedOperationException("CounterSuperColumn \'" + this.name + "\' has no ttl");
+        throw new UnsupportedOperationException("CounterSuperColumn \'" + getName() + "\' has no ttl");
     }
 
     @Override

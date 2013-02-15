@@ -15,10 +15,12 @@
  ******************************************************************************/
 package com.netflix.astyanax.thrift;
 
-import org.apache.cassandra.dht.Token;
+import java.nio.ByteBuffer;
+
 import org.apache.cassandra.thrift.Cassandra;
 
 import com.netflix.astyanax.CassandraOperationTracer;
+import com.netflix.astyanax.connectionpool.ConnectionContext;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
@@ -38,7 +40,7 @@ public abstract class AbstractOperationImpl<R> implements Operation<Cassandra.Cl
     }
 
     @Override
-    public Token getToken() {
+    public ByteBuffer getRowKey() {
         return null;
     }
 
@@ -48,10 +50,10 @@ public abstract class AbstractOperationImpl<R> implements Operation<Cassandra.Cl
     }
 
     @Override
-    public R execute(Cassandra.Client client) throws ConnectionException {
+    public R execute(Cassandra.Client client, ConnectionContext state) throws ConnectionException {
         try {
             tracer.start();
-            R result = internalExecute(client);
+            R result = internalExecute(client, state);
             tracer.success();
             return result;
         }
@@ -67,5 +69,5 @@ public abstract class AbstractOperationImpl<R> implements Operation<Cassandra.Cl
         return pinnedHost;
     }
 
-    protected abstract R internalExecute(Cassandra.Client client) throws Exception;
+    protected abstract R internalExecute(Cassandra.Client client, ConnectionContext state) throws Exception;
 }

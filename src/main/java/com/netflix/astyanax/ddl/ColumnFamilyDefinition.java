@@ -16,7 +16,9 @@
 package com.netflix.astyanax.ddl;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 public interface ColumnFamilyDefinition {
 
@@ -29,54 +31,82 @@ public interface ColumnFamilyDefinition {
     String getKeyspace();
 
     @Deprecated
-    ColumnFamilyDefinition setMemtableFlushAfterMins(int value);
+    ColumnFamilyDefinition setMemtableFlushAfterMins(Integer value);
 
     @Deprecated
-    int getMemtableFlushAfterMins();
+    Integer getMemtableFlushAfterMins();
 
     @Deprecated
-    ColumnFamilyDefinition setMemtableOperationsInMillions(double value);
+    ColumnFamilyDefinition setMemtableOperationsInMillions(Double value);
 
     @Deprecated
-    double getMemtableOperationsInMillions();
+    Double getMemtableOperationsInMillions();
 
     @Deprecated
-    ColumnFamilyDefinition setMemtableThroughputInMb(int value);
+    ColumnFamilyDefinition setMemtableThroughputInMb(Integer value);
 
     @Deprecated
-    int getMemtableThroughputInMb();
+    Integer getMemtableThroughputInMb();
 
-    ColumnFamilyDefinition setMergeShardsChance(double value);
+    ColumnFamilyDefinition setMergeShardsChance(Double value);
 
-    double getMergeShardsChance();
+    Double getMergeShardsChance();
 
-    ColumnFamilyDefinition setMinCompactionThreshold(int value);
+    ColumnFamilyDefinition setMinCompactionThreshold(Integer value);
 
-    int getMinCompactionThreshold();
+    Integer getMinCompactionThreshold();
 
+    ColumnFamilyDefinition setMaxCompactionThreshold(Integer value);
+
+    Integer getMaxCompactionThreshold();
+
+    ColumnFamilyDefinition setCompactionStrategy(String strategy);
+
+    String getCompactionStrategy();
+
+    ColumnFamilyDefinition setCompactionStrategyOptions(Map<String, String>  options);
+    
+    Map<String, String> getCompactionStrategyOptions();
+
+    ColumnFamilyDefinition setCompressionOptions(Map<String, String>  options);
+    
+    Map<String, String> getCompressionOptions();
+    
+    ColumnFamilyDefinition setBloomFilterFpChance(Double chance);
+    
+    Double getBloomFilterFpChance();
+    
+    ColumnFamilyDefinition setCaching(String caching);
+    
+    String getCaching();
+    
     ColumnFamilyDefinition setName(String name);
 
     String getName();
 
-    ColumnFamilyDefinition setReadRepairChance(double value);
+    ColumnFamilyDefinition setReadRepairChance(Double value);
 
-    double getReadRepairChance();
+    Double getReadRepairChance();
 
-    ColumnFamilyDefinition setReplicateOnWrite(boolean value);
+    ColumnFamilyDefinition setLocalReadRepairChance(Double value);
 
-    boolean getReplicateOnWrite();
+    Double getLocalReadRepairChance();
+
+    ColumnFamilyDefinition setReplicateOnWrite(Boolean value);
+
+    Boolean getReplicateOnWrite();
 
     ColumnFamilyDefinition setRowCacheProvider(String value);
 
     String getRowCacheProvider();
 
-    ColumnFamilyDefinition setRowCacheSavePeriodInSeconds(int value);
+    ColumnFamilyDefinition setRowCacheSavePeriodInSeconds(Integer value);
 
-    int getRowCacheSavePeriodInSeconds();
+    Integer getRowCacheSavePeriodInSeconds();
 
-    ColumnFamilyDefinition setRowCacheSize(double size);
+    ColumnFamilyDefinition setRowCacheSize(Double size);
 
-    double getRowCacheSize();
+    Double getRowCacheSize();
 
     ColumnFamilyDefinition setComparatorType(String value);
 
@@ -86,21 +116,21 @@ public interface ColumnFamilyDefinition {
 
     String getDefaultValidationClass();
 
-    ColumnFamilyDefinition setId(int id);
+    ColumnFamilyDefinition setId(Integer id);
 
-    int getId();
+    Integer getId();
 
     ColumnFamilyDefinition setKeyAlias(ByteBuffer alias);
 
     ByteBuffer getKeyAlias();
 
-    ColumnFamilyDefinition setKeyCacheSavePeriodInSeconds(int value);
+    ColumnFamilyDefinition setKeyCacheSavePeriodInSeconds(Integer value);
 
-    int getKeyCacheSavePeriodInSeconds();
+    Integer getKeyCacheSavePeriodInSeconds();
 
-    ColumnFamilyDefinition setKeyCacheSize(double keyCacheSize);
+    ColumnFamilyDefinition setKeyCacheSize(Double keyCacheSize);
 
-    double getKeyCacheSize();
+    Double getKeyCacheSize();
 
     ColumnFamilyDefinition setKeyValidationClass(String keyValidationClass);
 
@@ -113,4 +143,23 @@ public interface ColumnFamilyDefinition {
     ColumnDefinition makeColumnDefinition();
 
     void clearColumnDefinitionList();
+
+    Collection<String> getFieldNames();
+
+    Object getFieldValue(String name);
+
+    ColumnFamilyDefinition setFieldValue(String name, Object value);
+    
+    ColumnFamilyDefinition setGcGraceSeconds(Integer seconds);
+    
+    Integer getGcGraceSeconds();
+    
+    /**
+     * Get metadata for all fields
+     * @return
+     */
+    Collection<FieldMetadata> getFieldsMetadata();
+    
+    public void setFields(Map<String, Object> options);
+
 }

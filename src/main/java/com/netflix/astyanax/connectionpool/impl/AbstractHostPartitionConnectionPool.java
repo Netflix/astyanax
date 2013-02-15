@@ -15,18 +15,18 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.impl;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
+import java.util.Map.Entry;
 
-import org.apache.cassandra.dht.BigIntegerToken;
-import org.apache.cassandra.dht.Token;
 import org.cliffc.high_scale_lib.NonBlockingHashMap;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Maps;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.netflix.astyanax.connectionpool.ConnectionFactory;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
@@ -35,10 +35,10 @@ import com.netflix.astyanax.connectionpool.ConnectionPoolMonitor;
 import com.netflix.astyanax.connectionpool.ExecuteWithFailover;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
-import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
 import com.netflix.astyanax.connectionpool.LatencyScoreStrategy.Listener;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.OperationResult;
+import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.retry.RetryPolicy;
@@ -49,25 +49,23 @@ import com.netflix.astyanax.retry.RetryPolicy;
  * 
  * @author elandau
  * 
- * @param <CL>
+ * @param <CL>  
  */
 public abstract class AbstractHostPartitionConnectionPool<CL> implements ConnectionPool<CL>,
         SimpleHostConnectionPool.Listener<CL> {
     protected final NonBlockingHashMap<Host, HostConnectionPool<CL>> hosts;
-    protected final ConnectionPoolConfiguration config;
-    protected final ConnectionFactory<CL> factory;
-    protected final ConnectionPoolMonitor monitor;
-    private final LatencyScoreStrategy latencyScoreStrategy;
-    protected final Topology<CL> topology;
+    protected final ConnectionPoolConfiguration                      config;
+    protected final ConnectionFactory<CL>                            factory;
+    protected final ConnectionPoolMonitor                            monitor;
+    protected final Topology<CL>                                     topology;
 
     public AbstractHostPartitionConnectionPool(ConnectionPoolConfiguration config, ConnectionFactory<CL> factory,
             ConnectionPoolMonitor monitor) {
-        this.config = config;
-        this.factory = factory;
-        this.hosts = new NonBlockingHashMap<Host, HostConnectionPool<CL>>();
-        this.monitor = monitor;
-        this.latencyScoreStrategy = config.getLatencyScoreStrategy();
-        this.topology = new TokenPartitionedTopology<CL>(this.latencyScoreStrategy);
+        this.config     = config;
+        this.factory    = factory;
+        this.monitor    = monitor;
+        this.hosts      = new NonBlockingHashMap<Host, HostConnectionPool<CL>>();
+        this.topology   = new TokenPartitionedTopology<CL>(config.getPartitioner(), config.getLatencyScoreStrategy());
     }
 
     @Override
@@ -76,12 +74,10 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
 
         String seeds = config.getSeeds();
         if (seeds != null && !seeds.isEmpty()) {
-            Map<Token, List<Host>> ring = Maps.newHashMap();
-            ring.put(new BigIntegerToken("0"), config.getSeedHosts());
-            setHosts(ring);
+            setHosts(config.getSeedHosts());
         }
 
-        latencyScoreStrategy.start(new Listener() {
+        config.getLatencyScoreStrategy().start(new Listener() {
             @Override
             public void onUpdate() {
                 rebuildPartitions();
@@ -102,7 +98,8 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
             pool.getValue().shutdown();
         }
 
-        latencyScoreStrategy.shutdown();
+        config.getLatencyScoreStrategy().shutdown();
+        config.shutdown();
     }
 
     protected HostConnectionPool<CL> newHostConnectionPool(Host host, ConnectionFactory<CL> factory,
@@ -120,30 +117,58 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
         topology.resumePool(pool);
     }
 
-    @Override
-    public final boolean addHost(Host host, boolean refresh) {
-        // Already exists
-        if (hosts.get(host) != null) {
-            return false;
+    private static Comparator<TokenRange> compareByStartToken = new Comparator<TokenRange>() {
+        @Override
+        public int compare(TokenRange p1, TokenRange p2) {
+            return p1.getStartToken().compareTo(p2.getStartToken());
         }
+    };
 
-        HostConnectionPool<CL> pool = newHostConnectionPool(host, factory, config);
-        if (null == hosts.putIfAbsent(host, pool)) {
-            try {
-                monitor.onHostAdded(host, pool);
-                if (refresh) {
-                    topology.addPool(pool);
-                    rebuildPartitions();
+    @Override
+    public final synchronized boolean addHost(Host host, boolean refresh) {
+        // Already exists
+        if (hosts.containsKey(host)) {
+            // Check to see if we are adding token ranges or if the token ranges changed
+            // which will force a rebuild of the token topology
+            Host existingHost = hosts.get(host).getHost();
+            if (existingHost.getTokenRanges().size() != host.getTokenRanges().size()) {
+                existingHost.setTokenRanges(host.getTokenRanges());
+                return true;
+            }
+            
+            ArrayList<TokenRange> currentTokens = Lists.newArrayList(existingHost.getTokenRanges());
+            ArrayList<TokenRange> newTokens     = Lists.newArrayList(host.getTokenRanges());
+            Collections.sort(currentTokens, compareByStartToken);
+            Collections.sort(newTokens,     compareByStartToken);
+            for (int i = 0; i < currentTokens.size(); i++) {
+                if (!currentTokens.get(i).getStartToken().equals(newTokens.get(i).getStartToken()) ||
+                    !currentTokens.get(i).getEndToken().equals(newTokens.get(i).getEndToken())) {
+                    return false;
                 }
-                pool.growConnections(config.getInitConnsPerHost());
             }
-            catch (Exception e) {
-                // Ignore, pool will have been marked down internally
-            }
+            
+            existingHost.setTokenRanges(host.getTokenRanges());
             return true;
         }
         else {
-            return false;
+            HostConnectionPool<CL> pool = newHostConnectionPool(host, factory, config);
+            if (null == hosts.putIfAbsent(host, pool)) {
+                try {
+                    monitor.onHostAdded(host, pool);
+                    if (refresh) {
+                        topology.addPool(pool);
+                        rebuildPartitions();
+                    }
+                    pool.primeConnections(config.getInitConnsPerHost());
+                }
+                catch (Exception e) {
+                    // Ignore, pool will have been marked down internally
+                }
+                return true;
+            }
+            else {
+                return false;
+            }
         }
     }
 
@@ -151,7 +176,7 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
     public boolean isHostUp(Host host) {
         HostConnectionPool<CL> pool = hosts.get(host);
         if (pool != null) {
-            return !pool.isShutdown();
+            return !pool.isReconnecting();
         }
         return false;
     }
@@ -167,15 +192,18 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
     }
 
     @Override
-    public boolean removeHost(Host host, boolean refresh) {
+    public List<HostConnectionPool<CL>> getPools() {
+        return ImmutableList.copyOf(hosts.values());
+    }
+
+    @Override
+    public synchronized boolean removeHost(Host host, boolean refresh) {
         HostConnectionPool<CL> pool = hosts.remove(host);
         if (pool != null) {
+            topology.removePool(pool);
+            rebuildPartitions();
             monitor.onHostRemoved(host);
             pool.shutdown();
-            if (refresh) {
-                topology.removePool(pool);
-                rebuildPartitions();
-            }
             return true;
         }
         else {
@@ -189,42 +217,37 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
     }
 
     @Override
-    public synchronized void setHosts(Map<Token, List<Host>> ring) {
+    public synchronized void setHosts(Collection<Host> ring) {
+        
         // Temporary list of hosts to remove. Any host not in the new ring will
         // be removed
         Set<Host> hostsToRemove = Sets.newHashSet(hosts.keySet());
 
         // Add new hosts.
-        for (List<Host> hosts : ring.values()) {
-            for (Host host : hosts) {
-                addHost(host, false);
-                hostsToRemove.remove(host);
-            }
+        boolean changed = false;
+        for (Host host : ring) {
+            if (addHost(host, false))
+                changed = true;
+            hostsToRemove.remove(host);
         }
 
         // Remove any hosts that are no longer in the ring
         for (Host host : hostsToRemove) {
             removeHost(host, false);
+            changed = true;
         }
 
-        // Recreate the topology
-        Map<Token, Collection<HostConnectionPool<CL>>> tokens = Maps.newHashMap();
-        for (Map.Entry<Token, List<Host>> entry : ring.entrySet()) {
-            Set<HostConnectionPool<CL>> pools = Sets.newHashSet();
-            for (Host host : entry.getValue()) {
-                pools.add(getHostPool(host));
-            }
-            tokens.put(entry.getKey(), pools);
+        if (changed) {
+            topology.setPools(hosts.values());
+            rebuildPartitions();
         }
-
-        topology.setPools(tokens);
     }
-
+    
     @Override
     public <R> OperationResult<R> executeWithFailover(Operation<CL, R> op, RetryPolicy retry)
             throws ConnectionException {
         retry.begin();
-        ConnectionException lastException;
+        ConnectionException lastException = null;
         do {
             try {
                 OperationResult<R> result = newExecuteWithFailover(op).tryOperation(op);
@@ -259,5 +282,9 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
      */
     protected void rebuildPartitions() {
         topology.refresh();
+    }
+    
+    public Topology<CL> getTopology() {
+        return topology;
     }
 }

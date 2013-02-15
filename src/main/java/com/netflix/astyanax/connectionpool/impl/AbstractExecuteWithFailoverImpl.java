@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * Copyright 2011 Netflix
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ ******************************************************************************/
 package com.netflix.astyanax.connectionpool.impl;
 
 import com.netflix.astyanax.connectionpool.Connection;
@@ -43,13 +58,15 @@ public abstract class AbstractExecuteWithFailoverImpl<CL, R> implements ExecuteW
 	
 	@Override
 	public OperationResult<R> tryOperation(Operation<CL, R> operation) throws ConnectionException {
+	    Operation<CL, R> filteredOperation = config.getOperationFilterFactory().attachFilter(operation);
+	    
         while (true) {
             attemptCounter++;
             
             try {
-                connection = borrowConnection(operation);
+                connection = borrowConnection(filteredOperation);
                 startTime = System.currentTimeMillis();
-                OperationResult<R> result = connection.execute(operation);
+                OperationResult<R> result = connection.execute(filteredOperation);
                 result.setAttemptsCount(attemptCounter);
                 monitor.incOperationSuccess(getCurrentHost(), result.getLatency());
                 return result;
@@ -59,6 +76,7 @@ public abstract class AbstractExecuteWithFailoverImpl<CL, R> implements ExecuteW
                         : new UnknownException(e);
             	try {
             		informException(ce);
+                    monitor.incFailover(ce.getHost(), ce);
             	}
             	catch (ConnectionException ex) {
                     monitor.incOperationFailure(getCurrentHost(), ex);
@@ -78,7 +96,7 @@ public abstract class AbstractExecuteWithFailoverImpl<CL, R> implements ExecuteW
 	    }
 	}
     
-    public void informException(ConnectionException connectionException) throws ConnectionException {
+    private void informException(ConnectionException connectionException) throws ConnectionException {
         connectionException
             .setHost(getCurrentHost())
         	.setLatency(System.currentTimeMillis() - startTime)
@@ -89,8 +107,6 @@ public abstract class AbstractExecuteWithFailoverImpl<CL, R> implements ExecuteW
             if (!canRetry()) {
                 throw connectionException;
             }
-            
-        	monitor.incFailover(connectionException.getHost(), connectionException);
         }
         else {
             // Most likely an operation error

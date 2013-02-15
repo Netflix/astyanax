@@ -1,10 +1,27 @@
+/*******************************************************************************
+ * Copyright 2011 Netflix
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ ******************************************************************************/
 package com.netflix.astyanax.recipes.locks;
 
+import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.netflix.astyanax.ColumnListMutation;
@@ -18,6 +35,8 @@ import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.model.OrderedColumnMap;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.retry.RunOnce;
+import com.netflix.astyanax.serializers.ByteBufferSerializer;
+import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.util.RangeBuilder;
 import com.netflix.astyanax.util.TimeUUIDUtils;
 
@@ -86,34 +105,34 @@ import com.netflix.astyanax.util.TimeUUIDUtils;
  * @param <K>
  */
 public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
-    public static final int LOCK_TIMEOUT = 60;
+    public static final int      LOCK_TIMEOUT                    = 60;
     public static final TimeUnit DEFAULT_OPERATION_TIMEOUT_UNITS = TimeUnit.MINUTES;
-    public static final String DEFAULT_LOCK_PREFIX = "_LOCK_";
+    public static final String   DEFAULT_LOCK_PREFIX             = "_LOCK_";
 
     private final ColumnFamily<K, String> columnFamily; // The column family for data and lock
-    private final Keyspace keyspace;                    // The keyspace
-    private final K key;                                // Key being locked
+    private final Keyspace   keyspace;                  // The keyspace
+    private final K          key;                       // Key being locked
 
-    private long timeout = LOCK_TIMEOUT;                // Timeout after which the lock expires
-    private TimeUnit timeoutUnits = DEFAULT_OPERATION_TIMEOUT_UNITS;
-    private String prefix = DEFAULT_LOCK_PREFIX;        // Prefix to identify the lock columns
+    private long             timeout          = LOCK_TIMEOUT;                   // Timeout after which the lock expires.  Units defined by timeoutUnits.
+    private TimeUnit         timeoutUnits     = DEFAULT_OPERATION_TIMEOUT_UNITS;
+    private String           prefix           = DEFAULT_LOCK_PREFIX;            // Prefix to identify the lock columns
     private ConsistencyLevel consistencyLevel = ConsistencyLevel.CL_LOCAL_QUORUM;
-    private boolean failOnStaleLock = false;           
-    private String lockColumn = null;
-    private String lockId = null;
-    private Set<String> locksToDelete = Sets.newHashSet();
-    private ColumnMap<String> columns = null;
-    private Integer ttl = null;
-    private boolean readDataColumns = false;
-    private RetryPolicy backoffPolicy = RunOnce.get();
-    private long acquireTime = 0;
-    private int retryCount = 0;
+    private boolean          failOnStaleLock  = false;           
+    private String           lockColumn       = null;
+    private String           lockId           = null;
+    private Set<String>      locksToDelete    = Sets.newHashSet();
+    private ColumnMap<String> columns         = null;
+    private Integer          ttl              = null;                           // Units in seconds
+    private boolean          readDataColumns  = false;
+    private RetryPolicy      backoffPolicy    = RunOnce.get();
+    private long             acquireTime      = 0;
+    private int              retryCount       = 0;
 
     public ColumnPrefixDistributedRowLock(Keyspace keyspace, ColumnFamily<K, String> columnFamily, K key) {
-        this.keyspace = keyspace;
+        this.keyspace     = keyspace;
         this.columnFamily = columnFamily;
-        this.key = key;
-        this.lockId = TimeUUIDUtils.getUniqueTimeUUIDinMicros().toString();
+        this.key          = key;
+        this.lockId       = TimeUUIDUtils.getUniqueTimeUUIDinMicros().toString();
     }
 
     /**
@@ -185,7 +204,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
      * @return
      */
     public ColumnPrefixDistributedRowLock<K> expireLockAfter(long timeout, TimeUnit unit) {
-        this.timeout = timeout;
+        this.timeout      = timeout;
         this.timeoutUnits = unit;
         return this;
     }
@@ -204,6 +223,11 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
         return this;
     }
     
+    public ColumnPrefixDistributedRowLock<K> withTtl(Integer ttl, TimeUnit units) {
+        this.ttl = (int) TimeUnit.SECONDS.convert(ttl,  units);
+        return this;
+    }
+    
     public ColumnPrefixDistributedRowLock<K> withBackoff(RetryPolicy policy) {
         this.backoffPolicy  = policy;
         return this;
@@ -218,6 +242,9 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
      */
     @Override
     public void acquire() throws Exception {
+        
+        Preconditions.checkArgument(ttl == null || TimeUnit.SECONDS.convert(timeout, timeoutUnits) < ttl, "Timeout " + timeout + " must be less than TTL " + ttl);
+        
         RetryPolicy retry = backoffPolicy.duplicate();
         retryCount = 0;
         while (true) {
@@ -304,14 +331,24 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
      * @throws Exception
      */
     public void releaseWithMutation(MutationBatch m) throws Exception {
+        releaseWithMutation(m, false);
+    }
+    
+    public boolean releaseWithMutation(MutationBatch m, boolean force) throws Exception {
         long elapsed = System.currentTimeMillis() - acquireTime;
+        boolean isStale = false;
         if (timeout > 0 && elapsed > TimeUnit.MILLISECONDS.convert(timeout, this.timeoutUnits)) {
-            throw new StaleLockException("Lock for '" + getKey() + "' became stale");
+            isStale = true;
+            if (!force) {
+                throw new StaleLockException("Lock for '" + getKey() + "' became stale");
+            }
         }
         
         m.setConsistencyLevel(consistencyLevel);
         fillReleaseMutation(m, false);
         m.execute();
+        
+        return isStale;
     }
     
     /**
@@ -345,7 +382,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
     
             for (Column<String> c : lockResult) {
                 if (c.getName().startsWith(prefix))
-                    result.put(c.getName(), c.getLongValue());
+                    result.put(c.getName(), readTimeoutValue(c));
                 else 
                     columns.add(c);
             }
@@ -361,7 +398,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
                     .getResult();
 
             for (Column<String> c : lockResult) {
-                result.put(c.getName(), c.getLongValue());
+                result.put(c.getName(), readTimeoutValue(c));
             }
 
         }
@@ -442,14 +479,44 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
         else {
             lockColumn = prefix + lockId;
         }
-        if (time != null) {
-            m.withRow(columnFamily, key).putColumn(lockColumn,
-                    time + TimeUnit.MICROSECONDS.convert(timeout, timeoutUnits), ttl);
+        
+        Long timeoutValue 
+              = (time == null)
+              ? new Long(0)
+              : time + TimeUnit.MICROSECONDS.convert(timeout, timeoutUnits);
+              
+        m.withRow(columnFamily, key).putColumn(lockColumn, generateTimeoutValue(timeoutValue), ttl);
+        return lockColumn;
+    }
+    
+    /**
+     * Generate the expire time value to put in the column value.
+     * @param timeout
+     * @return
+     */
+    private ByteBuffer generateTimeoutValue(long timeout) {
+        if (columnFamily.getDefaultValueSerializer() == ByteBufferSerializer.get() ||
+            columnFamily.getDefaultValueSerializer() == LongSerializer.get()) {
+            return LongSerializer.get().toByteBuffer(timeout);
         }
         else {
-            m.withRow(columnFamily, key).putColumn(lockColumn, new Long(0), ttl);
+            return columnFamily.getDefaultValueSerializer().fromString(Long.toString(timeout));
         }
-        return lockColumn;
+    }
+    
+    /**
+     * Read the expiration time from the column value
+     * @param column
+     * @return
+     */
+    public long readTimeoutValue(Column<?> column) {
+        if (columnFamily.getDefaultValueSerializer() == ByteBufferSerializer.get() ||
+            columnFamily.getDefaultValueSerializer() == LongSerializer.get()) {
+            return column.getLongValue();
+        }
+        else {
+            return Long.parseLong(column.getStringValue());
+        }
     }
 
     /**

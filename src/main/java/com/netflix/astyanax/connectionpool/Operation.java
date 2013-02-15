@@ -15,7 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool;
 
-import org.apache.cassandra.dht.Token;
+import java.nio.ByteBuffer;
 
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 
@@ -25,18 +25,19 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
  * 
  * @author elandau
  * 
- * @param <CL>
+ * @param <C>
  * @param <R>
  */
 public interface Operation<CL, R> {
     /**
-     * Execute the operation on the client object and return the results
+     * Execute the operation on the client object and return the results.
      * 
-     * @param client
+     * @param client - The client object
+     * @param state  - State and metadata specific to the connection
      * @return
      * @throws ConnectionException
      */
-    R execute(CL client) throws ConnectionException;
+    R execute(CL client, ConnectionContext state) throws ConnectionException;
 
     /**
      * Return the unique key on which the operation is performed or null if the
@@ -44,8 +45,8 @@ public interface Operation<CL, R> {
      * 
      * @return
      */
-    Token getToken();
-
+    ByteBuffer getRowKey();
+    
     /**
      * Return keyspace for this operation. Return null if using the current
      * keyspace, or a keyspace is not needed for the operation.
@@ -58,6 +59,7 @@ public interface Operation<CL, R> {
      * Return the host to run on or null to select a host using the load
      * blancer. Failover is disabled for this scenario.
      * 
+     * @param host
      * @return
      */
     Host getPinnedHost();

@@ -1,8 +1,5 @@
 package com.netflix.astyanax;
 
-import org.apache.cassandra.dht.IPartitioner;
-
-import com.google.common.base.Supplier;
 import com.netflix.astyanax.connectionpool.ConnectionFactory;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
@@ -18,7 +15,7 @@ import com.netflix.astyanax.connectionpool.ConnectionPoolMonitor;
  */
 public interface AstyanaxTypeFactory<T> {
     Keyspace createKeyspace(String ksName, ConnectionPool<T> cp, AstyanaxConfiguration asConfig,
-            Supplier<IPartitioner> partitioner, KeyspaceTracerFactory tracerFactory);
+            KeyspaceTracerFactory tracerFactory);
 
     Cluster createCluster(ConnectionPool<T> cp, AstyanaxConfiguration asConfig, 
             KeyspaceTracerFactory tracerFactory);

@@ -18,11 +18,11 @@ package com.netflix.astyanax.connectionpool.impl;
 import com.netflix.astyanax.connectionpool.RetryBackoffStrategy;
 
 public class FixedRetryBackoffStrategy implements RetryBackoffStrategy {
-    private final int timeout;
+    private final int interval;
     private final int suspendTime;
 
-    public FixedRetryBackoffStrategy(int timeout, int suspendTime) {
-        this.timeout = timeout;
+    public FixedRetryBackoffStrategy(int interval, int suspendTime) {
+        this.interval = interval;
         this.suspendTime = suspendTime;
     }
 
@@ -38,7 +38,7 @@ public class FixedRetryBackoffStrategy implements RetryBackoffStrategy {
                     isSuspended = false;
                     return suspendTime;
                 }
-                return timeout;
+                return interval;
             }
 
             @Override

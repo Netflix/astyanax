@@ -37,8 +37,8 @@ public class ThriftCounterSuperColumnMutationImpl<C> extends AbstractColumnListM
     private SlicePredicate deletionPredicate;
 
     public ThriftCounterSuperColumnMutationImpl(long timestamp, List<Mutation> mutationList, ColumnPath<C> path) {
+        super(timestamp);
         this.path = path;
-        this.timestamp = timestamp;
         this.mutationList = mutationList;
     }
 
@@ -107,6 +107,7 @@ public class ThriftCounterSuperColumnMutationImpl<C> extends AbstractColumnListM
 
     @Override
     public ColumnListMutation<C> setDefaultTtl(Integer ttl) {
+        // TODO: Throw an exception
         return this;
     }
 }

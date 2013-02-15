@@ -16,45 +16,24 @@
 package com.netflix.astyanax.thrift.model;
 
 import java.nio.ByteBuffer;
-import java.util.Date;
-import java.util.UUID;
 
 import com.netflix.astyanax.Serializer;
-import com.netflix.astyanax.model.Column;
+import com.netflix.astyanax.model.AbstractColumnImpl;
 import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.serializers.LongSerializer;
 
-public class ThriftCounterColumnImpl<C> implements Column<C> {
+public class ThriftCounterColumnImpl<C> extends AbstractColumnImpl<C> {
 
-    private final C name;
     private final org.apache.cassandra.thrift.CounterColumn column;
 
     public ThriftCounterColumnImpl(C name, org.apache.cassandra.thrift.CounterColumn column) {
-        this.name = name;
+        super(name);
         this.column = column;
     }
 
     @Override
-    public C getName() {
-        return this.name;
-    }
-
-    @Override
     public <V> V getValue(Serializer<V> valSer) {
-        throw new UnsupportedOperationException("CounterColumn \'" + this.name
+        throw new UnsupportedOperationException("CounterColumn \'" + getName()
                 + "\' has no generic value. Call getLongValue().");
-    }
-
-    @Override
-    public String getStringValue() {
-        throw new UnsupportedOperationException("CounterColumn \'" + this.name
-                + "\' has no String value. Call getLongValue().");
-    }
-
-    @Override
-    public int getIntegerValue() {
-        throw new UnsupportedOperationException("CounterColumn \'" + this.name
-                + "\' has no Integer value. Call getLongValue().");
     }
 
     @Override
@@ -64,7 +43,7 @@ public class ThriftCounterColumnImpl<C> implements Column<C> {
 
     @Override
     public <C2> ColumnList<C2> getSubColumns(Serializer<C2> ser) {
-        throw new UnsupportedOperationException("CounterColumn \'" + this.name
+        throw new UnsupportedOperationException("CounterColumn \'" + getName()
                 + "\' has no sub columns. Call getLongValue().");
     }
 
@@ -74,43 +53,8 @@ public class ThriftCounterColumnImpl<C> implements Column<C> {
     }
 
     @Override
-    public byte[] getByteArrayValue() {
-        throw new UnsupportedOperationException("CounterColumn \'" + this.name
-                + "\' has no byte[] value. Call getLongValue().");
-    }
-
-    @Override
-    public boolean getBooleanValue() {
-        throw new UnsupportedOperationException("CounterColumn \'" + this.name
-                + "\' has no Boolean value. Call getLongValue().");
-    }
-
-    @Override
-    public ByteBuffer getByteBufferValue() {
-        return LongSerializer.get().toByteBuffer(column.getValue());
-    }
-
-    @Override
-    public Date getDateValue() {
-        throw new UnsupportedOperationException("CounterColumn \'" + this.name
-                + "\' has no Date value. Call getLongValue().");
-    }
-
-    @Override
-    public UUID getUUIDValue() {
-        throw new UnsupportedOperationException("CounterColumn \'" + this.name
-                + "\' has no UUID value. Call getLongValue().");
-    }
-
-    @Override
-    public double getDoubleValue() {
-        throw new UnsupportedOperationException("CounterColumn \'" + this.name
-                + "\' has no String value. Call getLongValue().");
-    }
-
-    @Override
     public long getTimestamp() {
-        throw new UnsupportedOperationException("CounterColumn \'" + this.name + "\' has no timestamp");
+        throw new UnsupportedOperationException("CounterColumn \'" + getName() + "\' has no timestamp");
     }
 
     @Override
@@ -120,7 +64,7 @@ public class ThriftCounterColumnImpl<C> implements Column<C> {
 
     @Override
     public int getTtl() {
-        throw new UnsupportedOperationException("CounterColumn \'" + this.name + "\' has no ttl");
+        return 0;
     }
 
     @Override

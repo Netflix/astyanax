@@ -15,21 +15,39 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.impl;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+
+import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Function;
+import com.google.common.base.Suppliers;
+import com.google.common.collect.Lists;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.ConnectionPoolMonitor;
 import com.netflix.astyanax.connectionpool.Host;
-import com.netflix.astyanax.connectionpool.OperationResult;
+import com.netflix.astyanax.connectionpool.HostConnectionPool;
+import com.netflix.astyanax.connectionpool.LatencyScoreStrategy.Instance;
+import com.netflix.astyanax.connectionpool.LatencyScoreStrategy.Listener;
+import com.netflix.astyanax.connectionpool.exceptions.BadRequestException;
+import com.netflix.astyanax.connectionpool.exceptions.ConnectionAbortedException;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.exceptions.NoAvailableHostsException;
+import com.netflix.astyanax.connectionpool.exceptions.HostDownException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
+import com.netflix.astyanax.connectionpool.exceptions.OperationTimeoutException;
+import com.netflix.astyanax.connectionpool.exceptions.PoolTimeoutException;
+import com.netflix.astyanax.connectionpool.exceptions.TimeoutException;
+import com.netflix.astyanax.connectionpool.exceptions.TokenRangeOfflineException;
+import com.netflix.astyanax.connectionpool.exceptions.TransportException;
+import com.netflix.astyanax.connectionpool.exceptions.UnknownException;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.connectionpool.impl.RoundRobinConnectionPoolImpl;
 import com.netflix.astyanax.retry.RunOnce;
@@ -38,6 +56,8 @@ import com.netflix.astyanax.test.TestConnectionFactory;
 import com.netflix.astyanax.test.TestConstants;
 import com.netflix.astyanax.test.TestHostType;
 import com.netflix.astyanax.test.TestOperation;
+import com.netflix.astyanax.util.ProbabalisticFunction;
+import com.netflix.astyanax.util.TestDriver;
 
 public class Stress {
     private static Logger LOG = LoggerFactory.getLogger(Stress.class);
@@ -46,135 +66,216 @@ public class Stress {
      * @param args
      */
     public static void main(String[] args) {
-        final int numThreads = 100;
-        final int numHosts = 15;
-        final int numOperations = 1000000000;
-
         ConnectionPoolConfigurationImpl config;
         config = new ConnectionPoolConfigurationImpl(TestConstants.CLUSTER_NAME
                 + "_" + TestConstants.KEYSPACE_NAME);
-        config.setMaxConns(100);
+//        config.setMaxConns(100);
         config.setMaxFailoverCount(-1);
         config.setMaxTimeoutWhenExhausted(1000);
-        config.setMaxConnsPerHost(10);
+        config.setMaxConnsPerHost(25);
         config.setInitConnsPerHost(0);
+        config.setTimeoutWindow(5000);
+        config.setMaxTimeoutCount(10);
+        config.setRetrySuspendWindow(5000);
+        config.setLatencyScoreStrategy(new EmaLatencyScoreStrategyImpl(1000, 0, 20));
         // config.setRetryBackoffStrategy(new
         // ExponentialRetryBackoffStrategy(20, 1000, 2000));
 
-        ConnectionPoolMonitor monitor = new Slf4jConnectionPoolMonitorImpl();
+        final ConnectionPoolMonitor monitor   = new CountingConnectionPoolMonitor();
+        TestConnectionFactory factory         = new TestConnectionFactory(config, monitor);
+        final ConnectionPool<TestClient> pool = new RoundRobinConnectionPoolImpl<TestClient>(config, factory, monitor);
+        pool.start();
 
-        TestConnectionFactory factory = new TestConnectionFactory(config,
-                monitor);
-        final ConnectionPool<TestClient> pool = new RoundRobinConnectionPoolImpl<TestClient>(
-                config, factory, monitor);
-        for (int i = 0; i < numHosts; i++) {
-            pool.addHost(
-                    new Host("127.0.0." + i, TestHostType.GOOD_FAST.ordinal()),
-                    true);
-            // pool.addHost(new Host("127.0." + i + ".0",
-            // MockHostType.FAIL_AFTER_100_RANDOM.ordinal()));
-            // pool.addHost(new Host("127.0." + i + ".0",
-            // MockHostType.FAIL_AFTER_100.ordinal()));
-            // pool.addHost(new Host("127.0.0" + i,
-            // MockHostType.GOOD_FAST.ordinal()));
+        final List<Host> hosts = Lists.newArrayList(
+                new Host("127.0.0.1",  TestHostType.GOOD_FAST.ordinal()),
+                new Host("127.0.0.2",  TestHostType.GOOD_FAST.ordinal()),
+                new Host("127.0.0.3",  TestHostType.GOOD_FAST.ordinal()),
+                new Host("127.0.0.4",  TestHostType.GOOD_FAST.ordinal()),
+                new Host("127.0.0.5",  TestHostType.GOOD_FAST.ordinal()),
+                new Host("127.0.0.6",  TestHostType.GOOD_FAST.ordinal()),
+                new Host("127.0.0.7",  TestHostType.GOOD_FAST.ordinal()),
+                new Host("127.0.0.8",  TestHostType.GOOD_FAST.ordinal()),
+//                new Host("127.0.0.9",  TestHostType.GOOD_SLOW.ordinal()),
+                new Host("127.0.0.10",  TestHostType.SWAP_EVERY_200.ordinal()),
+                new Host("127.0.0.11", TestHostType.ALTERNATING_SOCKET_TIMEOUT_200.ordinal())
+//                new Host("127.0.0.12", TestHostType.ALTERNATING_SOCKET_TIMEOUT_200.ordinal()),
+//                new Host("127.0.0.13",  TestHostType.CONNECT_FAIL_FIRST_TWO.ordinal())
+                );
+        
+        for (Host host : hosts) {
+            pool.addHost(host, true);
         }
-        pool.addHost(new Host("127.0.0." + numHosts,
-                TestHostType.SOCKET_TIMEOUT_AFTER10.ordinal()), true);
-
-        // pool.addHost(new Host("127.0." + numHosts + ".0",
-        // MockHostType.FAIL_AFTER_10_SLOW_CLOSE.ordinal()));
-
-        LOG.info(monitor.toString());
-
-        long startTime = System.currentTimeMillis();
-        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
-        for (int i = 0; i < numThreads; i++) {
-            executor.submit(new Runnable() {
-                @Override
-                public void run() {
-                    for (int i = 0; i < numOperations; i++) {
-                        long startTime = System.currentTimeMillis();
-                        try {
-                            OperationResult<String> result = pool
-                                    .executeWithFailover(new TestOperation() {
-                                        @Override
-                                        public String execute(TestClient client)
-                                                throws ConnectionException,
-                                                OperationException {
-
-                                            /*
-                                             * long tm1 =
-                                             * System.currentTimeMillis();
-                                             * think(5, 10); try { double p =
-                                             * new Random().nextDouble(); double
-                                             * factor = 50000; if (p < 1/factor)
-                                             * { throw new
-                                             * UnknownException("UnknownException"
-                                             * ); } else if (p < 2/factor) {
-                                             * throw new BadRequestException(
-                                             * "BadRequestException"); } else if
-                                             * (p < 3/factor) { think(1000, 0);
-                                             * throw new
-                                             * OperationTimeoutException
-                                             * ("OperationTimeoutException"); }
-                                             * else if (p < 4/factor) { throw
-                                             * new ConnectionAbortedException(
-                                             * "ConnectionAbortedException"); }
-                                             * else if (p < 5/factor) { throw
-                                             * new
-                                             * HostDownException("HostDownException"
-                                             * ); } else if (p < 6/factor) {
-                                             * think(1000, 0); throw new
-                                             * TimeoutException
-                                             * ("TimeoutException"); } else if
-                                             * (p < 7/factor) { throw new
-                                             * TokenRangeOfflineException
-                                             * ("TokenRangeOfflineException"); }
-                                             * else if (p < 8/factor) { throw
-                                             * new TransportException(
-                                             * "TransportException"); } } catch
-                                             * (ConnectionException e) {
-                                             * e.setLatency
-                                             * (System.currentTimeMillis() -
-                                             * tm1); throw e; } //
-                                             * LOG.info("Execute 1");
-                                             */
-                                            return "RESULT";
-                                        }
-                                    }, RunOnce.get());
-                        } catch (NoAvailableHostsException e) {
-                            // think(1000, 0);
-                        } catch (Exception e) {
-                            LOG.error(e.getMessage());
-                        }
-                    }
-                }
-            });
+                
+        final Map<Host, AtomicLong> counts = new TreeMap<Host, AtomicLong>();
+        for (HostConnectionPool<TestClient> p : pool.getActivePools()) {
+            counts.put(p.getHost(), new AtomicLong());
         }
-
-        try {
-            executor.shutdown();
-            int i = 0;
-            while (!executor.awaitTermination(1000, TimeUnit.MILLISECONDS)) {
-                LOG.info(monitor.toString());
-                /*
-                 * if (i++ % 10 == 9) { //
-                 * config.setMaxConnsPerHost(config.getMaxConnsPerHost() - 1); }
-                 */
+        System.out.println(monitor.toString());
+        
+        final AtomicBoolean timeoutsEnabled = new AtomicBoolean(false);
+        final AtomicLong lastOperationCount = new AtomicLong();
+        
+        EmaLatencyScoreStrategyImpl latency = new EmaLatencyScoreStrategyImpl(1000, 0, 10);
+        final Instance sampler = latency.createInstance();
+        latency.start(new Listener() {
+            @Override
+            public void onUpdate() {
             }
+            @Override
+            public void onReset() {
+            }
+        });
+        final Function<TestDriver, Void> function = new ProbabalisticFunction.Builder<TestDriver, Void>()
+            .withDefault(new Function<TestDriver, Void>() {
+                public Void apply(@Nullable TestDriver arg0) {
+                    return null;
+                }
+            })
+            .withAlways(new Runnable() {
+                public void run() {
+                    think(10, 30); 
+                }
+            })
+//            .withProbability(0.0001, new Function<TestDriver, Void>() {
+//                public Void apply(@Nullable TestDriver arg0) {
+//                    if (timeoutsEnabled.get()) {
+//                        think(1100, 0);
+//                        throw new RuntimeException(new TimeoutException("TimeoutException"));
+//                    }
+//                    return null;
+//                }
+//            })
+//            .withProbability(0.0001, new Function<TestDriver, Void>() {
+//                public Void apply(@Nullable TestDriver arg0) {
+//                    throw new RuntimeException(new UnknownException(new Exception("UnknownExceptionDescription")));
+//                }
+//            })
+//            .withProbability(0.0001, new Function<TestDriver, Void>() {
+//                public Void apply(@Nullable TestDriver arg0) {
+//                    think(1000, 0);
+//                    throw new RuntimeException(new OperationTimeoutException("OperationTimeoutException"));
+//                }
+//            })
+//            .withProbability(0.0001, new Function<TestDriver, Void>() {
+//                public Void apply(@Nullable TestDriver arg0) {
+//                    throw new RuntimeException(new HostDownException("HostDownException"));
+//                }
+//            })
+//            .withProbability(0.01, new Function<TestDriver, Void>() {
+//                public Void apply(@Nullable TestDriver arg0) {
+//                    throw new RuntimeException(new ConnectionAbortedException("ConnectionAbortedException"));
+//                }
+//            })
+//            .withProbability(0.0001, new Function<TestDriver, Void>() {
+//                public Void apply(@Nullable TestDriver arg0) {
+//                    throw new RuntimeException(new BadRequestException("BadRequestException"));
+//                }
+//            })
+//            .withProbability(0.0001, new Function<TestDriver, Void>() {
+//                public Void apply(@Nullable TestDriver arg0) {
+//                    throw new RuntimeException(new TokenRangeOfflineException("TokenRangeOfflineException"));
+//                }
+//            })
+//            .withProbability(0.0001, new Function<TestDriver, Void>() {
+//                public Void apply(@Nullable TestDriver arg0) {
+//                    throw new RuntimeException(new TransportException("TransportException"));
+//                }
+//            })
+        .build();
+        
+        final List<HostConnectionPool<TestClient>> hostPools = Lists.newArrayList(pool.getActivePools());
+        
+        final TestDriver driver = new TestDriver.Builder()
+            .withIterationCount(0)
+            .withThreadCount(200)
+//            .withFutures(100,  TimeUnit.MILLISECONDS)
+            .withCallsPerSecondSupplier(Suppliers.ofInstance(200))
+//            .withFutures(100, TimeUnit.MILLISECONDS)
+            .withCallback(new Function<TestDriver, Void>() {
+                public Void apply(final @Nullable TestDriver driver) {
+                    long startTime = System.nanoTime();
+                    try {
+                        pool.executeWithFailover(new TestOperation() {
+                            public String execute(TestClient client) throws ConnectionException, OperationException {
+                                try {
+                                    function.apply(driver);
+                                    return null;
+                                }
+                                catch (RuntimeException e) {
+                                    if (e.getCause() instanceof ConnectionException)
+                                        throw (ConnectionException)e.getCause();
+                                    throw e;
+                                }
+                            }
+                        }, new RunOnce());
+                    } catch (PoolTimeoutException e) {
+                        LOG.info(e.getMessage());
+                    } catch (ConnectionException e) {
+                    } finally {
+                        sampler.addSample((System.nanoTime() - startTime)/1000000);
+                    }
+                    
+                    return null;
+                }
+            })
+            
+            // 
+            //  Event to turn timeouts on/off
+            //
+            .withRecurringEvent(10,  TimeUnit.SECONDS,  new Function<TestDriver, Void>() {
+                @Override
+                public Void apply(@Nullable TestDriver driver) {
+                    timeoutsEnabled.getAndSet(!timeoutsEnabled.get());
+//                    LOG.info("Toggle timeouts " + timeoutsEnabled.get());
+                    return null;
+                }
+            })
+            
+            //
+            //  Print status information
+            //
+            .withRecurringEvent(1,  TimeUnit.SECONDS,  new Function<TestDriver, Void>() {
+                @Override
+                public Void apply(@Nullable TestDriver driver) {
+                    long opCount = lastOperationCount.get();
+                    lastOperationCount.set(driver.getOperationCount());
+                    
+                    System.out.println("" + driver.getRuntime() + "," + sampler.getScore() + "," + (lastOperationCount.get() - opCount));
+                    System.out.println(monitor.toString());
+                    System.out.println(monitor.toString());
+                    for (HostConnectionPool<TestClient> host : pool.getPools()) {
+                        System.out.println("   " + host.toString());
+                    }
+                    return null;
+                }
+            })
+            
+            //
+            //  Remove a random host
+            //
+            .withRecurringEvent(10,  TimeUnit.SECONDS,  new Function<TestDriver, Void>() {
+                @Override
+                public Void apply(@Nullable TestDriver driver) {
+//                    System.out.println("Latency: " + sampler.getScore());
+//                    
+//                    List<Host> newHosts = Lists.newArrayList(hosts);
+//                    newHosts.remove(new Random().nextInt(hosts.size()));
+//                    pool.setHosts(newHosts);
+//                    
+//                    System.out.println(monitor.toString());
+//                    for (HostConnectionPool<TestClient> host : pool.getPools()) {
+//                        System.out.println("   " + host.toString());
+//                    }
+                    return null;
+                }
+            })
+            .build();
+        
+        driver.start();
+        try {
+            driver.await();
         } catch (InterruptedException e) {
-            LOG.error(e.getMessage());
         }
-        long runTime = System.currentTimeMillis() - startTime;
-
-        double opsRate = (numThreads * numOperations) / runTime;
-
-        pool.shutdown();
-        think(1000, 1000);
-
-        LOG.info("*** DONE ***");
-        LOG.info(monitor.toString());
-        // LOG.info(runTime + " ops/msec");
     }
 
     private static void think(int min, int max) {

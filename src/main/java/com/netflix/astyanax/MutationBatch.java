@@ -19,6 +19,7 @@ import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.model.ColumnFamily;
@@ -90,11 +91,11 @@ public interface MutationBatch extends Execution<Void> {
     <K, C> ColumnListMutation<C> withRow(ColumnFamily<K, C> columnFamily, K rowKey);
 
     /**
-     * Delete the row for all the specified column families
+     * Delete the row for all the specified column families.
      * 
      * @param columnFamilies
      */
-    <K> void deleteRow(Collection<ColumnFamily<K, ?>> columnFamilies, K rowKey);
+    <K> void deleteRow(Iterable<? extends ColumnFamily<K, ?>> columnFamilies, K rowKey);
 
     /**
      * Discard any pending mutations. All previous references returned by row
@@ -142,11 +143,19 @@ public interface MutationBatch extends Execution<Void> {
     MutationBatch pinToHost(Host host);
 
     /**
-     * Set the consistency level for this mutation
+     * Set the consistency level for this mutation (same as withConsistencyLevel)
      * 
      * @param consistencyLevel
      */
     MutationBatch setConsistencyLevel(ConsistencyLevel consistencyLevel);
+    
+    /**
+     * Set the consistency level for this mutation (same as setConsistencyLevel)
+     * 
+     * @param consistencyLevel
+     * @return
+     */
+    MutationBatch withConsistencyLevel(ConsistencyLevel consistencyLevel);
 
     /**
      * Set the retry policy to use instead of the one specified in the
@@ -184,12 +193,21 @@ public interface MutationBatch extends Execution<Void> {
 
     /**
      * Set the timestamp for all subsequent operations on this mutation
+     * (same as withTimestamp)
      * 
-     * @param timestamp
+     * @param timestamp in microseconds
      * @return
      */
     MutationBatch setTimestamp(long timestamp);
 
+    /**
+     * Set the timestamp for all subsequent operations on this mutation.
+     * 
+     * @param timestamp in microsecond
+     * @return
+     */
+    MutationBatch withTimestamp(long timestamp);
+    
     /**
      * Serialize the entire mutation batch into a ByteBuffer.
      * 

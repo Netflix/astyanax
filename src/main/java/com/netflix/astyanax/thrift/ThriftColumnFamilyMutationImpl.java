@@ -40,12 +40,12 @@ import com.netflix.astyanax.model.ColumnPath;
 public class ThriftColumnFamilyMutationImpl<C> extends AbstractColumnListMutation<C> {
     private final Serializer<C> columnSerializer;
     private final List<Mutation> mutationList;
-    private SlicePredicate deletionPredicate;
-
+    private Deletion lastDeletion;
+    
     public ThriftColumnFamilyMutationImpl(Long timestamp, List<Mutation> mutationList, Serializer<C> columnSerializer) {
+        super(timestamp);
         this.mutationList = mutationList;
         this.columnSerializer = columnSerializer;
-        this.timestamp = timestamp;
     }
 
     @Override
@@ -60,8 +60,11 @@ public class ThriftColumnFamilyMutationImpl<C> extends AbstractColumnListMutatio
         column.setName(columnSerializer.toByteBuffer(columnName));
         column.setValue(valueSerializer.toByteBuffer(value));
         column.setTimestamp(timestamp);
-        if (ttl != null)
-            column.setTtl(ttl);
+        if (ttl != null) {
+            // Treat TTL of 0 or -1 as no TTL
+            if (ttl > 0)
+                column.setTtl(ttl);
+        }
         else if (defaultTtl != null)
             column.setTtl(defaultTtl);
 
@@ -79,8 +82,11 @@ public class ThriftColumnFamilyMutationImpl<C> extends AbstractColumnListMutatio
         column.setName(columnSerializer.toByteBuffer(columnName));
         column.setValue(ThriftUtils.EMPTY_BYTE_BUFFER);
         column.setTimestamp(timestamp);
-        if (ttl != null)
-            column.setTtl(ttl);
+        if (ttl != null) {
+            // Treat TTL of 0 or -1 as no TTL
+            if (ttl > 0)
+                column.setTtl(ttl);
+        }
         else if (defaultTtl != null)
             column.setTtl(defaultTtl);
 
@@ -120,13 +126,13 @@ public class ThriftColumnFamilyMutationImpl<C> extends AbstractColumnListMutatio
     @Override
     public ColumnListMutation<C> deleteColumn(C columnName) {
         // Create a reusable predicate for deleting columns and insert only once
-        if (null == deletionPredicate) {
-            deletionPredicate = new SlicePredicate();
-            Deletion d = new Deletion().setPredicate(deletionPredicate).setTimestamp(timestamp);
-            mutationList.add(new Mutation().setDeletion(d));
+        if (null == lastDeletion || lastDeletion.getTimestamp() != timestamp) {
+            lastDeletion = new Deletion().setPredicate(new SlicePredicate()).setTimestamp(timestamp);
+            mutationList.add(new Mutation().setDeletion(lastDeletion));
         }
+        
         ByteBuffer bb = this.columnSerializer.toByteBuffer(columnName);
-        deletionPredicate.addToColumn_names(bb);
+        lastDeletion.getPredicate().addToColumn_names(bb);
         return this;
     }
 

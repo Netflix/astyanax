@@ -150,7 +150,7 @@ public class ThriftConverter {
      * @param e
      * @return
      */
-    public static ConnectionException ToConnectionPoolException(Exception e) {
+    public static ConnectionException ToConnectionPoolException(Throwable e) {
         if (e instanceof ConnectionException) {
             return (ConnectionException) e;
         }
@@ -212,10 +212,10 @@ public class ThriftConverter {
             return org.apache.cassandra.thrift.ConsistencyLevel.EACH_QUORUM;
         case CL_LOCAL_QUORUM:
             return org.apache.cassandra.thrift.ConsistencyLevel.LOCAL_QUORUM;
-	case CL_TWO:
-	    return org.apache.cassandra.thrift.ConsistencyLevel.TWO;
-	case CL_THREE:
-	    return org.apache.cassandra.thrift.ConsistencyLevel.THREE;
+        case CL_TWO:
+            return org.apache.cassandra.thrift.ConsistencyLevel.TWO;
+        case CL_THREE:
+            return org.apache.cassandra.thrift.ConsistencyLevel.THREE;
         case CL_ALL:
             return org.apache.cassandra.thrift.ConsistencyLevel.ALL;
         case CL_ANY:

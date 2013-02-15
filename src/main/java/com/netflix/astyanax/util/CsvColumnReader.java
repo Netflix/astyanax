@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * Copyright 2011 Netflix
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ ******************************************************************************/
 package com.netflix.astyanax.util;
 
 import java.io.IOException;
@@ -52,9 +67,9 @@ public class CsvColumnReader implements RecordReader {
 
         List<Pair<String, String>> columns = new ArrayList<Pair<String, String>>();
         // Build row mutation for all columns
-        columns.add(new Pair<String, String>("key", row[0]));
+        columns.add(Pair.create("key", row[0]));
         if (row.length == 3)
-            columns.add(new Pair<String, String>(row[1], row[2]));
+            columns.add(Pair.create(row[1], row[2]));
         return columns;
     }
 }

@@ -15,6 +15,8 @@
  ******************************************************************************/
 package com.netflix.astyanax.model;
 
+import java.util.Collection;
+
 /**
  * Interface to a collection or Rows with key type K and column type C. The rows
  * can be either super or standard, but not both.
@@ -25,7 +27,12 @@ package com.netflix.astyanax.model;
  * @param <C>
  */
 public interface Rows<K, C> extends Iterable<Row<K, C>> {
-
+    /**
+     * Return all row keys in the set
+     * @return
+     */
+    Collection<K> getKeys();
+    
     /**
      * Return the row for a specific key. Will return an exception if the result
      * set is a list and not a lookup.

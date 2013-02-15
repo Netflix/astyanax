@@ -212,11 +212,9 @@ public class ReverseIndexQuery<K, C, V> {
     }
 
     private void fetchFirstIndexBatch(final Collection<ByteBuffer> keys) {
-        System.out.println("fetchIndexBatchRunnable");
         new Task() {
             @Override
             protected void internalRun() {
-                System.out.println("fetchIndexBatchRunnable:run");
                 // Get the first range in the index
                 RangeBuilder range = new RangeBuilder();
                 if (startValue != null) {

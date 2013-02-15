@@ -19,31 +19,31 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.cassandra.dht.IPartitioner;
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.Cassandra.Client;
 import org.apache.cassandra.thrift.KsDef;
 
 import com.google.common.base.Function;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.netflix.astyanax.AstyanaxConfiguration;
-import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.Cluster;
 import com.netflix.astyanax.Keyspace;
+import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.KeyspaceTracerFactory;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
+import com.netflix.astyanax.connectionpool.OperationResult;
+import com.netflix.astyanax.connectionpool.ConnectionContext;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.connectionpool.exceptions.SchemaDisagreementException;
 import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
-import com.netflix.astyanax.impl.RingDescribePartitionSupplier;
-import com.netflix.astyanax.thrift.ddl.ThriftColumnDefinitionImpl;
-import com.netflix.astyanax.thrift.ddl.ThriftColumnFamilyDefinitionImpl;
-import com.netflix.astyanax.thrift.ddl.ThriftKeyspaceDefinitionImpl;
+import com.netflix.astyanax.ddl.SchemaChangeResult;
+import com.netflix.astyanax.ddl.impl.SchemaChangeResponseImpl;
+import com.netflix.astyanax.retry.RunOnce;
+import com.netflix.astyanax.thrift.ddl.*;
 
 public class ThriftClusterImpl implements Cluster {
 
@@ -68,7 +68,7 @@ public class ThriftClusterImpl implements Cluster {
         return connectionPool.executeWithFailover(
                 new AbstractOperationImpl<String>(tracerFactory.newTracer(CassandraOperationType.DESCRIBE_CLUSTER)) {
                     @Override
-                    public String internalExecute(Client client) throws Exception {
+                    public String internalExecute(Client client, ConnectionContext context) throws Exception {
                         return client.describe_cluster_name();
                     }
 
@@ -80,7 +80,7 @@ public class ThriftClusterImpl implements Cluster {
         return connectionPool.executeWithFailover(
                 new AbstractOperationImpl<String>(tracerFactory.newTracer(CassandraOperationType.DESCRIBE_SNITCH)) {
                     @Override
-                    public String internalExecute(Client client) throws Exception {
+                    public String internalExecute(Client client, ConnectionContext context) throws Exception {
                         return client.describe_snitch();
                     }
                 }, config.getRetryPolicy().duplicate()).getResult();
@@ -93,7 +93,7 @@ public class ThriftClusterImpl implements Cluster {
                         new AbstractOperationImpl<String>(
                                 tracerFactory.newTracer(CassandraOperationType.DESCRIBE_PARTITIONER)) {
                             @Override
-                            public String internalExecute(Client client) throws Exception {
+                            public String internalExecute(Client client, ConnectionContext context) throws Exception {
                                 return client.describe_partitioner();
                             }
                         }, config.getRetryPolicy().duplicate()).getResult();
@@ -105,7 +105,7 @@ public class ThriftClusterImpl implements Cluster {
                 new AbstractOperationImpl<Map<String, List<String>>>(
                         tracerFactory.newTracer(CassandraOperationType.DESCRIBE_SCHEMA_VERSION)) {
                     @Override
-                    public Map<String, List<String>> internalExecute(Client client) throws Exception {
+                    public Map<String, List<String>> internalExecute(Client client, ConnectionContext context) throws Exception {
                         return client.describe_schema_versions();
                     }
                 }, config.getRetryPolicy().duplicate()).getResult();
@@ -122,18 +122,18 @@ public class ThriftClusterImpl implements Cluster {
         return connectionPool.executeWithFailover(
                 new AbstractOperationImpl<String>(tracerFactory.newTracer(CassandraOperationType.GET_VERSION)) {
                     @Override
-                    public String internalExecute(Client client) throws Exception {
+                    public String internalExecute(Client client, ConnectionContext state) throws Exception {
                         return client.describe_version();
                     }
                 }, config.getRetryPolicy().duplicate()).getResult();
     }
 
-    private <K> K executeSchemaChangeOperation(AbstractOperationImpl<K> op) throws OperationException,
+    private <K> OperationResult<K> executeSchemaChangeOperation(AbstractOperationImpl<K> op) throws OperationException,
             ConnectionException {
         int attempt = 0;
         do {
             try {
-                return connectionPool.executeWithFailover(op, config.getRetryPolicy().duplicate()).getResult();
+                return connectionPool.executeWithFailover(op, config.getRetryPolicy().duplicate());
             }
             catch (SchemaDisagreementException e) {
                 if (++attempt >= MAX_SCHEMA_CHANGE_ATTEMPTS) {
@@ -151,35 +151,12 @@ public class ThriftClusterImpl implements Cluster {
     }
 
     @Override
-    public String dropColumnFamily(final String keyspaceName, final String columnFamilyName) throws OperationException,
-            ConnectionException {
-        return executeSchemaChangeOperation(new AbstractKeyspaceOperationImpl<String>(
-                tracerFactory.newTracer(CassandraOperationType.DROP_COLUMN_FAMILY), keyspaceName) {
-            @Override
-            public String internalExecute(Client client) throws Exception {
-                return client.system_drop_column_family(columnFamilyName);
-            }
-        });
-    }
-
-    @Override
-    public String dropKeyspace(final String keyspaceName) throws OperationException, ConnectionException {
-        return executeSchemaChangeOperation(new AbstractOperationImpl<String>(
-                tracerFactory.newTracer(CassandraOperationType.DROP_KEYSPACE)) {
-            @Override
-            public String internalExecute(Client client) throws Exception {
-                return client.system_drop_keyspace(keyspaceName);
-            }
-        });
-    }
-
-    @Override
     public List<KeyspaceDefinition> describeKeyspaces() throws ConnectionException {
         return connectionPool.executeWithFailover(
                 new AbstractOperationImpl<List<KeyspaceDefinition>>(
                         tracerFactory.newTracer(CassandraOperationType.DESCRIBE_KEYSPACES)) {
                     @Override
-                    public List<KeyspaceDefinition> internalExecute(Client client) throws Exception {
+                    public List<KeyspaceDefinition> internalExecute(Client client, ConnectionContext context) throws Exception {
                         List<KsDef> ksDefs = client.describe_keyspaces();
                         return Lists.transform(ksDefs, new Function<KsDef, KeyspaceDefinition>() {
                             @Override
@@ -208,10 +185,8 @@ public class ThriftClusterImpl implements Cluster {
         Keyspace keyspace = keyspaces.get(ksName);
         if (keyspace == null) {
             synchronized (this) {
-                Supplier<IPartitioner> partitioner = RingDescribePartitionSupplier.create(this);
-                Keyspace newKeyspace = new ThriftKeyspaceImpl(ksName, this.connectionPool, this.config, partitioner,
-                        tracerFactory);
-                keyspace = keyspaces.put(ksName, newKeyspace);
+                Keyspace newKeyspace = new ThriftKeyspaceImpl(ksName, this.connectionPool, this.config, tracerFactory);
+                keyspace = keyspaces.putIfAbsent(ksName, newKeyspace);
                 if (keyspace == null) {
                     keyspace = newKeyspace;
                 }
@@ -226,25 +201,27 @@ public class ThriftClusterImpl implements Cluster {
     }
 
     @Override
-    public String addColumnFamily(final ColumnFamilyDefinition def) throws ConnectionException {
-        return executeSchemaChangeOperation(new AbstractKeyspaceOperationImpl<String>(
+    public OperationResult<SchemaChangeResult> addColumnFamily(final ColumnFamilyDefinition def) throws ConnectionException {
+        return executeSchemaChangeOperation(new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
                 tracerFactory.newTracer(CassandraOperationType.ADD_COLUMN_FAMILY), def.getKeyspace()) {
             @Override
-            public String internalExecute(Client client) throws Exception {
-                return client.system_add_column_family(((ThriftColumnFamilyDefinitionImpl) def)
-                        .getThriftColumnFamilyDefinition());
+            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                return new SchemaChangeResponseImpl()
+                    .setSchemaId(client.system_add_column_family(((ThriftColumnFamilyDefinitionImpl) def)
+                        .getThriftColumnFamilyDefinition()));
             }
         });
     }
 
     @Override
-    public String updateColumnFamily(final ColumnFamilyDefinition def) throws ConnectionException {
-        return executeSchemaChangeOperation(new AbstractKeyspaceOperationImpl<String>(
+    public OperationResult<SchemaChangeResult>  updateColumnFamily(final ColumnFamilyDefinition def) throws ConnectionException {
+        return executeSchemaChangeOperation(new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
                 tracerFactory.newTracer(CassandraOperationType.UPDATE_COLUMN_FAMILY), def.getKeyspace()) {
             @Override
-            public String internalExecute(Client client) throws Exception {
-                return client.system_update_column_family(((ThriftColumnFamilyDefinitionImpl) def)
-                        .getThriftColumnFamilyDefinition());
+            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                return new SchemaChangeResponseImpl()
+                    .setSchemaId(client.system_update_column_family(((ThriftColumnFamilyDefinitionImpl) def)
+                        .getThriftColumnFamilyDefinition()));
             }
         });
     }
@@ -255,24 +232,26 @@ public class ThriftClusterImpl implements Cluster {
     }
 
     @Override
-    public String addKeyspace(final KeyspaceDefinition def) throws ConnectionException {
-        return executeSchemaChangeOperation(new AbstractOperationImpl<String>(
+    public OperationResult<SchemaChangeResult>  addKeyspace(final KeyspaceDefinition def) throws ConnectionException {
+        return executeSchemaChangeOperation(new AbstractOperationImpl<SchemaChangeResult>(
                 tracerFactory.newTracer(CassandraOperationType.ADD_KEYSPACE)) {
             @Override
-            public String internalExecute(Client client) throws Exception {
-                return client.system_add_keyspace(((ThriftKeyspaceDefinitionImpl) def).getThriftKeyspaceDefinition());
+            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                return new SchemaChangeResponseImpl()
+                    .setSchemaId(client.system_add_keyspace(((ThriftKeyspaceDefinitionImpl) def).getThriftKeyspaceDefinition()));
             }
         });
     }
 
     @Override
-    public String updateKeyspace(final KeyspaceDefinition def) throws ConnectionException {
-        return executeSchemaChangeOperation(new AbstractOperationImpl<String>(
+    public OperationResult<SchemaChangeResult>  updateKeyspace(final KeyspaceDefinition def) throws ConnectionException {
+        return executeSchemaChangeOperation(new AbstractOperationImpl<SchemaChangeResult>(
                 tracerFactory.newTracer(CassandraOperationType.UPDATE_KEYSPACE)) {
             @Override
-            public String internalExecute(Client client) throws Exception {
-                return client
-                        .system_update_keyspace(((ThriftKeyspaceDefinitionImpl) def).getThriftKeyspaceDefinition());
+            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                return new SchemaChangeResponseImpl()
+                    .setSchemaId(client
+                        .system_update_keyspace(((ThriftKeyspaceDefinitionImpl) def).getThriftKeyspaceDefinition()));
             }
         });
     }
@@ -285,5 +264,101 @@ public class ThriftClusterImpl implements Cluster {
     @Override
     public AstyanaxConfiguration getConfig() {
         return config;
+    }
+    
+    @Override
+    public <K, C> OperationResult<SchemaChangeResult> createColumnFamily(final Map<String, Object> options) throws ConnectionException {
+        return connectionPool
+                .executeWithFailover(
+                        new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
+                                tracerFactory.newTracer(CassandraOperationType.ADD_COLUMN_FAMILY), (String)options.get("keyspace")) {
+                            @Override
+                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                                ThriftColumnFamilyDefinitionImpl def = new ThriftColumnFamilyDefinitionImpl();
+                                def.setFields(options);
+                                
+                                return new SchemaChangeResponseImpl()
+                                    .setSchemaId(client.system_add_column_family(def.getThriftColumnFamilyDefinition()));
+                            }
+                        }, RunOnce.get());
+    }
+    
+    @Override
+    public <K, C> OperationResult<SchemaChangeResult> updateColumnFamily(final Map<String, Object> options) throws ConnectionException  {
+        return connectionPool
+                .executeWithFailover(
+                        new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
+                                tracerFactory.newTracer(CassandraOperationType.UPDATE_COLUMN_FAMILY), (String)options.get("keyspace")) {
+                            @Override
+                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                                ThriftColumnFamilyDefinitionImpl def = new ThriftColumnFamilyDefinitionImpl();
+                                def.setFields(options);
+                                
+                                return new SchemaChangeResponseImpl()
+                                    .setSchemaId(client.system_update_column_family(def.getThriftColumnFamilyDefinition()));
+                            }
+                        }, RunOnce.get());
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResult> dropColumnFamily(final String keyspaceName, final String columnFamilyName) throws ConnectionException  {
+        return connectionPool
+                .executeWithFailover(
+                        new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
+                                tracerFactory.newTracer(CassandraOperationType.DROP_COLUMN_FAMILY), keyspaceName) {
+                            @Override
+                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                                return new SchemaChangeResponseImpl()
+                                    .setSchemaId(client.system_drop_column_family(columnFamilyName));
+                            }
+                        }, RunOnce.get());
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResult> createKeyspace(final Map<String, Object> options) throws ConnectionException  {
+        return connectionPool
+                .executeWithFailover(
+                        new AbstractOperationImpl<SchemaChangeResult>(
+                                tracerFactory.newTracer(CassandraOperationType.ADD_KEYSPACE)) {
+                            @Override
+                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                                ThriftKeyspaceDefinitionImpl def = new ThriftKeyspaceDefinitionImpl();
+                                def.setFields(options);
+                                return new SchemaChangeResponseImpl()
+                                    .setSchemaId(client.system_add_keyspace(def.getThriftKeyspaceDefinition()));
+                            }
+                        }, RunOnce.get());
+    }
+
+
+    @Override
+    public OperationResult<SchemaChangeResult> updateKeyspace(final Map<String, Object> options) throws ConnectionException  {
+        return connectionPool
+                .executeWithFailover(
+                        new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
+                                tracerFactory.newTracer(CassandraOperationType.UPDATE_KEYSPACE), (String)options.get("name")) {
+                            @Override
+                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                                ThriftKeyspaceDefinitionImpl def = new ThriftKeyspaceDefinitionImpl();
+                                def.setFields(options);
+                                
+                                return new SchemaChangeResponseImpl()
+                                    .setSchemaId(client.system_update_keyspace(def.getThriftKeyspaceDefinition()));
+                            }
+                        }, RunOnce.get());
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResult> dropKeyspace(final String keyspaceName) throws ConnectionException  {
+        return connectionPool
+                .executeWithFailover(
+                        new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
+                                tracerFactory.newTracer(CassandraOperationType.DROP_KEYSPACE), keyspaceName) {
+                            @Override
+                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                                return new SchemaChangeResponseImpl()
+                                    .setSchemaId(client.system_drop_keyspace(keyspaceName));
+                            }
+                        }, RunOnce.get());
     }
 }

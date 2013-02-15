@@ -15,22 +15,16 @@
  ******************************************************************************/
 package com.netflix.astyanax.test;
 
-import org.apache.cassandra.dht.Token;
+import java.nio.ByteBuffer;
 
+import com.netflix.astyanax.connectionpool.ConnectionContext;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 
 public class TestOperation implements Operation<TestClient, String> {
     @Override
-    public String execute(TestClient client) throws ConnectionException,
-            OperationException {
-        return "RESULT";
-    }
-
-    @Override
-    public Token getToken() {
+    public ByteBuffer getRowKey() {
         return null;
     }
 
@@ -42,5 +36,10 @@ public class TestOperation implements Operation<TestClient, String> {
     @Override
     public Host getPinnedHost() {
         return null;
+    }
+
+    @Override
+    public String execute(TestClient client, ConnectionContext state) throws ConnectionException {
+        return "RESULT";
     }
 }

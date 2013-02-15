@@ -2,15 +2,10 @@ package com.netflix.astyanax;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
-import org.apache.cassandra.dht.IPartitioner;
-import org.apache.cassandra.dht.Token;
 import org.apache.commons.lang.StringUtils;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.netflix.astyanax.connectionpool.ConnectionFactory;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
@@ -19,16 +14,14 @@ import com.netflix.astyanax.connectionpool.ConnectionPoolMonitor;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.NodeDiscovery;
 import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
-import com.netflix.astyanax.connectionpool.TokenRange;
-import com.netflix.astyanax.connectionpool.impl.BagOfConnectionsConnectionPoolImpl;
-import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
 import com.netflix.astyanax.connectionpool.impl.NodeDiscoveryImpl;
+import com.netflix.astyanax.connectionpool.impl.BagOfConnectionsConnectionPoolImpl;
+import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.RoundRobinConnectionPoolImpl;
 import com.netflix.astyanax.connectionpool.impl.TokenAwareConnectionPoolImpl;
 import com.netflix.astyanax.impl.FilteringHostSupplier;
 import com.netflix.astyanax.impl.RingDescribeHostSupplier;
-import com.netflix.astyanax.impl.RingDescribePartitionSupplier;
 import com.netflix.astyanax.shallows.EmptyKeyspaceTracerFactory;
 
 /**
@@ -37,7 +30,7 @@ import com.netflix.astyanax.shallows.EmptyKeyspaceTracerFactory;
  * 
  * @author elandau
  * 
- * @param <Entity>
+ * @param <T>
  */
 public class AstyanaxContext<Entity> {
     private final ConnectionPool<?> cp;
@@ -57,8 +50,7 @@ public class AstyanaxContext<Entity> {
         protected String clusterName;
         protected String keyspaceName;
         protected KeyspaceTracerFactory tracerFactory = EmptyKeyspaceTracerFactory.getInstance();
-        protected Supplier<Map<Token, List<Host>>> hostSupplier;
-        protected Predicate<TokenRange.EndpointDetails> hostFilter = Predicates.alwaysTrue();
+        protected Supplier<List<Host>> hostSupplier;
         protected ConnectionPoolMonitor monitor = new CountingConnectionPoolMonitor();
 
         public Builder forCluster(String clusterName) {
@@ -81,13 +73,8 @@ public class AstyanaxContext<Entity> {
             return this;
         }
 
-        public Builder withHostSupplier(Supplier<Map<Token, List<Host>>> tokenRangeSupplier) {
-            this.hostSupplier = tokenRangeSupplier;
-            return this;
-        }
-
-        public Builder withHostFilter(Predicate<TokenRange.EndpointDetails> hostFilter) {
-            this.hostFilter = hostFilter;
+        public Builder withHostSupplier(Supplier<List<Host>> supplier) {
+            this.hostSupplier = supplier;
             return this;
         }
 
@@ -118,7 +105,7 @@ public class AstyanaxContext<Entity> {
         }
 
         protected <T> ConnectionPool<T> createConnectionPool(ConnectionFactory<T> connectionFactory) {
-            ConnectionPool<T> connectionPool;
+            ConnectionPool<T> connectionPool = null;
             switch (asConfig.getConnectionPoolType()) {
             case TOKEN_AWARE:
                 connectionPool = new TokenAwareConnectionPoolImpl<T>(cpConfig, connectionFactory, monitor);
@@ -142,16 +129,15 @@ public class AstyanaxContext<Entity> {
         }
 
         public <T> AstyanaxContext<Keyspace> buildKeyspace(AstyanaxTypeFactory<T> factory) {
+            this.cpConfig.initialize();
+            
             ConnectionPool<T> cp = createConnectionPool(factory.createConnectionFactory(asConfig, cpConfig, tracerFactory,
                     monitor));
             this.cp = cp;
 
-            Cluster cluster = factory.createCluster(cp, asConfig, tracerFactory);
-            Supplier<IPartitioner> partitioner = RingDescribePartitionSupplier.create(cluster);
-            
-            final Keyspace keyspace = factory.createKeyspace(keyspaceName, cp, asConfig, partitioner, tracerFactory);
+            final Keyspace keyspace = factory.createKeyspace(keyspaceName, cp, asConfig, tracerFactory);
 
-            Supplier<Map<Token, List<Host>>> supplier = null;
+            Supplier<List<Host>> supplier = null;
 
             switch (getNodeDiscoveryType()) {
             case DISCOVERY_SERVICE:
@@ -160,13 +146,16 @@ public class AstyanaxContext<Entity> {
                 break;
 
             case RING_DESCRIBE:
-                supplier = new RingDescribeHostSupplier(keyspace, cpConfig.getPort(), partitioner, hostFilter);
+                supplier = new RingDescribeHostSupplier(keyspace, cpConfig.getPort(), cpConfig.getLocalDatacenter());
                 break;
 
             case TOKEN_AWARE:
-                supplier = new RingDescribeHostSupplier(keyspace, cpConfig.getPort(), partitioner, hostFilter);
-                if (hostSupplier != null) {
-                    supplier = new FilteringHostSupplier(supplier, hostSupplier);
+                if (hostSupplier == null) {
+                    supplier = new RingDescribeHostSupplier(keyspace, cpConfig.getPort(), cpConfig.getLocalDatacenter());
+                }
+                else {
+                    supplier = new FilteringHostSupplier(new RingDescribeHostSupplier(keyspace, cpConfig.getPort(), cpConfig.getLocalDatacenter()),
+                            hostSupplier);
                 }
                 break;
 
@@ -184,6 +173,8 @@ public class AstyanaxContext<Entity> {
         }
 
         public <T> AstyanaxContext<Cluster> buildCluster(AstyanaxTypeFactory<T> factory) {
+            this.cpConfig.initialize();
+            
             ConnectionPool<T> cp = createConnectionPool(factory.createConnectionFactory(asConfig, cpConfig, tracerFactory,
                     monitor));
             this.cp = cp;

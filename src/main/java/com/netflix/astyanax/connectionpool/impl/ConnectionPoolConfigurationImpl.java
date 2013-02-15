@@ -16,17 +16,26 @@
 package com.netflix.astyanax.connectionpool.impl;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.netflix.astyanax.AuthenticationCredentials;
 import com.netflix.astyanax.connectionpool.BadHostDetector;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
+import com.netflix.astyanax.connectionpool.OperationFilterFactory;
 import com.netflix.astyanax.connectionpool.RetryBackoffStrategy;
+import com.netflix.astyanax.connectionpool.SSLConnectionContext;
+import com.netflix.astyanax.partitioner.BigInteger127Partitioner;
+import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.shallows.EmptyBadHostDetectorImpl;
 import com.netflix.astyanax.shallows.EmptyLatencyScoreStrategyImpl;
+import com.netflix.astyanax.shallows.EmptyOperationFilterFactory;
 import com.netflix.astyanax.util.StringUtils;
 
 public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfiguration {
@@ -34,7 +43,7 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
      * Default values
      */
     public static final int DEFAULT_MAX_TIME_WHEN_EXHAUSTED = 2000;
-    public static final int DEFAULT_SOCKET_TIMEOUT = 11000; // ms
+    public static final int DEFAULT_SOCKET_TIMEOUT = 11000;	// ms
     public static final int DEFAULT_CONNECT_TIMEOUT = 2000; // ms
     public static final int DEFAULT_MAX_ACTIVE_PER_PARTITION = 3;
     public static final int DEFAULT_INIT_PER_PARTITION = 0;
@@ -49,47 +58,64 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     public static final int DEFAULT_CONNECTION_LIMITER_WINDOW_SIZE = 2000;
     public static final int DEFAULT_CONNECTION_LIMITER_MAX_PENDING_COUNT = 50;
     public static final int DEFAULT_MAX_PENDING_CONNECTIONS_PER_HOST = 5;
-    public static final int DEFAULT_MAX_BLOCKED_THREADS_PER_HOST = 10;
+    public static final int DEFAULT_MAX_BLOCKED_THREADS_PER_HOST = 25;
     public static final int DEFAULT_MAX_TIMEOUT_COUNT = 3;
     public static final int DEFAULT_TIMEOUT_WINDOW = 10000;
     public static final int DEFAULT_RETRY_SUSPEND_WINDOW = 20000;
     public static final int DEFAULT_RETRY_DELAY_SLICE = 1000;
     public static final int DEFAULT_RETRY_MAX_DELAY_SLICE = 10;
     public static final int DEFAULT_MAX_OPERATIONS_PER_CONNECTION = 10000;
+    public static final float DEFAULT_MIN_HOST_IN_POOL_RATIO = 0.65f;
+    public static final int DEFAULT_BLOCKED_THREAD_THRESHOLD = 10;
     public static final BadHostDetector DEFAULT_BAD_HOST_DETECTOR = EmptyBadHostDetectorImpl.getInstance();
+    public static final Partitioner DEFAULT_PARTITIONER = BigInteger127Partitioner.get();
+    private static final int DEFAULT_RECONNECT_THREAD_COUNT = 5;
+    private static final int DEFAULT_MAINTAINANCE_THREAD_COUNT = 1;
 
     private final String name;
 
-    private int maxConnsPerPartition = DEFAULT_MAX_ACTIVE_PER_PARTITION;
-    private int initConnsPerPartition = DEFAULT_INIT_PER_PARTITION;
-    private int maxConns = DEFAULT_MAX_CONNS;
-    private int port = DEFAULT_PORT;
-    private int socketTimeout = DEFAULT_SOCKET_TIMEOUT;
-    private int connectTimeout = DEFAULT_CONNECT_TIMEOUT;
-    private int maxFailoverCount = DEFAULT_FAILOVER_COUNT;
-    private int latencyAwareWindowSize = DEFAULT_LATENCY_AWARE_WINDOW_SIZE;
-    private float latencyAwareSentinelCompare = DEFAULT_LATENCY_AWARE_SENTINEL_COMPARE;
-    private float latencyAwareBadnessThreshold = DEFAULT_LATENCY_AWARE_BADNESS_THRESHOLD;
-    private int latencyAwareUpdateInterval = DEFAULT_LATENCY_AWARE_UPDATE_INTERVAL;
-    private int latencyAwareResetInterval = DEFAULT_LATENCY_AWARE_RESET_INTERVAL;
-
-    private int connectionLimiterWindowSize = DEFAULT_CONNECTION_LIMITER_WINDOW_SIZE;
+    private int maxConnsPerPartition             = DEFAULT_MAX_ACTIVE_PER_PARTITION;
+    private int initConnsPerPartition            = DEFAULT_INIT_PER_PARTITION;
+    private int maxConns                         = DEFAULT_MAX_CONNS;
+    private int port                             = DEFAULT_PORT;
+    private int socketTimeout                    = DEFAULT_SOCKET_TIMEOUT;
+    private int connectTimeout                   = DEFAULT_CONNECT_TIMEOUT;
+    private int maxFailoverCount                 = DEFAULT_FAILOVER_COUNT;
+    private int latencyAwareWindowSize           = DEFAULT_LATENCY_AWARE_WINDOW_SIZE;
+    private float latencyAwareSentinelCompare    = DEFAULT_LATENCY_AWARE_SENTINEL_COMPARE;
+    private float latencyAwareBadnessThreshold   = DEFAULT_LATENCY_AWARE_BADNESS_THRESHOLD;
+    private int latencyAwareUpdateInterval       = DEFAULT_LATENCY_AWARE_UPDATE_INTERVAL;
+    private int latencyAwareResetInterval        = DEFAULT_LATENCY_AWARE_RESET_INTERVAL;
+    private int connectionLimiterWindowSize      = DEFAULT_CONNECTION_LIMITER_WINDOW_SIZE;
     private int connectionLimiterMaxPendingCount = DEFAULT_CONNECTION_LIMITER_MAX_PENDING_COUNT;
-    private int maxPendingConnectionsPerHost = DEFAULT_MAX_PENDING_CONNECTIONS_PER_HOST;
-    private int maxBlockedThreadsPerHost = DEFAULT_MAX_BLOCKED_THREADS_PER_HOST;
-    private int maxTimeoutCount = DEFAULT_MAX_TIMEOUT_COUNT;
-    private int timeoutWindow = DEFAULT_TIMEOUT_WINDOW;
-    private int retrySuspendWindow = DEFAULT_RETRY_SUSPEND_WINDOW;
-    private int retryDelaySlice = DEFAULT_RETRY_DELAY_SLICE;
-    private int retryMaxDelaySlice = DEFAULT_RETRY_MAX_DELAY_SLICE;
-    private int maxOperationsPerConnection = DEFAULT_MAX_OPERATIONS_PER_CONNECTION;
+    private int maxPendingConnectionsPerHost     = DEFAULT_MAX_PENDING_CONNECTIONS_PER_HOST;
+    private int maxBlockedThreadsPerHost         = DEFAULT_MAX_BLOCKED_THREADS_PER_HOST;
+    private int maxTimeoutCount                  = DEFAULT_MAX_TIMEOUT_COUNT;
+    private int timeoutWindow                    = DEFAULT_TIMEOUT_WINDOW;
+    private int retrySuspendWindow               = DEFAULT_RETRY_SUSPEND_WINDOW;
+    private int retryDelaySlice                  = DEFAULT_RETRY_DELAY_SLICE;
+    private int retryMaxDelaySlice               = DEFAULT_RETRY_MAX_DELAY_SLICE;
+    private int maxOperationsPerConnection       = DEFAULT_MAX_OPERATIONS_PER_CONNECTION;
+    private int maxTimeoutWhenExhausted          = DEFAULT_MAX_TIME_WHEN_EXHAUSTED;
+    private float minHostInPoolRatio             = DEFAULT_MIN_HOST_IN_POOL_RATIO;
+    private int blockedThreadThreshold           = DEFAULT_BLOCKED_THREAD_THRESHOLD;
 
     private String seeds = null;
-    private int maxTimeoutWhenExhausted = DEFAULT_MAX_TIME_WHEN_EXHAUSTED;
     private RetryBackoffStrategy hostRetryBackoffStrategy = null;
-    private LatencyScoreStrategy latencyScoreStrategy = new EmptyLatencyScoreStrategyImpl();
-    private BadHostDetector badHostDetector = DEFAULT_BAD_HOST_DETECTOR;
-    private AuthenticationCredentials credentials = null;
+    private LatencyScoreStrategy latencyScoreStrategy     = new EmptyLatencyScoreStrategyImpl();
+    private BadHostDetector badHostDetector               = DEFAULT_BAD_HOST_DETECTOR;
+    private AuthenticationCredentials credentials         = null;
+    private OperationFilterFactory filterFactory          = EmptyOperationFilterFactory.getInstance();
+    private Partitioner partitioner                       = DEFAULT_PARTITIONER;
+    private SSLConnectionContext sslCtx;
+
+    private ScheduledExecutorService maintainanceExecutor;
+    private ScheduledExecutorService reconnectExecutor;
+    
+    private boolean bOwnMaintainanceExecutor              = false;
+    private boolean bOwnReconnectExecutor                 = false;
+            
+    private String localDatacenter = null;
 
     public ConnectionPoolConfigurationImpl(String name) {
         this.name = name;
@@ -97,6 +123,29 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
         this.hostRetryBackoffStrategy = new ExponentialRetryBackoffStrategy(this);
     }
 
+    @Override
+    public void initialize() {
+        if (maintainanceExecutor == null) {
+            maintainanceExecutor = Executors.newScheduledThreadPool(DEFAULT_MAINTAINANCE_THREAD_COUNT, new ThreadFactoryBuilder().setDaemon(true).build());
+            bOwnMaintainanceExecutor = true;
+        }
+        if (reconnectExecutor == null) {
+            reconnectExecutor = Executors.newScheduledThreadPool(DEFAULT_RECONNECT_THREAD_COUNT, new ThreadFactoryBuilder().setDaemon(true).build());
+            bOwnReconnectExecutor = true;
+        }
+    }
+    
+    @Override
+    public void shutdown() {
+        if (bOwnMaintainanceExecutor) {
+            maintainanceExecutor.shutdownNow();
+        }
+        
+        if (bOwnReconnectExecutor) {
+            reconnectExecutor.shutdownNow();
+        }
+    }
+    
     /*
      * (non-Javadoc)
      * 
@@ -150,6 +199,20 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
 
     public ConnectionPoolConfigurationImpl setSeeds(String seeds) {
         this.seeds = seeds;
+        return this;
+    }
+
+    /**
+     * Returns local datacenter name
+     *
+     * @return
+     */
+    public String getLocalDatacenter() {
+        return localDatacenter;
+    }
+
+    public ConnectionPoolConfigurationImpl setLocalDatacenter(String localDatacenter) {
+        this.localDatacenter = localDatacenter;
         return this;
     }
 
@@ -456,6 +519,77 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
 
     public ConnectionPoolConfigurationImpl setAuthenticationCredentials(AuthenticationCredentials credentials) {
         this.credentials = credentials;
+        return this;
+    }
+
+    @Override
+    public OperationFilterFactory getOperationFilterFactory() {
+        return filterFactory;
+    }
+    
+    public ConnectionPoolConfigurationImpl setOperationFilterFactory(OperationFilterFactory filterFactory) {
+        this.filterFactory = filterFactory;
+        return this;
+    }
+
+    @Override
+    public Partitioner getPartitioner() {
+        return this.partitioner;
+    }
+
+    public ConnectionPoolConfigurationImpl setPartitioner(Partitioner partitioner) {
+        this.partitioner = partitioner;
+        return this;
+    }
+
+    @Override
+    public int getBlockedThreadThreshold() {
+        return this.blockedThreadThreshold;
+    }
+
+    public ConnectionPoolConfigurationImpl setBlockedThreadThreshold(int threshold) {
+        this.blockedThreadThreshold = threshold;
+        return this;
+    }
+    
+    @Override
+    public float getMinHostInPoolRatio() {
+        return this.minHostInPoolRatio;
+    }
+    
+    public ConnectionPoolConfigurationImpl setMinHostInPoolRatio(float ratio) {
+        this.minHostInPoolRatio = ratio;
+        return this;
+    }
+
+    public SSLConnectionContext getSSLConnectionContext() {
+        return sslCtx;
+    }
+
+    public ConnectionPoolConfigurationImpl setSSLConnectionContext(SSLConnectionContext sslCtx) {
+        this.sslCtx = sslCtx;
+        return this;
+    }
+
+    @Override
+    public ScheduledExecutorService getMaintainanceScheduler() {
+        return maintainanceExecutor;
+    }
+
+    public ConnectionPoolConfigurationImpl setMaintainanceScheduler(ScheduledExecutorService executor) {
+        maintainanceExecutor = executor;
+        bOwnMaintainanceExecutor = false;
+        return this;
+    }
+
+    @Override
+    public ScheduledExecutorService getHostReconnectExecutor() {
+        return this.reconnectExecutor;
+    }
+
+    public ConnectionPoolConfigurationImpl setHostReconnectExecutor(ScheduledExecutorService executor) {
+        reconnectExecutor = executor;
+        bOwnReconnectExecutor = false;
         return this;
     }
 

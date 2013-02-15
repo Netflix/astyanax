@@ -18,8 +18,8 @@ package com.netflix.astyanax.util;
 import java.math.BigInteger;
 
 public class TokenGenerator {
-    public static final BigInteger MINIMUM = BigInteger.ZERO;
-    public static final BigInteger MAXIMUM = BigInteger.valueOf(2).pow(127);
+    public static final BigInteger MINIMUM = new BigInteger("" + 0);
+    public static final BigInteger MAXIMUM = new BigInteger("" + 2).pow(127);
 
     public static String initialToken(int size, int position) {
         return TokenGenerator.initialToken(size,position,MINIMUM,MAXIMUM);
@@ -28,7 +28,7 @@ public class TokenGenerator {
     public static String initialToken(int size, int position, BigInteger minInitialToken, BigInteger maxInitialToken ) {
         BigInteger decValue = minInitialToken;
         if (position != 0)
-            decValue = maxInitialToken.divide(BigInteger.valueOf(size)).multiply(BigInteger.valueOf(position));
+            decValue = maxInitialToken.multiply(new BigInteger("" + position)).divide(new BigInteger("" + size));
         return decValue.toString();
     }
 
@@ -37,10 +37,23 @@ public class TokenGenerator {
         // if zero rotate to the Maximum else minus one.
         if (bigInt.equals(MINIMUM))
             bigInt = MAXIMUM;
-        bigInt = bigInt.subtract(BigInteger.ONE);
+        bigInt = bigInt.subtract(new BigInteger("1"));
         return bigInt.toString();
     }
-
+    
+    public static BigInteger tokenDifference(BigInteger startToken, BigInteger endToken) {
+        if (startToken.compareTo(endToken) < 0) {
+            return endToken.subtract(startToken);
+        }
+        else {
+            return endToken.add(MAXIMUM).subtract(startToken);
+        }
+    }
+    
+    public static BigInteger tokenDifference(String startToken, String endToken) {
+        return tokenDifference(new BigInteger(startToken), new BigInteger(endToken));
+    }
+    
     public static String getMaximumToken() {
         return MAXIMUM.toString();
     }

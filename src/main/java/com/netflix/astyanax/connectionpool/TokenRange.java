@@ -17,18 +17,16 @@ package com.netflix.astyanax.connectionpool;
 
 import java.util.List;
 
+/**
+ * Represents a contiguous range of tokens.
+ * 
+ * @author elandau
+ *
+ */
 public interface TokenRange {
     String getStartToken();
 
     String getEndToken();
-
+    
     List<String> getEndpoints();
-
-    List<EndpointDetails> getEndpointDetails();
-
-    interface EndpointDetails {
-        String getHost();
-        String getDataCenter();
-        String getRack();
-    }
 }

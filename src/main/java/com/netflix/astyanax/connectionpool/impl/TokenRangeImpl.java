@@ -18,6 +18,7 @@ package com.netflix.astyanax.connectionpool.impl;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.netflix.astyanax.connectionpool.TokenRange;
 
 public class TokenRangeImpl implements TokenRange {
@@ -25,13 +26,14 @@ public class TokenRangeImpl implements TokenRange {
     private final String startToken;
     private final String endToken;
     private final List<String> endpoints;
-    private final List<EndpointDetails> endpointDetails;
 
-    public TokenRangeImpl(String startToken, String endToken, List<String> endpoints, List<EndpointDetails> endpointDetails) {
+    public TokenRangeImpl(String startToken, String endToken, List<String> endpoints) {
         this.startToken = startToken;
         this.endToken = endToken;
-        this.endpoints = ImmutableList.copyOf(endpoints);
-        this.endpointDetails = ImmutableList.copyOf(endpointDetails);
+        if (endpoints != null)
+            this.endpoints = ImmutableList.copyOf(endpoints);
+        else 
+            this.endpoints = Lists.newArrayList();
     }
 
     @Override
@@ -47,11 +49,6 @@ public class TokenRangeImpl implements TokenRange {
     @Override
     public List<String> getEndpoints() {
         return this.endpoints;
-    }
-
-    @Override
-    public List<EndpointDetails> getEndpointDetails() {
-        return this.endpointDetails;
     }
 
     @Override

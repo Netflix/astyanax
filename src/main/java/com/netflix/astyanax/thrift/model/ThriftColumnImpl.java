@@ -20,15 +20,19 @@ import java.util.Date;
 import java.util.UUID;
 
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.model.AbstractColumnImpl;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.serializers.BooleanSerializer;
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
+import com.netflix.astyanax.serializers.ByteSerializer;
 import com.netflix.astyanax.serializers.BytesArraySerializer;
 import com.netflix.astyanax.serializers.DateSerializer;
 import com.netflix.astyanax.serializers.DoubleSerializer;
+import com.netflix.astyanax.serializers.FloatSerializer;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.LongSerializer;
+import com.netflix.astyanax.serializers.ShortSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.UUIDSerializer;
 
@@ -41,18 +45,12 @@ import com.netflix.astyanax.serializers.UUIDSerializer;
  * 
  * @param <C>
  */
-public class ThriftColumnImpl<C> implements Column<C> {
-    private final C name;
+public class ThriftColumnImpl<C> extends AbstractColumnImpl<C> {
     private final org.apache.cassandra.thrift.Column column;
 
     public ThriftColumnImpl(C name, org.apache.cassandra.thrift.Column column) {
-        this.name = name;
+        super(name);
         this.column = column;
-    }
-
-    @Override
-    public C getName() {
-        return name;
     }
 
     @Override
@@ -61,59 +59,13 @@ public class ThriftColumnImpl<C> implements Column<C> {
     }
 
     @Override
-    public String getStringValue() {
-        return StringSerializer.get().fromBytes(column.getValue());
-    }
-
-    @Override
-    public int getIntegerValue() {
-        return IntegerSerializer.get().fromBytes(column.getValue());
-    }
-
-    @Override
-    public long getLongValue() {
-        return LongSerializer.get().fromBytes(column.getValue());
-    }
-
-    @Override
     public <C2> ColumnList<C2> getSubColumns(Serializer<C2> ser) {
-
-        throw new UnsupportedOperationException("SimpleColumn \'" + name + "\' has no children");
+        throw new UnsupportedOperationException("SimpleColumn \'" + getName() + "\' has no children");
     }
 
     @Override
     public boolean isParentColumn() {
         return false;
-    }
-
-    @Override
-    public byte[] getByteArrayValue() {
-        return BytesArraySerializer.get().fromBytes(column.getValue());
-    }
-
-    @Override
-    public boolean getBooleanValue() {
-        return BooleanSerializer.get().fromBytes(column.getValue());
-    }
-
-    @Override
-    public ByteBuffer getByteBufferValue() {
-        return ByteBufferSerializer.get().fromBytes(column.getValue());
-    }
-
-    @Override
-    public Date getDateValue() {
-        return DateSerializer.get().fromBytes(column.getValue());
-    }
-
-    @Override
-    public UUID getUUIDValue() {
-        return UUIDSerializer.get().fromBytes(column.getValue());
-    }
-
-    @Override
-    public double getDoubleValue() {
-        return DoubleSerializer.get().fromBytes(column.getValue());
     }
 
     @Override
@@ -133,7 +85,6 @@ public class ThriftColumnImpl<C> implements Column<C> {
 
     @Override
     public boolean hasValue() {
-        return column.value != null && column.value.limit() != 0;
+        return column.value != null && column.value.remaining() != 0;
     }
-
 }

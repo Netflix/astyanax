@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.cassandra.config.ConfigurationException;
+//import org.apache.cassandra.config.ConfigurationException;
 import org.apache.cassandra.db.marshal.CompositeType;
 import org.apache.cassandra.db.marshal.TypeParser;
 import org.apache.commons.lang.StringUtils;
@@ -92,11 +92,31 @@ public class SerializerPackageImpl implements SerializerPackage {
     }
 
     public SerializerPackageImpl setKeyType(String keyType) throws UnknownComparatorException {
-        ComparatorType type = ComparatorType.getByClassName(keyType);
-        if (type == null)
-            throw new UnknownComparatorException(keyType);
+        String comparatorType = StringUtils.substringBefore(keyType, "(");
+        ComparatorType type = ComparatorType.getByClassName(comparatorType);
 
-        this.keySerializer = type.getSerializer();
+        if (type == null) {
+            throw new UnknownComparatorException(keyType);
+        }
+
+        if (type == ComparatorType.COMPOSITETYPE) {
+            try {
+                this.keySerializer = new SpecificCompositeSerializer((CompositeType) TypeParser.parse(keyType));
+                return this;
+            }
+            catch (Exception e) {
+                // Ignore and simply use the default serializer
+            }
+            throw new UnknownComparatorException(keyType);
+        }
+        else if (type == ComparatorType.DYNAMICCOMPOSITETYPE) {
+            // TODO
+            throw new UnknownComparatorException(keyType);
+        }
+        else {
+            this.keySerializer = type.getSerializer();
+        }
+
         return this;
     }
 
@@ -123,7 +143,7 @@ public class SerializerPackageImpl implements SerializerPackage {
                 this.columnSerializer = new SpecificCompositeSerializer((CompositeType) TypeParser.parse(columnType));
                 return this;
             }
-            catch (ConfigurationException e) {
+            catch (Exception e) {
                 // Ignore and simply use the default serializer
             }
             throw new UnknownComparatorException(columnType);

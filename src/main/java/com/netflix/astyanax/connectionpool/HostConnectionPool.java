@@ -36,16 +36,6 @@ public interface HostConnectionPool<CL> {
     Connection<CL> borrowConnection(int timeout) throws ConnectionException;
 
     /**
-     * This open is different from borrowConnection in that it actually creates
-     * a new connection without waiting for one that may be idle. openConnection
-     * is still subject to all other connection pool limitations.
-     * 
-     * @return
-     * @throws ConnectionException
-     */
-    Connection<CL> openConnection() throws ConnectionException;
-
-    /**
      * Return a connection to the host's pool. May close the connection if the
      * pool is down or the last exception on the connection is determined to be
      * fatal.
@@ -82,7 +72,7 @@ public interface HostConnectionPool<CL> {
      * @throws InterruptedException
      * @returns Actual number of connections created
      */
-    int growConnections(int numConnections) throws ConnectionException, InterruptedException;
+    int primeConnections(int numConnections) throws ConnectionException, InterruptedException;
 
     /**
      * Get the host to which this pool is associated
@@ -130,12 +120,23 @@ public interface HostConnectionPool<CL> {
     int getBusyConnectionCount();
 
     /**
-     * Determine if pool is shut down.
-     * 
+     * Return true if the pool is marked as down and is trying to reconnect
+     * @return
+     */
+    boolean isReconnecting();
+
+    /**
+     * Return true if the pool is active.
+     * @return
+     */
+    boolean isActive();
+    
+    /**
+     * Return true if the has been shut down and is no longer accepting traffic.
      * @return
      */
     boolean isShutdown();
-
+    
     /**
      * Return implementation specific score to be used by weighted pool
      * selection algorithms
@@ -145,18 +146,36 @@ public interface HostConnectionPool<CL> {
     double getScore();
 
     /**
-     * Get the average latency as calculated by the scoring strategy
-     * 
-     * @return
-     */
-    double getMeanLatency();
-
-    /**
      * Add a single latency sample after an operation on a connection belonging
      * to this pool
      * 
      * @param lastLatency
      */
     void addLatencySample(long lastLatency, long now);
+
+    /**
+     * @return Get total number of connections opened since the pool was created
+     */
+    int getOpenedConnectionCount();
+
+    /**
+     * @return Get the total number of failed connection open attempts
+     */
+    int getFailedOpenConnectionCount();
+
+    /**
+     * @return Get total number of connections closed
+     */
+    int getClosedConnectionCount();
+
+    /**
+     * @return Get number of errors since the last successful operation
+     */
+    int getErrorsSinceLastSuccess();
+
+    /**
+     * @return Return the number of open connection attempts
+     */
+    int getConnectAttemptCount();
 
 }

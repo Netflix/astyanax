@@ -111,4 +111,9 @@ public class ColumnFamily<K, C> {
             Serializer<C> columnSerializer) {
         return new ColumnFamily<K, C>(columnFamilyName, keySerializer, columnSerializer);
     }
+    
+    public static <K, C> ColumnFamily<K, C> newColumnFamily(String columnFamilyName, Serializer<K> keySerializer,
+            Serializer<C> columnSerializer, Serializer<?> defaultSerializer) {
+        return new ColumnFamily<K, C>(columnFamilyName, keySerializer, columnSerializer, defaultSerializer);
+    }
 }

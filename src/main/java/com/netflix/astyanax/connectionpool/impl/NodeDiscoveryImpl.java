@@ -16,15 +16,12 @@
 package com.netflix.astyanax.connectionpool.impl;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.cassandra.dht.Token;
 import org.joda.time.DateTime;
 
 import com.google.common.base.Supplier;
@@ -38,25 +35,43 @@ import com.netflix.astyanax.connectionpool.NodeDiscovery;
  * the ring tokens.
  * 
  * @author elandau
+ * 
+ * @param <CL>
  */
 public class NodeDiscoveryImpl implements NodeDiscovery {
     private final ConnectionPool<?> connectionPool;
-    private final ScheduledExecutorService executor = Executors
-            .newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setDaemon(true).build());
+    private final ScheduledExecutorService executor;
+    private boolean bOwnedExecutor = false;
     private final int interval;
     private final String name;
-    private final Supplier<Map<Token, List<Host>>> tokenRangeSupplier;
+    private final Supplier<List<Host>> hostSupplier;
     private final AtomicReference<DateTime> lastUpdateTime = new AtomicReference<DateTime>();
     private final AtomicReference<Exception> lastException = new AtomicReference<Exception>();
     private final AtomicLong refreshCounter = new AtomicLong();
     private final AtomicLong errorCounter = new AtomicLong();
 
-    public NodeDiscoveryImpl(String name, int interval, Supplier<Map<Token, List<Host>>> tokenRangeSupplier,
+    public NodeDiscoveryImpl(
+            String name, 
+            int interval, 
+            Supplier<List<Host>> hostSupplier,
             ConnectionPool<?> connectionPool) {
+        this(name, interval, hostSupplier, connectionPool, 
+              Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setDaemon(true).build()));
+        
+        bOwnedExecutor = true;
+    }
+    
+    public NodeDiscoveryImpl(
+            String name, 
+            int interval, 
+            Supplier<List<Host>> hostSupplier,
+            ConnectionPool<?> connectionPool,
+            ScheduledExecutorService executor) {
         this.connectionPool = connectionPool;
-        this.interval = interval;
-        this.tokenRangeSupplier = tokenRangeSupplier;
-        this.name = name;
+        this.interval       = interval;
+        this.hostSupplier   = hostSupplier;
+        this.name           = name;
+        this.executor       = executor;
     }
 
     /**
@@ -79,13 +94,14 @@ public class NodeDiscoveryImpl implements NodeDiscovery {
 
     @Override
     public void shutdown() {
-        executor.shutdown();
+        if (bOwnedExecutor)
+            executor.shutdown();
         NodeDiscoveryMonitorManager.getInstance().unregisterMonitor(name, this);
     }
 
     private void update() {
         try {
-            connectionPool.setHosts(tokenRangeSupplier.get());
+            connectionPool.setHosts(hostSupplier.get());
             refreshCounter.incrementAndGet();
             lastUpdateTime.set(new DateTime());
         }
@@ -117,28 +133,8 @@ public class NodeDiscoveryImpl implements NodeDiscovery {
 
     @Override
     public String getRawHostList() {
-        StringBuilder sb = new StringBuilder();
-        Map<Token, List<Host>> hosts;
         try {
-            hosts = tokenRangeSupplier.get();
-            boolean first = true;
-            for (Entry<Token, List<Host>> token : hosts.entrySet()) {
-                if (!first)
-                    sb.append(",");
-                else
-                    first = false;
-                sb.append(token).append(":[");
-                boolean firstHost = true;
-                for (Host host : token.getValue()) {
-                    if (!firstHost)
-                        sb.append(",");
-                    else
-                        firstHost = false;
-                    sb.append(host.getHostName());
-                }
-                sb.append("]");
-            }
-            return sb.toString();
+            return hostSupplier.get().toString();
         }
         catch (Exception e) {
             return e.getMessage();

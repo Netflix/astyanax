@@ -42,8 +42,8 @@ public class ThriftSuperColumnMutationImpl<C> extends AbstractColumnListMutation
     private SlicePredicate deletionPredicate;
 
     public ThriftSuperColumnMutationImpl(long timestamp, List<Mutation> mutationList, ColumnPath<C> path) {
+        super(timestamp);
         this.path = path;
-        this.timestamp = timestamp;
         this.mutationList = mutationList;
     }
 
@@ -125,6 +125,26 @@ public class ThriftSuperColumnMutationImpl<C> extends AbstractColumnListMutation
 
         deletionPredicate.addToColumn_names(path.getSerializer().toByteBuffer(columnName));
         return this;
+    }
+
+    @Override
+    public ColumnListMutation<C> putCompressedColumn(C columnName, String value, Integer ttl) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ColumnListMutation<C> putCompressedColumn(C columnName, String value) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ColumnListMutation<C> putCompressedColumnIfNotNull(C columnName, String value, Integer ttl) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ColumnListMutation<C> putCompressedColumnIfNotNull(C columnName, String value) {
+        throw new UnsupportedOperationException();
     }
 
 }

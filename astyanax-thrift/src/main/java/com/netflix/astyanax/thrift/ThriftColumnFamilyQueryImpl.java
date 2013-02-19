@@ -237,6 +237,8 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                         ColumnOrSuperColumn last = Iterables.getLast(columnList);
                                         if (last.isSetColumn()) {
                                             predicate.getSlice_range().setStart(last.getColumn().getName());
+                                        } else if (last.isSetCounter_column()) {
+                                            predicate.getSlice_range().setStart(last.getCounter_column().getName());
                                         }
                                     }
                                 }

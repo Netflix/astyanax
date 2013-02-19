@@ -71,7 +71,7 @@ project(':astyanax-cassandra') {
     apply plugin: 'java'
     dependencies {
         compile 'org.apache.cassandra:cassandra-all:1.2.+'
-        compile 'io.netty:netty:3.4.4.Final'
+        compile 'org.jboss.netty:netty:3.2.4.Final'
         compile  project(':astyanax-core')
     }
 }

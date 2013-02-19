@@ -43,8 +43,7 @@ class ThriftCqlStatement implements CqlStatement {
 
     @Override
     public ListenableFuture<OperationResult<CqlStatementResult>> executeAsync() throws ConnectionException {
-        // TODO 
-        return null;
+        throw new RuntimeException("Not supported yet");
     }
 
     @Override
@@ -68,21 +67,6 @@ class ThriftCqlStatement implements CqlStatement {
 
     @Override
     public CqlPreparedStatement asPreparedStatement() {
-        return new AbstractThriftCqlPreparedStatement() {
-
-            @Override
-            public OperationResult<CqlStatementResult> execute() throws ConnectionException {
-                // TODO Auto-generated method stub
-                return null;
-            }
-
-            @Override
-            public ListenableFuture<OperationResult<CqlStatementResult>> executeAsync() throws ConnectionException {
-                // TODO Auto-generated method stub
-                return null;
-            }
-            
-        };
+        throw new RuntimeException("Not supported yet");
     }
-
 }

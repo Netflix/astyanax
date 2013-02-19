@@ -17,7 +17,7 @@ public class ThriftCqlStatementResult implements CqlStatementResult {
 
     @Override
     public long asCount() {
-        return 0;
+        throw new RuntimeException("Not supported yet");
     }
     
     @Override

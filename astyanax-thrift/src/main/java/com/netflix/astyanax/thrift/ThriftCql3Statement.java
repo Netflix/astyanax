@@ -37,16 +37,15 @@ public class ThriftCql3Statement implements CqlStatement {
                         CassandraOperationType.CQL, null), null, keyspace.getKeyspaceName()) {
                     @Override
                     public CqlStatementResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                        return null;
-//                        return new ThriftCqlStatementResult(client.execute_cql3_query(query, compression, ThriftConverter.ToThriftConsistencyLevel(cl)));
+                        return new ThriftCqlStatementResult(client.execute_cql3_query(query, compression, ThriftConverter.ToThriftConsistencyLevel(cl)));
                     }
                 }, retry);
     }
 
     @Override
     public ListenableFuture<OperationResult<CqlStatementResult>> executeAsync() throws ConnectionException {
-        // TODO 
-        return null;
+        // TODO:
+        throw new RuntimeException("Not supported yet");
     }
 
     @Override
@@ -71,8 +70,7 @@ public class ThriftCql3Statement implements CqlStatement {
 
     @Override
     public CqlPreparedStatement asPreparedStatement() {
-        // TODO Auto-generated method stub
-        return null;
+        // TODO:
+        throw new RuntimeException("Not supported yet");
     }
-
 }

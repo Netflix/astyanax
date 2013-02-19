@@ -47,7 +47,6 @@ import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.recipes.locks.BusyLockException;
 import com.netflix.astyanax.recipes.queue.triggers.Trigger;
-import com.netflix.astyanax.recipes.queue.shard.ModShardPolicy;
 import com.netflix.astyanax.recipes.queue.shard.ShardReaderReaderStrategy;
 import com.netflix.astyanax.recipes.queue.shard.TimePartitionedShardStrategy;
 import com.netflix.astyanax.retry.RetryPolicy;
@@ -758,24 +757,20 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             
             private List<MessageContext> readAndReturnShard(MessageQueueShard shard, int itemsToPop) throws MessageQueueException, BusyLockException, InterruptedException {
                 List<MessageContext>   messages = null;
-                if (shard != null) {
-                    try {
-                        if (shard.getLastReadCount() == 0) {
-                            if (!hasMessages(shard.getName())) {
-                                return null;
-                            }
+                try {
+                    // Optimization to check without locking if the shard was previously empty
+                    if (shard.getLastReadCount() == 0) {
+                        if (!hasMessages(shard.getName())) {
+                            return null;
                         }
-                        messages = readMessagesFromShard(shard.getName(), itemsToPop);
-                        if (!messages.isEmpty()) {
-                            return messages;
-                        }
-                        stats.incEmptyPartitionCount();
                     }
-                    catch (BusyLockException e) {
-//                        Thread.sleep(pollInterval);
-                    }
+                    
+                    return readMessagesFromShard(shard.getName(), itemsToPop);
                 }
-                return messages;
+                finally {
+                    if (messages == null || messages.isEmpty()) 
+                        stats.incEmptyPartitionCount();
+                }
             }
             
             @Override

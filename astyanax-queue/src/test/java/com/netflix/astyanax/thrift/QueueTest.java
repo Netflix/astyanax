@@ -3,7 +3,6 @@ package com.netflix.astyanax.thrift;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -160,8 +159,8 @@ public class QueueTest {
         final String key = "MyMessage";
         final Message message = new Message()
             .setUniqueKey(key)
-            .setTimeout(10, TimeUnit.SECONDS)
-            .setTrigger(new RepeatingTrigger.Builder().withInterval(1, TimeUnit.SECONDS).build());
+            .setTimeout(1, TimeUnit.SECONDS);
+//            .setTrigger(new RepeatingTrigger.Builder().withInterval(1, TimeUnit.SECONDS).build());
         
         producer.sendMessage(message);
         
@@ -171,23 +170,34 @@ public class QueueTest {
             Assert.fail();
         }
         catch (KeyExistsException e) {
+            LOG.info("Key already exists", e);
         }
         
         // Confirm that the message is there
         Assert.assertEquals(1, queue.getMessageCount());
-        List<Message> messages = queue.peekMessagesByKey(key);
-        Assert.assertEquals(1, messages.size());
+        final List<Message> m0 = queue.peekMessagesByKey(key);
+        LOG.info("m0: " + m0.toString());
+        Assert.assertEquals(1, m0.size());
         
         // Consume the message
-        List<MessageContext> m1 = consumer.readMessages(1);
+        final List<MessageContext> m1 = consumer.readMessages(1);
+        LOG.info("M1: " + m1.toString());
         Assert.assertEquals(1, m1.size());
+        
+        final List<Message> m1a = queue.peekMessagesByKey(key);
+        LOG.info("m1: " + m1a.toString());
         
         // Exceed the timeout
         Thread.sleep(2000);
         
         // Consume the timeout event
-        List<MessageContext> m2 = consumer.readMessages(1);
+        final List<MessageContext> m2 = consumer.readMessages(1);
+        LOG.info("M2: " + m2.toString());
         Assert.assertEquals(1, m2.size());
+        
+        final List<Message> m2a = queue.peekMessagesByKey(key);
+        LOG.info("m2: " + m2a.toString());
+        Assert.assertEquals(2, m2a.size());
         
         consumer.ackMessages(m1);
         consumer.ackMessages(m2);

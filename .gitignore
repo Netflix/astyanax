@@ -66,3 +66,7 @@ atlassian-ide-plugin.xml
 # NetBeans specific files/directories #
 #######################################
 .nbattrs
+
+astyanax-cassandra/bin/cassandra1.1-template.yaml
+
+astyanax-cassandra/bin/cassandra-template.yaml

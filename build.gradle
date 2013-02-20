@@ -1,6 +1,5 @@
 // Establish version and status
 ext.githubProjectName = rootProject.name // Change if github project name is not the same as the root project's name
-group = "com.netflix.${githubProjectName}"
 
 buildscript {
     repositories { mavenCentral() }
@@ -17,27 +16,82 @@ apply plugin: 'osgi'
 
 apply from: file('gradle/convention.gradle')
 apply from: file('gradle/maven.gradle')
-apply from: file('gradle/check.gradle')
-apply from: file('gradle/license.gradle')
+//apply from: file('gradle/check.gradle')
+//apply from: file('gradle/license.gradle')
 apply from: file('gradle/release.gradle')
 
-dependencies {
-    compile 'joda-time:joda-time:1.6.2'
-    compile 'org.apache.servicemix.bundles:org.apache.servicemix.bundles.commons-csv:1.0-r706900_3'
-    compile 'com.github.stephenc.high-scale-lib:high-scale-lib:1.1.2'
-    compile 'com.google.guava:guava:11.0.1'
-    compile 'org.apache.cassandra:cassandra-all:1.1.1'
-    compile 'org.apache.cassandra:cassandra-thrift:1.1.1'
-    compile 'com.eaio.uuid:uuid:3.2'
-    compile 'org.slf4j:slf4j-api:1.6.4'
-    compile 'org.codehaus.jettison:jettison:1.2'
-    compile 'commons-codec:commons-codec:1.5'
-    compile 'com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:1.3'
-    compile 'commons-lang:commons-lang:2.4'
-    compile 'org.apache.thrift:libthrift:0.7.0'
-    compile 'org.codehaus.jackson:jackson-core-asl:1.9.2'
-    compile 'org.codehaus.jackson:jackson-mapper-asl:1.9.2'
-    compile 'javax.persistence:persistence-api:1.0'
-    testCompile 'junit:junit:4.8.1'
+subprojects {
+    group = "com.netflix.${githubProjectName}"
+    dependencies {
+        compile 'joda-time:joda-time:1.6.2'
+        compile 'com.github.stephenc.high-scale-lib:high-scale-lib:1.1.2'
+        compile 'com.google.guava:guava:11.0.1'
+        compile 'com.eaio.uuid:uuid:3.2'
+        compile 'org.slf4j:slf4j-api:1.6.4'
+        compile 'org.codehaus.jettison:jettison:1.2'
+        compile 'commons-codec:commons-codec:1.5'
+        compile 'com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:1.3'
+        compile 'commons-lang:commons-lang:2.4'
+        compile 'org.codehaus.jackson:jackson-core-asl:1.9.2'
+        compile 'org.codehaus.jackson:jackson-mapper-asl:1.9.2'
+        compile 'org.xerial.snappy:snappy-java:1.0.4.1'
+        compile 'org.apache.servicemix.bundles:org.apache.servicemix.bundles.commons-csv:1.0-r706900_3'
+        testCompile 'junit:junit:4.8.1'
+    }
 }
 
+project(':astyanax-core') {
+    apply plugin: 'java'
+    dependencies {
+        testCompile 'junit:junit:4.8.1'
+    }
+}
+
+project(':astyanax-thrift') {
+    apply plugin: 'java'
+    dependencies {
+        compile  project(':astyanax-core')
+        compile  project(':astyanax-cassandra')
+        compile 'org.apache.cassandra:cassandra-thrift:1.2+'
+        compile 'org.apache.thrift:libthrift:0.7.0'
+    }
+}
+
+project(':astyanax-queue') {
+    apply plugin: 'java'
+    dependencies {
+        compile  project(':astyanax-core')
+        compile  project(':astyanax-cassandra')
+        compile  project(':astyanax-thrift')
+        compile  project(':astyanax-recipes')
+    }
+}
+
+project(':astyanax-cassandra') {
+    apply plugin: 'java'
+    dependencies {
+        compile 'org.apache.cassandra:cassandra-all:1.2.+'
+        compile 'org.jboss.netty:netty:3.2.4.Final'
+        compile  project(':astyanax-core')
+    }
+}
+
+project(':astyanax-recipes') {
+    apply plugin: 'java'
+    dependencies {
+        compile  project(':astyanax-core')
+        compile  project(':astyanax-cassandra')
+        testCompile project(':astyanax-thrift')
+    }
+}
+
+project(':astyanax-entity-mapper') {
+    apply plugin: 'java'
+    dependencies {
+        compile  project(':astyanax-core')
+        compile  project(':astyanax-cassandra')
+        compile  project(':astyanax-recipes')
+    	compile  'javax.persistence:persistence-api:1.0'
+        testCompile project(':astyanax-thrift')
+    }
+}

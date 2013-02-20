@@ -32,6 +32,7 @@ import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.cql.CqlStatement;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
+import com.netflix.astyanax.model.CfSplit;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
@@ -148,6 +149,11 @@ public class TestKeyspace implements Keyspace {
 
     @Override
     public List<String> describeSplits(String cfName, String startToken, String endToken, int keysPerSplit) throws ConnectionException {
+        return null;
+    }
+
+    @Override
+    public List<CfSplit> describeSplitsEx(String cfName, String startToken, String endToken, int keysPerSplit) throws ConnectionException {
         return null;
     }
 

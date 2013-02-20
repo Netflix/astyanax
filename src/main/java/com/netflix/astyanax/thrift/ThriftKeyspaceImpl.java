@@ -23,27 +23,29 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.cassandra.thrift.Cassandra;
-import org.apache.cassandra.thrift.CounterColumn;
 import org.apache.cassandra.thrift.Cassandra.Client;
+import org.apache.cassandra.thrift.CounterColumn;
 
+import com.google.common.base.Function;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.netflix.astyanax.AstyanaxConfiguration;
+import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.ColumnMutation;
 import com.netflix.astyanax.Execution;
-import com.netflix.astyanax.CassandraOperationType;
+import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.KeyspaceTracerFactory;
 import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.SerializerPackage;
 import com.netflix.astyanax.WriteAheadEntry;
 import com.netflix.astyanax.WriteAheadLog;
-import com.netflix.astyanax.SerializerPackage;
-import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.ConnectionContext;
+import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.TokenRange;
@@ -55,14 +57,16 @@ import com.netflix.astyanax.cql.CqlStatement;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
 import com.netflix.astyanax.ddl.impl.SchemaChangeResponseImpl;
-import com.netflix.astyanax.model.*;
-import com.netflix.astyanax.Keyspace;
+import com.netflix.astyanax.model.CfSplit;
+import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.retry.RunOnce;
 import com.netflix.astyanax.serializers.SerializerPackageImpl;
 import com.netflix.astyanax.serializers.UnknownComparatorException;
-import com.netflix.astyanax.thrift.ddl.*;
+import com.netflix.astyanax.thrift.ddl.ThriftColumnFamilyDefinitionImpl;
+import com.netflix.astyanax.thrift.ddl.ThriftKeyspaceDefinitionImpl;
+import com.netflix.astyanax.thrift.model.ThriftCfSplitImpl;
 
 public final class ThriftKeyspaceImpl implements Keyspace {
 
@@ -419,15 +423,56 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
     @Override
     public List<String> describeSplits(final String cfName, final String startToken, final String endToken,
-            final int keysPerSplit) throws ConnectionException {
+                                       final int keysPerSplit) throws ConnectionException {
         return executeOperation(
                 new AbstractKeyspaceOperationImpl<List<String>>(tracerFactory
                         .newTracer(CassandraOperationType.DESCRIBE_SPLITS), getKeyspaceName()) {
                     @Override
                     public List<String> internalExecute(Client client, ConnectionContext state) throws Exception {
-                        return client.describe_splits(cfName, startToken, endToken, keysPerSplit);
+                        List<String> tokens = client.describe_splits(cfName, startToken, endToken, keysPerSplit);
+                        return Lists.transform(tokens, new Function<String, String>() {
+                            @Override
+                            public String apply(String token) {
+                                return sanitizeToken(token);
+
+                            }
+                        });
                     }
                 }, getConfig().getRetryPolicy().duplicate()).getResult();
+    }
+
+    @Override
+    public List<CfSplit> describeSplitsEx(final String cfName, final String startToken, final String endToken,
+            final int keysPerSplit) throws ConnectionException {
+        return executeOperation(
+                new AbstractKeyspaceOperationImpl<List<CfSplit>>(tracerFactory
+                        .newTracer(CassandraOperationType.DESCRIBE_SPLITS), getKeyspaceName()) {
+                    @Override
+                    public List<CfSplit> internalExecute(Client client, ConnectionContext state) throws Exception {
+                        List<org.apache.cassandra.thrift.CfSplit> splits =
+                                client.describe_splits_ex(cfName, startToken, endToken, keysPerSplit);
+                        return Lists.transform(splits, new Function<org.apache.cassandra.thrift.CfSplit, CfSplit>() {
+                            @Override
+                            public CfSplit apply(org.apache.cassandra.thrift.CfSplit split) {
+                                return new ThriftCfSplitImpl(
+                                        sanitizeToken(split.getStart_token()),
+                                        sanitizeToken(split.getEnd_token()),
+                                        split.getRow_count());
+                            }
+                        });
+                    }
+                }, getConfig().getRetryPolicy().duplicate()).getResult();
+    }
+
+    private String sanitizeToken(String token) {
+        // In Cassandra 1.1.8+ describe_splits changed to return "Token(bytes[<hex>])" instead
+        // of just "<hex>" when using the ByteOrderedPartitioner.  Preserve the old, more
+        // sensible behavior.  See https://issues.apache.org/jira/browse/CASSANDRA-4803
+        String prefix = "Token(bytes[", suffix = "])";
+        if (token.startsWith(prefix) && token.endsWith(suffix)) {
+            token = token.substring(prefix.length(), token.length() - suffix.length());
+        }
+        return token;
     }
 
     @Override

@@ -27,6 +27,7 @@ import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.cql.CqlStatement;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
+import com.netflix.astyanax.model.CfSplit;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
@@ -164,6 +165,18 @@ public interface Keyspace {
      *    approximately {@code keysPerSplit} rows.
      */
     List<String> describeSplits(String cfName, String startToken, String endToken, int keysPerSplit)
+            throws ConnectionException;
+
+    /**
+     * Experimental Cassandra API added.  May change without warning.
+     *
+     * @return A list of column family splits, where each range query from {@code split.getStartToken()} to
+     * {@code split.getEndToken()} will return approximately {@code split.getRowCount()} rows where the latter
+     * is close to {@code keysPerSplit}.
+     *
+     * @since Cassandra 1.1.8+
+     */
+    List<CfSplit> describeSplitsEx(String cfName, String startToken, String endToken, int keysPerSplit)
             throws ConnectionException;
 
     /**

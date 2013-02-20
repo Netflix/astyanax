@@ -26,8 +26,8 @@
     </scm>
 
     <properties>
-        <next.release.version>1.56.26-bv2</next.release.version>
-        <next.development.version>1.56.26-bv3-SNAPSHOT</next.development.version>
+        <next.release.version>1.56.26-bv3</next.release.version>
+        <next.development.version>1.56.26-bv4-SNAPSHOT</next.development.version>
     </properties>
 
     <distributionManagement>

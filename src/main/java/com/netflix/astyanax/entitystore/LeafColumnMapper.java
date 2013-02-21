@@ -61,7 +61,9 @@ class LeafColumnMapper extends AbstractColumnMapper {
 		final Integer ttl = getTTL(field);
 		// TODO: suppress the unchecked raw type now.
 		// we have to use the raw type to avoid compiling error
-		clm.putColumn(columnName, value, valueSerializer, ttl);
+		if (value != null) {
+			clm.putColumn(columnName, value, valueSerializer, ttl);
+		}
 	}
 	
 	private Integer getTTL(Field field) {

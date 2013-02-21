@@ -17,6 +17,7 @@ import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
+import java.util.ArrayList;
 
 /**
  * utility class to map btw root Entity and cassandra data model
@@ -41,7 +42,7 @@ class EntityMapper<T, K> {
 		this.clazz = clazz;
 		this.defaultTtl = defaultTtl;
 
-		Field[] declaredFields = clazz.getDeclaredFields();
+		Field[] declaredFields = getFields(clazz, true).toArray(new Field[0]);
 		columnList = Lists.newArrayListWithCapacity(declaredFields.length);
 		Set<String> usedColumnNames = Sets.newHashSet();
 		Field tmpIdField = null;
@@ -71,6 +72,19 @@ class EntityMapper<T, K> {
 		Preconditions.checkNotNull(tmpIdField, "there are no field with @Id annotation");
 		//Preconditions.checkArgument(tmpIdField.getClass().equals(K.getClass()), String.format("@Id field type (%s) doesn't match generic type K (%s)", tmpIdField.getClass(), K.getClass()));
 		idField = tmpIdField;
+	}
+
+	private List<Field> getFields(Class clazz, boolean recursuvely) {
+		List<Field> allFields = new ArrayList<Field>();
+		if (clazz.getDeclaredFields() != null && clazz.getDeclaredFields().length > 0) {
+			for (Field field : clazz.getDeclaredFields()) {
+				allFields.add(field);
+			}
+			if (recursuvely && clazz.getSuperclass() != null) {
+				allFields.addAll(getFields(clazz.getSuperclass(), true));
+			}
+		}
+		return allFields;
 	}
 
 	void fillMutationBatch(MutationBatch mb, ColumnFamily<K, String> columnFamily, T entity) {

@@ -1,6 +1,8 @@
 package com.netflix.astyanax.entitystore;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -33,6 +35,7 @@ class EntityMapper<T, K> {
 
 	private final Class<T> clazz;
 	private final Integer ttl;
+	private final Method ttlMethod;
 	private final Field idField;
 	private final Map<String, ColumnMapper> columnList;
 	private final String entityName;
@@ -54,17 +57,31 @@ class EntityMapper<T, K> {
 		
 		entityName = MappingUtils.getEntityName(entityAnnotation, clazz);
 		
-		if(ttl == null) {
+		// TTL value from constructor or class-level annotation
+		Integer tmpTtlValue = ttl;
+		// constructor value has higher priority
+		if(tmpTtlValue == null) {
 			// try @TTL annotation at entity/row level.
 			// it doesn't make sense to support @TTL annotation at individual column level.
 			TTL ttlAnnotation = clazz.getAnnotation(TTL.class);
-			if(ttlAnnotation == null)
-				this.ttl = null;
-			else
-				this.ttl = ttlAnnotation.value();
-		} else {
-			this.ttl = ttl;
+			if(ttlAnnotation != null) {
+				int ttlAnnotationValue = ttlAnnotation.value();
+				Preconditions.checkState(ttlAnnotationValue > 0, "cannot define non-positive value for TTL annotation at class level: " + ttlAnnotationValue);
+				tmpTtlValue = ttlAnnotationValue;
+			}
 		}
+		this.ttl = tmpTtlValue;
+
+		// TTL method
+		Method tmpTtlMethod = null;
+		for (Method method : this.clazz.getDeclaredMethods()) {
+			if (method.isAnnotationPresent(TTL.class)) {
+				Preconditions.checkState(tmpTtlMethod == null, "Duplicate TTL method annotation on " + method.getName());
+				tmpTtlMethod = method;
+				tmpTtlMethod.setAccessible(true);
+			}
+		}
+		this.ttlMethod = tmpTtlMethod;
 
 		Field[] declaredFields = clazz.getDeclaredFields();
 		columnList = Maps.newHashMapWithExpectedSize(declaredFields.length);
@@ -107,7 +124,7 @@ class EntityMapper<T, K> {
 			@SuppressWarnings("unchecked")
 			K rowKey = (K) idField.get(entity);
 			ColumnListMutation<String> clm = mb.withRow(columnFamily, rowKey);
-			clm.setDefaultTtl(ttl);
+			clm.setDefaultTtl(getTtl(entity));
 			
 			for (ColumnMapper mapper : columnList.values()) {
 				mapper.fillMutationBatch(entity, clm, "");
@@ -116,6 +133,16 @@ class EntityMapper<T, K> {
 			throw new PersistenceException("failed to fill mutation batch", e);
 		}
 	}
+    
+    private Integer getTtl(T entity) throws IllegalArgumentException, IllegalAccessException, InvocationTargetException {
+    	Integer retTtl = this.ttl;
+    	// TTL method has higher priority
+    	if(ttlMethod != null) {
+    		Object retobj = ttlMethod.invoke(entity);
+    		retTtl = (Integer) retobj;
+    	}
+    	return retTtl;
+    }
 
 	T constructEntity(K id, ColumnList<String> cl) {
 		try {

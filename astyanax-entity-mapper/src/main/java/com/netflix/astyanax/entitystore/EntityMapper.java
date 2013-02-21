@@ -59,9 +59,9 @@ class EntityMapper<T, K> {
 		
 		// TTL value from constructor or class-level annotation
 		Integer tmpTtlValue = ttl;
-		// constructor value has higher priority
 		if(tmpTtlValue == null) {
-			// try @TTL annotation at entity/row level.
+			// constructor value has higher priority
+			// try @TTL annotation at entity/class level.
 			// it doesn't make sense to support @TTL annotation at individual column level.
 			TTL ttlAnnotation = clazz.getAnnotation(TTL.class);
 			if(ttlAnnotation != null) {

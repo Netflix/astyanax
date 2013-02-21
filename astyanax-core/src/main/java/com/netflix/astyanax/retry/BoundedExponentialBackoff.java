@@ -40,7 +40,7 @@ public class BoundedExponentialBackoff extends ExponentialBackoff {
     }
 
     public long getSleepTimeMs() {
-        return Math.max(maxSleepTimeMs, super.getSleepTimeMs());
+        return Math.min(maxSleepTimeMs, super.getSleepTimeMs());
     }
 
     @Override

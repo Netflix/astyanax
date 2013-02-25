@@ -475,7 +475,6 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                                 .setNameFormat("AstyanaxAllRowsReader-%d")
                                 .build());
                 
-                
                 try {
                     futures.addAll(startTasks(localExecutor, subtasks));
                     return waitForTasksToFinish();

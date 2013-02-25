@@ -34,6 +34,7 @@ import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.model.Row;
+import com.netflix.astyanax.partitioner.Murmur3Partitioner;
 import com.netflix.astyanax.recipes.UUIDStringSupplier;
 import com.netflix.astyanax.recipes.locks.ColumnPrefixDistributedRowLock;
 import com.netflix.astyanax.recipes.locks.StaleLockException;
@@ -805,11 +806,42 @@ public class MiscUnitTest {
 //    }
     
     @Test
+    public void testAllRowsReader() throws Exception {
+        final AtomicLong counter = new AtomicLong(0);
+        
+        AllRowsReader<String, String> reader = new AllRowsReader.Builder<String, String>(keyspace, CF_STANDARD1)
+                .withPageSize(3)
+                .withConcurrencyLevel(2)
+//                .withPartitioner(new Murmur3Partitioner())
+                .forEachRow(new Function<Row<String, String>, Boolean>() {
+                    @Override
+                    public Boolean apply(@Nullable Row<String, String> row) {
+                        counter.incrementAndGet();
+                        LOG.info("Got a row: " + row.getKey().toString());
+                        return true;
+                    }
+                })
+                .build();
+        
+        try {
+            boolean result = reader.call();
+            Assert.assertEquals(counter.get(), 27);
+            Assert.assertTrue(result);
+        }
+        catch (Exception e) {
+            LOG.info(e.getMessage(), e);
+            Assert.fail(e.getMessage());
+        }
+        
+    }
+    
+    @Test
     public void testAllRowsReaderWithCancel() throws Exception {
         final AtomicLong counter = new AtomicLong(0);
         
         AllRowsReader<String, String> reader = new AllRowsReader.Builder<String, String>(keyspace, CF_STANDARD1)
                 .withPageSize(3)
+                .withConcurrencyLevel(2)
                 .forEachRow(new Function<Row<String, String>, Boolean>() {
                     @Override
                     public Boolean apply(@Nullable Row<String, String> row) {

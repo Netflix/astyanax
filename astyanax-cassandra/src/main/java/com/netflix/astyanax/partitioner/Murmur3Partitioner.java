@@ -3,6 +3,7 @@ package com.netflix.astyanax.partitioner;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import com.google.common.collect.Lists;
@@ -11,9 +12,10 @@ import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.impl.TokenRangeImpl;
 
 public class Murmur3Partitioner implements Partitioner {
-    public static final Long MINIMUM = Long.MIN_VALUE;
-    public static final Long MAXIMUM = Long.MAX_VALUE;
-    public static final Long ONE     = 1L;
+    public static final BigInteger MINIMUM = new BigInteger(Long.toString(Long.MIN_VALUE));
+    public static final BigInteger MAXIMUM = new BigInteger(Long.toString(Long.MAX_VALUE));
+
+    public static final BigInteger ONE     = new BigInteger("1");
     
     private static final org.apache.cassandra.dht.Murmur3Partitioner partitioner = new org.apache.cassandra.dht.Murmur3Partitioner();
     private static final Murmur3Partitioner instance = new Murmur3Partitioner();
@@ -22,6 +24,9 @@ public class Murmur3Partitioner implements Partitioner {
         return instance;
     }
     
+    private Murmur3Partitioner() {
+        
+    }
     
     @Override
     public String getMinToken() {
@@ -38,15 +43,15 @@ public class Murmur3Partitioner implements Partitioner {
         if (first.equals(last)) {
             last = getTokenMinusOne(last);
         }
+        
         List<TokenRange> tokens = Lists.newArrayList();
-        for (int i = 0; i < count; i++) {
-            String startToken = getSegmentToken(count, i, new BigInteger(first), new BigInteger(last));
-            String endToken;
-            if (i == count-1 && last.equals(getMaxToken())) 
-                endToken = getMinToken();
-            else
-                endToken = getSegmentToken(count, i+1, new BigInteger(first), new BigInteger(last));
-            tokens.add(new TokenRangeImpl(startToken, endToken, new ArrayList<String>()));
+        List<String> splits = splitRange(new BigInteger(first), new BigInteger(last), count);
+        Iterator<String> iter = splits.iterator();
+        String current = iter.next();
+        while (iter.hasNext()) {
+            String next = iter.next();
+            tokens.add(new TokenRangeImpl(current, next, new ArrayList<String>()));
+            current = next;
         }
         return tokens;
     }
@@ -75,11 +80,16 @@ public class Murmur3Partitioner implements Partitioner {
             return Long.toString(lToken - 1);
     }
 
-    public static String getSegmentToken(int size, int position, BigInteger minInitialToken, BigInteger maxInitialToken ) {
-        BigInteger decValue = minInitialToken;
-        if (position != 0)
-            decValue = maxInitialToken.multiply(new BigInteger("" + position)).divide(new BigInteger("" + size));
-        return decValue.toString();
+    public static List<String> splitRange(BigInteger first, BigInteger last, int count) {
+        List<String> tokens = Lists.newArrayList();
+        tokens.add(first.toString());
+        BigInteger delta = (last.subtract(first).divide(BigInteger.valueOf((long)count)));
+        BigInteger current = first;
+        for (int i = 0; i < count-1; i++) {
+            current = current.add(delta);
+        }
+        tokens.add(last.toString());
+        return tokens;
     }
 
 }

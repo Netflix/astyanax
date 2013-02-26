@@ -21,6 +21,7 @@ import java.util.Collection;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.connectionpool.impl.Topology;
+import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.retry.RetryPolicy;
 
 /**
@@ -111,4 +112,9 @@ public interface ConnectionPool<CL> {
      * @return Return the internal topology which represents the partitioning of data across hosts in the pool
      */
     Topology<CL> getTopology();
+    
+    /**
+     * @return Return the partitioner used by this pool.  
+     */
+    Partitioner getPartitioner();
 }

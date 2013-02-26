@@ -57,6 +57,8 @@ import com.netflix.astyanax.ddl.SchemaChangeResult;
 import com.netflix.astyanax.ddl.impl.SchemaChangeResponseImpl;
 import com.netflix.astyanax.model.*;
 import com.netflix.astyanax.Keyspace;
+import com.netflix.astyanax.partitioner.BigInteger127Partitioner;
+import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.retry.RunOnce;
@@ -72,9 +74,13 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     final ListeningExecutorService executor;
     final KeyspaceTracerFactory tracerFactory;
     final Cache<String, Object> cache;
-    final ThriftCqlFactory cqlStatementFactory;
+    final ThriftCqlFactory      cqlStatementFactory;
+    final Partitioner           partitioner;
     
-    public ThriftKeyspaceImpl(String ksName, ConnectionPool<Cassandra.Client> pool, AstyanaxConfiguration config,
+    public ThriftKeyspaceImpl(
+            String ksName, 
+            ConnectionPool<Cassandra.Client> pool, 
+            AstyanaxConfiguration config,
             final KeyspaceTracerFactory tracerFactory) {
         this.connectionPool = pool;
         this.config         = config;
@@ -83,6 +89,11 @@ public final class ThriftKeyspaceImpl implements Keyspace {
         this.tracerFactory  = tracerFactory;
         this.cache          = CacheBuilder.newBuilder().expireAfterWrite(10, TimeUnit.MINUTES).build();
         this.cqlStatementFactory = ThriftCqlFactoryResolver.createFactory(config);
+        
+        if (pool.getPartitioner() == null)
+            this.partitioner = BigInteger127Partitioner.get();
+        else 
+            this.partitioner = pool.getPartitioner();
     }
 
     @Override

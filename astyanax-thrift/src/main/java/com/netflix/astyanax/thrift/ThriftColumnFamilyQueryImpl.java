@@ -15,76 +15,58 @@
  ******************************************************************************/
 package com.netflix.astyanax.thrift;
 
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.cassandra.dht.BigIntegerToken;
-import org.apache.cassandra.dht.RandomPartitioner;
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.Cassandra.Client;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.CounterSuperColumn;
 import org.apache.cassandra.thrift.KeyRange;
-import org.apache.cassandra.thrift.KeySlice;
 import org.apache.cassandra.thrift.Mutation;
 import org.apache.cassandra.thrift.SuperColumn;
-import org.apache.cassandra.utils.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.KeyspaceTracerFactory;
-import com.netflix.astyanax.RowCallback;
 import com.netflix.astyanax.RowCopier;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.ConnectionContext;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.OperationResult;
-import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.impl.OperationResultImpl;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ConsistencyLevel;
-import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.model.Rows;
-import com.netflix.astyanax.query.AbstractPreparedCqlQuery;
 import com.netflix.astyanax.query.AllRowsQuery;
 import com.netflix.astyanax.query.ColumnCountQuery;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.query.ColumnQuery;
 import com.netflix.astyanax.query.CqlQuery;
 import com.netflix.astyanax.query.IndexQuery;
-import com.netflix.astyanax.query.PreparedCqlQuery;
 import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.query.RowSliceColumnCountQuery;
 import com.netflix.astyanax.query.RowSliceQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
-import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.shallows.EmptyColumnList;
 import com.netflix.astyanax.shallows.EmptyRowsImpl;
 import com.netflix.astyanax.thrift.model.*;
-import com.netflix.astyanax.util.TokenGenerator;
 
 /**
  * Implementation of all column family queries using the thrift API.
@@ -98,13 +80,13 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
     private final static Logger LOG = LoggerFactory.getLogger(ThriftColumnFamilyQueryImpl.class);
 
     final ConnectionPool<Cassandra.Client> connectionPool;
-    final ColumnFamily<K, C> columnFamily;
-    final KeyspaceTracerFactory tracerFactory;
-    final ThriftKeyspaceImpl keyspace;
-    ConsistencyLevel consistencyLevel;
-    final ListeningExecutorService executor;
-    Host pinnedHost;
-    RetryPolicy retry;
+    final ColumnFamily<K, C>               columnFamily;
+    final KeyspaceTracerFactory            tracerFactory;
+    final ThriftKeyspaceImpl               keyspace;
+    ConsistencyLevel                       consistencyLevel;
+    final ListeningExecutorService         executor;
+    Host                                   pinnedHost;
+    RetryPolicy                            retry;
 
     public ThriftColumnFamilyQueryImpl(ExecutorService executor, KeyspaceTracerFactory tracerFactory,
             ThriftKeyspaceImpl keyspace, ConnectionPool<Cassandra.Client> cp, ColumnFamily<K, C> columnFamily,
@@ -695,233 +677,7 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
 
     @Override
     public AllRowsQuery<K, C> getAllRows() {
-        return new AbstractThriftAllRowsQueryImpl<K, C>(columnFamily) {
-            private AbstractThriftAllRowsQueryImpl<K, C> getThisQuery() {
-                return this;
-            }
-
-            protected List<org.apache.cassandra.thrift.KeySlice> getNextBlock(final KeyRange range) {
-                while (true) {
-                    try {
-                        return connectionPool.executeWithFailover(
-                                new AbstractKeyspaceOperationImpl<List<org.apache.cassandra.thrift.KeySlice>>(
-                                        tracerFactory.newTracer(CassandraOperationType.GET_ROWS_RANGE, columnFamily),
-                                        pinnedHost, keyspace.getKeyspaceName()) {
-                                    @Override
-                                    public List<org.apache.cassandra.thrift.KeySlice> internalExecute(Client client, ConnectionContext context)
-                                            throws Exception {
-                                        return client.get_range_slices(
-                                                new ColumnParent().setColumn_family(columnFamily.getName()), predicate,
-                                                range, ThriftConverter.ToThriftConsistencyLevel(consistencyLevel));
-                                    }
-
-                                    @Override
-                                    public ByteBuffer getRowKey() {
-                                        if (range.getStart_key() != null)
-                                            return range.start_key;
-                                        return null;
-                                    }
-                                }, retry).getResult();
-                    }
-                    catch (ConnectionException e) {
-                        // Let exception callback handle this exception. If it
-                        // returns false then
-                        // we return an empty result which the iterator's
-                        // hasNext() to return false.
-                        // If no exception handler is provided then simply
-                        // return an empty set as if the
-                        // there is no more data
-                        if (this.getExceptionCallback() == null) {
-                            throw new RuntimeException(e);
-                        }
-                        else {
-                            if (!this.getExceptionCallback().onException(e)) {
-                                return new ArrayList<org.apache.cassandra.thrift.KeySlice>();
-                            }
-                        }
-                    }
-                }
-            }
-
-            @Override
-            public OperationResult<Rows<K, C>> execute() throws ConnectionException {
-                return new OperationResultImpl<Rows<K, C>>(Host.NO_HOST, new ThriftAllRowsImpl<K, C>(getThisQuery(),
-                        columnFamily), 0);
-            }
-
-            @Override
-            public ListenableFuture<OperationResult<Rows<K, C>>> executeAsync() throws ConnectionException {
-                throw new UnsupportedOperationException("executeAsync not supported here.  Use execute()");
-            }
-
-            private boolean shouldIgnoreEmptyRows() {
-                if (getIncludeEmptyRows() == null) {
-                    if (getPredicate().isSetSlice_range() && getPredicate().getSlice_range().getCount() == 0) {
-                        return false;
-                    }
-                }
-                else {
-                    return !getIncludeEmptyRows();
-                }
-
-                return true;
-            }
-
-            @Override
-            public void executeWithCallback(final RowCallback<K, C> callback) throws ConnectionException {
-                final RandomPartitioner partitioner = new RandomPartitioner();
-                final AtomicReference<ConnectionException> error = new AtomicReference<ConnectionException>();
-                final boolean bIgnoreTombstones = shouldIgnoreEmptyRows();
-
-                List<Pair<String, String>> ranges;
-                if (this.getConcurrencyLevel() != null) {
-                    ranges = Lists.newArrayList();
-                    int nThreads = this.getConcurrencyLevel();
-                    for (int i = 0; i < nThreads; i++) {
-                        BigIntegerToken start =  new BigIntegerToken(TokenGenerator.initialToken(nThreads, i,   getStartToken(), getEndToken()));
-                        BigIntegerToken end   =  new BigIntegerToken(TokenGenerator.initialToken(nThreads, i+1, getStartToken(), getEndToken()));
-
-                        try {
-                            Pair<String, String> pair = Pair.create(checkpointManager.getCheckpoint(start.toString()), end.toString());
-                            if (pair.left == null) {
-                                pair = Pair.create(start.toString(), end.toString());
-                                ranges.add(pair);
-                            }
-                            else if (!pair.left.equals(pair.right)) {
-                                ranges.add(pair);
-                            }
-                        } catch (Exception e) {
-                            throw ThriftConverter.ToConnectionPoolException(e);
-                        }
-                    }
-                }
-                else {
-                    ranges = Lists.transform(keyspace.describeRing(true), new Function<TokenRange, Pair<String, String>> () {
-                        @Override
-                        public Pair<String, String> apply(TokenRange input) {
-                            return Pair.create(input.getStartToken(), input.getEndToken());
-                        }
-                    });
-                }
-                final CountDownLatch doneSignal = new CountDownLatch(ranges.size());
-
-                for (final Pair<String, String> tokenPair : ranges) {
-                    // Prepare the range of tokens for this token range
-                    final KeyRange range = new KeyRange()
-                            .setCount(getBlockSize())
-                            .setStart_token(tokenPair.left)
-                            .setEnd_token(tokenPair.right);
-
-                    executor.submit(new Callable<Void>() {
-                        @Override
-                        public Void call() throws Exception {
-                            if (error.get() == null && internalRun()) {
-                                executor.submit(this);
-                            }
-                            else {
-                                doneSignal.countDown();
-                            }
-                            return null;
-                        }
-
-                        private boolean internalRun() throws Exception {
-                            try {
-                                // Get the next block
-                                List<KeySlice> ks = connectionPool.executeWithFailover(
-                                        new AbstractKeyspaceOperationImpl<List<KeySlice>>(tracerFactory
-                                                .newTracer(CassandraOperationType.GET_ROWS_RANGE,
-                                                        columnFamily), pinnedHost, keyspace
-                                                .getKeyspaceName()) {
-                                            @Override
-                                            public List<KeySlice> internalExecute(Client client, ConnectionContext context)
-                                                    throws Exception {
-                                                return client.get_range_slices(new ColumnParent()
-                                                        .setColumn_family(columnFamily.getName()),
-                                                        predicate, range, ThriftConverter
-                                                                .ToThriftConsistencyLevel(consistencyLevel));
-                                            }
-
-                                            @Override
-                                            public ByteBuffer getRowKey() {
-                                                if (range.getStart_key() != null)
-                                                    return ByteBuffer.wrap(range.getStart_key());
-                                                return null;
-                                            }
-                                        }, retry.duplicate()).getResult();
-
-                                // Notify the callback
-                                if (!ks.isEmpty()) {
-                                    KeySlice lastRow = Iterables.getLast(ks);
-
-                                    boolean bContinue = ks.size() == getBlockSize();
-                                    if (bIgnoreTombstones) {
-                                        Iterator<KeySlice> iter = ks.iterator();
-                                        while (iter.hasNext()) {
-                                            if (iter.next().getColumnsSize() == 0)
-                                                iter.remove();
-                                        }
-                                    }
-                                    Rows<K, C> rows = new ThriftRowsSliceImpl<K, C>(ks, columnFamily
-                                            .getKeySerializer(), columnFamily.getColumnSerializer());
-                                    try {
-                                    	callback.success(rows);
-                                    }
-                                    catch (Throwable t) {
-                                        ConnectionException ce = ThriftConverter.ToConnectionPoolException(t);
-                                        error.set(ce);
-                                        return false;
-                                    }
-
-                                    if (bContinue) {
-                                        // Determine the start token
-                                        // for the next page
-                                        String token = partitioner.getToken(lastRow.bufferForKey()).toString();
-                                        checkpointManager.trackCheckpoint(tokenPair.left, token);
-                                        if (getRepeatLastToken()) {
-                                            // Start token is
-                                            // non-inclusive
-                                            BigInteger intToken = new BigInteger(token).subtract(new BigInteger("1"));
-                                            range.setStart_token(intToken.toString());
-                                        }
-                                        else {
-                                            range.setStart_token(token);
-                                        }
-                                    }
-                                    else {
-                                        checkpointManager.trackCheckpoint(tokenPair.left, tokenPair.right);
-                                        return false;
-                                    }
-                                }
-                                else {
-                                    checkpointManager.trackCheckpoint(tokenPair.left, tokenPair.right);
-                                    return false;
-                                }
-                            }
-                            catch (Exception e) {
-                                ConnectionException ce = ThriftConverter.ToConnectionPoolException(e);
-                                if (!callback.failure(ce)) {
-                                    error.set(ce);
-                                    return false;
-                                }
-                            }
-
-                            return true;
-                        }
-                    });
-                }
-                // Block until all threads finish
-                try {
-                    doneSignal.await();
-                }
-                catch (InterruptedException e) {
-                    LOG.debug("Execution interrupted on get all rows for keyspace " + keyspace.getKeyspaceName());
-                }
-
-                if (error.get() != null) {
-                    throw error.get();
-                }
-            }
-        };
+        return new ThriftAllRowsQueryImpl<K, C>(this);
     }
 
     @Override

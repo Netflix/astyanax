@@ -15,8 +15,11 @@
  ******************************************************************************/
 package com.netflix.astyanax.test;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.concurrent.Callable;
@@ -28,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
+import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import com.google.common.io.Resources;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -75,28 +79,35 @@ public class EmbeddedCassandra {
         this.dataDir = dataDir;
         dataDir.mkdirs();
 
-        URL         templateUrl = ClassLoader.getSystemClassLoader().getResource("cassandra-template.yaml");
-        Preconditions.checkNotNull(templateUrl, "Cassandra config template is null");
-        String      baseFile = Resources.toString(templateUrl, Charset.defaultCharset());
-
-        String      newFile = baseFile.replace("$DIR$", dataDir.getPath());
-        newFile = newFile.replace("$PORT$", Integer.toString(port));
-        newFile = newFile.replace("$STORAGE_PORT$", Integer.toString(storagePort));
-        newFile = newFile.replace("$CLUSTER$", clusterName);
-
-        File        configFile = new File(dataDir, "cassandra.yaml");
-        Files.write(newFile, configFile, Charset.defaultCharset());
+        InputStream is = null;
         
-        LOG.info("Cassandra config file: " + configFile.getPath());
-        System.setProperty("cassandra.config", "file:" + configFile.getPath());
-
         try {
-            cassandra = new CassandraDaemon();
-            cassandra.init(null);
+            URL         templateUrl = ClassLoader.getSystemClassLoader().getResource("cassandra-template.yaml");
+            Preconditions.checkNotNull(templateUrl, "Cassandra config template is null");
+            String      baseFile = Resources.toString(templateUrl, Charset.defaultCharset());
+            
+            String      newFile = baseFile.replace("$DIR$", dataDir.getPath());
+            newFile = newFile.replace("$PORT$", Integer.toString(port));
+            newFile = newFile.replace("$STORAGE_PORT$", Integer.toString(storagePort));
+            newFile = newFile.replace("$CLUSTER$", clusterName);
+    
+            File        configFile = new File(dataDir, "cassandra.yaml");
+            Files.write(newFile, configFile, Charset.defaultCharset());
+            
+            LOG.info("Cassandra config file: " + configFile.getPath());
+            System.setProperty("cassandra.config", "file:" + configFile.getPath());
+    
+            try {
+                cassandra = new CassandraDaemon();
+                cassandra.init(null);
+            }
+            catch (IOException e) {
+                LOG.error("Error initializing embedded cassandra", e);
+                throw e;
+            }
         }
-        catch (IOException e) {
-            LOG.error("Error initializing embedded cassandra", e);
-            throw e;
+        finally {
+            Closeables.closeQuietly(is);
         }
         LOG.info("Started cassandra deamon");
     }

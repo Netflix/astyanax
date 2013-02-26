@@ -11,7 +11,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.cassandra.dht.BigIntegerToken;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.KeyRange;
 import org.apache.cassandra.thrift.KeySlice;
@@ -39,13 +38,11 @@ import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnSlice;
 import com.netflix.astyanax.model.Rows;
-import com.netflix.astyanax.partitioner.BigInteger127Partitioner;
 import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.query.AllRowsQuery;
 import com.netflix.astyanax.query.CheckpointManager;
 import com.netflix.astyanax.shallows.EmptyCheckpointManager;
 import com.netflix.astyanax.thrift.model.ThriftRowsSliceImpl;
-import com.netflix.astyanax.util.TokenGenerator;
 
 public class ThriftAllRowsQueryImpl<K, C> implements AllRowsQuery<K, C> {
     private final static Logger LOG = LoggerFactory.getLogger(ThriftAllRowsQueryImpl.class);
@@ -62,18 +59,10 @@ public class ThriftAllRowsQueryImpl<K, C> implements AllRowsQuery<K, C> {
     private String  startToken      ;
     private String  endToken        ;
     private Boolean includeEmptyRows;
-    private final Partitioner partitioner;
     
     public ThriftAllRowsQueryImpl(ThriftColumnFamilyQueryImpl<K, C> query) {
         this.columnFamily = query.columnFamily;
         this.query = query;
-        if (this.query.keyspace.connectionPool.getPartitioner() == null)
-            partitioner = BigInteger127Partitioner.get();
-        else 
-            partitioner = this.query.keyspace.connectionPool.getPartitioner();
-            
-        this.startToken = partitioner.getMinToken();
-        this.endToken   = partitioner.getMaxToken();
     }
     
     protected List<org.apache.cassandra.thrift.KeySlice> getNextBlock(final KeyRange range) {
@@ -128,7 +117,7 @@ public class ThriftAllRowsQueryImpl<K, C> implements AllRowsQuery<K, C> {
     @Override
     public OperationResult<Rows<K, C>> execute() throws ConnectionException {
         return new OperationResultImpl<Rows<K, C>>(Host.NO_HOST, 
-                new ThriftAllRowsImpl<K, C>(query.keyspace.partitioner, this, columnFamily), 0);
+                new ThriftAllRowsImpl<K, C>(query.keyspace.getPartitioner(), this, columnFamily), 0);
     }
 
     @Override
@@ -162,7 +151,7 @@ public class ThriftAllRowsQueryImpl<K, C> implements AllRowsQuery<K, C> {
             int nThreads = this.getConcurrencyLevel();
             List<TokenRange> tokens = partitioner.splitTokenRange(
                     startToken == null ? partitioner.getMinToken() : startToken, 
-                    endToken == null   ? partitioner.getMinToken() : endToken, 
+                    endToken == null   ? partitioner.getMaxToken() : endToken, 
                     nThreads);
             for (TokenRange range : tokens) {
                 try {

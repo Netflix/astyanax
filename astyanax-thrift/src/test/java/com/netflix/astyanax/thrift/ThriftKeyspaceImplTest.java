@@ -68,7 +68,6 @@ import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.model.Equality;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
-import com.netflix.astyanax.partitioner.Murmur3Partitioner;
 import com.netflix.astyanax.query.IndexQuery;
 import com.netflix.astyanax.query.PreparedIndexExpression;
 import com.netflix.astyanax.query.RowQuery;
@@ -236,7 +235,6 @@ public class ThriftKeyspaceImplTest {
                                 .setMaxConnsPerHost(20)
                                 .setInitConnsPerHost(10)
                                 .setSeeds(SEEDS)
-//                                .setPartitioner(Murmur3Partitioner.get())
                                 )
                 .withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
                 .buildKeyspace(ThriftFamilyFactory.getInstance());

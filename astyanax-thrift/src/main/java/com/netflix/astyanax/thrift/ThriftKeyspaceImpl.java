@@ -48,6 +48,7 @@ import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.connectionpool.exceptions.SchemaDisagreementException;
 import com.netflix.astyanax.connectionpool.impl.TokenRangeImpl;
@@ -57,7 +58,6 @@ import com.netflix.astyanax.ddl.SchemaChangeResult;
 import com.netflix.astyanax.ddl.impl.SchemaChangeResponseImpl;
 import com.netflix.astyanax.model.*;
 import com.netflix.astyanax.Keyspace;
-import com.netflix.astyanax.partitioner.BigInteger127Partitioner;
 import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
@@ -75,7 +75,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     final KeyspaceTracerFactory tracerFactory;
     final Cache<String, Object> cache;
     final ThriftCqlFactory      cqlStatementFactory;
-    final Partitioner           partitioner;
+    private volatile Partitioner  partitioner;
     
     public ThriftKeyspaceImpl(
             String ksName, 
@@ -89,11 +89,6 @@ public final class ThriftKeyspaceImpl implements Keyspace {
         this.tracerFactory  = tracerFactory;
         this.cache          = CacheBuilder.newBuilder().expireAfterWrite(10, TimeUnit.MINUTES).build();
         this.cqlStatementFactory = ThriftCqlFactoryResolver.createFactory(config);
-        
-        if (pool.getPartitioner() == null)
-            this.partitioner = BigInteger127Partitioner.get();
-        else 
-            this.partitioner = pool.getPartitioner();
     }
 
     @Override
@@ -702,5 +697,22 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     @Override
     public CqlStatement prepareCqlStatement() {
         return this.cqlStatementFactory.createCqlStatement(this);
+    }
+
+    @Override
+    public Partitioner getPartitioner() throws ConnectionException {
+        if (partitioner == null) {
+            synchronized(this) {
+                if (partitioner == null) {
+                    String partitionerName = this.describePartitioner();
+                    try {
+                        partitioner = config.getPartitioner(partitionerName);
+                    } catch (Exception e) {
+                        throw new NotFoundException("Unable to determine partitioner " + partitionerName, e);
+                    }
+                }
+            }
+        }
+        return partitioner;
     }
 }

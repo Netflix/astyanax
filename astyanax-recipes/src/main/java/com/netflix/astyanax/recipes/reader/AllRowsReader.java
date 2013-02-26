@@ -35,6 +35,7 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.connectionpool.TokenRange;
+import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnSlice;
 import com.netflix.astyanax.model.Row;
@@ -96,7 +97,7 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
         private Boolean             includeEmptyRows;  // Default to null will discard tombstones
         
         public Builder(Keyspace ks, ColumnFamily<K, C> columnFamily) {
-            this.keyspace = ks;
+            this.keyspace     = ks;
             this.columnFamily = columnFamily;
         }
         
@@ -269,6 +270,13 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
         }
         
         public AllRowsReader<K,C> build() {
+            if (partitioner == null) {
+                try {
+                    partitioner = keyspace.getPartitioner();
+                } catch (ConnectionException e) {
+                    throw new RuntimeException("Unable to determine partitioner", e);
+                }
+            }
             return new AllRowsReader<K,C>(keyspace, 
                     columnFamily, 
                     concurrencyLevel, 
@@ -492,7 +500,7 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
         catch (Throwable t) {
             LOG.warn("AllRowsReader terminated", t);
             cancel();
-            throw new RuntimeException("Error reading all rows" , t);
+            throw new Exception("Error reading all rows" , t);
         }
     }
     

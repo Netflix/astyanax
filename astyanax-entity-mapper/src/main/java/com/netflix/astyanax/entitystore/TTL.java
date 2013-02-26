@@ -7,13 +7,13 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 @Documented
-@Target({ ElementType.TYPE })
+@Target({ ElementType.TYPE, ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface TTL {
 
 	/**
 	 * The time-to-live in seconds with which this particular field should be persisted as. 
-	 * By default no expiration deadline (ttl) is set.
+	 * add a negative default value so that the same annotation can be used at method level
 	 */
-	int value();
+	int value() default -1;
 }

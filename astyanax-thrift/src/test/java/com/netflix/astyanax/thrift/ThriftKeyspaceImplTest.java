@@ -553,26 +553,22 @@ public class ThriftKeyspaceImplTest {
     }
     
     @Test
-    public void paginateColumns() {
+    public void paginateColumns() throws Exception {
         String column = "";
         ColumnList<String> columns;
         int pageize = 10;
-        try {
-            RowQuery<String, String> query = keyspace
-                    .prepareQuery(CF_STANDARD1)
-                    .getKey("A")
-                    .autoPaginate(true)
-                    .withColumnRange(
-                            new RangeBuilder().setStart(column)
-                                    .setLimit(pageize).build());
+        RowQuery<String, String> query = keyspace
+                .prepareQuery(CF_STANDARD1)
+                .getKey("A")
+                .autoPaginate(true)
+                .withColumnRange(
+                        new RangeBuilder().setStart(column)
+                                .setLimit(pageize).build());
 
-            while (!(columns = query.execute().getResult()).isEmpty()) {
-                for (Column<String> c : columns) {
-                }
-                // column = Iterables.getLast(columns).getName() + "\u0000";
+        while (!(columns = query.execute().getResult()).isEmpty()) {
+            for (Column<String> c : columns) {
             }
-        } catch (ConnectionException e) {
-            System.out.println(e.getMessage());
+            // column = Iterables.getLast(columns).getName() + "\u0000";
         }
     }
 

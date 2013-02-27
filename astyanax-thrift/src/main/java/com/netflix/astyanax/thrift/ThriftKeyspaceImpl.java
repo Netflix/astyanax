@@ -25,7 +25,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.CounterColumn;
 import org.apache.cassandra.thrift.Cassandra.Client;
-import org.mortbay.log.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -25,6 +25,9 @@ import java.util.concurrent.TimeUnit;
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.CounterColumn;
 import org.apache.cassandra.thrift.Cassandra.Client;
+import org.mortbay.log.Log;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -67,7 +70,8 @@ import com.netflix.astyanax.serializers.UnknownComparatorException;
 import com.netflix.astyanax.thrift.ddl.*;
 
 public final class ThriftKeyspaceImpl implements Keyspace {
-
+    private final static Logger LOG = LoggerFactory.getLogger(ThriftKeyspaceImpl.class);
+    
     final ConnectionPool<Cassandra.Client> connectionPool;
     final AstyanaxConfiguration config;
     final String                ksName;
@@ -707,6 +711,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                     String partitionerName = this.describePartitioner();
                     try {
                         partitioner = config.getPartitioner(partitionerName);
+                        LOG.info(String.format("Detected partitioner %s for keyspace %s", partitionerName, ksName));
                     } catch (Exception e) {
                         throw new NotFoundException("Unable to determine partitioner " + partitionerName, e);
                     }

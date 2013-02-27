@@ -111,19 +111,12 @@ public class ThriftAllRowsImpl<K, C> implements Rows<K, C> {
                         iter.remove();
                     }
                     
-                    if (iter.hasNext()) {
-                        // If repeating last token then skip the first row in the result
-                        if (previousLastRow != null && query.getRepeatLastToken() && iter.hasNext()) {
-                            iter.next();
-                        }
-                        
+                    if (iter.hasNext() && bIgnoreTombstones) {
                         // Discard any tombstones
-                        if (bIgnoreTombstones) {
-                            while (iter.hasNext()) {
-                                KeySlice row = iter.next();
-                                if (row.getColumns().isEmpty()) {
-                                    iter.remove();
-                                }
+                        while (iter.hasNext()) {
+                            KeySlice row = iter.next();
+                            if (row.getColumns().isEmpty()) {
+                                iter.remove();
                             }
                         }
                         

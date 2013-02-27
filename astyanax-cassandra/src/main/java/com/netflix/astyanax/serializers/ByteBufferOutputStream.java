@@ -31,10 +31,12 @@ import java.util.List;
  * Hector and added getByteBuffer to return single ByteBuffer from contents.
  */
 public class ByteBufferOutputStream extends OutputStream {
-    public static final int BUFFER_SIZE = 8192;
-
+    public static final int INIT_BUFFER_SIZE = 64;
+    public static final int MAX_BUFFER_SIZE = 8192;
+    
     private List<ByteBuffer> buffers;
-
+    private int bufferSize = INIT_BUFFER_SIZE;
+    
     public ByteBufferOutputStream() {
         reset();
     }
@@ -84,13 +86,14 @@ public class ByteBufferOutputStream extends OutputStream {
 
     public void reset() {
         buffers = new LinkedList<ByteBuffer>();
-        buffers.add(ByteBuffer.allocate(BUFFER_SIZE));
+        bufferSize = INIT_BUFFER_SIZE;
+        buffers.add(ByteBuffer.allocate(bufferSize));
     }
 
     private ByteBuffer getBufferWithCapacity(int capacity) {
         ByteBuffer buffer = buffers.get(buffers.size() - 1);
         if (buffer.remaining() < capacity) {
-            buffer = ByteBuffer.allocate(BUFFER_SIZE);
+            buffer = ByteBuffer.allocate(bufferSize);
             buffers.add(buffer);
         }
         return buffer;
@@ -140,7 +143,12 @@ public class ByteBufferOutputStream extends OutputStream {
             buffer.put(b, off, remaining);
             len -= remaining;
             off += remaining;
-            buffer = ByteBuffer.allocate(BUFFER_SIZE);
+            
+            bufferSize *= 2;
+            if (bufferSize > MAX_BUFFER_SIZE)
+                bufferSize = MAX_BUFFER_SIZE;
+            
+            buffer = ByteBuffer.allocate(bufferSize);
             buffers.add(buffer);
             remaining = buffer.remaining();
         }
@@ -149,7 +157,7 @@ public class ByteBufferOutputStream extends OutputStream {
 
     /** Add a buffer to the output without copying, if possible. */
     public void write(ByteBuffer buffer) {
-        if (buffer.remaining() < BUFFER_SIZE) {
+        if (buffer.remaining() < bufferSize) {
             write(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining());
         }
         else { // append w/o copying bytes

@@ -140,6 +140,12 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     public static final String           DEFAULT_METADATA_SUFFIX         = "_metadata";
     public static final String           DEFAULT_HISTORY_SUFFIX          = "_history";
     public static final long             SCHEMA_CHANGE_DELAY             = 3000;
+    public static final ImmutableMap<String, Object> DEFAULT_COLUMN_FAMILY_SETTINGS = ImmutableMap.<String, Object>builder()
+            .put("read_repair_chance",       1.0)
+            .put("gc_grace_seconds",         5)     // TODO: Calculate gc_grace_seconds
+            .put("compaction_strategy",      "LeveledCompactionStrategy")
+            .put("compaction_strategy_options", ImmutableMap.of("sstable_size_in_mb", "100"))
+            .build();
     
     private final static AnnotatedCompositeSerializer<MessageQueueEntry> entrySerializer     
         = new AnnotatedCompositeSerializer<MessageQueueEntry>(MessageQueueEntry.class);
@@ -147,7 +153,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         = new AnnotatedCompositeSerializer<MessageMetadataEntry>(MessageMetadataEntry.class);
     
     private static final ObjectMapper mapper = new ObjectMapper();
-    
+
     {
         mapper.getSerializationConfig().setSerializationInclusion(JsonSerialize.Inclusion.NON_NULL);
         mapper.enableDefaultTyping();
@@ -214,6 +220,11 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             return this;
         }
         
+        public Builder withColumnFamilySettings(Map<String, Object> settings) {
+            queue.columnFamilySettings = settings;
+            return this;
+        }
+        
         public Builder withKeyspace(Keyspace keyspace) {
             queue.keyspace = keyspace;
             return this;
@@ -263,6 +274,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     private Collection<MessageQueueHooks>   hooks               = Lists.newArrayList();
     private MessageQueueSettings            settings            = new MessageQueueSettings();
     private Boolean                         bPoisonQueueEnabled = DEFAULT_POISON_QUEUE_ENABLED;
+    private Map<String, Object>             columnFamilySettings = DEFAULT_COLUMN_FAMILY_SETTINGS;
     private ShardReaderReaderStrategy       shardStrategy;
     private Function<String, Message>       invalidMessageHandler  = new Function<String, Message>() {
                                                                         @Override
@@ -628,21 +640,13 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     
     @Override
     public void createStorage() throws MessageQueueException {
-        final ImmutableMap<String, Object> common = ImmutableMap.<String, Object>builder()
-                .put("read_repair_chance",       0.0)
-                .put("gc_grace_seconds",         0)     // TODO: Calculate gc_grace_seconds
-                .put("compaction_strategy",      "LeveledCompactionStrategy")
-                .put("min_compaction_threshold", 2)
-                .put("max_compaction_threshold", 4)
-                .build();
-                
         changeSchema(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
                 keyspace.createColumnFamily(queueColumnFamily, ImmutableMap.<String, Object>builder()
                         .put("key_validation_class",     "UTF8Type")
                         .put("comparator_type",          "CompositeType(BytesType, BytesType(reversed=true), TimeUUIDType, TimeUUIDType, BytesType)")
-                        .putAll(common)
+                        .putAll(columnFamilySettings)
                         .build());
                 return null;
             }            
@@ -654,7 +658,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 keyspace.createColumnFamily(keyIndexColumnFamily, ImmutableMap.<String, Object>builder()
                         .put("key_validation_class",     "UTF8Type")
                         .put("comparator_type",          "CompositeType(BytesType, UTF8Type)")
-                        .putAll(common)
+                        .putAll(columnFamilySettings)
                         .build());
                 return null;
             }
@@ -665,7 +669,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             public Void call() throws Exception {
                 keyspace.createColumnFamily(historyColumnFamily, ImmutableMap.<String, Object>builder()
                         .put("default_validation_class", "UTF8Type")
-                        .putAll(common)
+                        .putAll(columnFamilySettings)
                         .build());
                 return null;
             }

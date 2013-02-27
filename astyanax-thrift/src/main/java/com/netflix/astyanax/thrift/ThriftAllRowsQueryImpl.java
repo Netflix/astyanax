@@ -141,7 +141,7 @@ public class ThriftAllRowsQueryImpl<K, C> implements AllRowsQuery<K, C> {
     @Override
     public void executeWithCallback(final RowCallback<K, C> callback) throws ConnectionException {
         final ThriftKeyspaceImpl keyspace = query.keyspace;
-        final Partitioner partitioner = keyspace.connectionPool.getPartitioner();
+        final Partitioner partitioner = keyspace.getPartitioner();
         final AtomicReference<ConnectionException> error = new AtomicReference<ConnectionException>();
         final boolean bIgnoreTombstones = shouldIgnoreEmptyRows();
 
@@ -159,7 +159,7 @@ public class ThriftAllRowsQueryImpl<K, C> implements AllRowsQuery<K, C> {
                     if (currentToken == null) {
                         currentToken = range.getStartToken();
                     }
-                    else if (currentToken.equals(endToken)) {
+                    else if (currentToken.equals(range.getEndToken())) {
                         continue;
                     }
                     ranges.add(Pair.create(currentToken, range.getEndToken()));
@@ -186,6 +186,8 @@ public class ThriftAllRowsQueryImpl<K, C> implements AllRowsQuery<K, C> {
                     .setEnd_token(tokenPair.right);
 
             query.executor.submit(new Callable<Void>() {
+                private boolean firstBlock = true;
+                
                 @Override
                 public Void call() throws Exception {
                     if (error.get() == null && internalRun()) {
@@ -225,8 +227,17 @@ public class ThriftAllRowsQueryImpl<K, C> implements AllRowsQuery<K, C> {
                         // Notify the callback
                         if (!ks.isEmpty()) {
                             KeySlice lastRow = Iterables.getLast(ks);
-
                             boolean bContinue = (ks.size() == getBlockSize());
+
+                            if (getRepeatLastToken()) {
+                                if (firstBlock) {
+                                    firstBlock = false;
+                                }
+                                else {
+                                    ks.remove(0);
+                                }
+                            }
+                            
                             if (bIgnoreTombstones) {
                                 Iterator<KeySlice> iter = ks.iterator();
                                 while (iter.hasNext()) {
@@ -246,8 +257,7 @@ public class ThriftAllRowsQueryImpl<K, C> implements AllRowsQuery<K, C> {
                             }
                             
                             if (bContinue) {
-                                // Determine the start token
-                                // for the next page
+                                // Determine the start token for the next page
                                 String token = partitioner.getTokenForKey(lastRow.bufferForKey()).toString();
                                 checkpointManager.trackCheckpoint(tokenPair.left, token);
                                 if (getRepeatLastToken()) {

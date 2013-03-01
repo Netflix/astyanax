@@ -29,13 +29,11 @@ public class ListSerializer<T> extends AbstractSerializer<List<T>> {
 
     @Override
     public List<T> fromByteBuffer(ByteBuffer arg0) {
-        List<T> result = arg0 == null ? null : myList.compose(arg0);
-        return result;
+        return arg0 == null ? null : myList.compose(arg0);
     }
 
     @Override
     public ByteBuffer toByteBuffer(List<T> arg0) {
-        ByteBuffer result = arg0 == null ? null : myList.decompose(arg0);
-        return result;
+        return arg0 == null ? null : myList.decompose(arg0);
     }
 }

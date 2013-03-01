@@ -33,13 +33,11 @@ public class MapSerializer<K, V> extends AbstractSerializer<Map<K, V>> {
 
     @Override
     public Map<K, V> fromByteBuffer(ByteBuffer arg0) {
-        Map<K, V> result = arg0 == null ? null : myMap.compose(arg0);
-        return result;
+        return arg0 == null ? null : myMap.compose(arg0);
     }
 
     @Override
     public ByteBuffer toByteBuffer(Map<K, V> arg0) {
-        ByteBuffer result = arg0 == null ? null : myMap.decompose(arg0);
-        return result;
+        return arg0 == null ? null : myMap.decompose(arg0);
     }
 }

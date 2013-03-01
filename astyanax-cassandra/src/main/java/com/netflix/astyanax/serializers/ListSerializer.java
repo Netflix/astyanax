@@ -8,15 +8,25 @@ import org.apache.cassandra.db.marshal.ListType;
 
 import com.netflix.astyanax.serializers.AbstractSerializer;
 
+/**
+ * Serializer implementation for generic lists.
+ * 
+ * @author vermes
+ * 
+ * @param <T>
+ *            element type
+ */
 public class ListSerializer<T> extends AbstractSerializer<List<T>> {
 
-    
-    ListType<T> myList;
+    private ListType<T> myList;
 
+    /**
+     * @param elements
+     */
     public ListSerializer(AbstractType<T> elements) {
         myList = ListType.getInstance(elements);
     }
-    
+
     @Override
     public List<T> fromByteBuffer(ByteBuffer arg0) {
         List<T> result = arg0 == null ? null : myList.compose(arg0);

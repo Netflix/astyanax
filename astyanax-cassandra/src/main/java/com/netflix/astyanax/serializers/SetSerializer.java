@@ -9,10 +9,21 @@ import org.apache.cassandra.db.marshal.UTF8Type;
 
 import com.netflix.astyanax.serializers.AbstractSerializer;
 
+/**
+ * Serializer implementation for generic sets.
+ * 
+ * @author vermes
+ * 
+ * @param <T>
+ *            element type
+ */
 public class SetSerializer<T> extends AbstractSerializer<Set<T>> {
 
-    SetType<T> mySet;
+    private SetType<T> mySet;
 
+    /**
+     * @param elements
+     */
     public SetSerializer(AbstractType<T> elements) {
         mySet = SetType.getInstance(elements);
     }

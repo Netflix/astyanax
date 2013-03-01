@@ -9,10 +9,24 @@ import org.apache.cassandra.db.marshal.UTF8Type;
 
 import com.netflix.astyanax.serializers.AbstractSerializer;
 
+/**
+ * Serializer implementation for generic maps.
+ * 
+ * @author vermes
+ * 
+ * @param <K>
+ *            key type
+ * @param <V>
+ *            value type
+ */
 public class MapSerializer<K, V> extends AbstractSerializer<Map<K, V>> {
 
-    MapType<K, V> myMap;
+    private MapType<K, V> myMap;
 
+    /**
+     * @param key
+     * @param value
+     */
     public MapSerializer(AbstractType<K> key, AbstractType<V> value) {
         myMap = MapType.getInstance(key, value);
     }

@@ -19,11 +19,13 @@ public class SetSerializer<T> extends AbstractSerializer<Set<T>> {
 
     @Override
     public Set<T> fromByteBuffer(ByteBuffer arg0) {
-        return mySet.compose(arg0);
+        Set<T> result = arg0 == null ? null : mySet.compose(arg0);
+        return result;
     }
 
     @Override
     public ByteBuffer toByteBuffer(Set<T> arg0) {
-        return mySet.decompose(arg0);
+        ByteBuffer result = arg0 == null ? null : mySet.decompose(arg0);
+        return result;
     }
 }

@@ -11,19 +11,21 @@ import com.netflix.astyanax.serializers.AbstractSerializer;
 
 public class MapSerializer<K, V> extends AbstractSerializer<Map<K, V>> {
 
-    MapType<K, V> mySet;
+    MapType<K, V> myMap;
 
     public MapSerializer(AbstractType<K> key, AbstractType<V> value) {
-        mySet = MapType.getInstance(key, value);
+        myMap = MapType.getInstance(key, value);
     }
 
     @Override
     public Map<K, V> fromByteBuffer(ByteBuffer arg0) {
-        return mySet.compose(arg0);
+        Map<K, V> result = arg0 == null ? null : myMap.compose(arg0);
+        return result;
     }
 
     @Override
     public ByteBuffer toByteBuffer(Map<K, V> arg0) {
-        return mySet.decompose(arg0);
+        ByteBuffer result = arg0 == null ? null : myMap.decompose(arg0);
+        return result;
     }
 }

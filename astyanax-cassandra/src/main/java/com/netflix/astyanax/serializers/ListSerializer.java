@@ -11,19 +11,21 @@ import com.netflix.astyanax.serializers.AbstractSerializer;
 public class ListSerializer<T> extends AbstractSerializer<List<T>> {
 
     
-    ListType<T> mySet;
+    ListType<T> myList;
 
     public ListSerializer(AbstractType<T> elements) {
-        mySet = ListType.getInstance(elements);
+        myList = ListType.getInstance(elements);
     }
     
     @Override
     public List<T> fromByteBuffer(ByteBuffer arg0) {
-        return mySet.compose(arg0);
+        List<T> result = arg0 == null ? null : myList.compose(arg0);
+        return result;
     }
 
     @Override
     public ByteBuffer toByteBuffer(List<T> arg0) {
-        return mySet.decompose(arg0);
+        ByteBuffer result = arg0 == null ? null : myList.decompose(arg0);
+        return result;
     }
 }

@@ -20,9 +20,11 @@ import com.google.common.collect.ImmutableClassToInstanceMap;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.serializers.AsciiSerializer;
 import com.netflix.astyanax.serializers.BigIntegerSerializer;
+import com.netflix.astyanax.serializers.BooleanSerializer;
 import com.netflix.astyanax.serializers.ByteBufferOutputStream;
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
 import com.netflix.astyanax.serializers.ComparatorType;
+import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.SerializerTypeInferer;
 import com.netflix.astyanax.serializers.StringSerializer;
@@ -66,18 +68,23 @@ public abstract class AbstractComposite extends AbstractList<Object> implements 
     static final Logger logger = Logger.getLogger(AbstractComposite.class.getName());
 
     public static final BiMap<Class<? extends Serializer>, String> DEFAULT_SERIALIZER_TO_COMPARATOR_MAPPING = new ImmutableBiMap.Builder<Class<? extends Serializer>, String>()
-            .put(AsciiSerializer.class, AsciiSerializer.get().getComparatorType().getTypeName())
+            .put(AsciiSerializer.class,      AsciiSerializer.get().getComparatorType().getTypeName())
             .put(BigIntegerSerializer.class, BigIntegerSerializer.get().getComparatorType().getTypeName())
-            .put(LongSerializer.class, LongSerializer.get().getComparatorType().getTypeName())
-            .put(StringSerializer.class, StringSerializer.get().getComparatorType().getTypeName())
-            .put(UUIDSerializer.class, UUIDSerializer.get().getComparatorType().getTypeName()).build();
+            .put(LongSerializer.class,       LongSerializer.get().getComparatorType().getTypeName())
+            .put(IntegerSerializer.class,    IntegerSerializer.get().getComparatorType().getTypeName())
+            .put(BooleanSerializer.class,    BooleanSerializer.get().getComparatorType().getTypeName())
+            .put(StringSerializer.class,     StringSerializer.get().getComparatorType().getTypeName())
+            .put(UUIDSerializer.class,       UUIDSerializer.get().getComparatorType().getTypeName()).build();
 
     static final ImmutableClassToInstanceMap<Serializer> SERIALIZERS = new ImmutableClassToInstanceMap.Builder<Serializer>()
-            .put(AsciiSerializer.class, AsciiSerializer.get())
+            .put(IntegerSerializer.class,    IntegerSerializer.get())
+            .put(BooleanSerializer.class,    BooleanSerializer.get())
+            .put(AsciiSerializer.class,      AsciiSerializer.get())
             .put(BigIntegerSerializer.class, BigIntegerSerializer.get())
             .put(ByteBufferSerializer.class, ByteBufferSerializer.get())
-            .put(LongSerializer.class, LongSerializer.get()).put(StringSerializer.class, StringSerializer.get())
-            .put(UUIDSerializer.class, UUIDSerializer.get()).build();
+            .put(LongSerializer.class,       LongSerializer.get())
+            .put(StringSerializer.class,     StringSerializer.get())
+            .put(UUIDSerializer.class,       UUIDSerializer.get()).build();
 
     public static final BiMap<Byte, String> DEFAULT_ALIAS_TO_COMPARATOR_MAPPING = new ImmutableBiMap.Builder<Byte, String>()
             .put((byte) 'a', ComparatorType.ASCIITYPE.getTypeName())

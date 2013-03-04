@@ -5,7 +5,6 @@ import java.util.Map;
 
 import org.apache.cassandra.db.marshal.AbstractType;
 import org.apache.cassandra.db.marshal.MapType;
-import org.apache.cassandra.db.marshal.UTF8Type;
 
 import com.netflix.astyanax.serializers.AbstractSerializer;
 
@@ -21,7 +20,7 @@ import com.netflix.astyanax.serializers.AbstractSerializer;
  */
 public class MapSerializer<K, V> extends AbstractSerializer<Map<K, V>> {
 
-    private MapType<K, V> myMap;
+    private final MapType<K, V> myMap;
 
     /**
      * @param key

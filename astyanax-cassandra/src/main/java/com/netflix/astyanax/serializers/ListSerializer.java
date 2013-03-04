@@ -18,7 +18,7 @@ import com.netflix.astyanax.serializers.AbstractSerializer;
  */
 public class ListSerializer<T> extends AbstractSerializer<List<T>> {
 
-    private ListType<T> myList;
+    private final ListType<T> myList;
 
     /**
      * @param elements

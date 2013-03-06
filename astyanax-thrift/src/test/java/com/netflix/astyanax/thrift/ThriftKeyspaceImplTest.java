@@ -68,6 +68,7 @@ import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.model.Equality;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
+import com.netflix.astyanax.query.ColumnQuery;
 import com.netflix.astyanax.query.IndexQuery;
 import com.netflix.astyanax.query.PreparedIndexExpression;
 import com.netflix.astyanax.query.RowQuery;
@@ -769,9 +770,15 @@ public class ThriftKeyspaceImplTest {
             keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
                     .putValue(value, null).execute();
             // Read
-            String v = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
-                    .getColumn(column).execute().getResult().getStringValue();
+            ColumnQuery<String> query = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
+                    .getColumn(column);
+            
+            String v = query.execute().getResult().getStringValue();
             Assert.assertEquals(value, v);
+            
+            v = query.execute().getResult().getStringValue();
+            Assert.assertEquals(value, v);
+
             // Delete
             keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
                     .deleteColumn().execute();

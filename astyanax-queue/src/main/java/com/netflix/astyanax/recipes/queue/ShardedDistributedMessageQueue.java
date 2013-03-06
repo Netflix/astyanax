@@ -949,13 +949,15 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                                         m.withRow(queueColumnFamily, getShardKey(timeoutEntry))
                                          .putColumn(timeoutEntry, column.getStringValue(), settings.getRetentionTimeout());
                                         
+                                        MessageMetadataEntry messageIdEntry = MessageMetadataEntry.newMessageId(getCompositeKey(getShardKey(timeoutEntry), timeoutEntry.getMessageId()));
+                                        
                                         // Add the timeout column to the key
                                         if (message.hasKey()) {
                                             m.withRow(keyIndexColumnFamily, getCompositeKey(settings.getQueueName(), message.getKey()))
-                                                .putEmptyColumn(
-                                                        MessageMetadataEntry.newMessageId(getCompositeKey(getShardKey(timeoutEntry), timeoutEntry.getMessageId())),
-                                                        settings.getRetentionTimeout());
+                                                .putEmptyColumn(messageIdEntry, settings.getRetentionTimeout());
                                         }
+                                        
+                                        context.setAckMessageId(messageIdEntry.getName());
                                     }
                                     else {
                                         message.setToken(null);

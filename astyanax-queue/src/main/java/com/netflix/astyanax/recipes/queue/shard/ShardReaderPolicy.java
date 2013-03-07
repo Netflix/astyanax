@@ -12,7 +12,7 @@ import com.netflix.astyanax.recipes.queue.MessageQueueShardStats;
  * @author elandau
  *
  */
-public interface ShardReaderReaderStrategy {
+public interface ShardReaderPolicy {
     /**
      * Acquire the next shard to be processed.  Must call releaseShard when done reading
      * from the shard

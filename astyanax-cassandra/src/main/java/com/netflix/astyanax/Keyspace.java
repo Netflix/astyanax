@@ -229,6 +229,14 @@ public interface Keyspace {
     OperationResult<SchemaChangeResult> createKeyspace(Map<String, Object> options) throws ConnectionException ;
     
     /**
+     * Bulk create for a keyspace and a bunch of column famlies
+     * @param options
+     * @param cfs
+     * @throws ConnectionException
+     */
+    OperationResult<SchemaChangeResult> createKeyspace(Map<String, Object> options, Map<ColumnFamily, Map<String, Object>> cfs) throws ConnectionException ;
+    
+    /**
      * Update the keyspace in cassandra.
      * @param options - For list of options see http://www.datastax.com/docs/1.0/configuration/storage_configuration
      */

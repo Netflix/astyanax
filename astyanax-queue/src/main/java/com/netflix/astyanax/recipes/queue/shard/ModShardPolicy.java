@@ -1,6 +1,7 @@
 package com.netflix.astyanax.recipes.queue.shard;
 
 import com.netflix.astyanax.recipes.queue.Message;
+import com.netflix.astyanax.recipes.queue.MessageQueueSettings;
 
 /**
  * Policy for mod sharding within a time partition
@@ -15,5 +16,5 @@ public interface ModShardPolicy {
      * @param message
      * @return
      */
-    int getMessageShard(Message message, int shardCount);
+    int getMessageShard(Message message, MessageQueueSettings settings);
 }

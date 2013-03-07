@@ -47,8 +47,10 @@ import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.recipes.locks.BusyLockException;
 import com.netflix.astyanax.recipes.queue.triggers.Trigger;
-import com.netflix.astyanax.recipes.queue.shard.ShardReaderReaderStrategy;
-import com.netflix.astyanax.recipes.queue.shard.TimePartitionedShardStrategy;
+import com.netflix.astyanax.recipes.queue.shard.ModShardPolicy;
+import com.netflix.astyanax.recipes.queue.shard.ShardReaderPolicy;
+import com.netflix.astyanax.recipes.queue.shard.TimeModShardPolicy;
+import com.netflix.astyanax.recipes.queue.shard.TimePartitionedShardReaderPolicy;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.retry.RunOnce;
 import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
@@ -250,6 +252,16 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             return this;
         }
         
+        public Builder withModShardPolicy(ModShardPolicy policy) {
+            queue.modShardPolicy = policy;
+            return this;
+        }
+        
+        public Builder withShardReaderPolicy(ShardReaderPolicy shardReaderPolicy) {
+            queue.shardReaderPolicy = shardReaderPolicy;
+            return this;
+        }
+        
         public ShardedDistributedMessageQueue build() throws MessageQueueException {
             queue.queueColumnFamily    = ColumnFamily.newColumnFamily(columnFamilyName + DEFAULT_QUEUE_SUFFIX,    StringSerializer.get(), entrySerializer); 
             queue.keyIndexColumnFamily = ColumnFamily.newColumnFamily(columnFamilyName + DEFAULT_METADATA_SUFFIX, StringSerializer.get(), metadataSerializer); 
@@ -275,7 +287,8 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     private MessageQueueSettings            settings            = new MessageQueueSettings();
     private Boolean                         bPoisonQueueEnabled = DEFAULT_POISON_QUEUE_ENABLED;
     private Map<String, Object>             columnFamilySettings = DEFAULT_COLUMN_FAMILY_SETTINGS;
-    private ShardReaderReaderStrategy       shardStrategy;
+    private ShardReaderPolicy               shardReaderPolicy;
+    private ModShardPolicy                  modShardPolicy;
     private Function<String, Message>       invalidMessageHandler  = new Function<String, Message>() {
                                                                         @Override
                                                                         public Message apply(@Nullable String input) {
@@ -316,7 +329,11 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             throw new MessageQueueException("Error getting message queue metadata", e);
         }
         
-        shardStrategy = new TimePartitionedShardStrategy(settings);
+        if (shardReaderPolicy == null)
+            shardReaderPolicy = new TimePartitionedShardReaderPolicy(settings);
+        
+        if (modShardPolicy == null)
+            modShardPolicy = TimeModShardPolicy.getInstance();
     }
 
     /**
@@ -324,8 +341,8 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
      * @param message
      * @return
      */
-    protected String getShardKey(MessageQueueEntry message) {
-        return getShardKey(TimeUUIDUtils.getMicrosTimeFromUUID(message.getTimestamp()));
+    protected String getShardKey(Message message) {
+        return getShardKey(message.getTokenTime(), this.modShardPolicy.getMessageShard(message, settings));
     }
     
     /**
@@ -333,14 +350,13 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
      * @param message
      * @return
      */
-    private String getShardKey(long messageTime) {
+    private String getShardKey(long messageTime, int modShard) {
         long timePartition;
         if (settings.getPartitionDuration() != null)
             timePartition = (messageTime / settings.getPartitionDuration()) % settings.getPartitionCount();
         else 
             timePartition = 0;
-        long shard         =  messageTime % settings.getShardCount();
-        return settings.getQueueName() + ":" + timePartition + ":" + shard;
+        return settings.getQueueName() + ":" + timePartition + ":" + modShard;
     }
     
     private String getCompositeKey(String name, String key) {
@@ -419,7 +435,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         LOG.info("Clearing messages from '" + settings.getQueueName() + "'");
         MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
         
-        for (MessageQueueShard partition : shardStrategy.listShards()) {
+        for (MessageQueueShard partition : shardReaderPolicy.listShards()) {
             mb.withRow(queueColumnFamily, partition.getName()).delete();
         }
         
@@ -435,7 +451,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         LOG.info("Deleting queue '" + settings.getQueueName() + "'");
         MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
         
-        for (MessageQueueShard partition : shardStrategy.listShards()) {
+        for (MessageQueueShard partition : shardReaderPolicy.listShards()) {
             mb.withRow(queueColumnFamily, partition.getName()).delete();
         }
         
@@ -466,11 +482,13 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 ByteArrayInputStream bais = new ByteArrayInputStream(column.getByteArrayValue());
                 return mapper.readValue(bais, Message.class);
             } catch (Exception e) {
+                LOG.warn("Error parsing message", e);
                 // Error parsing the message so we pass it on to the invalid message handler.
                 try {
                     return invalidMessageHandler.apply(column.getStringValue());
                 }
                 catch (Exception e2) {
+                    LOG.warn("Error handling invalid message message", e2);
                     throw new MessageQueueException("Error parsing message " + messageId);
                 }
             } 
@@ -540,6 +558,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         String groupRowKey = getCompositeKey(settings.getQueueName(), key);
         try {
             ColumnList<MessageMetadataEntry> columns = keyspace.prepareQuery(keyIndexColumnFamily)
+                .setConsistencyLevel(consistencyLevel)
                 .getRow(groupRowKey)
                 .withColumnRange(metadataSerializer.buildRange()
                     .greaterThanEquals((byte)MessageMetadataEntryType.MessageId.ordinal())
@@ -698,7 +717,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         } catch (ConnectionException e) {
             if (!e.getMessage().contains("already exist"))
                 throw new MessageQueueException("Failed to create column family for " + queueColumnFamily.getName(), e);
-        }    
+        }
     }
     
     @Override
@@ -737,7 +756,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 // TODO: Read full itemsToPop instead of just stopping when we get the first successful set
                 List<MessageContext> messages = null;
                 while (true) {
-                    MessageQueueShard partition = shardStrategy.nextShard();
+                    MessageQueueShard partition = shardReaderPolicy.nextShard();
                     if (partition != null) {
                         try {
                             messages = readAndReturnShard(partition, itemsToPop);
@@ -745,7 +764,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                                 return messages;
                         }
                         finally {
-                            shardStrategy.releaseShard(partition, messages == null ? 0 : messages.size());
+                            shardReaderPolicy.releaseShard(partition, messages == null ? 0 : messages.size());
                         }
                     }                        
                     
@@ -946,10 +965,10 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                                         message.setToken(timeoutEntry.getTimestamp());
                                         message.setRandom(timeoutEntry.getRandom());
                                         
-                                        m.withRow(queueColumnFamily, getShardKey(timeoutEntry))
+                                        m.withRow(queueColumnFamily, getShardKey(message))
                                          .putColumn(timeoutEntry, column.getStringValue(), settings.getRetentionTimeout());
                                         
-                                        MessageMetadataEntry messageIdEntry = MessageMetadataEntry.newMessageId(getCompositeKey(getShardKey(timeoutEntry), timeoutEntry.getMessageId()));
+                                        MessageMetadataEntry messageIdEntry = MessageMetadataEntry.newMessageId(getCompositeKey(getShardKey(message), timeoutEntry.getMessageId()));
                                         
                                         // Add the timeout column to the key
                                         if (message.hasKey()) {
@@ -1062,7 +1081,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     MessageQueueEntry entry = MessageQueueEntry.newBusyEntry(message);
                     
                     // Remove timeout entry from the queue
-                    mb.withRow(queueColumnFamily, getShardKey(entry))
+                    mb.withRow(queueColumnFamily, getShardKey(message))
                       .deleteColumn(entry);
                     
                     // Remove entry lookup from the key, if one exists
@@ -1243,7 +1262,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         }
         
         // Write the queue entry  
-        String shardKey = getShardKey(entry);
+        String shardKey = getShardKey(message);
         mb.withRow(queueColumnFamily, shardKey)
           .putColumn(entry, new String(baos.toByteArray()), (Integer)settings.getRetentionTimeout());
             
@@ -1264,7 +1283,11 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         return getCompositeKey(shardKey, entry.getMessageId());
     }
 
-
+    /**
+     * Return history for a single key for the specified time range
+     * 
+     * TODO:  honor the time range :)
+     */
     @Override
     public List<MessageHistory> getKeyHistory(String key, Long startTime, Long endTime, int count) throws MessageQueueException {
         List<MessageHistory> list = Lists.newArrayList();
@@ -1289,11 +1312,19 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         return list;
     }
 
+    /**
+     * Iterate through shards attempting to extract itemsToPeek items.  Will return 
+     * once itemToPeek items have been read or all shards have been checked.
+     * 
+     * Note that this call does not take into account the message trigger time and
+     * will likely return messages that aren't due to be executed yet.
+     * @return List of items
+     */
     @Override
     public List<Message> peekMessages(int itemsToPeek) throws MessageQueueException {
         List<Message> messages = Lists.newArrayList();
         
-        for (MessageQueueShard shard : shardStrategy.listShards()) {
+        for (MessageQueueShard shard : shardReaderPolicy.listShards()) {
             messages.addAll(peekMessages(shard.getName(), itemsToPeek - messages.size()));
             
             if (messages.size() == itemsToPeek)
@@ -1303,13 +1334,21 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         return messages;
     }
     
-    private Collection<Message> peekMessages(String shardName, int itemsToPop) throws MessageQueueException {
+    /**
+     * Peek into messages contained in the shard.  This call does not take trigger time into account
+     * and will return messages that are not yet due to be executed
+     * @param shardName
+     * @param itemsToPop
+     * @return
+     * @throws MessageQueueException
+     */
+    private Collection<Message> peekMessages(String shardName, int itemsToPeek) throws MessageQueueException {
         try {
             ColumnList<MessageQueueEntry> result = keyspace.prepareQuery(queueColumnFamily)
                     .setConsistencyLevel(consistencyLevel)
                     .getKey(shardName)
                     .withColumnRange(new RangeBuilder()
-                        .setLimit(itemsToPop)
+                        .setLimit(itemsToPeek)
                         .setStart(entrySerializer
                                 .makeEndpoint((byte)MessageQueueEntryType.Message.ordinal(), Equality.GREATER_THAN_EQUALS)
                                 .toBytes())
@@ -1332,6 +1371,11 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         }
     }
     
+    /**
+     * Extract a message body from a column
+     * @param column
+     * @return
+     */
     private Message extractMessageFromColumn(Column<MessageQueueEntry> column) {
         // Next, parse the message metadata and add a timeout entry
         Message message = null;
@@ -1339,17 +1383,22 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             ByteArrayInputStream bais = new ByteArrayInputStream(column.getByteArrayValue());
             message = mapper.readValue(bais, Message.class);
         } catch (Exception e) {
-            // Error parsing the message so we pass it on to the invalid message handler.
+            LOG.warn("Error processing message ", e);
             try {
                 message = invalidMessageHandler.apply(column.getStringValue());
             }
             catch (Exception e2) {
-                // OK to ignore this
+                LOG.warn("Error processing invalid message", e2);
             }
         } 
         return message;
     }
 
+    /**
+     * Fast check to see if a shard has messages to process
+     * @param shardName
+     * @throws MessageQueueException
+     */
     private boolean hasMessages(String shardName) throws MessageQueueException {
         UUID currentTime = TimeUUIDUtils.getUniqueTimeUUIDinMicros();
         
@@ -1380,6 +1429,6 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
     @Override
     public Map<String, MessageQueueShardStats> getShardStats() {
-        return shardStrategy.getShardStats();
+        return shardReaderPolicy.getShardStats();
     }
 }

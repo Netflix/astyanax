@@ -99,7 +99,7 @@ public class QueueTest {
             keyspace.dropKeyspace();
         }
         catch (Exception e) {
-            e.printStackTrace();
+            LOG.info(e.getMessage(), e);
         }
         
         keyspace.createKeyspace(ImmutableMap.<String, Object>builder()
@@ -137,7 +137,7 @@ public class QueueTest {
     
     @Test
     @Ignore
-    // This tests for a known but that has yet to be fixed
+    // This tests for a known bug that has yet to be fixed
     public void testRepeatingMessage() throws Exception {
         final CountingQueueStats stats = new CountingQueueStats();
         

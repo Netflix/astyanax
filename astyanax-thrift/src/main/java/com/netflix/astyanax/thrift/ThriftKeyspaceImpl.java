@@ -16,8 +16,10 @@
 package com.netflix.astyanax.thrift;
 
 import java.nio.ByteBuffer;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -478,8 +480,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
     @Override
     public String describePartitioner() throws ConnectionException {
-        return connectionPool
-                .executeWithFailover(
+        return executeOperation(
                         new AbstractOperationImpl<String>(
                                 tracerFactory.newTracer(CassandraOperationType.DESCRIBE_PARTITIONER)) {
                             @Override
@@ -491,112 +492,76 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
     @Override
     public <K, C> OperationResult<SchemaChangeResult> createColumnFamily(final Map<String, Object> options) throws ConnectionException {
-        return connectionPool
-                .executeWithFailover(
+        return executeOperation(
                         new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
                                 tracerFactory.newTracer(CassandraOperationType.ADD_COLUMN_FAMILY), getKeyspaceName()) {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                Map<String, List<String>> schemas = client.describe_schema_versions();
-                                if (schemas.size() > 1) {
-                                    throw new SchemaDisagreementException("Can't create column family when there is a schema disagreement");
-                                }
-
-                                ThriftColumnFamilyDefinitionImpl def = new ThriftColumnFamilyDefinitionImpl();
-
-                                Map<String, Object> internalOptions = Maps.newHashMap();
-                                if (options != null)
-                                    internalOptions.putAll(options);
-
-                                internalOptions.put("keyspace", getKeyspaceName());
-
-                                def.setFields(internalOptions);
+                                precheckSchemaAgreement(client);
 
                                 return new SchemaChangeResponseImpl()
-                                    .setSchemaId(client.system_add_column_family(def.getThriftColumnFamilyDefinition()));
+                                    .setSchemaId(client.system_add_column_family(toThriftColumnFamilyDefinition(options, null).getThriftColumnFamilyDefinition()));
                             }
                         }, RunOnce.get());
     }
 
     @Override
+    public OperationResult<SchemaChangeResult> createKeyspace(
+            final Map<String, Object> options,
+            final Map<ColumnFamily, Map<String, Object>> cfs) throws ConnectionException {
+        return executeOperation(
+                        new AbstractOperationImpl<SchemaChangeResult>(
+                                tracerFactory.newTracer(CassandraOperationType.ADD_KEYSPACE)) {
+                            @Override
+                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                                precheckSchemaAgreement(client);
+                                
+                                ThriftKeyspaceDefinitionImpl ksDef = toThriftKeyspaceDefinition(options);
+                                for (Entry<ColumnFamily, Map<String, Object>> cf : cfs.entrySet()) {
+                                    ksDef.addColumnFamily(toThriftColumnFamilyDefinition(cf.getValue(), cf.getKey()));
+                                }
+                                return new SchemaChangeResponseImpl()
+                                    .setSchemaId(client.system_add_keyspace(ksDef.getThriftKeyspaceDefinition()));
+                            }
+                        }, RunOnce.get());
+    }    
+
+    @Override
     public <K, C> OperationResult<SchemaChangeResult> createColumnFamily(final ColumnFamily<K, C> columnFamily, final Map<String, Object> options) throws ConnectionException {
-        return connectionPool
-                .executeWithFailover(
+        return executeOperation(
                         new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
                                 tracerFactory.newTracer(CassandraOperationType.ADD_COLUMN_FAMILY), getKeyspaceName()) {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                Map<String, List<String>> schemas = client.describe_schema_versions();
-                                if (schemas.size() > 1) {
-                                    throw new SchemaDisagreementException("Can't create column family when there is a schema disagreement");
-                                }
-
-                                ThriftColumnFamilyDefinitionImpl def = new ThriftColumnFamilyDefinitionImpl();
-
-                                Map<String, Object> internalOptions = Maps.newHashMap();
-                                if (options != null)
-                                    internalOptions.putAll(options);
-
-                                internalOptions.put("name", columnFamily.getName());
-                                internalOptions.put("keyspace", getKeyspaceName());
-                                if (!internalOptions.containsKey("comparator_type"))
-                                    internalOptions.put("comparator_type", columnFamily.getColumnSerializer().getComparatorType().getTypeName());
-                                if (!internalOptions.containsKey("key_validation_class"))
-                                    internalOptions.put("key_validation_class", columnFamily.getKeySerializer().getComparatorType().getTypeName());
-                                if (columnFamily.getDefaultValueSerializer() != null && !internalOptions.containsKey("default_validation_class"))
-                                    internalOptions.put("default_validation_class", columnFamily.getDefaultValueSerializer().getComparatorType().getTypeName());
-
-                                def.setFields(internalOptions);
-
+                                precheckSchemaAgreement(client);
                                 return new SchemaChangeResponseImpl()
-                                    .setSchemaId(client.system_add_column_family(def.getThriftColumnFamilyDefinition()));
+                                    .setSchemaId(client.system_add_column_family(toThriftColumnFamilyDefinition(options, columnFamily).getThriftColumnFamilyDefinition()));
                             }
                         }, RunOnce.get());
     }
 
     @Override
     public <K, C> OperationResult<SchemaChangeResult> updateColumnFamily(final ColumnFamily<K, C> columnFamily, final Map<String, Object> options) throws ConnectionException  {
-        return connectionPool
-                .executeWithFailover(
+        return executeOperation(
                         new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
                                 tracerFactory.newTracer(CassandraOperationType.UPDATE_COLUMN_FAMILY), getKeyspaceName()) {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                Map<String, List<String>> schemas = client.describe_schema_versions();
-                                if (schemas.size() > 1) {
-                                    throw new SchemaDisagreementException("Can't update column family when there is a schema disagreement");
-                                }
-
-                                ThriftColumnFamilyDefinitionImpl def = new ThriftColumnFamilyDefinitionImpl();
-
-                                Map<String, Object> internalOptions = Maps.newHashMap();
-                                if (options != null)
-                                    internalOptions.putAll(options);
-                                internalOptions.put("name",                 columnFamily.getName());
-                                internalOptions.put("keyspace",             getKeyspaceName());
-                                if (!internalOptions.containsKey("key_validation_class"))
-                                    internalOptions.put("key_validation_class", columnFamily.getKeySerializer().getComparatorType().getTypeName());
-
-                                def.setFields(internalOptions);
-
+                                precheckSchemaAgreement(client);
                                 return new SchemaChangeResponseImpl()
-                                    .setSchemaId(client.system_update_column_family(def.getThriftColumnFamilyDefinition()));
+                                    .setSchemaId(client.system_update_column_family(toThriftColumnFamilyDefinition(options, columnFamily).getThriftColumnFamilyDefinition()));
                             }
                         }, RunOnce.get());
     }
 
     @Override
     public OperationResult<SchemaChangeResult> dropColumnFamily(final String columnFamilyName) throws ConnectionException  {
-        return connectionPool
-                .executeWithFailover(
+        return executeOperation(
                         new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
                                 tracerFactory.newTracer(CassandraOperationType.DROP_COLUMN_FAMILY), getKeyspaceName()) {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                Map<String, List<String>> schemas = client.describe_schema_versions();
-                                if (schemas.size() > 1) {
-                                    throw new SchemaDisagreementException("Can't drop column family when there is a schema disagreement");
-                                }
+                                precheckSchemaAgreement(client);
                                 return new SchemaChangeResponseImpl()
                                     .setSchemaId(client.system_drop_column_family(columnFamilyName));
                             }
@@ -605,16 +570,12 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
     @Override
     public <K, C> OperationResult<SchemaChangeResult> dropColumnFamily(final ColumnFamily<K, C> columnFamily) throws ConnectionException  {
-        return connectionPool
-                .executeWithFailover(
+        return executeOperation(
                         new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
                                 tracerFactory.newTracer(CassandraOperationType.DROP_COLUMN_FAMILY), getKeyspaceName()) {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                Map<String, List<String>> schemas = client.describe_schema_versions();
-                                if (schemas.size() > 1) {
-                                    throw new SchemaDisagreementException("Can't drop column family when there is a schema disagreement");
-                                }
+                                precheckSchemaAgreement(client);
                                 return new SchemaChangeResponseImpl()
                                     .setSchemaId(client.system_drop_column_family(columnFamily.getName()));
                             }
@@ -623,28 +584,14 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
     @Override
     public OperationResult<SchemaChangeResult> createKeyspace(final Map<String, Object> options) throws ConnectionException  {
-        return connectionPool
-                .executeWithFailover(
+        return executeOperation(
                         new AbstractOperationImpl<SchemaChangeResult>(
                                 tracerFactory.newTracer(CassandraOperationType.ADD_KEYSPACE)) {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                Map<String, List<String>> schemas = client.describe_schema_versions();
-                                if (schemas.size() > 1) {
-                                    throw new SchemaDisagreementException("Can't create keyspace when there is a schema disagreement");
-                                }
-
-                                ThriftKeyspaceDefinitionImpl def = new ThriftKeyspaceDefinitionImpl();
-
-                                Map<String, Object> internalOptions = Maps.newHashMap();
-                                if (options != null)
-                                    internalOptions.putAll(options);
-                                internalOptions.put("name",                 getKeyspaceName());
-
-                                def.setFields(internalOptions);
-
+                                precheckSchemaAgreement(client);
                                 return new SchemaChangeResponseImpl()
-                                    .setSchemaId(client.system_add_keyspace(def.getThriftKeyspaceDefinition()));
+                                    .setSchemaId(client.system_add_keyspace(toThriftKeyspaceDefinition(options).getThriftKeyspaceDefinition()));
                             }
                         }, RunOnce.get());
     }
@@ -652,44 +599,26 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
     @Override
     public OperationResult<SchemaChangeResult> updateKeyspace(final Map<String, Object> options) throws ConnectionException  {
-        return connectionPool
-                .executeWithFailover(
+        return executeOperation(
                         new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
                                 tracerFactory.newTracer(CassandraOperationType.UPDATE_KEYSPACE), getKeyspaceName()) {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                Map<String, List<String>> schemas = client.describe_schema_versions();
-                                if (schemas.size() > 1) {
-                                    throw new SchemaDisagreementException("Can't update keyspace when there is a schema disagreement");
-                                }
-
-                                ThriftKeyspaceDefinitionImpl def = new ThriftKeyspaceDefinitionImpl();
-
-                                Map<String, Object> internalOptions = Maps.newHashMap();
-                                if (options != null)
-                                    internalOptions.putAll(options);
-                                internalOptions.put("name",                 getKeyspaceName());
-
-                                def.setFields(internalOptions);
-
+                                precheckSchemaAgreement(client);
                                 return new SchemaChangeResponseImpl()
-                                    .setSchemaId(client.system_update_keyspace(def.getThriftKeyspaceDefinition()));
+                                    .setSchemaId(client.system_update_keyspace(toThriftKeyspaceDefinition(options).getThriftKeyspaceDefinition()));
                             }
                         }, RunOnce.get());
     }
 
     @Override
     public OperationResult<SchemaChangeResult> dropKeyspace() throws ConnectionException  {
-        return connectionPool
-                .executeWithFailover(
+        return executeOperation(
                         new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
                                 tracerFactory.newTracer(CassandraOperationType.DROP_KEYSPACE), getKeyspaceName()) {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                Map<String, List<String>> schemas = client.describe_schema_versions();
-                                if (schemas.size() > 1) {
-                                    throw new SchemaDisagreementException("Can't drop keyspace when there is a schema disagreement");
-                                }
+                                precheckSchemaAgreement(client);
 
                                 return new SchemaChangeResponseImpl()
                                     .setSchemaId(client.system_drop_keyspace(getKeyspaceName()));
@@ -719,4 +648,62 @@ public final class ThriftKeyspaceImpl implements Keyspace {
         }
         return partitioner;
     }
+    
+    /**
+     * Do a quick check to see if there is a schema disagreement.  This is done as an extra precaution
+     * to reduce the chances of putting the cluster into a bad state.  This will not gurantee however, that 
+     * by the time a schema change is made the cluster will be in the same state.
+     * @param client
+     * @throws Exception
+     */
+    private void precheckSchemaAgreement(Client client) throws Exception {
+        Map<String, List<String>> schemas = client.describe_schema_versions();
+        if (schemas.size() > 1) {
+            throw new SchemaDisagreementException("Can't change schema due to pending schema agreement");
+        }
+    }
+    
+    /**
+     * Convert a Map of options to an internal thrift column family definition
+     * @param options
+     */
+    private ThriftColumnFamilyDefinitionImpl toThriftColumnFamilyDefinition(Map<String, Object> options, ColumnFamily columnFamily) {
+        ThriftColumnFamilyDefinitionImpl def = new ThriftColumnFamilyDefinitionImpl();
+
+        Map<String, Object> internalOptions = Maps.newHashMap();
+        if (options != null)
+            internalOptions.putAll(options);
+
+        internalOptions.put("keyspace", getKeyspaceName());
+        
+        if (columnFamily != null) {
+            internalOptions.put("name", columnFamily.getName());
+            if (!internalOptions.containsKey("comparator_type"))
+                internalOptions.put("comparator_type", columnFamily.getColumnSerializer().getComparatorType().getTypeName());
+            if (!internalOptions.containsKey("key_validation_class"))
+                internalOptions.put("key_validation_class", columnFamily.getKeySerializer().getComparatorType().getTypeName());
+            if (columnFamily.getDefaultValueSerializer() != null && !internalOptions.containsKey("default_validation_class"))
+                internalOptions.put("default_validation_class", columnFamily.getDefaultValueSerializer().getComparatorType().getTypeName());
+        }
+
+        def.setFields(internalOptions);
+        return def;
+    }
+    
+    /**
+     * Convert a Map of options to an internal thrift keyspace definition
+     * @param options
+     */
+    private ThriftKeyspaceDefinitionImpl toThriftKeyspaceDefinition(final Map<String, Object> options) {
+        ThriftKeyspaceDefinitionImpl def = new ThriftKeyspaceDefinitionImpl();
+        
+        Map<String, Object> internalOptions = Maps.newHashMap();
+        if (options != null)
+            internalOptions.putAll(options);
+        internalOptions.put("name",                 getKeyspaceName());
+        def.setFields(internalOptions); 
+        
+        return def;
+    }
+    
 }

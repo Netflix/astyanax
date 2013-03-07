@@ -14,7 +14,7 @@ import com.netflix.astyanax.recipes.queue.MessageQueueShard;
 import com.netflix.astyanax.recipes.queue.MessageQueueSettings;
 import com.netflix.astyanax.recipes.queue.MessageQueueShardStats;
 
-public class TimePartitionedShardStrategy implements ShardReaderReaderStrategy {
+public class TimePartitionedShardReaderPolicy implements ShardReaderPolicy {
     private static final String SEPARATOR = ":";
     
     private final MessageQueueSettings          settings;
@@ -25,13 +25,13 @@ public class TimePartitionedShardStrategy implements ShardReaderReaderStrategy {
 
     private int currentTimePartition = -1;
 
-    public TimePartitionedShardStrategy(MessageQueueSettings config) {
-        this.settings = config;
+    public TimePartitionedShardReaderPolicy(MessageQueueSettings settings) {
+        this.settings = settings;
         
-        shards = Lists.newArrayListWithCapacity(config.getPartitionCount() * config.getShardCount());
-        for (int i = 0; i < config.getPartitionCount(); i++) {
-            for (int j = 0; j < config.getShardCount(); j++) {
-                shards.add(new MessageQueueShard(config.getQueueName() + SEPARATOR + i + SEPARATOR + j, i, j));
+        shards = Lists.newArrayListWithCapacity(settings.getPartitionCount() * settings.getShardCount());
+        for (int i = 0; i < settings.getPartitionCount(); i++) {
+            for (int j = 0; j < settings.getShardCount(); j++) {
+                shards.add(new MessageQueueShard(settings.getQueueName() + SEPARATOR + i + SEPARATOR + j, i, j));
             }
         }
         

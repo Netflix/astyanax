@@ -4,8 +4,11 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import org.codehaus.jackson.annotate.JsonIgnore;
+
 import com.google.common.collect.Maps;
 import com.netflix.astyanax.recipes.queue.triggers.Trigger;
+import com.netflix.astyanax.util.TimeUUIDUtils;
 
 public class Message {
     
@@ -85,6 +88,15 @@ public class Message {
     public Message setToken(UUID token) {
         this.token = token;
         return this;
+    }
+    
+    /**
+     * Get the micros time encoded in the token
+     * @return
+     */
+    @JsonIgnore
+    public long getTokenTime() {
+        return TimeUUIDUtils.getMicrosTimeFromUUID(token);
     }
 
     public UUID getRandom() {

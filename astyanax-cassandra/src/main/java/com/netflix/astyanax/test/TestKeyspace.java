@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax.test;
 
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -217,6 +218,13 @@ public class TestKeyspace implements Keyspace {
 
     @Override
     public Partitioner getPartitioner() throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResult> createKeyspace(Map<String, Object> options,
+            Map<ColumnFamily, Map<String, Object>> cfs) throws ConnectionException {
         // TODO Auto-generated method stub
         return null;
     }

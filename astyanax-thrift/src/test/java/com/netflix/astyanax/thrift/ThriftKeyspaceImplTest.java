@@ -34,6 +34,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Cluster;
 import com.netflix.astyanax.ColumnListMutation;
@@ -251,30 +252,35 @@ public class ThriftKeyspaceImplTest {
             LOG.info(e.getMessage());
         }
         
-        keyspace.createKeyspace(ImmutableMap.<String, Object>builder()
+        ImmutableMap<String, Object> ksOptions = ImmutableMap.<String, Object>builder()
                 .put("strategy_options", ImmutableMap.<String, Object>builder()
                         .put("replication_factor", "1")
                         .build())
                 .put("strategy_class",     "SimpleStrategy")
-                .build()
-                );
+                .build();
         
-        keyspace.createColumnFamily(CF_STANDARD1, ImmutableMap.<String, Object>builder()
-                .put("column_metadata", ImmutableMap.<String, Object>builder()
-                        .put("Index1", ImmutableMap.<String, Object>builder()
-                                .put("validation_class", "UTF8Type")
-                                .put("index_name",       "Index1")
-                                .put("index_type",       "KEYS")
-                                .build())
-                        .put("Index2", ImmutableMap.<String, Object>builder()
-                                .put("validation_class", "UTF8Type")
-                                .put("index_name",       "Index2")
-                                .put("index_type",       "KEYS")
-                                .build())
+        ImmutableMap<String, Object> NO_OPTIONS = ImmutableMap.of();
+        
+        Map<ColumnFamily, Map<String, Object>> cfs = ImmutableMap.<ColumnFamily, Map<String, Object>>builder()
+                .put(CF_STANDARD1, 
+                     ImmutableMap.<String, Object>builder()
+                         .put("column_metadata", ImmutableMap.<String, Object>builder()
+                             .put("Index1", ImmutableMap.<String, Object>builder()
+                                 .put("validation_class", "UTF8Type")
+                                 .put("index_name",       "Index1")
+                                 .put("index_type",       "KEYS")
+                                 .build())
+                             .put("Index2", ImmutableMap.<String, Object>builder()
+                                 .put("validation_class", "UTF8Type")
+                                 .put("index_name",       "Index2")
+                                 .put("index_type",       "KEYS")
+                                 .build())
+                             .build())
                          .build())
-                     .build());
+                .put(CF_TTL,        NO_OPTIONS)
+                .build();
+        keyspace.createKeyspace(ksOptions, cfs);
         
-        keyspace.createColumnFamily(CF_TTL,        null);
         keyspace.createColumnFamily(CF_STANDARD2,  null);
         keyspace.createColumnFamily(CF_LONGCOLUMN, null);
         keyspace.createColumnFamily(CF_DELETE,     null);

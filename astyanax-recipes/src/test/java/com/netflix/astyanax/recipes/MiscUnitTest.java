@@ -846,7 +846,7 @@ public class MiscUnitTest {
                     @Override
                     public Boolean apply(@Nullable Row<String, String> row) {
                         try {
-                            Thread.sleep(200);
+                            Thread.sleep(2000);
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
                             throw new RuntimeException(e);
@@ -868,7 +868,6 @@ public class MiscUnitTest {
         try {
             boolean result = future.get();
             Assert.assertEquals(false, result);
-            Assert.fail();
         }
         catch (Exception e) {
             LOG.info("Failed to execute", e);
@@ -881,4 +880,29 @@ public class MiscUnitTest {
     }
 
 
+    @Test
+    public void testAllRowsReaderWithException() throws Exception {
+        AllRowsReader<String, String> reader = new AllRowsReader.Builder<String, String>(keyspace, CF_STANDARD1)
+                .withPageSize(3)
+                .withConcurrencyLevel(2)
+                .forEachRow(new Function<Row<String, String>, Boolean>() {
+                    @Override
+                    public Boolean apply(@Nullable Row<String, String> row) {
+                        throw new RuntimeException("Very bad");
+                    }
+                })
+                .build();
+        
+        
+        Future<Boolean> future = Executors.newSingleThreadExecutor().submit(reader);        
+        
+        try {
+            boolean result = future.get();
+            Assert.fail();
+        }
+        catch (Exception e) {
+            Assert.assertTrue(e.getMessage().contains("Very bad"));
+            LOG.info("Failed to execute", e);
+        }
+    }
 }

@@ -24,6 +24,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,6 +79,7 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
     private final   List<Future<Boolean>> futures = Lists.newArrayList();
     private final   AtomicBoolean       cancelling = new AtomicBoolean(false);
     private final   Partitioner         partitioner;
+    private AtomicReference<Exception>  error = new AtomicReference<Exception>();
     
     public static class Builder<K, C> {
         private final Keyspace      keyspace;
@@ -347,10 +349,11 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                         else if (currentToken.equals(endToken)) {
                             return true;
                         }
-                    } catch (Throwable t) {
-                        LOG.error("Failed to get checkpoint for startToken " + startToken, t);
+                    } catch (Exception e) {
+                        error.compareAndSet(null, e);
+                        LOG.error("Failed to get checkpoint for startToken " + startToken, e);
                         cancel();
-                        throw new RuntimeException("Failed to get checkpoint for startToken " + startToken, t);
+                        throw new RuntimeException("Failed to get checkpoint for startToken " + startToken, e);
                     }
                     
                     int localPageSize = pageSize;
@@ -391,10 +394,11 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                                     }
                                 }
                             }
-                            catch (Throwable t) {
-                                t.printStackTrace();
+                            catch (Exception e) {
+                                error.compareAndSet(null, e);
+                                LOG.warn(e.getMessage(), e);
                                 cancel();
-                                throw new RuntimeException("Error processing row", t);
+                                throw new RuntimeException("Error processing row", e);
                             }
                                 
                             // Get the next block
@@ -436,10 +440,11 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                     }
                     cancel();
                     return false;
-                } catch (Throwable t) {
-                    LOG.error("Error process token/key range", t);
+                } catch (Exception e) {
+                    error.compareAndSet(null, e);
+                    LOG.error("Error process token/key range", e);
                     cancel();
-                    throw new RuntimeException("Error process token/key range", t);
+                    throw new RuntimeException("Error process token/key range", e);
                 }
             }
         };
@@ -450,6 +455,8 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
      */
     @Override
     public Boolean call() throws Exception {
+        error.set(null);
+        
         List<Callable<Boolean>> subtasks = Lists.newArrayList();
         
         // We are iterating the entire ring using an arbitrary number of threads
@@ -497,10 +504,12 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                 return waitForTasksToFinish();
             }
         }
-        catch (Throwable t) {
-            LOG.warn("AllRowsReader terminated", t);
+        catch (Exception e) {
+            error.compareAndSet(null, e);
+            LOG.warn("AllRowsReader terminated. " + e.getMessage(), e);
             cancel();
-            throw new Exception("Error reading all rows" , t);
+            
+            throw error.get();
         }
     }
     
@@ -510,7 +519,7 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
      * @param futures
      * @return true if all tasks returned true or false otherwise.  
      */
-    private boolean waitForTasksToFinish() throws Throwable {
+    private boolean waitForTasksToFinish() throws Exception {
         for (Future<Boolean> future : futures) {
             try {
                 if (!future.get()) {
@@ -518,9 +527,10 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                     return false;
                 }
             }
-            catch (Throwable t) {
+            catch (Exception e) {
+                error.compareAndSet(null, e);
                 cancel();
-                throw t;
+                throw e;
             }
         }
         return true;
@@ -547,17 +557,6 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
      * call() to return false.
      */
     public synchronized void cancel() {
-        if (cancelling.compareAndSet(false, true)) {
-            if (futures != null) {
-                for (Future<Boolean> future : futures) {
-                    try {
-                        future.cancel(true);
-                    }
-                    catch (Throwable t) {
-                        LOG.info("Exception cancelling range processing task", t);
-                    }
-                }
-            }
-        }
+        cancelling.compareAndSet(false, true);
     }
 }

@@ -68,7 +68,8 @@ public class SetupUtil {
 		try {
 			keyspace.dropKeyspace();
 		} catch (Exception e) {
-			e.printStackTrace();
+			System.out.println("Exception dropping keyspace: " + e.getMessage());
+			//e.printStackTrace();
 		}
 
 		keyspace.createKeyspace(ImmutableMap

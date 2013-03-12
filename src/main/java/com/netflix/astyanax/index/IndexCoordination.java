@@ -22,6 +22,17 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 public interface IndexCoordination {
 
 	/**
+	 * A convenience mechanism for getting the index,
+	 * which can be used with;
+	 * 
+	 * @param keyspace
+	 * @param mutation
+	 * @return
+	 */
+	public <C,V,K>Index<C, V, K> getReadIndex(IndexMetadata<C,K> metaData,Keyspace keyspace,MutationBatch mutation);
+	
+	
+	/**
 	 * This may be stored in future, but for now client are expected to add meta data
 	 * {@link IndexMetadata} for each life-cycle of the context.
 	 * See {@link IndexCoordinationFactory} is currently a singleton

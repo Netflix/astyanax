@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.netflix.astyanax.Keyspace;
+import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 
 /**
@@ -52,6 +53,18 @@ public class IndexCoordinationThreadLocalImpl implements IndexCoordination {
 		metaDataSet = new HashMap<IndexMappingKey<?>,IndexMetadata<?,?>>();
 		metaDataByCF = new HashMap<String, ArrayList<IndexMetadata<?,?>>>();
 	}
+	
+	
+	
+	@Override
+	public <C, V, K> Index<C, V, K> getReadIndex(IndexMetadata<C, K> metaData,
+			Keyspace keyspace, MutationBatch mutation) {
+		
+		return new IndexImpl<C, V, K>(keyspace, mutation, metaData.getIndexKey().getColumnFamily(), metaData.getIndexCFName());
+	}
+
+
+
 	/**
 	 * Adding the index meta data.
 	 * 

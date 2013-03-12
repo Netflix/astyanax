@@ -69,13 +69,18 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 	}
 	
 	/**
-	 * Will participate in this batch.
+	 * Will participate in this batch, using the default index CF
 	 * 
 	 * @param mutationBatch
 	 */
 	protected IndexImpl(MutationBatch mutationBatch,String targetCf) {
 		this.mutationBatch = mutationBatch;
 		this.targetCF = targetCf;
+	}
+	protected IndexImpl(MutationBatch mutationBatch,String targetCf,String indexCF) {
+		this.mutationBatch = mutationBatch;
+		this.targetCF = targetCf;
+		this.indexCF = indexCF;
 	}
 	
 	//support both read and write to index

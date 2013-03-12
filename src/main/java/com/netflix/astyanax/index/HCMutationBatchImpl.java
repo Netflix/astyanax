@@ -88,11 +88,14 @@ public class HCMutationBatchImpl implements IndexedMutationBatch {
 				coordination.modifying(mappingKey, value);			
 				//check delta:
 				try {
+					//Get the index meta data to determine which index CF to store it in
+					IndexMetadata<C, K> metaData = coordination.getMetaData(mappingKey );
+					String indexCF = metaData.getIndexCFName();
 					if (mapping.getOldValueofCol() == null ) {
-						Index<C,V,K> ind = new IndexImpl<C, V, K>(mutator,columnFamily.getName());
+						Index<C,V,K> ind = new IndexImpl<C, V, K>(mutator,columnFamily.getName(),indexCF);
 						ind.insertIndex(columnName, value, rowKey);
 					}else if (!mapping.getValueOfCol().equals(mapping.getOldValueofCol()) ) {
-						Index<C,V,K> ind = new IndexImpl<C, V, K>(mutator,columnFamily.getName());
+						Index<C,V,K> ind = new IndexImpl<C, V, K>(mutator,columnFamily.getName(),indexCF);
 						ind.updateIndex(columnName, value, mapping.getOldValueofCol(), rowKey);
 						
 					} else {

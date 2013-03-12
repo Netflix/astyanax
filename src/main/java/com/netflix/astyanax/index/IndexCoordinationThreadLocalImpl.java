@@ -5,7 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.Keyspace;
+import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 
 /**
  * The point of synchronization between the clients  
@@ -51,7 +52,11 @@ public class IndexCoordinationThreadLocalImpl implements IndexCoordination {
 		metaDataSet = new HashMap<IndexMappingKey<?>,IndexMetadata<?,?>>();
 		metaDataByCF = new HashMap<String, ArrayList<IndexMetadata<?,?>>>();
 	}
-	
+	/**
+	 * Adding the index meta data.
+	 * 
+	 *  
+	 */
  	@Override
 	public <C,K> void addIndexMetaData(IndexMetadata<C,K> metaData) {
 		
@@ -64,9 +69,20 @@ public class IndexCoordinationThreadLocalImpl implements IndexCoordination {
  		}
  		list.add(metaData);
  		
+ 		//
 		
 	}
  	
+	@Override
+	public <C, K> void addIndexMetaDataAndSchema(Keyspace keyspace,IndexMetadata<C, K> metaData) throws ConnectionException {
+		
+		if (metaData.getIndexCFOptions() == null)
+			SchemaIndexUtil.createIndexCF(keyspace, metaData.getIndexCFName(), true, true);
+		else 
+			SchemaIndexUtil.createIndexCF(keyspace, metaData.getIndexCFName(), true,metaData.getIndexCFOptions());
+		
+		addIndexMetaData(metaData);
+	}
 	@Override
 	public <C, K> IndexMetadata<C, K> getMetaData(IndexMappingKey<C> key) {
 		return (IndexMetadata<C,K>)metaDataSet.get(key);

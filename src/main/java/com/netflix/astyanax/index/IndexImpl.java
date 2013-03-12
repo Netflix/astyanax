@@ -56,9 +56,16 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 	public static String DEFAULT_INDEX_CF = "index_cf"; 
 	private String indexCF = DEFAULT_INDEX_CF;
 	
-	protected IndexImpl(Keyspace keyspace,String targetCf) {
+	/**
+	 * Constructor required for reading
+	 * @param keyspace
+	 * @param targetCf
+	 */
+	
+	protected IndexImpl(Keyspace keyspace,String targetCf,String indexCF) {
 		this.keyspace = keyspace;
 		this.targetCF = targetCf;
+		this.indexCF = indexCF;
 	}
 	
 	/**
@@ -84,8 +91,19 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 		this.targetCF = targetCf;
 		this.indexCF = indexCF;
 	}
-	
-	
+	/**
+	 * Same as above with create index column family optional.
+	 * 
+	 * @param keyspace
+	 * @param mutationBatch
+	 * @param targetCf
+	 * @param indexCF
+	 * @param create - creates the index column family if it doesn't exist
+	 */
+	public IndexImpl(Keyspace keyspace,MutationBatch mutationBatch,String targetCf,String indexCF,boolean create) throws ConnectionException {
+		this(keyspace,mutationBatch,targetCf,indexCF);
+		SchemaIndexUtil.createIndexCF(keyspace, indexCF, false, true);
+	}
 	
 	
 	/**

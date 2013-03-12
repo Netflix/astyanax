@@ -63,8 +63,13 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 	public RowSliceQuery<K, C> equals(C name, V value) {
 		//OK, this is where it happens
 		ColumnFamilyQuery<K, C> query = keyspace.prepareQuery(columnFamily);
+		IndexMetadata<C, K> metaData = indexCoordination.getMetaData(new IndexMappingKey<C>(columnFamily.getName(),name));
+		Index<C, V, K> ind = null;
+		if (metaData != null)
+			ind = new IndexImpl<C, V, K>(keyspace,columnFamily.getName(),metaData.getIndexCFName());
+		else
+			ind = new IndexImpl<C, V, K>(keyspace,columnFamily.getName(),IndexImpl.DEFAULT_INDEX_CF);
 		
-		Index<C, V, K> ind = new IndexImpl<C, V, K>(keyspace,columnFamily.getName());
 		try {
 			//get keys associated with 
 			Collection<K> keys = ind.eq(name, value);

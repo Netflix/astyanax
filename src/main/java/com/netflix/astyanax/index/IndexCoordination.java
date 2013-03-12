@@ -2,7 +2,9 @@ package com.netflix.astyanax.index;
 
 import java.util.List;
 
+import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 
 /**
  * 
@@ -24,9 +26,19 @@ public interface IndexCoordination {
 	 * {@link IndexMetadata} for each life-cycle of the context.
 	 * See {@link IndexCoordinationFactory} is currently a singleton
 	 * 
+	 * 
 	 * @param metaData
 	 */
 	<C,K> void addIndexMetaData(IndexMetadata<C,K> metaData);
+	
+	/**
+	 * Same effect as above but with the additional behaviour that 
+	 * the index column family defined in the {@link IndexMetadata}
+	 * is created as well.
+	 * 
+	 * @param metaData
+	 */
+	<C,K> void addIndexMetaDataAndSchema(Keyspace keyspace,IndexMetadata<C,K> metaData) throws ConnectionException;
 	
 	<C,K> IndexMetadata<C, K> getMetaData(IndexMappingKey<C> key);
 	

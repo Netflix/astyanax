@@ -90,9 +90,9 @@ public class IndexCoordinationThreadLocalImpl implements IndexCoordination {
 	public <C, K> void addIndexMetaDataAndSchema(Keyspace keyspace,IndexMetadata<C, K> metaData) throws ConnectionException {
 		
 		if (metaData.getIndexCFOptions() == null)
-			SchemaIndexUtil.createIndexCF(keyspace, metaData.getIndexCFName(), true, true);
+			SchemaIndexUtil.createIndexCF(keyspace, metaData.getIndexCFName(), false, true);
 		else 
-			SchemaIndexUtil.createIndexCF(keyspace, metaData.getIndexCFName(), true,metaData.getIndexCFOptions());
+			SchemaIndexUtil.createIndexCF(keyspace, metaData.getIndexCFName(), false,metaData.getIndexCFOptions());
 		
 		addIndexMetaData(metaData);
 	}

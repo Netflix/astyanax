@@ -126,8 +126,8 @@ public class IndexCoordinationThreadLocalImpl implements IndexCoordination {
 		if (mapping == null) {
 			//throw new NoReadException();
 			//assume new "insert"
-			IndexMapping<C,V> newMapping = new IndexMapping<C, V>(key,newValue);
-			indexMapLocal.get().put(key, newMapping);
+			mapping = new IndexMapping<C, V>(key,newValue);
+			indexMapLocal.get().put(key, mapping);
 			
 		}
 		
@@ -150,6 +150,10 @@ public class IndexCoordinationThreadLocalImpl implements IndexCoordination {
 		
 		
 		IndexMapping<C,V> indexMapping = (IndexMapping<C,V>)indexMapLocal.get().get(key);
+		if (indexMapping == null) {
+			indexMapping = new IndexMapping<C, V>(key,null);
+			indexMapLocal.get().put(key, indexMapping);
+		}
 		
 		return indexMapping;
 		

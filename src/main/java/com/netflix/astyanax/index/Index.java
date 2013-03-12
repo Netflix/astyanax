@@ -10,7 +10,7 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
  * at the layer of the query or batch mutation level.
  * The other major reason for this is that a mutator does not need to be provided 
  * for query.
- * TODO: split the implementation of index.
+ * 
  *  
  * 
  * @author marcus

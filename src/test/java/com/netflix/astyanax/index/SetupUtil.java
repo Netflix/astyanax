@@ -90,7 +90,8 @@ public class SetupUtil {
 		try {
 			keyspace.dropColumnFamily(index_cf);
 		}catch (Exception e) {
-			e.printStackTrace();
+			System.out.println("Exception dropping index: " + index_cf);
+			//e.printStackTrace();
 		}
 		keyspace.createColumnFamily(index_cf, ImmutableMap
 				.<String, Object> builder().put("caching", "ALL").build());

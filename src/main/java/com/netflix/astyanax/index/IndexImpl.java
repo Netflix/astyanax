@@ -275,7 +275,8 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 	}
 
 	/**
-	 * A bit of code redundancy here
+	 * A bit of code redundancy here, as it's a copy (almost) from above.
+	 * 
 	 */
 	@Override
 	public Collection<byte[]> eqBytes(N name, V value)

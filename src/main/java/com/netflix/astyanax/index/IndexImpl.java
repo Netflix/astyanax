@@ -190,14 +190,34 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 		
 		
 		
-		Composite row = new Composite(this.targetCF,name,value);
+		Composite row = new Composite(this.targetCF);
+		if (name instanceof Composite  ) {
+						
+			row.add(CompositeSerializer.get().toBytes((Composite)name));
+		}else
+			row.add(name);
+		if (name instanceof Composite)
+			row.add(CompositeSerializer.get().toBytes((Composite)value));
+		else
+			row.add(value);
+		
+		
 				
 		byte []bType = MappingUtil.getType(pkValue);
 		
 		
 		//I suppose that if we can save space by
 		//storing the type information else-where
-		mutationBatch.withRow(getRowCF(), row).putColumn(pkValue,bType);
+		if (pkValue instanceof Composite) {
+			byte [] compositeColNameByte = CompositeSerializer.get().toBytes((Composite)pkValue);
+			ColumnFamily<Composite, byte[]> CF = new ColumnFamily<Composite, byte[]>(
+					indexCF,CompositeSerializer.get(), BytesArraySerializer.get());
+			
+			mutationBatch.withRow(CF, row).putColumn(compositeColNameByte, bType);
+			//mutationBatch.withRow(CF, CompositeSerializer.get().toBytes(row));//.putColumn(pkValue, bType);
+		}else {
+			mutationBatch.withRow(getRowCF(), row).putColumn(pkValue,bType);
+		}
 		
 		
 		

@@ -13,7 +13,13 @@ import org.junit.Test;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.connectionpool.OperationResult;
+import com.netflix.astyanax.model.ColumnFamily;
+import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.Composite;
+import com.netflix.astyanax.serializers.BytesArraySerializer;
+import com.netflix.astyanax.serializers.CompositeSerializer;
+import com.netflix.astyanax.serializers.TypeInferringSerializer;
 import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
 
 public class PlainIndexTest {
@@ -173,14 +179,17 @@ public class PlainIndexTest {
 	public void testAllComposites() throws Exception {
 		
 		MutationBatch m = keyspace.prepareMutationBatch();
-		Index<Composite,Composite,String> ind = new IndexImpl<Composite, Composite, String>(keyspace,m,"index_cf_composite");
+		Index<Composite,Composite,Composite> ind = new IndexImpl<Composite, Composite, Composite>(keyspace,m,"index_cf_composite");
 		Composite colVal = new Composite("Happy",new Long(0));
 		Composite col = new Composite("Family");
 		Composite pkVal = new Composite("Makes","the","world","goround");
-		ind.insertIndex(col,colVal , "not composite");
+		ind.insertIndex(col, colVal , pkVal);
+		
+		Composite row = new Composite("index_cf_composite",col,colVal);
 		
 		
-		Collection<String> indexResult = ind.eq(col, colVal);
+		
+		Collection<Composite> indexResult = ind.eq(col, colVal);
 		
 		Assert.assertEquals(1, indexResult.size());
 		
@@ -188,7 +197,7 @@ public class PlainIndexTest {
 		
 	}
 	
-	//this one works
+	
 	@Test
 	public void testCompositeNonCompositePKValue() throws Exception {
 		
@@ -198,6 +207,14 @@ public class PlainIndexTest {
 		Composite col = new Composite("Family");
 		Composite pkVal = new Composite("Makes","the","world","goround");
 		ind.insertIndex(col,colVal , "not composite");
+		
+		Composite row = new Composite("index_cf_composite",CompositeSerializer.get().toBytes(col),CompositeSerializer.get().toBytes(colVal));
+		
+		ColumnFamily<Composite, byte[]> CF = new ColumnFamily<Composite, byte[]>(
+				IndexImpl.DEFAULT_INDEX_CF, CompositeSerializer.get(), BytesArraySerializer.get());
+		
+		OperationResult<ColumnList<byte[]>> result = keyspace.prepareQuery(CF).getKey(row).execute();
+		
 		
 		
 		Collection<String> indexResult = ind.eq(col, colVal);

@@ -87,6 +87,7 @@ public class Murmur3Partitioner implements Partitioner {
         BigInteger current = first;
         for (int i = 0; i < count-1; i++) {
             current = current.add(delta);
+            tokens.add(current.toString());
         }
         tokens.add(last.toString());
         return tokens;

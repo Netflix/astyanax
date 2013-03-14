@@ -1,5 +1,8 @@
 package com.netflix.astyanax.recipes;
 
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -17,7 +20,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Function;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Keyspace;
@@ -44,6 +50,7 @@ import com.netflix.astyanax.recipes.uniqueness.DedicatedMultiRowUniquenessConstr
 import com.netflix.astyanax.recipes.uniqueness.MultiRowUniquenessConstraint;
 import com.netflix.astyanax.recipes.uniqueness.NotUniqueException;
 import com.netflix.astyanax.recipes.uniqueness.RowUniquenessConstraint;
+import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.TimeUUIDSerializer;
@@ -63,6 +70,8 @@ public class MiscUnitTest {
     private static final String TEST_CLUSTER_NAME  = "cass_sandbox";
     private static final String TEST_KEYSPACE_NAME = "AstyanaxUnitTests_MiscRecipes";
     private static final String SEEDS = "localhost:9160";
+    
+    private static final int    ALL_ROWS_COUNT = 10000;
     
     /**
      * Column Family definitions
@@ -96,6 +105,12 @@ public class MiscUnitTest {
                     "Standard1", 
                     StringSerializer.get(),
                     StringSerializer.get());
+    
+    public static ColumnFamily<Integer, Integer> CF_ALL_ROWS = ColumnFamily
+            .newColumnFamily(
+                    "AllRowsMusicUnitTest", 
+                    IntegerSerializer.get(),
+                    IntegerSerializer.get());
 
     /**
      * Interal
@@ -150,7 +165,7 @@ public class MiscUnitTest {
             keyspace.dropKeyspace();
         }
         catch (Exception e) {
-            e.printStackTrace();
+            LOG.info(e.getMessage());
         }
         
         keyspace.createKeyspace(ImmutableMap.<String, Object>builder()
@@ -164,6 +179,7 @@ public class MiscUnitTest {
 
         keyspace.createColumnFamily(CF_USER_UNIQUE_UUID,  null);
         keyspace.createColumnFamily(CF_EMAIL_UNIQUE_UUID, null);
+        keyspace.createColumnFamily(CF_ALL_ROWS, null);
         
         keyspace.createColumnFamily(LOCK_CF_LONG, ImmutableMap.<String, Object>builder()
                 .put("default_validation_class", "LongType")
@@ -245,6 +261,15 @@ public class MiscUnitTest {
 
             result = m.execute();
 
+            m.execute();
+            
+            m = keyspace.prepareMutationBatch();
+            for (int i = 0; i < ALL_ROWS_COUNT; i++) {
+                m.withRow(CF_ALL_ROWS,  i).putColumn(0,  true);
+                if (m.getRowCount() == 50) {
+                    m.execute();
+                }
+            }
             m.execute();
 
         } catch (Exception e) {
@@ -834,6 +859,51 @@ public class MiscUnitTest {
         }
         
     }
+    
+    @Test
+    public void testAllRowsReaderConcurrency12() throws Exception {
+        final AtomicLong counter = new AtomicLong(0);
+        
+        final Map<Long, AtomicLong> threadIds = Maps.newHashMap();
+        
+        AllRowsReader<Integer, Integer> reader = new AllRowsReader.Builder<Integer, Integer>(keyspace, CF_ALL_ROWS)
+                .withPageSize(100)
+                .withConcurrencyLevel(12)
+                .withColumnSlice(0)
+                .forEachRow(new Function<Row<Integer, Integer>, Boolean>() {
+                    @Override
+                    public synchronized Boolean apply(Row<Integer, Integer> row) {
+                        long threadId = Thread.currentThread().getId();
+                        AtomicLong threadCounter = threadIds.get(threadId);
+                        if (threadCounter == null) {
+                            threadCounter = new AtomicLong(0);
+                            threadIds.put(threadId, threadCounter);
+                        }
+                        threadCounter.incrementAndGet();
+                        counter.incrementAndGet();
+                        return true;
+                    }
+                })
+                .build();
+        
+        try {
+            Stopwatch sw = new Stopwatch().start();
+            boolean result = reader.call();
+            long runtimeMillis = sw.stop().elapsedMillis();
+            
+            LOG.info("Count = " + counter.get() + " runtime=" + runtimeMillis);
+            LOG.info("ThreadIds (" + threadIds.size() + ") " + threadIds);
+            Assert.assertEquals(threadIds.size(), 12);
+            Assert.assertEquals(counter.get(), ALL_ROWS_COUNT);
+            Assert.assertTrue(result);
+        }
+        catch (Exception e) {
+            LOG.info(e.getMessage(), e);
+            Assert.fail(e.getMessage());
+        }
+        
+    }
+    
     
     @Test
     public void testAllRowsReaderWithCancel() throws Exception {

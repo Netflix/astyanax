@@ -262,7 +262,15 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 		ColumnFamily<Composite, byte[]> CF = new ColumnFamily<Composite, byte[]>(
 				indexCF, compSerializer, bSer);
 		
-		Composite row = new Composite(this.targetCF,name,value);
+		Composite row = new Composite(this.targetCF);
+		if (name instanceof Composite  ) 		
+			row.add(CompositeSerializer.get().toBytes((Composite)name));
+		else
+			row.add(name);
+		if (name instanceof Composite)
+			row.add(CompositeSerializer.get().toBytes((Composite)value));
+		else
+			row.add(value);
 		
 		
 		OperationResult<ColumnList<byte[]>> result = keyspace.prepareQuery(CF).getKey(row).execute();

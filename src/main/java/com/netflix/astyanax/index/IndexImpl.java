@@ -191,10 +191,9 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 		
 		
 		Composite row = new Composite(this.targetCF);
-		if (name instanceof Composite  ) {
-						
+		if (name instanceof Composite  ) 		
 			row.add(CompositeSerializer.get().toBytes((Composite)name));
-		}else
+		else
 			row.add(name);
 		if (name instanceof Composite)
 			row.add(CompositeSerializer.get().toBytes((Composite)value));

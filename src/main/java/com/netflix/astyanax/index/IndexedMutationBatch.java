@@ -18,19 +18,19 @@ import com.netflix.astyanax.model.ColumnFamily;
  * {@link HighCardinalityQuery#equals(Object)}
  * 
  * @author marcus
- *
+ * @deprecated
  */
 public interface IndexedMutationBatch  {
 
 	/**
+	 * 
 	 * Allows the column family to be indexed through this muation operation.
 	 * 
-	 * @param currentBatch - get this from {@link Keyspace#prepareColumnMutation(ColumnFamily, Object, Object)}
 	 * @param columnFamily
 	 * @param rowKey
 	 * @return
 	 */
-	<K, C> ColumnListMutation<C> withIndexedRow(MutationBatch currentBatch, ColumnFamily<K, C> columnFamily, K rowKey);
+	<K, C> ColumnListMutation<C> withIndexedRow(ColumnFamily<K, C> columnFamily, K rowKey);
 	
 	
 }

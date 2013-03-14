@@ -1,51 +1,148 @@
 package com.netflix.astyanax.index;
 
+import java.nio.ByteBuffer;
+import java.util.Map;
+import java.util.Set;
+
+import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.AbstractColumnListMutation;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.WriteAheadLog;
+import com.netflix.astyanax.connectionpool.Host;
+import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnPath;
+import com.netflix.astyanax.model.ConsistencyLevel;
+import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.thrift.ThriftColumnFamilyMutationImpl;
 
-public class HCMutationBatchImpl implements IndexedMutationBatch {
+public class HCMutationBatchImpl implements MutationBatch {
 
 	private IndexCoordination indexcoorindator;
+	private MutationBatch mutator;
 	
-	//TODO perhaps a constructor with the mutator is called for??
-	
-	public HCMutationBatchImpl() {
+	public HCMutationBatchImpl(MutationBatch mutator) {
 		this.indexcoorindator = IndexCoordinationFactory.getIndexContext();
+		this.mutator = mutator;
 	}
-	public HCMutationBatchImpl(IndexCoordination coordinator) {
+	public HCMutationBatchImpl(MutationBatch mutator, IndexCoordination coordinator) {		
 		this.indexcoorindator = coordinator;
+		this.mutator = mutator;
 	}
-	@Override
-	public <K, C> ColumnListMutation<C> withIndexedRow(
-			MutationBatch currentBatch, ColumnFamily<K, C> columnFamily,
-			K rowKey) {
-		
-				
-		//wrap and return wrapping
-		//this might throw if its the super column implementation :(
-		ThriftColumnFamilyMutationImpl<C> impl =  (ThriftColumnFamilyMutationImpl<C>)currentBatch.withRow(columnFamily, rowKey);
-				
-		
-		ThriftMutatorExt<C,K> cfMutatorWrapper = new ThriftMutatorExt<C,K>(currentBatch,impl,indexcoorindator,columnFamily, rowKey); 
-		
-		return cfMutatorWrapper;
-		
-	}
-
-	
+			
 	public IndexCoordination getIndexcoorindator() {
 		return indexcoorindator;
 	}
 	public void setIndexcoorindator(IndexCoordination indexcoorindator) {
 		this.indexcoorindator = indexcoorindator;
 	}
+	
+	@Override
+	public <K, C> ColumnListMutation<C> withRow(ColumnFamily<K, C> columnFamily, K rowKey) {
+		//wrap and return wrapping
+		//this might throw if its the super column implementation :(
+		ThriftColumnFamilyMutationImpl<C> impl =  (ThriftColumnFamilyMutationImpl<C>)mutator.withRow(columnFamily, rowKey);
+										
+		ThriftMutatorExt<C,K> cfMutatorWrapper = new ThriftMutatorExt<C,K>(mutator,impl,indexcoorindator,columnFamily, rowKey); 
+				
+		return cfMutatorWrapper;
+	}
 
+	@Override
+	public <K> void deleteRow(Iterable<? extends ColumnFamily<K, ?>> columnFamilies, K rowKey) {
+		mutator.deleteRow(columnFamilies, rowKey);
+	}
+	
+	@Override
+	public void discardMutations() {
+		mutator.discardMutations();
+	}
+	
+	@Override
+	public void mergeShallow(MutationBatch other) {
+		mutator.mergeShallow(other);
+	}
+	
+	@Override
+	public boolean isEmpty() {
+		return mutator.isEmpty();
+	}
+	
+	@Override
+	public int getRowCount() {
+		return mutator.getRowCount();
+	}
+	
+	@Override
+	public Map<ByteBuffer, Set<String>> getRowKeys() {
+		return null;
+	}
+	
+	@Override
+	public MutationBatch pinToHost(Host host) {
+		return mutator.pinToHost(host);
+	}
+	
+	@Override
+	public MutationBatch setConsistencyLevel(ConsistencyLevel consistencyLevel) {
+		return mutator.setConsistencyLevel(consistencyLevel);
+	}
+	
+	@Override
+	public MutationBatch withConsistencyLevel(ConsistencyLevel consistencyLevel) {
+		return mutator.withConsistencyLevel(consistencyLevel);
+	}
+	
+	@Override
+	public MutationBatch withRetryPolicy(RetryPolicy retry) {
+		return mutator.withRetryPolicy(retry);
+	}
+	
+	@Override
+	public MutationBatch usingWriteAheadLog(WriteAheadLog manager) {
+		return mutator.usingWriteAheadLog(manager);
+	}
+	@Override
+	public MutationBatch lockCurrentTimestamp() {
+		return mutator.lockCurrentTimestamp();
+	}
+	
+	@Override
+	public MutationBatch setTimeout(long timeout) {
+		return mutator.setTimeout(timeout);
+	}
+	@Override
+	public MutationBatch setTimestamp(long timestamp) {
+		return mutator.setTimestamp(timestamp);
+	}
+	
+	@Override
+	public MutationBatch withTimestamp(long timestamp) {
+		return mutator.withTimestamp(timestamp);
+	}
+	
+	@Override
+	public ByteBuffer serialize() throws Exception {
+		return mutator.serialize();
+	}
+	
+	@Override
+	public void deserialize(ByteBuffer data) throws Exception {
+		mutator.deserialize(data);		
+	}
+	
+	@Override
+	public OperationResult<Void> execute() throws ConnectionException {
+		return mutator.execute();
+	}
+
+	@Override
+	public ListenableFuture<OperationResult<Void>> executeAsync() throws ConnectionException {
+		return mutator.executeAsync();
+	}
 
 	/**
 	 * Wrapping the Column family mutator to "detect" puts on indexed columns
@@ -70,10 +167,8 @@ public class HCMutationBatchImpl implements IndexedMutationBatch {
 			this.coordination = coordination;
 			this.columnFamily = columnFamily;
 			this.mutator = mutator;
-			this.rowKey = rowKey;
-			
+			this.rowKey = rowKey;			
 		}
-
 		
 		@Override
 		public <V> ColumnListMutation<C> putColumn(C columnName, V value,
@@ -168,7 +263,6 @@ public class HCMutationBatchImpl implements IndexedMutationBatch {
 			
 			return this;
 		}
-
 				
 	}
 	

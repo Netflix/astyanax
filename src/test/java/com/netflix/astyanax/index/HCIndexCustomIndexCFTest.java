@@ -1,11 +1,9 @@
 package com.netflix.astyanax.index;
 
-import java.util.Collection;
 import java.util.Iterator;
 
 import junit.framework.Assert;
 
-import org.codehaus.jackson.map.ser.std.StdArraySerializers.ByteArraySerializer;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -15,19 +13,12 @@ import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
-import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
-import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
-import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
-import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
-import com.netflix.astyanax.query.AllRowsQuery;
 import com.netflix.astyanax.query.RowSliceQuery;
 import com.netflix.astyanax.serializers.BytesArraySerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
-import com.netflix.astyanax.test.EmbeddedCassandra;
-import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
 
 /*
@@ -45,7 +36,7 @@ public class HCIndexCustomIndexCFTest {
 	static Keyspace keyspace;
 	
 	HighCardinalityQuery<String, String, String> hcq = null;
-	IndexedMutationBatch indBatchMutator = null;
+	MutationBatch indBatchMutator = null;
 	ColumnFamily<String, String> CF;
 	
 	@BeforeClass
@@ -75,7 +66,7 @@ public class HCIndexCustomIndexCFTest {
 		CF = new ColumnFamily<String, String>("device_service", StringSerializer.get(), StringSerializer.get());
 		
 		hcq = new HCIndexQueryImpl<String, String, String>(keyspace, CF);
-		indBatchMutator = new HCMutationBatchImpl();
+		indBatchMutator = new HCMutationBatchImpl(keyspace.prepareMutationBatch());
 		
 	}
 	
@@ -101,8 +92,8 @@ public class HCIndexCustomIndexCFTest {
 				
 		//Now update the index
 		batch = keyspace.prepareMutationBatch();
-		IndexedMutationBatch indexedBatch = new HCMutationBatchImpl();
-		ColumnListMutation<String> mutation = indexedBatch.withIndexedRow(batch, CF, row.getKey());
+		MutationBatch indexedBatch = new HCMutationBatchImpl(batch);
+		ColumnListMutation<String> mutation = indexedBatch.withRow(CF, row.getKey());
 		
 		mutation.putColumn("pin", "100998880_m");
 		

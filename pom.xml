@@ -4,7 +4,7 @@
 
     <groupId>com.netflix.astyanax</groupId>
     <artifactId>astyanax</artifactId>
-    <version>1.56.25-RIM-SNAPSHOT</version>
+    <version>1.56.25-RIM-0.1-SNAPSHOT</version>
 
     <parent>
       <groupId>org.sonatype.oss</groupId>

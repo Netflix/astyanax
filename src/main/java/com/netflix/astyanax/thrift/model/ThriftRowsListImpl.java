@@ -39,6 +39,17 @@ public class ThriftRowsListImpl<K, C> implements Rows<K, C> {
         this.lookup = Maps.newLinkedHashMap();
         
         for (Entry<ByteBuffer, List<ColumnOrSuperColumn>> row : rows.entrySet()) {
+        	//TODO:
+        	//If the client needs to be able to call getRawKey and get the actually Key value, we need to use the commented
+        	//out constructor call instead of the uncommented one which ends up returning an already read ByteBuffer, without knowing
+        	//which position is the actual key value.
+        	
+        	//ByteBuffer keyBuffer = row.getKey().duplicate();
+            //Row<K,C> thriftRow = new ThriftRowImpl<K, C>(
+            //        keySer.fromByteBuffer(row.getKey()), 
+            //        keyBuffer,
+            //        new ThriftColumnOrSuperColumnListImpl<C>(row.getValue(), colSer));
+        	
             Row<K,C> thriftRow = new ThriftRowImpl<K, C>(
                     keySer.fromByteBuffer(row.getKey()), 
                     row.getKey(),

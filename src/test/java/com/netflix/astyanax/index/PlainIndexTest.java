@@ -32,7 +32,7 @@ public class PlainIndexTest {
 	@BeforeClass
 	public static void beforeClass() throws Exception {
 		
-		SingletonEmbeddedCassandra.getInstance();
+		//SingletonEmbeddedCassandra.getInstance();
 		context = SetupUtil.initKeySpace();
 		keyspace = context.getEntity();
 		
@@ -185,9 +185,8 @@ public class PlainIndexTest {
 		Composite pkVal = new Composite("Makes","the","world","goround");
 		ind.insertIndex(col, colVal , pkVal);
 		
-		Composite row = new Composite("index_cf_composite",col,colVal);
-		
-		
+		m.execute();
+					
 		
 		Collection<Composite> indexResult = ind.eq(col, colVal);
 		
@@ -208,13 +207,16 @@ public class PlainIndexTest {
 		Composite pkVal = new Composite("Makes","the","world","goround");
 		ind.insertIndex(col,colVal , "not composite");
 		
+		m.execute();
+		
+		
 		Composite row = new Composite("index_cf_composite",CompositeSerializer.get().toBytes(col),CompositeSerializer.get().toBytes(colVal));
 		
 		ColumnFamily<Composite, byte[]> CF = new ColumnFamily<Composite, byte[]>(
 				IndexImpl.DEFAULT_INDEX_CF, CompositeSerializer.get(), BytesArraySerializer.get());
 		
 		OperationResult<ColumnList<byte[]>> result = keyspace.prepareQuery(CF).getKey(row).execute();
-		
+		Assert.assertTrue(result.getResult().size() > 0);
 		
 		
 		Collection<String> indexResult = ind.eq(col, colVal);

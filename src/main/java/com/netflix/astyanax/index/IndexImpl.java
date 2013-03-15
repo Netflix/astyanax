@@ -195,7 +195,7 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 			row.add(CompositeSerializer.get().toBytes((Composite)name));
 		else
 			row.add(name);
-		if (name instanceof Composite)
+		if (value instanceof Composite)
 			row.add(CompositeSerializer.get().toBytes((Composite)value));
 		else
 			row.add(value);
@@ -267,7 +267,7 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 			row.add(CompositeSerializer.get().toBytes((Composite)name));
 		else
 			row.add(name);
-		if (name instanceof Composite)
+		if (value instanceof Composite)
 			row.add(CompositeSerializer.get().toBytes((Composite)value));
 		else
 			row.add(value);

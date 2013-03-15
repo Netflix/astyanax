@@ -19,7 +19,6 @@ import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.Composite;
 import com.netflix.astyanax.serializers.BytesArraySerializer;
 import com.netflix.astyanax.serializers.CompositeSerializer;
-import com.netflix.astyanax.serializers.TypeInferringSerializer;
 import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
 
 public class PlainIndexTest {
@@ -32,7 +31,7 @@ public class PlainIndexTest {
 	@BeforeClass
 	public static void beforeClass() throws Exception {
 		
-		//SingletonEmbeddedCassandra.getInstance();
+		SingletonEmbeddedCassandra.getInstance();
 		context = SetupUtil.initKeySpace();
 		keyspace = context.getEntity();
 		
@@ -170,11 +169,12 @@ public class PlainIndexTest {
 		String colToBeIndexed = "intcol";
 		
 		ind.insertIndex( colToBeIndexed,new PsuedoCompositeValue("name","val","des"),new PsuedoCompositeKey("a key"));
-			
+		
+		
 		
 		
 	}
-	//this doesn't work
+	
 	@Test
 	public void testAllComposites() throws Exception {
 		
@@ -198,28 +198,18 @@ public class PlainIndexTest {
 	
 	
 	@Test
-	public void testCompositeNonCompositePKValue() throws Exception {
+	public void testCompositeNonCompositeCol() throws Exception {
 		
 		MutationBatch m = keyspace.prepareMutationBatch();
-		Index<Composite,Composite,String> ind = new IndexImpl<Composite, Composite, String>(keyspace,m,"index_cf_composite");
+		Index<String,Composite,Composite> ind = new IndexImpl<String, Composite, Composite>(keyspace,m,"index_cf_composite");
 		Composite colVal = new Composite("Happy",new Long(0));
-		Composite col = new Composite("Family");
+		//Composite col = new Composite("Family");
 		Composite pkVal = new Composite("Makes","the","world","goround");
-		ind.insertIndex(col,colVal , "not composite");
+		ind.insertIndex("to_be_indexed",colVal , pkVal);
 		
 		m.execute();
-		
-		
-		Composite row = new Composite("index_cf_composite",CompositeSerializer.get().toBytes(col),CompositeSerializer.get().toBytes(colVal));
-		
-		ColumnFamily<Composite, byte[]> CF = new ColumnFamily<Composite, byte[]>(
-				IndexImpl.DEFAULT_INDEX_CF, CompositeSerializer.get(), BytesArraySerializer.get());
-		
-		OperationResult<ColumnList<byte[]>> result = keyspace.prepareQuery(CF).getKey(row).execute();
-		Assert.assertTrue(result.getResult().size() > 0);
-		
-		
-		Collection<String> indexResult = ind.eq(col, colVal);
+				
+		Collection<Composite> indexResult = ind.eq("to_be_indexed", colVal);
 		
 		Assert.assertEquals(1, indexResult.size());
 		

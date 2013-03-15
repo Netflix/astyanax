@@ -190,14 +190,33 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 		
 		
 		
-		Composite row = new Composite(this.targetCF,name,value);
+		Composite row = new Composite(this.targetCF);
+		if (name instanceof Composite  ) 		
+			row.add(CompositeSerializer.get().toBytes((Composite)name));
+		else
+			row.add(name);
+		if (value instanceof Composite)
+			row.add(CompositeSerializer.get().toBytes((Composite)value));
+		else
+			row.add(value);
+		
+		
 				
 		byte []bType = MappingUtil.getType(pkValue);
 		
 		
 		//I suppose that if we can save space by
 		//storing the type information else-where
-		mutationBatch.withRow(getRowCF(), row).putColumn(pkValue,bType);
+		if (pkValue instanceof Composite) {
+			byte [] compositeColNameByte = CompositeSerializer.get().toBytes((Composite)pkValue);
+			ColumnFamily<Composite, byte[]> CF = new ColumnFamily<Composite, byte[]>(
+					indexCF,CompositeSerializer.get(), BytesArraySerializer.get());
+			
+			mutationBatch.withRow(CF, row).putColumn(compositeColNameByte, bType);
+			//mutationBatch.withRow(CF, CompositeSerializer.get().toBytes(row));//.putColumn(pkValue, bType);
+		}else {
+			mutationBatch.withRow(getRowCF(), row).putColumn(pkValue,bType);
+		}
 		
 		
 		
@@ -243,7 +262,15 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 		ColumnFamily<Composite, byte[]> CF = new ColumnFamily<Composite, byte[]>(
 				indexCF, compSerializer, bSer);
 		
-		Composite row = new Composite(this.targetCF,name,value);
+		Composite row = new Composite(this.targetCF);
+		if (name instanceof Composite  ) 		
+			row.add(CompositeSerializer.get().toBytes((Composite)name));
+		else
+			row.add(name);
+		if (value instanceof Composite)
+			row.add(CompositeSerializer.get().toBytes((Composite)value));
+		else
+			row.add(value);
 		
 		
 		OperationResult<ColumnList<byte[]>> result = keyspace.prepareQuery(CF).getKey(row).execute();
@@ -275,7 +302,8 @@ public class IndexImpl<N,V,K> implements Index<N, V, K>
 	}
 
 	/**
-	 * A bit of code redundancy here
+	 * A bit of code redundancy here, as it's a copy (almost) from above.
+	 * 
 	 */
 	@Override
 	public Collection<byte[]> eqBytes(N name, V value)

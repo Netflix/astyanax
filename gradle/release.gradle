@@ -7,7 +7,8 @@ task release(overwrite: true, dependsOn: commitNewVersion) << {
 commitNewVersion.dependsOn updateVersion
 updateVersion.dependsOn createReleaseTag
 createReleaseTag.dependsOn preTagCommit
-preTagCommit.dependsOn build
+def buildTasks = tasks.matching { it.name =~ /:build/ }
+preTagCommit.dependsOn buildTasks
 preTagCommit.dependsOn checkSnapshotDependencies
 //checkSnapshotDependencies.dependsOn confirmReleaseVersion // Introduced in 1.0, forces readLine
 //confirmReleaseVersion.dependsOn unSnapshotVersion
@@ -29,22 +30,25 @@ checkCommitNeeded.dependsOn initScmPlugin
         tasks = [ 'build', value ]
     }
 }
+
 task releaseArtifactory(dependsOn: [checkSnapshotDependencies, uploadArtifactory])
 
 // Ensure upload happens before taggging but after all pre-checks
-releaseArtifactory.dependsOn checkSnapshotDependencies
+//releaseArtifactory.dependsOn checkSnapshotDependencies
 createReleaseTag.dependsOn releaseArtifactory
 gradle.taskGraph.whenReady { taskGraph ->
     if ( taskGraph.hasTask(uploadArtifactory) && rootProject.status == 'release' && !taskGraph.hasTask(':release') ) {
-        throw new GradleException('"release" task has to be run before uploading a release to Artifactory')
+        throw new GradleException('Project has to be release status releasing to Artifactory')
     }
 }
+subprojects.each { project ->
+    project.uploadMavenCentral.dependsOn rootProject.checkSnapshotDependencies
+    rootProject.createReleaseTag.dependsOn project.uploadMavenCentral
 
-project.uploadMavenCentral.dependsOn rootProject.checkSnapshotDependencies
-rootProject.createReleaseTag.dependsOn project.uploadMavenCentral
-gradle.taskGraph.whenReady { taskGraph ->
-    if ( taskGraph.hasTask(project.uploadMavenCentral) && !taskGraph.hasTask(':release') ) {
-        throw new GradleException('"release" task has to be run before uploading to Maven Central')
+    gradle.taskGraph.whenReady { taskGraph ->
+        if ( taskGraph.hasTask(project.uploadMavenCentral) && !taskGraph.hasTask(':release') ) {
+            throw new GradleException('"release" task has to be run before uploading to Maven Central')
+        }
     }
 }
 

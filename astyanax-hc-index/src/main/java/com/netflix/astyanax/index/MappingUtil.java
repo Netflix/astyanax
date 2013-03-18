@@ -6,8 +6,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.model.Composite;
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
 import com.netflix.astyanax.serializers.BytesArraySerializer;
+import com.netflix.astyanax.serializers.CompositeSerializer;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.ObjectSerializer;
@@ -28,6 +30,7 @@ public class MappingUtil {
 	static byte [] objByte = new byte[1];
 	static byte [] bigIntByte = new byte[1];
 	
+			
 	static Map<Class<?>,byte[]> clToByteMap = new HashMap<Class<?>,byte[]>();
 	static Map<Class<?>,byte[]> byteToClMap = new HashMap<Class<?>,byte[]>();
 	
@@ -65,6 +68,8 @@ public class MappingUtil {
 		bigIntByte[0] = new Integer(8).byteValue();
 		clToByteMap.put(BigInteger.class, bigIntByte);
 		
+		compByte[0] = new Integer(9).byteValue();
+		clToByteMap.put(Composite.class, compByte);
 		//byteArrByte[0] = new Integer(2).byteValue();
 		
 		
@@ -104,6 +109,8 @@ public class MappingUtil {
         else if (objByte[0] == b) {
             serializer = ObjectSerializer.get();
         }
+        else if (compByte[0] == b)
+        	serializer = CompositeSerializer.get();
 		
 		return (Serializer<K>)serializer;
 	}

@@ -77,7 +77,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 		 * @param columnFamily column name type is fixed to String/UTF8
 		 */
 		public Builder<T, K> withColumnFamily(ColumnFamily<K, String> columnFamily) {
-		    Preconditions.checkState(this.columnFamilyName != null || columnFamily != null , "withColumnFamily called multiple times");
+		    Preconditions.checkState(this.columnFamilyName == null && this.columnFamily == null , "withColumnFamily called multiple times");
 			Preconditions.checkNotNull(columnFamily);
 			this.columnFamily = columnFamily;
 			return this;
@@ -88,7 +88,8 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 		 * @param columnFamilyName Name of column family to use.  
 		 */
 		public Builder<T, K> withColumnFamily(String columnFamilyName) {
-            Preconditions.checkState(this.columnFamilyName != null || columnFamily != null , "withColumnFamily called multiple times");
+            Preconditions.checkState(this.columnFamilyName == null && columnFamily == null , "withColumnFamily called multiple times");
+            Preconditions.checkNotNull(columnFamilyName);
 		    this.columnFamilyName = columnFamilyName;
 		    return this;
 		}

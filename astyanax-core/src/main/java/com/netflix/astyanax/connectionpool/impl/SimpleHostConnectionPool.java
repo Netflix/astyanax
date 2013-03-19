@@ -240,6 +240,13 @@ public class SimpleHostConnectionPool<CL> implements HostConnectionPool<CL> {
         returnedCount.incrementAndGet();
         monitor.incConnectionReturned(host);
 
+        if (config.getMaxOperationsPerConnection() != 0 &&
+                connection.getOperationCount() > config.getMaxOperationsPerConnection()) {
+            internalCloseConnection(connection);
+            tryOpenAsync();
+            return true;
+        }
+
         ConnectionException ce = connection.getLastException();
         if (ce != null) {
             if (ce instanceof IsDeadConnectionException) {

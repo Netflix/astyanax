@@ -40,6 +40,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 		private Class<T> clazz = null;
 		private EntityMapper<T,K> entityMapper = null;
 		private Keyspace keyspace = null;
+		private MutationBatch currentMutation;
 		private ColumnFamily<K, String> columnFamily = null;
 		private ConsistencyLevel readConsitency = null;
 		private ConsistencyLevel writeConsistency = null;
@@ -71,6 +72,19 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 			this.keyspace = keyspace;
 			return this;
 		}
+		/**
+		 * optional - define a mutation batch to operate in.
+		 * consistency level ignored?? if configured. 
+		 * 
+		 * @param mutationBatch
+		 * @return
+		 */
+		public Builder<T, K> withMutationBatch(MutationBatch mutationBatch) {
+			Preconditions.checkNotNull(mutationBatch);
+			this.currentMutation = mutationBatch;
+			return this;
+		}
+		
 
 		/**
 		 * optional
@@ -174,6 +188,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 
 	private final EntityMapper<T,K> entityMapper;
 	private final Keyspace keyspace;
+	private final MutationBatch mutationBatch;
 	private final ColumnFamily<K, String> columnFamily;
 	private final ConsistencyLevel readConsitency;
 	private final ConsistencyLevel writeConsistency;
@@ -188,6 +203,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 		writeConsistency = builder.writeConsistency;
 		retryPolicy = builder.retryPolicy;
 		lifecycleHandler = builder.lifecycleHandler;
+		mutationBatch = builder.currentMutation;
 	}
 
 	//////////////////////////////////////////////////////////////////
@@ -199,7 +215,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 	public void put(T entity) throws PersistenceException {
 		try {
 		    lifecycleHandler.onPrePersist(entity);
-            MutationBatch mb = newMutationBatch();
+            MutationBatch mb = getMutationBatch();
 			entityMapper.fillMutationBatch(mb, columnFamily, entity);			
 			mb.execute();
             lifecycleHandler.onPostPersist(entity);
@@ -248,7 +264,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
         try {
             lifecycleHandler.onPreRemove(entity);
             id = entityMapper.getEntityId(entity);
-            MutationBatch mb = newMutationBatch();
+            MutationBatch mb = getMutationBatch();
             mb.withRow(columnFamily, id).delete();
             mb.execute();
             lifecycleHandler.onPostRemove(entity);
@@ -306,7 +322,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
      */
     @Override
     public void delete(Collection<K> ids) throws PersistenceException {
-        MutationBatch mb = newMutationBatch();        
+        MutationBatch mb = getMutationBatch();        
         try {
             for (K id : ids) {
                 mb.withRow(columnFamily, id).delete();
@@ -319,7 +335,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 
     @Override
     public void remove(Collection<T> entities) throws PersistenceException {
-        MutationBatch mb = newMutationBatch();        
+        MutationBatch mb = getMutationBatch();        
         try {
             for (T entity : entities) {
                 lifecycleHandler.onPreRemove(entity);
@@ -340,7 +356,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
      */
     @Override
     public void put(Collection<T> entities) throws PersistenceException {
-        MutationBatch mb = newMutationBatch();        
+        MutationBatch mb = getMutationBatch();        
         try {
             for (T entity : entities) {
                 lifecycleHandler.onPrePersist(entity);
@@ -414,7 +430,11 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
             mb.withRetryPolicy(retryPolicy);
         return mb;
     }
-    
+    private MutationBatch getMutationBatch() {
+    	if (mutationBatch == null)
+    		return newMutationBatch();
+    	return mutationBatch;
+    }
     private ColumnFamilyQuery<K, String> newQuery() {
         ColumnFamilyQuery<K, String> cfq = keyspace.prepareQuery(columnFamily);
         if(readConsitency != null)

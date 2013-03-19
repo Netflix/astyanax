@@ -21,8 +21,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import javax.annotation.Nullable;
-
 import org.apache.cassandra.thrift.CqlRow;
 
 import com.google.common.base.Function;
@@ -76,7 +74,7 @@ public class ThriftCqlRowsImpl<K, C> implements Rows<K, C> {
     public Collection<K> getKeys() {
         return Lists.transform(rows, new Function<Row<K,C>, K>() {
             @Override
-            public K apply(@Nullable Row<K, C> input) {
+            public K apply(Row<K, C> input) {
                 return input.getKey();
             }
         });

@@ -13,8 +13,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import javax.annotation.Nullable;
-
 import org.apache.cassandra.thrift.SchemaDisagreementException;
 import org.apache.commons.lang.StringUtils;
 import org.codehaus.jackson.JsonGenerationException;
@@ -291,7 +289,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     private ModShardPolicy                  modShardPolicy;
     private Function<String, Message>       invalidMessageHandler  = new Function<String, Message>() {
                                                                         @Override
-                                                                        public Message apply(@Nullable String input) {
+                                                                        public Message apply(String input) {
                                                                             LOG.warn("Invalid message: " + input);
                                                                             return null;
                                                                         }

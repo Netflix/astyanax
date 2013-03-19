@@ -21,8 +21,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import javax.annotation.Nullable;
-
 import org.apache.cassandra.thrift.KeySlice;
 
 import com.google.common.base.Function;
@@ -89,7 +87,7 @@ public class ThriftRowsSliceImpl<K, C> implements Rows<K, C> {
     public Collection<K> getKeys() {
         return Lists.transform(rows, new Function<Row<K,C>, K>() {
             @Override
-            public K apply(@Nullable Row<K, C> row) {
+            public K apply(Row<K, C> row) {
                 return row.getKey();
             }
         });

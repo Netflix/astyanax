@@ -3,8 +3,6 @@ package com.netflix.astyanax.test;
 import java.util.ArrayList;
 import java.util.Random;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 
@@ -49,7 +47,7 @@ public class ProbabalisticFunction<T, R> implements Function<T,R> {
     private Runnable                always;
     
     @Override
-    public R apply(@Nullable T arg) {
+    public R apply(T arg) {
         always.run();
         
         double p = new Random().nextDouble();

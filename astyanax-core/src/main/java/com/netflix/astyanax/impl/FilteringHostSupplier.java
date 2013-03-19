@@ -18,8 +18,6 @@ package com.netflix.astyanax.impl;
 import java.util.List;
 import java.util.Map;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
@@ -77,7 +75,7 @@ public class FilteringHostSupplier implements Supplier<List<Host>> {
 
         List<Host> result = Lists.newArrayList(Collections2.filter(sourceList, new Predicate<Host>() {
             @Override
-            public boolean apply(@Nullable Host host) {
+            public boolean apply(Host host) {
                 Host foundHost = lookup.get(host.getHostName());
                 if (foundHost == null) {
                     for (String addr : host.getAlternateIpAddresses()) {

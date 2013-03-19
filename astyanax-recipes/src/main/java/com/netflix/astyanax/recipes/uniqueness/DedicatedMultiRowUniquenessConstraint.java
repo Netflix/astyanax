@@ -17,8 +17,6 @@ package com.netflix.astyanax.recipes.uniqueness;
 
 import java.util.List;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
@@ -158,7 +156,7 @@ public class DedicatedMultiRowUniquenessConstraint<C> implements UniquenessConst
     public void acquireAndMutate(final MutationBatch other) throws NotUniqueException, Exception {
         acquireAndApplyMutation(new Function<MutationBatch, Boolean>() {
             @Override
-            public Boolean apply(@Nullable MutationBatch input) {
+            public Boolean apply(MutationBatch input) {
                 if (other != null) {
                     input.mergeShallow(other);
                 }

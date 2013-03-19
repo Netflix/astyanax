@@ -9,8 +9,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import javax.annotation.Nullable;
-
 import junit.framework.Assert;
 
 import org.junit.AfterClass;
@@ -782,7 +780,7 @@ public class MiscUnitTest {
         try {
             unique.acquireAndApplyMutation(new Function<MutationBatch, Boolean>() {
                 @Override
-                public Boolean apply(@Nullable MutationBatch m) {
+                public Boolean apply(MutationBatch m) {
                     m.withRow(UNIQUE_CF, row)
                         .putColumn(dataColumn, value, null);
                     return true;
@@ -840,7 +838,7 @@ public class MiscUnitTest {
 //                .withPartitioner(new Murmur3Partitioner())
                 .forEachRow(new Function<Row<String, String>, Boolean>() {
                     @Override
-                    public Boolean apply(@Nullable Row<String, String> row) {
+                    public Boolean apply(Row<String, String> row) {
                         counter.incrementAndGet();
                         LOG.info("Got a row: " + row.getKey().toString());
                         return true;
@@ -914,7 +912,7 @@ public class MiscUnitTest {
                 .withConcurrencyLevel(2)
                 .forEachRow(new Function<Row<String, String>, Boolean>() {
                     @Override
-                    public Boolean apply(@Nullable Row<String, String> row) {
+                    public Boolean apply(Row<String, String> row) {
                         try {
                             Thread.sleep(2000);
                         } catch (InterruptedException e) {
@@ -957,7 +955,7 @@ public class MiscUnitTest {
                 .withConcurrencyLevel(2)
                 .forEachRow(new Function<Row<String, String>, Boolean>() {
                     @Override
-                    public Boolean apply(@Nullable Row<String, String> row) {
+                    public Boolean apply(Row<String, String> row) {
                         throw new RuntimeException("Very bad");
                     }
                 })

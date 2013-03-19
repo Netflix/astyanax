@@ -262,6 +262,34 @@ public class DefaultEntityManagerTest {
 			Assert.assertTrue(entities4.isEmpty());
 		}        
 	}
+	
+	@Test
+	public void testBuilder() {
+		new DefaultEntityManager.Builder<DoubleIdColumnEntity, String>()
+			.withColumnFamily(CF_SAMPLE_ENTITY);
+		
+		try {
+			new DefaultEntityManager.Builder<DoubleIdColumnEntity, String>()
+				.withColumnFamily("Test")
+				.withColumnFamily(CF_SAMPLE_ENTITY);
+			Assert.fail();
+		}
+		catch (Exception e) {
+		}
+		
+		try {
+			new DefaultEntityManager.Builder<DoubleIdColumnEntity, String>()
+				.withColumnFamily(CF_SAMPLE_ENTITY)
+				.withColumnFamily("Test");
+			Assert.fail();
+		}
+		catch (Exception e) {
+			
+		}
+		
+		new DefaultEntityManager.Builder<DoubleIdColumnEntity, String>()
+			.withColumnFamily("test");
+	}
 
 	private static Map<String, SimpleEntity> collectionToMap(Collection<SimpleEntity> entities) {
 		Map<String, SimpleEntity> map = Maps.newHashMap();

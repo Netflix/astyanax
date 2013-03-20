@@ -3,6 +3,8 @@ package com.netflix.astyanax.index;
 import java.util.Map;
 
 /**
+ * Holds information on the Index, based Row + index key (CF + column).
+ * 
  * 
  * @author marcus
  *

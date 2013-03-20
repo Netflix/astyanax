@@ -31,6 +31,7 @@ public interface IndexCoordination {
 	 */
 	public <C,V,K>Index<C, V, K> getIndex(IndexMetadata<C,K> metaData,Keyspace keyspace,MutationBatch mutation);
 	
+	public <C,V,K>Index<C, V, K> getReadIndex(IndexMetadata<C,K> metaData,Keyspace keyspace);
 	
 	/**
 	 * This may be stored in future, but for now client are expected to add meta data

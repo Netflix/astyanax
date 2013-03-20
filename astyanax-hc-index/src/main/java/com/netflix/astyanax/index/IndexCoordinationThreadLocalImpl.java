@@ -57,7 +57,7 @@ public class IndexCoordinationThreadLocalImpl implements IndexCoordination {
 	
 	
 	@Override
-	public <C, V, K> Index<C, V, K> getReadIndex(IndexMetadata<C, K> metaData,
+	public <C, V, K> Index<C, V, K> getIndex(IndexMetadata<C, K> metaData,
 			Keyspace keyspace, MutationBatch mutation) {
 		
 		return new IndexImpl<C, V, K>(keyspace, mutation, metaData.getIndexKey().getColumnFamily(), metaData.getIndexCFName());

@@ -29,7 +29,7 @@ public interface IndexCoordination {
 	 * @param mutation
 	 * @return
 	 */
-	public <C,V,K>Index<C, V, K> getReadIndex(IndexMetadata<C,K> metaData,Keyspace keyspace,MutationBatch mutation);
+	public <C,V,K>Index<C, V, K> getIndex(IndexMetadata<C,K> metaData,Keyspace keyspace,MutationBatch mutation);
 	
 	
 	/**

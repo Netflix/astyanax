@@ -51,12 +51,6 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 	
 		
 
-	//@Override
-	public IndexRead<K, C, V> readIndex() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
 
 
 	@Override

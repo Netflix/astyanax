@@ -217,7 +217,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 		    lifecycleHandler.onPrePersist(entity);
             MutationBatch mb = getMutationBatch();
 			entityMapper.fillMutationBatch(mb, columnFamily, entity);			
-			mb.execute();
+			if (mutationBatch == null) mb.execute();
             lifecycleHandler.onPostPersist(entity);
 		} catch(Exception e) {
 			throw new PersistenceException("failed to put entity ", e);
@@ -266,7 +266,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
             id = entityMapper.getEntityId(entity);
             MutationBatch mb = getMutationBatch();
             mb.withRow(columnFamily, id).delete();
-            mb.execute();
+            if (mutationBatch == null) mb.execute();
             lifecycleHandler.onPostRemove(entity);
         } catch(Exception e) {
             throw new PersistenceException("failed to delete entity " + id, e);
@@ -327,7 +327,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
             for (K id : ids) {
                 mb.withRow(columnFamily, id).delete();
             }
-            mb.execute();
+            if (mutationBatch == null) mb.execute();
         } catch(Exception e) {
             throw new PersistenceException("failed to delete entities " + ids, e);
         }
@@ -342,7 +342,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
                 K id = entityMapper.getEntityId(entity);
                 mb.withRow(columnFamily, id).delete();
             }
-            mb.execute();
+            if (mutationBatch ==null) mb.execute();
             for (T entity : entities) {
                 lifecycleHandler.onPostRemove(entity);
             }
@@ -362,7 +362,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
                 lifecycleHandler.onPrePersist(entity);
                 entityMapper.fillMutationBatch(mb, columnFamily, entity);           
             }
-            mb.execute();
+            if (mutationBatch == null) mb.execute();
             
             for (T entity : entities) {
                 lifecycleHandler.onPostPersist(entity);

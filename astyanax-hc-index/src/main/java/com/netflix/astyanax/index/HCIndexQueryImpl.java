@@ -147,7 +147,8 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 			//we don't have a column slice selected
 			//we'll have to check for all of them.
 			if (!columnsSelected) {
-				
+				//TODO: remove this guy, as we've cached it in coordinator.
+				//not sure if that's the best place for it.
 				List<IndexMetadata<C, K>> list = indexContext.getMetaDataByCf(cf.getName());
 				for (IndexMetadata<C, K> metadata:list) {
 					colsMapped.put(metadata.getIndexKey().getColumnName(), metadata.getIndexKey());

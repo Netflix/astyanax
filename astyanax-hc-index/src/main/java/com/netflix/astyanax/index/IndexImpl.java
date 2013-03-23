@@ -1,6 +1,5 @@
 package com.netflix.astyanax.index;
 
-import java.lang.reflect.TypeVariable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -33,6 +32,12 @@ import com.netflix.astyanax.serializers.TypeInferringSerializer;
  * 
  * Can optionally store values as well, but not for this round.
  * 
+ * Also thinking about changing the structure to not store in a single CF.
+ * This will allow a lighter packaging in terms of what is shipped over
+ * the wire, ie. less meta data about column family and also even the column 
+ * name to be indexed.
+ * Will complicate CF index naming, and possibly result in large CF names
+ * which is possibly not good.
  * 
  * @author marcus
  *

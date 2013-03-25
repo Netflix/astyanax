@@ -1,13 +1,24 @@
 package com.netflix.astyanax.index;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.connectionpool.Operation;
+import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.model.Column;
+import com.netflix.astyanax.model.ColumnFamily;
+import com.netflix.astyanax.model.ColumnList;
+import com.netflix.astyanax.model.Row;
+import com.netflix.astyanax.model.Rows;
+import com.netflix.astyanax.query.RowQuery;
+import com.netflix.astyanax.serializers.SerializerTypeInferer;
 
 /**
  * The point of synchronization between the clients  
@@ -47,6 +58,16 @@ public class IndexCoordinationThreadLocalImpl implements IndexCoordination {
 	//clients will provide this.
 	private Map<IndexMappingKey<?>,IndexMetadata<?,?>> metaDataSet;
 	private Map<String,ArrayList<IndexMetadata<?, ?>>> metaDataByCF;
+	
+	/**
+	 * Sorry column family == string, because IndexMetaData keeps it 
+	 * simple, and I want to make sure equals/hashcode always work.
+	 * 
+	 * sorry, going to avoid all generics typing - it's not constructive at this
+	 * point.
+	 */
+	
+	private Map<Object,Object> cfToColsMapped = new HashMap<Object, Object>();
 	
 	
 	public IndexCoordinationThreadLocalImpl() {
@@ -90,7 +111,18 @@ public class IndexCoordinationThreadLocalImpl implements IndexCoordination {
  		}
  		list.add(metaData);
  		
- 		//
+ 		//add cf to column information
+ 		HashMap<C,IndexMappingKey<C>> colsMapped = new HashMap<C,IndexMappingKey<C>>();
+		
+		List<IndexMetadata<C, K>> cfList = getMetaDataByCf(metaData.getIndexCFName());
+		if (cfList != null) {
+			for (IndexMetadata<C, K> metadata:cfList) {
+				colsMapped.put(metadata.getIndexKey().getColumnName(), metadata.getIndexKey());
+			}
+			
+			cfToColsMapped.put(metaData.getIndexCFName(), colsMapped);
+		}
+		
 		
 	}
  	
@@ -112,6 +144,8 @@ public class IndexCoordinationThreadLocalImpl implements IndexCoordination {
 	public <C,K> List<IndexMetadata<C, K>> getMetaDataByCf(String cf) {
 		
 		ArrayList<IndexMetadata<?, ?>> uncastlist = metaDataByCF.get(cf);
+		if (uncastlist == null)
+			return null;
 		ArrayList<IndexMetadata<C,K>> castList = new ArrayList<IndexMetadata<C,K>>();
 		for (IndexMetadata<?, ?> indexdata:uncastlist) {
 			castList.add((IndexMetadata<C,K>)indexdata);
@@ -142,14 +176,7 @@ public class IndexCoordinationThreadLocalImpl implements IndexCoordination {
 		
 	}
 	
-	@Override
-	public <C, V> void reading(String cf, C columnName, V value)
-			throws NoMetaDataException {
-		
-		reading (new IndexMapping<C, V>(cf, columnName, value, value));
-		
-	}
-
+	
 	@Override
 	public <C, V> IndexMapping<C, V> modifying(IndexMappingKey<C> key, V newValue)
 			throws NoReadException {
@@ -173,14 +200,65 @@ public class IndexCoordinationThreadLocalImpl implements IndexCoordination {
 		return mapping;
 		
 	}
-
-	@Override
-	public <C, V> IndexMapping<C,V> modifying(String cf, C columnName, V newValue)
-			throws NoReadException {
+	
+	//Gets and possibly modifies it for future updates.
+	//queries the data on behalf
+	/**
+	 * Gets while caching result, for potentional put downstream.
+	 * 
+	 * @param rowKey
+	 * @param keyspace
+	 * @param cf
+	 * @return
+	 * @throws ConnectionException
+	 */
+	public <K,C> OperationResult<ColumnList<C>>  reading(K rowKey,Keyspace keyspace,ColumnFamily<K,C> cf) throws ConnectionException {
 		
-		return modifying(new IndexMappingKey(cf, columnName), newValue);
+		
+		RowQuery<K,C> rq = keyspace.prepareQuery(cf).getKey(rowKey);
+		OperationResult<ColumnList<C>> ores = rq.execute();
+		ColumnList<C> colResult = ores.getResult();
+		reading(colResult, cf);
+		
+		return ores;
 		
 	}
+	
+	
+	public <K,C> OperationResult<Rows<K,C>>  reading(Collection<K> keys,Keyspace keyspace,ColumnFamily<K,C> cf) throws ConnectionException {
+		
+		OperationResult<Rows<K,C>> rowsRes = keyspace.prepareQuery(cf).getKeySlice(keys).execute();
+		
+		for (Row<K,C> row:rowsRes.getResult()) {
+			reading(row.getColumns(), cf);
+		}
+		
+		return rowsRes;
+		
+	}
+
+	private <K,C>void reading (ColumnList<C> columnList,ColumnFamily<K, C> cf) {
+		
+		@SuppressWarnings("unchecked")
+		HashMap<C,IndexMappingKey<C>> colsMapped = (HashMap<C,IndexMappingKey<C>>)cfToColsMapped.get(cf.getName());
+		if (colsMapped == null)
+			return;
+		for (C col: colsMapped.keySet()) {
+			
+			
+			Column<C> column = columnList.getColumnByName(col);
+			if (column == null)
+				continue;
+			IndexMappingKey<C> mappingKey = colsMapped.get(col);
+			IndexMetadata<C,K> md = getMetaData(mappingKey);
+			Serializer<K> serializer = SerializerTypeInferer.getSerializer(md.getRowKeyClass());
+			
+			byte[] b = column.getByteArrayValue();
+			K colVal = serializer.fromBytes(b);
+			reading(new IndexMapping<C,K>(mappingKey,colVal,colVal));
+		}
+	}
+	
 
 	@Override
 	public <C, V> IndexMapping<C, V> get(IndexMappingKey<C> key) {

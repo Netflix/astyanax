@@ -1,10 +1,17 @@
 package com.netflix.astyanax.index;
 
+import java.util.Collection;
 import java.util.List;
+
+import org.apache.cassandra.cli.CliParser.rowKey_return;
 
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.model.ColumnFamily;
+import com.netflix.astyanax.model.ColumnList;
+import com.netflix.astyanax.model.Rows;
 
 /**
  * 
@@ -83,20 +90,40 @@ public interface IndexCoordination {
 	 * Called internally so that the coordinator can keep track of 
 	 * what is being read currently by the index mapping in question.
 	 * 
+	 * Internally called.
+	 * 
 	 * @param mapping
 	 * @throws NoMetaDataException
 	 */
 	<C,V> void reading(IndexMapping<C,V> mapping) throws NoMetaDataException;
 	
-	/**
-	 * Same as above - consider removing.
-	 * @param cf
-	 * @param columnName
-	 * @param value
-	 * @throws NoMetaDataException
-	 */
-	<C,V> void reading(String cf,C columnName,V value) throws NoMetaDataException;
 	
+	/**
+	 * A convenience method to allow this coordinator to "know" about reading operations
+	 * on a possibly indexed row defined by rowKey
+	 * 
+	 * It executes the row key query and "reads" the possible index values so that subsequent
+	 * puts will be aware of any changes that have to be made.
+	 * 
+	 * @param rowKey
+	 * @param keyspace
+	 * @param cf
+	 * @return
+	 * @throws ConnectionException
+	 */
+	public <K,C> OperationResult<ColumnList<C>>  reading(K rowKey,Keyspace keyspace,ColumnFamily<K,C> cf) throws ConnectionException;
+		
+	/**
+	 * Like the above method, except with a collection of keys to execute on behalf on clients interested in indexed 
+	 * reads.
+	 * 
+	 * @param keys
+	 * @param keyspace
+	 * @param cf
+	 * @return
+	 * @throws ConnectionException
+	 */
+	public <K,C> OperationResult<Rows<K,C>>  reading(Collection<K> keys,Keyspace keyspace,ColumnFamily<K,C> cf) throws ConnectionException;
 	/**
 	 * Gets an index mapping by it's key - used internally
 	 * @param key
@@ -107,6 +134,7 @@ public interface IndexCoordination {
 	
 	/**
 	 * Indicates that a value is mapped by the key is being modified.
+	 * 
 	 * Used internally.
 	 * 
 	 * @param key
@@ -115,16 +143,6 @@ public interface IndexCoordination {
 	 * @throws NoReadException
 	 */
 	<C,V> IndexMapping<C,V> modifying(IndexMappingKey<C> key, V newValue) throws NoReadException;
-	
-	/**
-	 * Same as above - used internally.
-	 * @param cf
-	 * @param columnName
-	 * @param newValue
-	 * @return
-	 * @throws NoReadException
-	 */
-	<C,V> IndexMapping<C,V> modifying(String cf, C columnName, V newValue) throws NoReadException;
 	
 	
 	

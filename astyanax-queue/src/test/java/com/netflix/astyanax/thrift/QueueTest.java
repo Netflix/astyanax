@@ -62,7 +62,7 @@ public class QueueTest {
 
     @BeforeClass
     public static void setup() throws Exception {
-        System.out.println("TESTING THRIFT KEYSPACE");
+        LOG.info("TESTING THRIFT KEYSPACE");
 
         SingletonEmbeddedCassandra.getInstance();
         
@@ -99,7 +99,7 @@ public class QueueTest {
             keyspace.dropKeyspace();
         }
         catch (Exception e) {
-            e.printStackTrace();
+            LOG.info(e.getMessage(), e);
         }
         
         keyspace.createKeyspace(ImmutableMap.<String, Object>builder()
@@ -137,7 +137,7 @@ public class QueueTest {
     
     @Test
     @Ignore
-    // This tests for a known but that has yet to be fixed
+    // This tests for a known bug that has yet to be fixed
     public void testRepeatingMessage() throws Exception {
         final CountingQueueStats stats = new CountingQueueStats();
         
@@ -207,6 +207,38 @@ public class QueueTest {
     }
     
     @Test
+    public void testNoKeyQueue() throws Exception {
+        final CountingQueueStats stats = new CountingQueueStats();
+        
+        final ShardedDistributedMessageQueue scheduler = new ShardedDistributedMessageQueue.Builder()
+            .withColumnFamily(SCHEDULER_NAME_CF_NAME)
+            .withQueueName("TestNoKeyQueue")
+            .withKeyspace(keyspace)
+            .withConsistencyLevel(CONSISTENCY_LEVEL)
+            .withStats(stats)
+            .withShardCount(1)
+            .withPollInterval(100L,  TimeUnit.MILLISECONDS)
+            .build();
+        
+        scheduler.createQueue();
+        
+        String key = "MyEvent";
+        String key2 = "MyEvent2";
+        
+        MessageProducer producer = scheduler.createProducer();
+        MessageConsumer consumer = scheduler.createConsumer();
+        
+        {
+            final Message m = new Message();
+            
+            // Add a message
+            LOG.info(m.toString());
+            String messageId = producer.sendMessage(m);
+            LOG.info("MessageId: " + messageId);
+        }
+    }
+    
+    @Test
     public void testQueue() throws Exception {
         final CountingQueueStats stats = new CountingQueueStats();
         
@@ -232,20 +264,20 @@ public class QueueTest {
             final Message m = new Message().setKey(key);
             
             // Add a message
-            System.out.println(m);
+            LOG.info(m.toString());
             String messageId = producer.sendMessage(m);
-            System.out.println("MessageId: " + messageId);
+            LOG.info("MessageId: " + messageId);
             
             Assert.assertEquals(1,  scheduler.getMessageCount());
             
             // Read it by the messageId
             final Message m1rm = scheduler.peekMessage(messageId);
-            System.out.println("m1rm: " + m1rm);
+            LOG.info("m1rm: " + m1rm);
             Assert.assertNotNull(m1rm);
             
             // Read it by the key
             final Message m1rk = scheduler.peekMessageByKey(key);
-            System.out.println("m1rk:" + m1rk);
+            LOG.info("m1rk:" + m1rk);
             Assert.assertNotNull(m1rk);
             
             // Delete the message
@@ -263,9 +295,9 @@ public class QueueTest {
         {
             // Send another message
             final Message m = new Message().setUniqueKey(key);
-            System.out.println("m2: " + m);
+            LOG.info("m2: " + m);
             final String messageId2 = producer.sendMessage(m);
-            System.out.println("MessageId2: " + messageId2);
+            LOG.info("MessageId2: " + messageId2);
     
             try {
                 final Message m2 = new Message().setUniqueKey(key);
@@ -290,7 +322,7 @@ public class QueueTest {
             }
             
             Map<String, Integer> counts = scheduler.getShardCounts();
-            System.out.println(counts);
+            LOG.info(counts.toString());
             Assert.assertEquals(2,  scheduler.getMessageCount());
             
             // Delete the message
@@ -298,9 +330,9 @@ public class QueueTest {
 
             // Read the message
             final Collection<MessageContext> lm2 = consumer.readMessages(10, 10, TimeUnit.SECONDS);
-            System.out.println("Read message: " + lm2);
+            LOG.info("Read message: " + lm2);
             Assert.assertEquals(1,  lm2.size());
-            System.out.println(lm2);
+            LOG.info(lm2.toString());
             Assert.assertEquals(1,  scheduler.getMessageCount());
 
             consumer.ackMessages(lm2);
@@ -317,7 +349,7 @@ public class QueueTest {
             Assert.assertNotNull(messageId3);
             final Message m3rm = scheduler.peekMessage(messageId3);
             Assert.assertNotNull(m3rm);
-            System.out.println(m3rm);
+            LOG.info(m3rm.toString());
             Assert.assertEquals(1,  scheduler.getMessageCount());
             scheduler.deleteMessage(messageId3);
             Assert.assertEquals(0,  scheduler.getMessageCount());
@@ -347,7 +379,7 @@ public class QueueTest {
 //                        if (startTime == 0) 
 //                            startTime = System.currentTimeMillis();
 //                        
-//                        System.out.println("Callback : " + (System.currentTimeMillis() - startTime) + " " + message);
+//                        LOG.info("Callback : " + (System.currentTimeMillis() - startTime) + " " + message);
 //                        counter.incrementAndGet();
 //                        return true;
 //                    }
@@ -361,7 +393,7 @@ public class QueueTest {
 //            Thread.sleep(TimeUnit.MILLISECONDS.convert(20,  TimeUnit.SECONDS));
 //            
 //            Collection<MessageHistory> history = scheduler.getKeyHistory(repeatingKey, null, null, 10);
-//            System.out.println(history);
+//            LOG.info(history);
 //            
 //            dispatcher.stop();
 //            
@@ -382,7 +414,7 @@ public class QueueTest {
             Assert.assertEquals(10,  all.size());
             
             for (Message msg : all) {
-                System.out.println(msg.getParameters());
+                LOG.info(msg.getParameters().toString());
             }
         }
         
@@ -513,13 +545,13 @@ public class QueueTest {
                 try {
                     long newCount = insertCount.get();
 //                    long newCount = counter.get();
-//                    System.out.println("#### Processed : " + (newCount - prevCount.get()) + " of " + newCount + " (" + (insertCount.get() - newCount) + ")");
-//                        System.out.println("#### Pending   : " + scheduler.getTaskCount());
+//                    LOG.info("#### Processed : " + (newCount - prevCount.get()) + " of " + newCount + " (" + (insertCount.get() - newCount) + ")");
+//                        LOG.info("#### Pending   : " + scheduler.getTaskCount());
 //                        for (Entry<String, Integer> shard : producer.getShardCounts().entrySet()) {
 //                            LOG.info("  " + shard.getKey() + " : " + shard.getValue());
 //                        }
-                    System.out.println(stats.toString());
-                    System.out.println("" + (newCount - prevCount.get()) + " /sec  (" + newCount + ")");
+                    LOG.info(stats.toString());
+                    LOG.info("" + (newCount - prevCount.get()) + " /sec  (" + newCount + ")");
                     prevCount.set(newCount);
                     
 //                    if (insertCount.get() >= max_count) {
@@ -531,7 +563,7 @@ public class QueueTest {
 //                                total += shard.getValue();
 //                            }
 //                            
-//                            System.out.println("Total: " + total + " " + counts.toString());
+//                            LOG.info("Total: " + total + " " + counts.toString());
 //                        } catch (MessageQueueException e) {
 //                            // TODO Auto-generated catch block
 //                            e.printStackTrace();

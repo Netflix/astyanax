@@ -1,9 +1,14 @@
 package com.netflix.astyanax.thrift;
 
+import java.util.Map;
+import java.util.Map.Entry;
+
 import junit.framework.Assert;
 
+import org.apache.cassandra.db.marshal.UTF8Type;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,12 +25,14 @@ import com.netflix.astyanax.cql.CqlSchema;
 import com.netflix.astyanax.cql.CqlStatementResult;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
+import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.serializers.IntegerSerializer;
+import com.netflix.astyanax.serializers.MapSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
 
@@ -48,6 +55,11 @@ public class CqlTest {
     static ColumnFamily<Integer, String> CQL3_CF = ColumnFamily.newColumnFamily(
             "Cql3CF", 
             IntegerSerializer.get(), 
+            StringSerializer.get());
+    
+    static ColumnFamily<String, String> User_CF = ColumnFamily.newColumnFamily(
+            "UserCF", 
+            StringSerializer.get(), 
             StringSerializer.get());
     
     @BeforeClass
@@ -76,6 +88,7 @@ public class CqlTest {
                                 .setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
                                 .setConnectionPoolType(ConnectionPoolType.TOKEN_AWARE)
                                 .setDiscoveryDelayInSeconds(60000)
+                                .setTargetCassandraVersion("1.2")
                                 .setCqlVersion("3.0.0")
                                 )
                 .withConnectionPoolConfiguration(
@@ -111,10 +124,14 @@ public class CqlTest {
         
         Thread.sleep(CASSANDRA_WAIT_TIME);
         
-        OperationResult<CqlResult<Integer, String>> result;
+        OperationResult<CqlStatementResult> result;
 
-        result = keyspace.prepareQuery(CQL3_CF)
+        result = keyspace.prepareCqlStatement()
             .withCql("CREATE TABLE employees (empID int, deptID int, first_name varchar, last_name varchar, PRIMARY KEY (empID, deptID));")
+            .execute();
+        
+        result = keyspace.prepareCqlStatement()
+            .withCql("CREATE TABLE users (id text PRIMARY KEY, given text, surname text, favs map<text, text>);")
             .execute();
         
         Thread.sleep(CASSANDRA_WAIT_TIME);
@@ -126,24 +143,24 @@ public class CqlTest {
     
     @Test
     public void testCompoundKey() throws Exception {
-        OperationResult<CqlResult<Integer, String>> result;
+        OperationResult<CqlStatementResult> result;
         result = keyspace
-                .prepareQuery(CQL3_CF)
+                .prepareCqlStatement()
                 .withCql("INSERT INTO employees (empID, deptID, first_name, last_name) VALUES ('111', '222', 'eran', 'landau');")
                 .execute();
         
         result = keyspace
-                .prepareQuery(CQL3_CF)
+                .prepareCqlStatement()
                 .withCql("INSERT INTO employees (empID, deptID, first_name, last_name) VALUES ('111', '233', 'netta', 'landau');")
                 .execute();
         
         result = keyspace
-                .prepareQuery(CQL3_CF)
+                .prepareCqlStatement()
                 .withCql("SELECT * FROM employees WHERE empId='111';")
                 .execute();
 
-        Assert.assertTrue(!result.getResult().getRows().isEmpty());
-        for (Row<Integer, String> row : result.getResult().getRows()) {
+        Assert.assertTrue(!result.getResult().getRows(CQL3_CF).isEmpty());
+        for (Row<Integer, String> row : result.getResult().getRows(CQL3_CF)) {
             LOG.info("CQL Key: " + row.getKey());
 
             ColumnList<String> columns = row.getColumns();
@@ -190,7 +207,7 @@ public class CqlTest {
     
     @Test
     public void testKeyspaceCql() throws Exception {
-        keyspace.prepareCqlStatement()
+        keyspace.prepareQuery(CQL3_CF)
                 .withCql("INSERT INTO employees (empID, deptID, first_name, last_name) VALUES ('999', '233', 'arielle', 'landau');")
                 .execute();
         
@@ -203,8 +220,36 @@ public class CqlTest {
         Rows<Integer, String> rows = result.getRows(CQL3_CF);
         
         Assert.assertEquals(1,  rows.size());
-        Assert.assertTrue(999 == rows.getRowByIndex(0).getKey());
+//        Assert.assertTrue(999 == rows.getRowByIndex(0).getKey());
         
     }
 
+    @Test
+    public void testCollections() throws Exception {
+        OperationResult<CqlStatementResult> result;
+        result = keyspace
+                .prepareCqlStatement()
+                .withCql("INSERT INTO users (id, given, surname, favs) VALUES ('jsmith', 'John', 'Smith', { 'fruit' : 'apple', 'band' : 'Beatles' })")
+                .execute();
+
+        Rows<String, String> rows = keyspace.prepareCqlStatement()
+                .withCql("SELECT * FROM users;")
+                .execute()
+                .getResult()
+                .getRows(User_CF);
+        
+        MapSerializer<String, String> mapSerializer = new MapSerializer<String, String>(UTF8Type.instance, UTF8Type.instance);
+        
+        for (Row<String, String> row : rows) {
+            LOG.info(row.getKey());
+            for (Column<String> column : row.getColumns()) {
+                LOG.info("  " + column.getName());
+            }
+            Column<String> favs = row.getColumns().getColumnByName("favs");
+            Map<String, String> map = favs.getValue(mapSerializer);
+            for (Entry<String, String> entry : map.entrySet()) {
+                LOG.info(" fav: " + entry.getKey() + " = " + entry.getValue());
+            }
+        }
+    }
 }

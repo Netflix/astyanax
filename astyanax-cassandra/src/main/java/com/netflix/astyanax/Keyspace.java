@@ -28,6 +28,7 @@ import com.netflix.astyanax.cql.CqlStatement;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
 import com.netflix.astyanax.model.ColumnFamily;
+import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.serializers.UnknownComparatorException;
@@ -50,6 +51,15 @@ public interface Keyspace {
      */
     String getKeyspaceName();
 
+    /**
+     * Return the partitioner for this keyspace.  The partitioner is mainly used for reading
+     * all rows.
+     * 
+     * @return
+     * @throws ConnectionException
+     */
+    Partitioner getPartitioner() throws ConnectionException;
+    
     /**
      * Describe the partitioner used by the cluster
      * @throws ConnectionException
@@ -217,6 +227,14 @@ public interface Keyspace {
      * @param options - For list of options see http://www.datastax.com/docs/1.0/configuration/storage_configuration
      */
     OperationResult<SchemaChangeResult> createKeyspace(Map<String, Object> options) throws ConnectionException ;
+    
+    /**
+     * Bulk create for a keyspace and a bunch of column famlies
+     * @param options
+     * @param cfs
+     * @throws ConnectionException
+     */
+    OperationResult<SchemaChangeResult> createKeyspace(Map<String, Object> options, Map<ColumnFamily, Map<String, Object>> cfs) throws ConnectionException ;
     
     /**
      * Update the keyspace in cassandra.

@@ -7,6 +7,7 @@ max_hint_window_in_ms: 3600000 # one hour
 authenticator: org.apache.cassandra.auth.AllowAllAuthenticator
 authority: org.apache.cassandra.auth.AllowAllAuthority
 partitioner: org.apache.cassandra.dht.RandomPartitioner
+#partitioner: org.apache.cassandra.dht.Murmur3Partitioner
 data_file_directories:
     - $DIR$/data
 commitlog_directory: $DIR$/commitlog

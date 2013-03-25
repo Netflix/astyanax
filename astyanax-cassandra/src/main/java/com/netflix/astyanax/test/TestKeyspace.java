@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax.test;
 
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -33,6 +34,7 @@ import com.netflix.astyanax.cql.CqlStatement;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
 import com.netflix.astyanax.model.ColumnFamily;
+import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.serializers.SerializerPackageImpl;
@@ -210,6 +212,19 @@ public class TestKeyspace implements Keyspace {
 
     @Override
     public CqlStatement prepareCqlStatement() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public Partitioner getPartitioner() throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResult> createKeyspace(Map<String, Object> options,
+            Map<ColumnFamily, Map<String, Object>> cfs) throws ConnectionException {
         // TODO Auto-generated method stub
         return null;
     }

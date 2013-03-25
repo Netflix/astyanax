@@ -262,6 +262,34 @@ public class DefaultEntityManagerTest {
 			Assert.assertTrue(entities4.isEmpty());
 		}        
 	}
+	
+	@Test
+	public void testBuilder() {
+		new DefaultEntityManager.Builder<DoubleIdColumnEntity, String>()
+			.withColumnFamily(CF_SAMPLE_ENTITY);
+		
+		try {
+			new DefaultEntityManager.Builder<DoubleIdColumnEntity, String>()
+				.withColumnFamily("Test")
+				.withColumnFamily(CF_SAMPLE_ENTITY);
+			Assert.fail();
+		}
+		catch (Exception e) {
+		}
+		
+		try {
+			new DefaultEntityManager.Builder<DoubleIdColumnEntity, String>()
+				.withColumnFamily(CF_SAMPLE_ENTITY)
+				.withColumnFamily("Test");
+			Assert.fail();
+		}
+		catch (Exception e) {
+			
+		}
+		
+		new DefaultEntityManager.Builder<DoubleIdColumnEntity, String>()
+			.withColumnFamily("test");
+	}
 
 	private static Map<String, SimpleEntity> collectionToMap(Collection<SimpleEntity> entities) {
 		Map<String, SimpleEntity> map = Maps.newHashMap();
@@ -315,90 +343,5 @@ public class DefaultEntityManagerTest {
 		}
 	}
 	
-	private TtlEntity createTtlEntity(String id) {
-		TtlEntity e = new TtlEntity();
-		e.setId(id);
-		e.setColumn(RandomStringUtils.randomAlphanumeric(4));
-		return e;
-	}
-	
-	@Test
-	public void testTtlAnnotation() throws Exception {
-		final String id = "testTtlAnnotation";
-		EntityManager<TtlEntity, String> entityPersister = new DefaultEntityManager.Builder<TtlEntity, String>()
-				.withEntityType(TtlEntity.class)
-				.withKeyspace(keyspace)
-				.withColumnFamily(CF_SAMPLE_ENTITY)
-				.build();
-		TtlEntity origEntity = createTtlEntity(id);
-
-		entityPersister.put(origEntity);
-
-		// use low-level astyanax API to confirm the write
-		{
-			ColumnList<String> cl = keyspace.prepareQuery(CF_SAMPLE_ENTITY).getKey(id).execute().getResult();
-			// test column number
-			Assert.assertEquals(1, cl.size());
-			// test column value
-			Assert.assertEquals(origEntity.getColumn(), cl.getColumnByName("column").getStringValue());
-			// custom ttl
-			Assert.assertEquals(2, cl.getColumnByName("column").getTtl());
-		}
-
-		TtlEntity getEntity = entityPersister.get(id);
-		Assert.assertEquals(origEntity, getEntity);
-
-		// entity should expire after 3s since TTL is 2s in annotation
-		Thread.sleep(1000 * 3);
-
-		// use low-level astyanax API to confirm the TTL expiration
-		{
-			ColumnList<String> cl = keyspace.prepareQuery(CF_SAMPLE_ENTITY).getKey(id).execute().getResult();
-			Assert.assertEquals(0, cl.size());
-		}
-	}
-	
-	@Test
-	public void testTtlOverride() throws Exception {
-		final String id = "testTtlAnnotation";
-		EntityManager<TtlEntity, String> entityPersister = new DefaultEntityManager.Builder<TtlEntity, String>()
-				.withEntityType(TtlEntity.class)
-				.withKeyspace(keyspace)
-				.withColumnFamily(CF_SAMPLE_ENTITY)
-				.withTTL(5)
-				.build();
-		TtlEntity origEntity = createTtlEntity(id);
-
-		entityPersister.put(origEntity);
-
-		// use low-level astyanax API to confirm the write
-		{
-			ColumnList<String> cl = keyspace.prepareQuery(CF_SAMPLE_ENTITY).getKey(id).execute().getResult();
-			// test column number
-			Assert.assertEquals(1, cl.size());
-			// test column value
-			Assert.assertEquals(origEntity.getColumn(), cl.getColumnByName("column").getStringValue());
-			// custom ttl
-			Assert.assertEquals(5, cl.getColumnByName("column").getTtl());
-		}
-
-		TtlEntity getEntity = entityPersister.get(id);
-		Assert.assertEquals(origEntity, getEntity);
-
-		// entity should still be alive after 3s since TTL is overriden to 5s
-		Thread.sleep(1000 * 3);
-		
-		getEntity = entityPersister.get(id);
-		Assert.assertEquals(origEntity, getEntity);
-		
-		// entity should expire after 3s since 6s have passed with 5s TTL
-		Thread.sleep(1000 * 3);
-
-		// use low-level astyanax API to confirm the TTL expiration
-		{
-			ColumnList<String> cl = keyspace.prepareQuery(CF_SAMPLE_ENTITY).getKey(id).execute().getResult();
-			Assert.assertEquals(0, cl.size());
-		}
-	}
 
 }

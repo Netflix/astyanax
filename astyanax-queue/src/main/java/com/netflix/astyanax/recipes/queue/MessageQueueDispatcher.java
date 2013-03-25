@@ -28,8 +28,7 @@ public class MessageQueueDispatcher {
     private static final Logger LOG = LoggerFactory.getLogger(MessageQueueDispatcher.class);
     
     public final static int   DEFAULT_BATCH_SIZE            = 5;
-    public final static int   DEFAULT_POLLING_INTERVAL      = 1; // Seconds
-    public final static int   THROTTLE_DURATION             = 1000;
+    public final static int   DEFAULT_THROTTLE_DURATION     = 1000;
     public final static int   DEFAULT_THREAD_COUNT          = 1;
     public final static int   DEFAULT_CONSUMER_COUNT        = 1;
     public final static int   DEFAULT_ACK_SIZE              = 100;
@@ -53,9 +52,19 @@ public class MessageQueueDispatcher {
          * Change the number of threads reading from the queue
          * 
          * @param threadCount
+         * @deprecated Use withProcessorThreadCount
          */
         public Builder withThreadCount(int threadCount) {
-            dispatcher.threadCount = threadCount;
+            return withProcessorThreadCount(threadCount);
+        }
+        
+        /**
+         * Specify number of threads that are processing events popped from the queue
+         * @param threadCount
+         * @return
+         */
+        public Builder withProcessorThreadCount(int threadCount) {
+            dispatcher.processorThreadCount = threadCount;
             return this;
         }
         
@@ -94,10 +103,19 @@ public class MessageQueueDispatcher {
          * Flush the ack queue on this interval.
          * @param interval
          * @param units
-         * @return
          */
         public Builder withAckInterval(long interval, TimeUnit units) {
             dispatcher.ackInterval = TimeUnit.MILLISECONDS.convert(interval, units);
+            return this;
+        }
+        
+        /**
+         * Interval for polling from the queue.  
+         * @param interval
+         * @param units
+         */
+        public Builder withPollingInterval(long interval, TimeUnit units) {
+            dispatcher.pollingInterval = TimeUnit.SECONDS.convert(interval, units);
             return this;
         }
         
@@ -124,18 +142,19 @@ public class MessageQueueDispatcher {
         }
         
         public MessageQueueDispatcher build() {
-            Preconditions.checkArgument(dispatcher.consumerCount <= dispatcher.threadCount, "consumerCounter must be <= threadCount");
+            Preconditions.checkArgument(dispatcher.consumerCount <= dispatcher.processorThreadCount, "consumerCounter must be <= threadCount");
             dispatcher.initialize();
             return dispatcher;
         }
     }
     
-    private int             threadCount   = DEFAULT_THREAD_COUNT;
+    private int             processorThreadCount   = DEFAULT_THREAD_COUNT;
     private int             batchSize     = DEFAULT_BATCH_SIZE;
     private int             consumerCount = DEFAULT_CONSUMER_COUNT;
     private int             ackSize       = DEFAULT_ACK_SIZE;
     private long            ackInterval   = DEFAULT_ACK_INTERVAL;
     private int             backlogSize   = DEFAULT_BACKLOG_SIZE;
+    private long            pollingInterval = DEFAULT_THROTTLE_DURATION;
     private boolean         terminate     = false;
     private MessageQueue    messageQueue;
     private ExecutorService executor;
@@ -157,7 +176,7 @@ public class MessageQueueDispatcher {
     }
     
     public void start() {
-        executor = Executors.newScheduledThreadPool(threadCount + consumerCount + 1);
+        executor = Executors.newScheduledThreadPool(processorThreadCount + consumerCount + 1);
         
         startAckThread();
         
@@ -165,7 +184,7 @@ public class MessageQueueDispatcher {
             startConsumer(i);
         }
         
-        for (int i = 0; i < threadCount; i++) {
+        for (int i = 0; i < processorThreadCount; i++) {
             startProcessor(i);
         }
     }
@@ -227,13 +246,18 @@ public class MessageQueueDispatcher {
                     Collection<MessageContext> messages = null;
                     try {
                         messages = consumer.readMessages(batchSize);
-                        for (MessageContext context : messages) {
-                            toProcess.put(context);
+                        if (messages.isEmpty()) {
+                            Thread.sleep(pollingInterval);
+                        }
+                        else {
+                            for (MessageContext context : messages) {
+                                toProcess.put(context);
+                            }
                         }
                     } 
                     catch (BusyLockException e) {
                         try {
-                            Thread.sleep(THROTTLE_DURATION);
+                            Thread.sleep(pollingInterval);
                         } catch (InterruptedException e1) {
                             Thread.interrupted();
                             return;
@@ -256,7 +280,7 @@ public class MessageQueueDispatcher {
                 LOG.info("Starting message processor : " + name);
                 try {
                     while (!terminate) {
-                        // Pop a message off the queue
+                        // Pop a message off the queue, blocking if empty
                         final MessageContext context;
                         try {
                             context = toProcess.take();

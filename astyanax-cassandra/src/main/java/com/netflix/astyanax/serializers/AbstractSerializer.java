@@ -10,8 +10,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -84,7 +82,7 @@ public abstract class AbstractSerializer<T> implements Serializer<T> {
     public List<ByteBuffer> toBytesList(List<T> list) {
         return Lists.transform(list, new Function<T, ByteBuffer>() {
             @Override
-            public ByteBuffer apply(@Nullable T s) {
+            public ByteBuffer apply(T s) {
                 return toByteBuffer(s);
             }
         });
@@ -101,7 +99,7 @@ public abstract class AbstractSerializer<T> implements Serializer<T> {
     public List<ByteBuffer> toBytesList(Iterable<T> list) {
         return Lists.newArrayList(Iterables.transform(list, new Function<T, ByteBuffer>() {
             @Override
-            public ByteBuffer apply(@Nullable T s) {
+            public ByteBuffer apply(T s) {
                 return toByteBuffer(s);
             }
         }));

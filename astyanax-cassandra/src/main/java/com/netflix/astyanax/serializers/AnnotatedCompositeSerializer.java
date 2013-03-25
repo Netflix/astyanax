@@ -23,9 +23,11 @@ import java.util.Arrays;
  * @param <T>
  */
 public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
-    private static byte END_OF_COMPONENT = 0;
-    private static ByteBuffer EMPTY_BYTE_BUFFER = ByteBuffer.allocate(0);
-    private static final int DEFAULT_BUFFER_SIZE = 512;
+    private static final byte       END_OF_COMPONENT    = 0;
+    private static final ByteBuffer EMPTY_BYTE_BUFFER   = ByteBuffer.allocate(0);
+    private static final int        DEFAULT_BUFFER_SIZE = 128;
+    private static final int        COMPONENT_OVERHEAD  = 3;
+    
     /**
      * Serializer for a single component within the Pojo
      * 
@@ -125,8 +127,10 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
                     cb = ByteBuffer.allocate(0);
                 }
 
-                if (cb.limit() + 3 > bb.remaining()) {
-                    ByteBuffer temp = ByteBuffer.allocate(bb.limit() * 2);
+                if (cb.limit() + COMPONENT_OVERHEAD > bb.remaining()) {
+                    int exponent = (int) Math.ceil(Math.log((double) (cb.limit() + COMPONENT_OVERHEAD) / (double) bb.limit()) / Math.log(2));
+                    int newBufferSize = bb.limit() * (int) Math.pow(2, exponent);
+                    ByteBuffer temp = ByteBuffer.allocate(newBufferSize);
                     bb.flip();
                     temp.put(bb);
                     bb = temp;
@@ -256,8 +260,10 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
                     cb = EMPTY_BYTE_BUFFER;
                 }
 
-                if (cb.limit() + 3 > out.remaining()) {
-                    ByteBuffer temp = ByteBuffer.allocate(out.limit() * 2);
+                if (cb.limit() + COMPONENT_OVERHEAD > out.remaining()) {
+                    int exponent = (int) Math.ceil(Math.log((double) (cb.limit() + COMPONENT_OVERHEAD) / (double) out.limit()) / Math.log(2));
+                    int newBufferSize = out.limit() * (int) Math.pow(2, exponent);
+                    ByteBuffer temp = ByteBuffer.allocate(newBufferSize);
                     out.flip();
                     temp.put(out);
                     out = temp;

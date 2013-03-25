@@ -6,27 +6,25 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.cassandra.dht.RandomPartitioner;
-
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.impl.TokenRangeImpl;
 
-public class BigInteger127Partitioner implements Partitioner {
+public class Murmur3Partitioner implements Partitioner {
+    public static final BigInteger MINIMUM = new BigInteger(Long.toString(Long.MIN_VALUE));
+    public static final BigInteger MAXIMUM = new BigInteger(Long.toString(Long.MAX_VALUE));
 
-    public static final BigInteger MINIMUM = new BigInteger("" + 0);
-    public static final BigInteger MAXIMUM = new BigInteger("" + 2).pow(127).subtract(new BigInteger("1"));
     public static final BigInteger ONE     = new BigInteger("1");
     
-    private static final RandomPartitioner partitioner = new RandomPartitioner();
-    private static final BigInteger127Partitioner instance = new BigInteger127Partitioner();
+    private static final org.apache.cassandra.dht.Murmur3Partitioner partitioner = new org.apache.cassandra.dht.Murmur3Partitioner();
+    private static final Murmur3Partitioner instance = new Murmur3Partitioner();
     
     public static Partitioner get() {
         return instance;
     }
     
-    public BigInteger127Partitioner() {
+    private Murmur3Partitioner() {
         
     }
     
@@ -43,8 +41,7 @@ public class BigInteger127Partitioner implements Partitioner {
     @Override
     public List<TokenRange> splitTokenRange(String first, String last, int count) {
         if (first.equals(last)) {
-            first = getMinToken();
-            last  = getMaxToken();
+            last = getTokenMinusOne(last);
         }
         
         List<TokenRange> tokens = Lists.newArrayList();
@@ -75,12 +72,12 @@ public class BigInteger127Partitioner implements Partitioner {
 
     @Override
     public String getTokenMinusOne(String token) {
-        BigInteger bigInt = new BigInteger(token);
+        Long lToken = Long.parseLong(token);
         // if zero rotate to the Maximum else minus one.
-        if (bigInt.equals(MINIMUM))
+        if (lToken.equals(MINIMUM))
             return MAXIMUM.toString();
         else
-            return bigInt.subtract(ONE).toString();
+            return Long.toString(lToken - 1);
     }
 
     public static List<String> splitRange(BigInteger first, BigInteger last, int count) {
@@ -95,4 +92,5 @@ public class BigInteger127Partitioner implements Partitioner {
         tokens.add(last.toString());
         return tokens;
     }
+
 }

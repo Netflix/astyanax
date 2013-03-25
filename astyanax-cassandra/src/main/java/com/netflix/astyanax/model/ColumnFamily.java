@@ -31,7 +31,7 @@ import com.netflix.astyanax.serializers.ByteBufferSerializer;
  * @param <K>
  * @param <C>
  */
-public class ColumnFamily<K, C> {
+public class ColumnFamily<K, C> implements Comparable<ColumnFamily<K,C>>{
     private final String columnFamilyName;
     private final Serializer<K> keySerializer;
     private final Serializer<C> columnSerializer;
@@ -115,5 +115,21 @@ public class ColumnFamily<K, C> {
     public static <K, C> ColumnFamily<K, C> newColumnFamily(String columnFamilyName, Serializer<K> keySerializer,
             Serializer<C> columnSerializer, Serializer<?> defaultSerializer) {
         return new ColumnFamily<K, C>(columnFamilyName, keySerializer, columnSerializer, defaultSerializer);
+    }
+
+    @Override
+    public int compareTo(ColumnFamily<K, C> other) {
+        return getName().compareTo(other.getName());
+    }
+    
+    @Override
+    public boolean equals(Object obj) {
+        ColumnFamily p = (ColumnFamily)obj;
+        return this.getName().equals(p.getName());
+    }
+     
+    @Override
+    public int hashCode() {
+        return this.getName().hashCode();
     }
 }

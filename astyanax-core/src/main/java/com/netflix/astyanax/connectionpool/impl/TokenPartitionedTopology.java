@@ -12,8 +12,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
-import javax.annotation.Nullable;
-
 import org.apache.commons.lang.StringUtils;
 import org.cliffc.high_scale_lib.NonBlockingHashMap;
 
@@ -249,7 +247,7 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
     public List<String> getPartitionNames() {
         return Lists.newArrayList(Collections2.transform(tokenToPartitionMap.keySet(), new Function<BigInteger, String>() {
             @Override
-            public String apply(@Nullable BigInteger input) {
+            public String apply(BigInteger input) {
                 return input.toString();
             }
         }));
@@ -270,7 +268,7 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
         sb.append("TokenPartitionTopology[");
         sb.append(StringUtils.join(Lists.transform(this.sortedRing.get(), new Function<TokenHostConnectionPoolPartition<CL>, String>() {
             @Override
-            public String apply(@Nullable TokenHostConnectionPoolPartition<CL> input) {
+            public String apply(TokenHostConnectionPoolPartition<CL> input) {
                 return input.id().toString() + "\n";
             }
         }), ","));

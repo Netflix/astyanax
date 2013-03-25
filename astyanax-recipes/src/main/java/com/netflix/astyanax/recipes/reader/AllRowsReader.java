@@ -24,6 +24,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +36,7 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.connectionpool.TokenRange;
+import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnSlice;
 import com.netflix.astyanax.model.Row;
@@ -77,6 +79,7 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
     private final   List<Future<Boolean>> futures = Lists.newArrayList();
     private final   AtomicBoolean       cancelling = new AtomicBoolean(false);
     private final   Partitioner         partitioner;
+    private AtomicReference<Exception>  error = new AtomicReference<Exception>();
     
     public static class Builder<K, C> {
         private final Keyspace      keyspace;
@@ -96,7 +99,7 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
         private Boolean             includeEmptyRows;  // Default to null will discard tombstones
         
         public Builder(Keyspace ks, ColumnFamily<K, C> columnFamily) {
-            this.keyspace = ks;
+            this.keyspace     = ks;
             this.columnFamily = columnFamily;
         }
         
@@ -269,6 +272,13 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
         }
         
         public AllRowsReader<K,C> build() {
+            if (partitioner == null) {
+                try {
+                    partitioner = keyspace.getPartitioner();
+                } catch (ConnectionException e) {
+                    throw new RuntimeException("Unable to determine partitioner", e);
+                }
+            }
             return new AllRowsReader<K,C>(keyspace, 
                     columnFamily, 
                     concurrencyLevel, 
@@ -339,10 +349,11 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                         else if (currentToken.equals(endToken)) {
                             return true;
                         }
-                    } catch (Throwable t) {
-                        LOG.error("Failed to get checkpoint for startToken " + startToken, t);
+                    } catch (Exception e) {
+                        error.compareAndSet(null, e);
+                        LOG.error("Failed to get checkpoint for startToken " + startToken, e);
                         cancel();
-                        throw new RuntimeException("Failed to get checkpoint for startToken " + startToken, t);
+                        throw new RuntimeException("Failed to get checkpoint for startToken " + startToken, e);
                     }
                     
                     int localPageSize = pageSize;
@@ -383,10 +394,11 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                                     }
                                 }
                             }
-                            catch (Throwable t) {
-                                t.printStackTrace();
+                            catch (Exception e) {
+                                error.compareAndSet(null, e);
+                                LOG.warn(e.getMessage(), e);
                                 cancel();
-                                throw new RuntimeException("Error processing row", t);
+                                throw new RuntimeException("Error processing row", e);
                             }
                                 
                             // Get the next block
@@ -396,7 +408,7 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                                 checkpointManager.trackCheckpoint(startToken, currentToken);
                                 if (repeatLastToken) {
                                     // Start token is non-inclusive
-                                    currentToken = new BigInteger(lastToken).subtract(new BigInteger("1")).toString();
+                                    currentToken = partitioner.getTokenMinusOne(lastToken);
                                     
                                     // Determine the number of rows to skip in the response.  Since we are repeating the
                                     // last token it's possible (although unlikely) that there is more than one key mapping to the
@@ -428,10 +440,11 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                     }
                     cancel();
                     return false;
-                } catch (Throwable t) {
-                    LOG.error("Error process token/key range", t);
+                } catch (Exception e) {
+                    error.compareAndSet(null, e);
+                    LOG.error("Error process token/key range", e);
                     cancel();
-                    throw new RuntimeException("Error process token/key range", t);
+                    throw new RuntimeException("Error process token/key range", e);
                 }
             }
         };
@@ -442,6 +455,8 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
      */
     @Override
     public Boolean call() throws Exception {
+        error.set(null);
+        
         List<Callable<Boolean>> subtasks = Lists.newArrayList();
         
         // We are iterating the entire ring using an arbitrary number of threads
@@ -475,7 +490,6 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                                 .setNameFormat("AstyanaxAllRowsReader-%d")
                                 .build());
                 
-                
                 try {
                     futures.addAll(startTasks(localExecutor, subtasks));
                     return waitForTasksToFinish();
@@ -490,10 +504,12 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                 return waitForTasksToFinish();
             }
         }
-        catch (Throwable t) {
-            LOG.warn("AllRowsReader terminated", t);
+        catch (Exception e) {
+            error.compareAndSet(null, e);
+            LOG.warn("AllRowsReader terminated. " + e.getMessage(), e);
             cancel();
-            throw new RuntimeException("Error reading all rows" , t);
+            
+            throw error.get();
         }
     }
     
@@ -503,7 +519,7 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
      * @param futures
      * @return true if all tasks returned true or false otherwise.  
      */
-    private boolean waitForTasksToFinish() throws Throwable {
+    private boolean waitForTasksToFinish() throws Exception {
         for (Future<Boolean> future : futures) {
             try {
                 if (!future.get()) {
@@ -511,9 +527,10 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                     return false;
                 }
             }
-            catch (Throwable t) {
+            catch (Exception e) {
+                error.compareAndSet(null, e);
                 cancel();
-                throw t;
+                throw e;
             }
         }
         return true;
@@ -540,17 +557,6 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
      * call() to return false.
      */
     public synchronized void cancel() {
-        if (cancelling.compareAndSet(false, true)) {
-            if (futures != null) {
-                for (Future<Boolean> future : futures) {
-                    try {
-                        future.cancel(true);
-                    }
-                    catch (Throwable t) {
-                        LOG.info("Exception cancelling range processing task", t);
-                    }
-                }
-            }
-        }
+        cancelling.compareAndSet(false, true);
     }
 }

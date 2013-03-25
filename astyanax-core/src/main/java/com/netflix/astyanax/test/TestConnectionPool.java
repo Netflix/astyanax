@@ -26,6 +26,7 @@ import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.connectionpool.impl.Topology;
+import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.retry.RetryPolicy;
 
 public class TestConnectionPool implements ConnectionPool<TestClient> {
@@ -93,6 +94,12 @@ public class TestConnectionPool implements ConnectionPool<TestClient> {
 
     @Override
     public Topology<TestClient> getTopology() {
+        return null;
+    }
+
+    @Override
+    public Partitioner getPartitioner() {
+        // TODO Auto-generated method stub
         return null;
     }
 

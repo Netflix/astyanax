@@ -6,8 +6,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import javax.annotation.Nullable;
-
 import org.apache.commons.lang.StringUtils;
 import org.cliffc.high_scale_lib.NonBlockingHashSet;
 
@@ -128,7 +126,7 @@ public class HostConnectionPoolPartition<CL> {
             .append("BaseHostConnectionPoolPartition[")   
             .append(StringUtils.join(Collections2.transform(getPools(), new Function<HostConnectionPool<CL>, String>() {
                 @Override
-                public String apply(@Nullable HostConnectionPool<CL> host) {
+                public String apply(HostConnectionPool<CL> host) {
                     return host.getHost().getHostName();
                 }
             }), ","))

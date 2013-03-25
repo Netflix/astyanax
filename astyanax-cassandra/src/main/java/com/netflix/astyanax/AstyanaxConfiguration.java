@@ -20,6 +20,7 @@ import java.util.concurrent.ExecutorService;
 import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.model.ConsistencyLevel;
+import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.retry.RetryPolicy;
 
 /**
@@ -86,4 +87,10 @@ public interface AstyanaxConfiguration {
      * This is a hack for backwards compatibility when APIs break between version 
      */
     String getTargetCassandraVersion();
+
+    /**
+     * @return Return the partitioner implementation for the specified partitioner name
+     * @throws Exception 
+     */
+    Partitioner getPartitioner(String partitionerName) throws Exception;
 }

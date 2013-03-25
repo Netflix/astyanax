@@ -17,8 +17,6 @@ package com.netflix.astyanax.recipes.uniqueness;
 
 import java.nio.ByteBuffer;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.netflix.astyanax.Keyspace;
@@ -95,7 +93,7 @@ public class RowUniquenessConstraint<K, C> implements UniquenessConstraint {
     public void acquireAndMutate(final MutationBatch mutation) throws NotUniqueException, Exception {
         acquireAndApplyMutation(new Function<MutationBatch, Boolean>() {
             @Override
-            public Boolean apply(@Nullable MutationBatch input) {
+            public Boolean apply(MutationBatch input) {
                 if (mutation != null)
                     input.mergeShallow(mutation);
                 return true;

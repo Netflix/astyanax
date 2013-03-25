@@ -4,7 +4,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import javax.annotation.Nullable;
 import javax.persistence.PersistenceException;
 
 import org.apache.commons.lang.StringUtils;
@@ -77,7 +76,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 		 * @param columnFamily column name type is fixed to String/UTF8
 		 */
 		public Builder<T, K> withColumnFamily(ColumnFamily<K, String> columnFamily) {
-		    Preconditions.checkState(this.columnFamilyName != null || columnFamily != null , "withColumnFamily called multiple times");
+		    Preconditions.checkState(this.columnFamilyName == null && this.columnFamily == null , "withColumnFamily called multiple times");
 			Preconditions.checkNotNull(columnFamily);
 			this.columnFamily = columnFamily;
 			return this;
@@ -88,7 +87,8 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 		 * @param columnFamilyName Name of column family to use.  
 		 */
 		public Builder<T, K> withColumnFamily(String columnFamilyName) {
-            Preconditions.checkState(this.columnFamilyName != null || columnFamily != null , "withColumnFamily called multiple times");
+            Preconditions.checkState(this.columnFamilyName == null && columnFamily == null , "withColumnFamily called multiple times");
+            Preconditions.checkNotNull(columnFamilyName);
 		    this.columnFamilyName = columnFamilyName;
 		    return this;
 		}
@@ -265,7 +265,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
         final List<T> entities = Lists.newArrayList();
         visitAll(new Function<T, Boolean>() {
             @Override
-            public synchronized Boolean apply(@Nullable T entity) {
+            public synchronized Boolean apply(T entity) {
                 entities.add(entity);
                 try {
                     lifecycleHandler.onPostLoad(entity);
@@ -367,7 +367,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
                     .withIncludeEmptyRows(false)
                     .forEachRow(new Function<Row<K,String>, Boolean>() {
                         @Override
-                        public Boolean apply(@Nullable Row<K, String> row) {
+                        public Boolean apply(Row<K, String> row) {
                             if (row.getColumns().isEmpty())
                                 return true;
                             T entity = entityMapper.constructEntity(row.getKey(), row.getColumns());

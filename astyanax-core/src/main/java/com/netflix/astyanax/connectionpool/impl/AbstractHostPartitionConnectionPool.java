@@ -41,6 +41,7 @@ import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
+import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.retry.RetryPolicy;
 
 /**
@@ -58,6 +59,7 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
     protected final ConnectionFactory<CL>                            factory;
     protected final ConnectionPoolMonitor                            monitor;
     protected final Topology<CL>                                     topology;
+    protected final Partitioner                                      partitioner;
 
     public AbstractHostPartitionConnectionPool(ConnectionPoolConfiguration config, ConnectionFactory<CL> factory,
             ConnectionPoolMonitor monitor) {
@@ -66,6 +68,7 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
         this.monitor    = monitor;
         this.hosts      = new NonBlockingHashMap<Host, HostConnectionPool<CL>>();
         this.topology   = new TokenPartitionedTopology<CL>(config.getPartitioner(), config.getLatencyScoreStrategy());
+        this.partitioner = config.getPartitioner();
     }
 
     @Override
@@ -286,5 +289,9 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
     
     public Topology<CL> getTopology() {
         return topology;
+    }
+    
+    public Partitioner getPartitioner() {
+        return this.partitioner;
     }
 }

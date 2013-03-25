@@ -15,9 +15,11 @@
  ******************************************************************************/
 package com.netflix.astyanax.impl;
 
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.Clock;
@@ -25,6 +27,9 @@ import com.netflix.astyanax.clock.MicrosecondsSyncClock;
 import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.model.ConsistencyLevel;
+import com.netflix.astyanax.partitioner.BigInteger127Partitioner;
+import com.netflix.astyanax.partitioner.Murmur3Partitioner;
+import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.retry.RunOnce;
 import com.netflix.astyanax.util.StringUtils;
@@ -43,8 +48,11 @@ public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
     private ConnectionPoolType  connectionPoolType          = ConnectionPoolType.ROUND_ROBIN;
     private String              cqlVersion                  = null;
     private String              targetCassandraVersion      = "1.1";
+    private Map<String, Partitioner> partitioners           = Maps.newHashMap();
 
     public AstyanaxConfigurationImpl() {
+        partitioners.put(org.apache.cassandra.dht.RandomPartitioner.class.getCanonicalName(), BigInteger127Partitioner.get());
+        partitioners.put(org.apache.cassandra.dht.Murmur3Partitioner.class.getCanonicalName(), Murmur3Partitioner.get());
     }
 
     public AstyanaxConfigurationImpl setConnectionPoolType(ConnectionPoolType connectionPoolType) {
@@ -150,5 +158,23 @@ public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
     public AstyanaxConfigurationImpl setTargetCassandraVersion(String version) {
         this.targetCassandraVersion = version;
         return this;
+    }
+
+    public AstyanaxConfigurationImpl registerPartitioner(String name, Partitioner partitioner) {
+        this.partitioners.put(name, partitioner);
+        return this;
+    }
+    
+    public AstyanaxConfigurationImpl setPartitioners(Map<String, Partitioner> partitioners) {
+        this.partitioners.putAll(partitioners);
+        return this;
+    }
+    
+    @Override
+    public Partitioner getPartitioner(String partitionerName) throws Exception {
+        Partitioner partitioner = partitioners.get(partitionerName);
+        if (partitioner == null)
+            throw new Exception("Unsupported partitioner " + partitionerName);
+        return partitioner;
     }
 }

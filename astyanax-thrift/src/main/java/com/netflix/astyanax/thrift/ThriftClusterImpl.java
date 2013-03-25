@@ -42,6 +42,7 @@ import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
 import com.netflix.astyanax.ddl.impl.SchemaChangeResponseImpl;
+import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.retry.RunOnce;
 import com.netflix.astyanax.thrift.ddl.*;
 
@@ -55,12 +56,14 @@ public class ThriftClusterImpl implements Cluster {
     private final AstyanaxConfiguration config;
     private final KeyspaceTracerFactory tracerFactory;
 
-    public ThriftClusterImpl(AstyanaxConfiguration config, ConnectionPool<Cassandra.Client> connectionPool,
+    public ThriftClusterImpl(
+            AstyanaxConfiguration config, 
+            ConnectionPool<Cassandra.Client> connectionPool,
             KeyspaceTracerFactory tracerFactory) {
-        this.config = config;
+        this.config         = config;
         this.connectionPool = connectionPool;
-        this.tracerFactory = tracerFactory;
-        this.keyspaces = Maps.newConcurrentMap();
+        this.tracerFactory  = tracerFactory;
+        this.keyspaces      = Maps.newConcurrentMap();
     }
 
     @Override

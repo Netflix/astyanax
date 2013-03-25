@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Future;
 
 import com.google.common.util.concurrent.ListenableFuture;
@@ -28,6 +29,8 @@ import com.netflix.astyanax.serializers.SerializerTypeInferer;
  * of the rows returned from a {@link RowSliceQuery}.
  * 
  * The trade off is that the number of rows is low (it's a high cardinality index)
+ * 
+ * 
  * 
  * @author marcus
  *
@@ -82,6 +85,7 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 		
 	}
 	
+	
 	public Keyspace getKeyspace() {
 		return keyspace;
 	}
@@ -121,14 +125,14 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 		RowSliceQuery<K, C> impl;
 		IndexCoordination indexContext;
 		ColumnFamily<K, C> cf;
-		HashMap<C,IndexMappingKey<C>> colsMapped = new HashMap<C,IndexMappingKey<C>>();
+		Map<C,IndexMappingKey<C>> colsMapped = null;
 		boolean columnsSelected  = false;
 		
 		RowSliceQueryWrapper(RowSliceQuery<K, C> impl,IndexCoordination indexContext,ColumnFamily<K, C> cf) {
 			this.impl = impl;
 			this.indexContext = indexContext;
 			this.cf = cf;
-			//this.colsMapped = indexContext.getMetaDataByCf(cf.getName());
+			this.colsMapped = indexContext.getColumnsMapped(cf.getName());
 		}
 		@Override
 		public OperationResult<Rows<K, C>> execute() throws ConnectionException {
@@ -146,14 +150,7 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 			
 			//we don't have a column slice selected
 			//we'll have to check for all of them.
-			if (!columnsSelected) {
-				//TODO: remove this guy, as we've cached it in coordinator.
-				//not sure if that's the best place for it.
-				List<IndexMetadata<C, K>> list = indexContext.getMetaDataByCf(cf.getName());
-				for (IndexMetadata<C, K> metadata:list) {
-					colsMapped.put(metadata.getIndexKey().getColumnName(), metadata.getIndexKey());
-				}
-			}
+			
 			//This is an iteration over all the rows returned
 			//however if this is truly high cardinality, it will be a small number
 			
@@ -187,6 +184,9 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 			return opResult;
 		}
 		
+		private void repair() {
+			
+		}
 		
 		@Override
 		public ListenableFuture<OperationResult<Rows<K, C>>> executeAsync()

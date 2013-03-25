@@ -4,6 +4,9 @@ import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.AbstractColumnListMutation;
 import com.netflix.astyanax.ColumnListMutation;
@@ -19,8 +22,20 @@ import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.thrift.ThriftColumnFamilyMutationImpl;
 
+/**
+ * A wrapping and implemenation for {@link MutationBatch}.
+ * 
+ * The reason for implementing is that puts will also be potentially indexed
+ * depending on meta data provided by client.
+ * 
+ * Meta data {@link IndexMetadata} can be added via the coordination {@link IndexCoordination#addIndexMetaData(IndexMetadata)}
+ * 
+ * @author msimonsen
+ *
+ */
 public class HCMutationBatchImpl implements MutationBatch {
 
+	private static Logger LOG = LoggerFactory.getLogger(HCMutationBatchImpl.class);
 	private IndexCoordination indexcoorindator;
 	private MutationBatch mutator;
 	
@@ -197,12 +212,11 @@ public class HCMutationBatchImpl implements MutationBatch {
 						//no update required
 					}
 				}catch (ConnectionException e) {
-					//TODO
-					e.printStackTrace();
+					LOG.error(e.getMessage(), e);
 				}
 			
 			}
-			//then modify
+			//finally delegate to put
 			impl.putColumn(columnName, value, valueSerializer, ttl);
 			
 			

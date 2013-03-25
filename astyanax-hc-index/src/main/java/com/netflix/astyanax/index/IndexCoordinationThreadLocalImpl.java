@@ -112,13 +112,13 @@ public class IndexCoordinationThreadLocalImpl implements IndexCoordination {
  		//add cf to column information
  		HashMap<C,IndexMappingKey<C>> colsMapped = new HashMap<C,IndexMappingKey<C>>();
 		
-		List<IndexMetadata<C, K>> cfList = getMetaDataByCf(metaData.getIndexCFName());
+		List<IndexMetadata<C, K>> cfList = getMetaDataByCf(metaData.getIndexKey().getColumnFamily());
 		if (cfList != null) {
 			for (IndexMetadata<C, K> metadata:cfList) {
 				colsMapped.put(metadata.getIndexKey().getColumnName(), metadata.getIndexKey());
 			}
 			
-			cfToColsMapped.put(metaData.getIndexCFName(), colsMapped);
+			cfToColsMapped.put(metaData.getIndexKey().getColumnFamily(), colsMapped);
 		}
 		
 		

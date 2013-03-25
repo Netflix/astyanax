@@ -60,8 +60,6 @@ public class IndexCoordinationThreadLocalImpl implements IndexCoordination {
 	private Map<String,ArrayList<IndexMetadata<?, ?>>> metaDataByCF;
 	
 	/**
-	 * Sorry column family == string, because IndexMetaData keeps it 
-	 * simple, and I want to make sure equals/hashcode always work.
 	 * 
 	 * sorry, going to avoid all generics typing - it's not constructive at this
 	 * point.
@@ -275,6 +273,18 @@ public class IndexCoordinationThreadLocalImpl implements IndexCoordination {
 	}
 
 	
+	@SuppressWarnings("unchecked")
+	public <C> Map<C,IndexMappingKey<C>> getColumnsMapped(ColumnFamily<?, C> cf) {
+		return (HashMap<C,IndexMappingKey<C>>)cfToColsMapped.get(cf.getName());
+		
+		
+	}
+	@SuppressWarnings("unchecked")
+	public <C> Map<C,IndexMappingKey<C>> getColumnsMapped(String cf) {
+		return (HashMap<C,IndexMappingKey<C>>)cfToColsMapped.get(cf);
+		
+		
+	}
 	
 
 }

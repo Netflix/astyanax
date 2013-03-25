@@ -2,6 +2,7 @@ package com.netflix.astyanax.index;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
@@ -58,6 +59,15 @@ public interface IndexCoordination {
 	<C,K> void addIndexMetaDataAndSchema(Keyspace keyspace,IndexMetadata<C,K> metaData) throws ConnectionException;
 	
 	<C,K> IndexMetadata<C, K> getMetaData(IndexMappingKey<C> key);
+	
+	/**
+	 * Gets the columns (metadata) mapped by the the column family.
+	 *  
+	 * @param cf - the column family mapped
+	 * @return
+	 */
+	<C> Map<C,IndexMappingKey<C>> getColumnsMapped(String cf);
+	
 	
 	/**
 	 * A check to see if we have a local copy of the index meta data {@link IndexMetadata}

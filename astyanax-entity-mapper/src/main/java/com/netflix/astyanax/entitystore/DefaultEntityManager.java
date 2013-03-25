@@ -9,12 +9,18 @@ import javax.persistence.PersistenceException;
 
 import org.apache.commons.lang.StringUtils;
 
+
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.index.HCIndexQueryImpl;
+import com.netflix.astyanax.index.HCMutationBatchImpl;
+import com.netflix.astyanax.index.HighCardinalityQuery;
+import com.netflix.astyanax.index.IndexCoordinationFactory;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ConsistencyLevel;
@@ -22,6 +28,7 @@ import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
+import com.netflix.astyanax.query.RowSliceQuery;
 import com.netflix.astyanax.recipes.reader.AllRowsReader;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.serializers.StringSerializer;
@@ -215,7 +222,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 	public void put(T entity) throws PersistenceException {
 		try {
 		    lifecycleHandler.onPrePersist(entity);
-            MutationBatch mb = getMutationBatch();
+            MutationBatch mb = new HCMutationBatchImpl(getMutationBatch());
 			entityMapper.fillMutationBatch(mb, columnFamily, entity);			
 			if (mutationBatch == null) mb.execute();
             lifecycleHandler.onPostPersist(entity);
@@ -229,8 +236,8 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 	 */
 	public T get(K id) throws PersistenceException {
 		try {
-			ColumnFamilyQuery<K, String> cfq = newQuery();            
-			ColumnList<String> cl = cfq.getKey(id).execute().getResult();
+			//ColumnFamilyQuery<K, String> cfq = newQuery();
+			ColumnList<String> cl = IndexCoordinationFactory.getIndexContext().reading(id, keyspace, columnFamily).getResult();
 			// when a row is deleted in cassandra,
 			// the row key remains (without any columns) until the next compaction.
 			// simply return null (as non exist)
@@ -243,6 +250,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 			throw new PersistenceException("failed to get entity " + id, e);
 		}
 	}
+	
 
 	/**
 	 * @inheritDoc
@@ -251,6 +259,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 	public void delete(K id) throws PersistenceException {
 		try {
 			MutationBatch mb = newMutationBatch();
+			
 			mb.withRow(columnFamily, id).delete();
 			mb.execute();
 		} catch(Exception e) {
@@ -301,7 +310,8 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
     public List<T> get(Collection<K> ids) throws PersistenceException {
         try {
             ColumnFamilyQuery<K, String> cfq = newQuery();            
-            Rows<K, String> rows = cfq.getRowSlice(ids).execute().getResult();
+            Rows<K, String> rows = IndexCoordinationFactory.getIndexContext().reading(ids, keyspace, columnFamily).getResult();
+            //Rows<K, String> rows = cfq.getRowSlice(ids).execute().getResult();
 
             List<T> entities = Lists.newArrayListWithExpectedSize(rows.size());
             for (Row<K, String> row : rows) {
@@ -422,7 +432,42 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
         }
     }
     
-    private MutationBatch newMutationBatch() {
+    
+    
+	@Override
+	public < V> List<T> findByIndex(String colName, V value)
+			throws PersistenceException {
+		//returned marshalled entities
+		List<T> entities = null;
+		
+		//Indexing function
+		HighCardinalityQuery<K, String, V> ind = new HCIndexQueryImpl<K, String, V>(keyspace, columnFamily);
+		RowSliceQuery<K, String> slice = ind.equals(colName, value);
+		try {
+			
+			//get the indexed value
+			Rows<K,String> rows = slice.execute().getResult();
+			entities = Lists.newArrayListWithExpectedSize(rows.size());
+			 
+			for (Row<K, String> row : rows) {
+                if (!row.getColumns().isEmpty()) { 
+                    T entity = entityMapper.constructEntity(row.getKey(), row.getColumns());
+                    //throws Exception
+                    lifecycleHandler.onPostLoad(entity);
+                    entities.add(entity);
+                }
+            }
+			
+			
+		}catch (ConnectionException e) {
+			throw new PersistenceException(e.getMessage(), e);
+		}catch (Exception e) {
+			throw new PersistenceException(e.getMessage(), e);
+		}
+		return entities;
+	}
+
+	private MutationBatch newMutationBatch() {
         MutationBatch mb = keyspace.prepareMutationBatch();
         if(writeConsistency != null)
             mb.withConsistencyLevel(writeConsistency);

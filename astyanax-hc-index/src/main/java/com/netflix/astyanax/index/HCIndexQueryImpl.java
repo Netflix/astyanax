@@ -8,8 +8,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.Keyspace;
+import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
@@ -23,6 +27,7 @@ import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.query.RowSliceColumnCountQuery;
 import com.netflix.astyanax.query.RowSliceQuery;
 import com.netflix.astyanax.serializers.SerializerTypeInferer;
+import com.netflix.astyanax.serializers.TypeInferringSerializer;
 
 /**
  * The problem with the approach is that we have to do double iteration 
@@ -40,6 +45,8 @@ import com.netflix.astyanax.serializers.SerializerTypeInferer;
  */
 public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> {
 
+	private static Logger log = LoggerFactory.getLogger(HCIndexQueryImpl.class);
+	
 	private Keyspace keyspace;
 	private ColumnFamily<K, C> columnFamily;
 	
@@ -68,12 +75,12 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 			ind = new IndexImpl<C, V, K>(keyspace,columnFamily.getName(),IndexImpl.DEFAULT_INDEX_CF);
 		
 		try {
-			//get keys associated with 
+			//get keys for this reverse index
 			Collection<K> keys = ind.eq(name, value);
-			
+			//The real row slice query
 			RowSliceQuery<K,C> rsqImpl = query.getRowSlice(keys);
-			
-			RowSliceQueryWrapper wrapper = new RowSliceQueryWrapper(rsqImpl,indexCoordination,columnFamily);
+			//a wrapped version of the real row slice query
+			RowSliceQueryWrapper wrapper = new RowSliceQueryWrapper(rsqImpl,indexCoordination,columnFamily,name,value);
 			
 			
 			return wrapper;
@@ -122,17 +129,23 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 	 */
 	class RowSliceQueryWrapper implements RowSliceQuery<K, C> {
 
+		//private static Logger log = LoggerFactory.getLogger(RowSliceQueryWrapper.class);
 		RowSliceQuery<K, C> impl;
 		IndexCoordination indexContext;
 		ColumnFamily<K, C> cf;
 		Map<C,IndexMappingKey<C>> colsMapped = null;
 		boolean columnsSelected  = false;
-		
-		RowSliceQueryWrapper(RowSliceQuery<K, C> impl,IndexCoordination indexContext,ColumnFamily<K, C> cf) {
+		C colEq;
+		ByteBuffer colValEq;
+		V typedValue;
+		RowSliceQueryWrapper(RowSliceQuery<K, C> impl,IndexCoordination indexContext,ColumnFamily<K, C> cf,C colEQ, V val) {
 			this.impl = impl;
 			this.indexContext = indexContext;
 			this.cf = cf;
 			this.colsMapped = indexContext.getColumnsMapped(cf.getName());
+			this.colEq = colEQ;
+			this.colValEq = TypeInferringSerializer.get().toByteBuffer(val);
+			this.typedValue = val;
 		}
 		@Override
 		public OperationResult<Rows<K, C>> execute() throws ConnectionException {
@@ -148,32 +161,49 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 			
 			Iterator<Row<K,C>> iter =  opResult.getResult().iterator();
 			
+			//no index meta data - just return the result
+			if (colsMapped == null)
+				return opResult;
 			
 			//This is an iteration over all the rows returned
 			//however if this is truly high cardinality, it will be a small number
-			
+			//why do I need to do this?
+			//this is required because I need to understand what index is being "read"
+			//so that an appropriate update can take place down stream
+			//if the client does indeed modify the index value
+			//and we can remove the old value of the index.
 			while (iter.hasNext()) {
 				Row<K,C> row = iter.next();
 				
+				
 				//first determine if we need to drop this from the iterator:
-				if (colsMapped == null)
-					continue;
 				for (C col: colsMapped.keySet()) {
 					Column<C> column = row.getColumns().getColumnByName(col);
 					
 					//I don't have to read this
 					if (column == null)
 						continue;
+					
 					//we don't know the value type - get it from meta data
-					byte[] b = column.getByteArrayValue();
+					ByteBuffer bb = column.getByteBufferValue();
 					IndexMappingKey<C> mappingKey = colsMapped.get(col);
 					IndexMetadata<C,K> md = indexContext.getMetaData(mappingKey);
 					Serializer<K> serializer = SerializerTypeInferer.getSerializer(md.getRowKeyClass());
 					
-					//TODO: catch the no meta data exception??
-					//possible warn or throw an exception
-					K colVal = serializer.fromBytes(b);
+					//cast to the key type
+					K colVal = serializer.fromBytes(bb.array());
 					indexContext.reading(new IndexMapping<C,K>(mappingKey,colVal,colVal));
+					
+					//invoke repair
+					//if the colEq and being compared
+					//And the column value returned this query doesn't
+					//match the one one from the index
+					if (colEq.equals(col) &&
+							!colValEq.equals(bb)) {
+						iter.remove();
+						
+						repair(row.getKey(),(V) column.getValue(SerializerTypeInferer.getSerializer(typedValue)));
+					}
 					
 					
 				}
@@ -185,9 +215,19 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 			return opResult;
 		}
 		
-		private void repair() {
+		private void repair(K pkValue,V newVal) {
+			MutationBatch repairBatch = keyspace.prepareMutationBatch();
+			IndexImpl<C, V, K> ind = new IndexImpl<C, V, K>(keyspace,repairBatch , cf.getName());
 			
+			ind.updateIndex(colEq, typedValue, newVal,pkValue);
+			
+			try {
+				repairBatch.executeAsync();
+			} catch (ConnectionException e) {
+				log.error("Error repairing index cf " + cf.getName() + " rowkey= " + pkValue, e);
+			}
 		}
+		
 		
 		@Override
 		public ListenableFuture<OperationResult<Rows<K, C>>> executeAsync()

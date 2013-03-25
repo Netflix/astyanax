@@ -148,8 +148,6 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 			
 			Iterator<Row<K,C>> iter =  opResult.getResult().iterator();
 			
-			//we don't have a column slice selected
-			//we'll have to check for all of them.
 			
 			//This is an iteration over all the rows returned
 			//however if this is truly high cardinality, it will be a small number
@@ -157,6 +155,9 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 			while (iter.hasNext()) {
 				Row<K,C> row = iter.next();
 				
+				//first determine if we need to drop this from the iterator:
+				if (colsMapped == null)
+					continue;
 				for (C col: colsMapped.keySet()) {
 					Column<C> column = row.getColumns().getColumnByName(col);
 					
@@ -199,11 +200,7 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 		}
 		private void onAddedColumns(C...columns) {
 			columnsSelected = true;
-			for (C column:columns) {
-				if (indexContext.indexExists(cf.getName(), column)) {
-					colsMapped.put(column,new IndexMappingKey<C>(cf.getName(), column));
-				}
-			}
+			
 		}
 		@Override
 		public RowSliceQuery<K, C> withColumnSlice(C... columns) {

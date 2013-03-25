@@ -3,8 +3,6 @@ package com.netflix.astyanax.index;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.cassandra.cli.CliParser.rowKey_return;
-
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.OperationResult;

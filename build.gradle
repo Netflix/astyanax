@@ -93,6 +93,7 @@ project(':astyanax-entity-mapper') {
         compile  project(':astyanax-core')
         compile  project(':astyanax-cassandra')
         compile  project(':astyanax-recipes')
+        compile  project(':astyanax-hc-index')
     	compile  'javax.persistence:persistence-api:1.0'
         testCompile project(':astyanax-thrift')
     }

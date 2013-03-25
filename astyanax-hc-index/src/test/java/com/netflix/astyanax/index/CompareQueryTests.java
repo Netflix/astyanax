@@ -26,6 +26,11 @@ import com.netflix.astyanax.util.RangeBuilder;
 import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
 
 
+/**
+ * 
+ * @author diana
+ *
+ */
 public class CompareQueryTests {
 
 	

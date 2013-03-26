@@ -144,8 +144,15 @@ public class MessageQueueEntry {
 
     @Override
     public String toString() {
-        return "MessageQueueEntry [type=" + type + ", priority=" + priority + ", timestamp=" + timestamp + ", random=" + random
-                + ", state=" + state + "]";
+        StringBuilder sb = new StringBuilder();
+        sb.append("MessageQueueEntry [");
+        sb.append(  "type="      + MessageQueueEntryType.values()[type]);
+        sb.append(", priority="  + priority);
+        sb.append(", timestamp=" + timestamp + "(" + TimeUUIDUtils.getMicrosTimeFromUUID(timestamp) + ")");
+        sb.append(", random="    + random);
+        sb.append(", state="     + MessageQueueEntryState.values()[state]);
+        sb.append("]");
+        return sb.toString();
     }
     
     

@@ -75,6 +75,13 @@ public class MessageContext {
     
     @Override
     public String toString() {
-        return "MessageContext [message=" + message + ", nextMessage=" + nextMessage + ", ackMessageId=" + ackMessageId + "]";
+    	StringBuilder sb = new StringBuilder();
+    	sb.append("MessageContext [")
+    	  .append("ackMessageId=" + ackMessageId)
+    	  .append(", message=" + message)
+    	  .append(", nextMessage=" + nextMessage)
+    	  .append("]");
+    	
+    	return sb.toString();
     }
 }

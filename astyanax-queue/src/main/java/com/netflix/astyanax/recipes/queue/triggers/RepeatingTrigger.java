@@ -98,6 +98,15 @@ public class RepeatingTrigger extends AbstractTrigger {
 
     @Override
     public String toString() {
-        return "RepeatingTrigger [delay=" + delay + ", interval=" + interval + ", repeatCount=" + repeatCount + ", endTime=" + endTime + "] " + super.toString();
+    	StringBuilder sb = new StringBuilder();
+    	sb.append("RepeatingTrigger[interval=" + interval);
+    	if (delay != null)
+    		sb.append(", delay=" + delay);
+    	if (repeatCount != null) 
+    		sb.append(", repeatCount=" + repeatCount);
+    	if (endTime > 0) 
+    		sb.append(", endTime=" + endTime);
+    	sb.append("]");
+    	return sb.toString();
     }
 }

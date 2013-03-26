@@ -99,7 +99,7 @@ public class QueueTest {
             keyspace.dropKeyspace();
         }
         catch (Exception e) {
-            LOG.info(e.getMessage(), e);
+            LOG.info(e.getMessage());
         }
         
         keyspace.createKeyspace(ImmutableMap.<String, Object>builder()
@@ -136,11 +136,11 @@ public class QueueTest {
     }
     
     @Test
-    @Ignore
     // This tests for a known bug that has yet to be fixed
     public void testRepeatingMessage() throws Exception {
         final CountingQueueStats stats = new CountingQueueStats();
         
+        // Create a simple queue
         final ShardedDistributedMessageQueue queue = new ShardedDistributedMessageQueue.Builder()
             .withColumnFamily(SCHEDULER_NAME_CF_NAME)
             .withQueueName("RepeatingMessageQueue")
@@ -155,12 +155,12 @@ public class QueueTest {
         MessageProducer producer = queue.createProducer();
         MessageConsumer consumer = queue.createConsumer();
 
-        // Enqueue a recurring messsage
-        final String key = "MyMessage";
+        // Enqueue a recurring message
+        final String key = "RepeatingMessageWithTimeout";
         final Message message = new Message()
             .setUniqueKey(key)
-            .setTimeout(1, TimeUnit.SECONDS);
-//            .setTrigger(new RepeatingTrigger.Builder().withInterval(1, TimeUnit.SECONDS).build());
+            .setTimeout(1, TimeUnit.SECONDS)
+            .setTrigger(new RepeatingTrigger.Builder().withInterval(1, TimeUnit.SECONDS).build());
         
         producer.sendMessage(message);
         
@@ -170,40 +170,64 @@ public class QueueTest {
             Assert.fail();
         }
         catch (KeyExistsException e) {
-            LOG.info("Key already exists", e);
+            LOG.info("Key already exists");
         }
         
         // Confirm that the message is there
         Assert.assertEquals(1, queue.getMessageCount());
-        final List<Message> m0 = queue.peekMessagesByKey(key);
-        LOG.info("m0: " + m0.toString());
-        Assert.assertEquals(1, m0.size());
+        printMessages("Pending messages after insert ORIG message", queue.peekMessagesByKey(key));
         
         // Consume the message
-        final List<MessageContext> m1 = consumer.readMessages(1);
-        LOG.info("M1: " + m1.toString());
+        LOG.info("*** Reading first message ***");
+        final List<MessageContext> m1 = consumer.readMessages(10);
+        printMessages("Consuming the ORIG message", m1);
         Assert.assertEquals(1, m1.size());
         
-        final List<Message> m1a = queue.peekMessagesByKey(key);
-        LOG.info("m1: " + m1a.toString());
+        printMessages("Pending messages after consume ORIG " + key, queue.peekMessagesByKey(key));
         
         // Exceed the timeout
         Thread.sleep(2000);
         
         // Consume the timeout event
-        final List<MessageContext> m2 = consumer.readMessages(1);
-        LOG.info("M2: " + m2.toString());
+        LOG.info("*** Reading timeout message ***");
+        final List<MessageContext> m2 = consumer.readMessages(10);
+        printMessages("Consuming the TIMEOUT message", m2);
         Assert.assertEquals(1, m2.size());
         
-        final List<Message> m2a = queue.peekMessagesByKey(key);
-        LOG.info("m2: " + m2a.toString());
-        Assert.assertEquals(2, m2a.size());
+        printMessages("Pending messages after consume TIMEOUT " + key, queue.peekMessagesByKey(key));
+//        Assert.assertEquals(2, m2a.size());
         
+        LOG.info("*** Acking both messages ***");
         consumer.ackMessages(m1);
         consumer.ackMessages(m2);
         
+        printMessages("Pending messages after both acks " + key, queue.peekMessagesByKey(key));
+//        Assert.assertEquals(2, m2a.size());
+        
+        // Consume anything that is in the queue
+        final List<MessageContext> m3 = consumer.readMessages(10);
+        printMessages("Consuming messages", m3);
+        Assert.assertEquals(1, m3.size());
+
+        printMessages("Pending messages after 2nd consume " + key, queue.peekMessagesByKey(key));
+        
+        consumer.ackMessages(m3);
+
+        Thread.sleep(2000);
+        
+        final List<MessageContext> m4 = consumer.readMessages(10);
+        printMessages("Consuming messages", m4);
+        Assert.assertEquals(1, m4.size());
+        
         // There should be only one message
-        Assert.assertEquals(1, queue.getMessageCount());
+//        Assert.assertEquals(1, queue.getMessageCount());
+    }
+    
+    private <T> void printMessages(String caption, List<T> messages) {
+    	LOG.info(caption + "(" + messages.size() + ")");
+    	for (T message : messages) {
+        	LOG.info("   " + message);
+    	}
     }
     
     @Test

@@ -135,6 +135,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     public static final RetryPolicy      DEFAULT_RETRY_POLICY            = RunOnce.get();
     public static final long             DEFAULT_LOCK_TIMEOUT            = TimeUnit.MICROSECONDS.convert(30,  TimeUnit.SECONDS);
     public static final Integer          DEFAULT_LOCK_TTL                = (int)TimeUnit.SECONDS.convert(2,   TimeUnit.MINUTES);
+    public static final Integer          DEFAULT_METADATA_DELETE_TTL     = (int)TimeUnit.SECONDS.convert(2,   TimeUnit.MINUTES);
     public static final Boolean          DEFAULT_POISON_QUEUE_ENABLED    = false;
     public static final String           DEFAULT_QUEUE_SUFFIX            = "_queue";
     public static final String           DEFAULT_METADATA_SUFFIX         = "_metadata";
@@ -279,6 +280,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     private ConsistencyLevel                consistencyLevel    = DEFAULT_CONSISTENCY_LEVEL;
     private long                            lockTimeout         = DEFAULT_LOCK_TIMEOUT;
     private int                             lockTtl             = DEFAULT_LOCK_TTL;
+    private int                             metadataDeleteTTL   = DEFAULT_METADATA_DELETE_TTL;
     private MessageQueueStats               stats               = new CountingQueueStats();
     private AtomicLong                      counter             = new AtomicLong(new Random().nextInt(1000));
     private Collection<MessageQueueHooks>   hooks               = Lists.newArrayList();
@@ -513,7 +515,16 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 .getResult();
             
             for (Column<MessageMetadataEntry> entry : columns) {
-                messages.add(peekMessage(entry.getName().getName()));
+                if (entry.getTtl() != 0) 
+                    continue;
+                
+                Message message = peekMessage(entry.getName().getName());
+                if (message != null) {
+                    messages.add(peekMessage(entry.getName().getName()));
+                }
+                else {
+                    LOG.warn("No queue item for " + entry.getName());
+                }
             }
         } catch (NotFoundException e) {
         } catch (ConnectionException e) {
@@ -538,6 +549,8 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 .getResult();
             
             for (Column<MessageMetadataEntry> entry : columns) {
+                if (entry.getTtl() != 0)
+                    continue;
                 // Return the first one we get.  Hmmm... maybe we want to do some validation checks here
                 return peekMessage(entry.getName().getName());
             }
@@ -920,99 +933,146 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                                 break;
                                 
                             case Message: {
-                                itemsToPop--; 
-                                
-                                // First, we always want to remove the old item
-                                rowMutation.deleteColumn(entry);
-                                
-                                // Next, parse the message metadata and add a timeout entry
-                                final Message message = extractMessageFromColumn(column);
-                                
-                                // Update the message state
-                                if (message != null) {
-                                    MessageContext context = new MessageContext();
-                                    context.setMessage(message);
+                                try {
+                                    itemsToPop--; 
                                     
-                                    if (message.hasKey()) {
-                                        m.withRow(keyIndexColumnFamily, getCompositeKey(settings.getQueueName(), message.getKey()))
-                                            .deleteColumn(MessageMetadataEntry.newMessageId(getCompositeKey(shardName, entry.getMessageId())));
+                                    // First, we always want to remove the old item
+                                    String messageId = getCompositeKey(shardName, entry.getMessageId()); 
+                                    
+                                    rowMutation.deleteColumn(entry);
+                                    
+                                    // Next, parse the message metadata and add a timeout entry
+                                    final Message message = extractMessageFromColumn(column);
+                                    
+                                    // Update the message state
+                                    if (message != null) {
+                                        MessageContext context = new MessageContext();
+                                        context.setMessage(message);
                                         
-                                        if (message.isKeepHistory()) {
-                                            MessageHistory history = context.getHistory();
-                                            history.setToken(entry.getTimestamp());
-                                            history.setStartTime(curTimeMicros);
-                                            history.setTriggerTime(message.getTrigger().getTriggerTime());
-                                            history.setStatus(MessageStatus.RUNNING);
+                                        // Message has a trigger so we need to figure out if it is an 
+                                        // unfinished repeating trigger and re-add it.
+                                        if (message.hasTrigger()) {
+                                                    // Read back all messageIds associated with this key and check to see if we have duplicates.
+                                            String groupRowKey = getCompositeKey(settings.getQueueName(), message.getKey());
                                             try {
-                                                m.withRow(historyColumnFamily, message.getKey())
-                                                    .putColumn(entry.getTimestamp(), serializeToString(history), settings.getHistoryTtl());
-                                            }
-                                            catch (Exception e) {
-                                                LOG.warn("Error serializing history for key '" + message.getKey() + "'", e);
+                                                // Use consistency level
+                                                ColumnList<MessageMetadataEntry> columns = keyspace.prepareQuery(keyIndexColumnFamily)
+                                                    .getRow(groupRowKey)
+                                                    .withColumnRange(metadataSerializer.buildRange()
+                                                        .greaterThanEquals((byte)MessageMetadataEntryType.MessageId.ordinal())
+                                                        .lessThanEquals((byte)MessageMetadataEntryType.MessageId.ordinal())
+                                                        .build()
+                                                    )
+                                                    .execute()
+                                                    .getResult();
+                                                
+                                                MessageMetadataEntry thisMessageMetadata = null;
+                                                for (Column<MessageMetadataEntry> pendingMessageEntry : columns) {
+                                                    if (pendingMessageEntry.getTtl() == 0) {
+                                                        if (thisMessageMetadata != null) {
+                                                            LOG.warn("Need to discard : " + entry.getMessageId() + " => " + pendingMessageEntry.getName() + " ttl=" + pendingMessageEntry.getTtl());
+                                                            m.withRow(keyIndexColumnFamily, getCompositeKey(settings.getQueueName(), message.getKey()))
+                                                             .putEmptyColumn(thisMessageMetadata, metadataDeleteTTL);
+                                                            throw new DuplicateMessageException("Duplicate trigger for " + messageId);
+                                                        }
+                                                        else if (pendingMessageEntry.getName().getName().endsWith(entry.getMessageId())) {
+                                                            thisMessageMetadata = pendingMessageEntry.getName();
+                                                        }
+                                                    }
+                                                }
+                                            } catch (NotFoundException e) {
+                                            } catch (ConnectionException e) {
+                                                throw new MessageQueueException("Error fetching row " + groupRowKey, e);
+                                            }    
+                                            
+                                            // Update the trigger
+                                            final Message nextMessage;
+                                            Trigger trigger = message.getTrigger().nextTrigger();
+                                            if (trigger != null) {
+                                                nextMessage = message.clone();
+                                                nextMessage.setTrigger(trigger);
+                                                context.setNextMessage(nextMessage);
+                                                
+                                                if (message.isAutoCommitTrigger())
+                                                    fillMessageMutation(m, nextMessage);
                                             }
                                         }
-                                    }
-                                    
-                                    // Message has a timeout so we add a timeout event.  
-                                    if (message.getTimeout() != 0) {
-                                        MessageQueueEntry timeoutEntry = MessageQueueEntry.newMessageEntry(
-                                                (byte)0,   // Timeout has to be of 0 priority otherwise it screws up the ordering of everything else
-                                                TimeUUIDUtils.getMicrosTimeUUID(curTimeMicros + TimeUnit.MICROSECONDS.convert(message.getTimeout(), TimeUnit.SECONDS) + (counter.incrementAndGet() % 1000)), 
-                                                MessageQueueEntryState.Busy);
                                         
-                                        message.setToken(timeoutEntry.getTimestamp());
-                                        message.setRandom(timeoutEntry.getRandom());
-                                        
-                                        m.withRow(queueColumnFamily, getShardKey(message))
-                                         .putColumn(timeoutEntry, column.getStringValue(), settings.getRetentionTimeout());
-                                        
-                                        MessageMetadataEntry messageIdEntry = MessageMetadataEntry.newMessageId(getCompositeKey(getShardKey(message), timeoutEntry.getMessageId()));
-                                        
-                                        // Add the timeout column to the key
+                                        // Message has a key so we remove this item from the messages by key index. 
+                                        // A timeout item will be added later
                                         if (message.hasKey()) {
                                             m.withRow(keyIndexColumnFamily, getCompositeKey(settings.getQueueName(), message.getKey()))
-                                                .putEmptyColumn(messageIdEntry, settings.getRetentionTimeout());
+                                                .putEmptyColumn(MessageMetadataEntry.newMessageId(messageId), metadataDeleteTTL);
+                                            
+                                            LOG.debug("Removing from key  :  " + getCompositeKey(settings.getQueueName(), message.getKey()) + " : " + messageId);
+                                            
+                                            if (message.isKeepHistory()) {
+                                                MessageHistory history = context.getHistory();
+                                                history.setToken(entry.getTimestamp());
+                                                history.setStartTime(curTimeMicros);
+                                                history.setTriggerTime(message.getTrigger().getTriggerTime());
+                                                history.setStatus(MessageStatus.RUNNING);
+                                                try {
+                                                    m.withRow(historyColumnFamily, message.getKey())
+                                                        .putColumn(entry.getTimestamp(), serializeToString(history), settings.getHistoryTtl());
+                                                }
+                                                catch (Exception e) {
+                                                    LOG.warn("Error serializing history for key '" + message.getKey() + "'", e);
+                                                }
+                                            }
                                         }
                                         
-                                        context.setAckMessageId(messageIdEntry.getName());
-                                    }
-                                    else {
-                                        message.setToken(null);
-                                    }
-                                    
-                                    if (message.hasTrigger()) {
-                                        final Message nextMessage;
-                                        Trigger trigger = message.getTrigger().nextTrigger();
-                                        if (trigger != null) {
-                                            nextMessage = message.clone();
-                                            nextMessage.setTrigger(trigger);
-                                            context.setNextMessage(nextMessage);
+                                        // Message has a timeout so we add a timeout event.  
+                                        if (message.getTimeout() > 0) {
+                                            MessageQueueEntry timeoutEntry = MessageQueueEntry.newMessageEntry(
+                                                    (byte)0,   // Timeout has to be of 0 priority otherwise it screws up the ordering of everything else
+                                                    TimeUUIDUtils.getMicrosTimeUUID(curTimeMicros + TimeUnit.MICROSECONDS.convert(message.getTimeout(), TimeUnit.SECONDS) + (counter.incrementAndGet() % 1000)), 
+                                                    MessageQueueEntryState.Busy);
                                             
-                                            if (message.isAutoCommitTrigger())
-                                                fillMessageMutation(m, nextMessage);
+                                            message.setToken(timeoutEntry.getTimestamp());
+                                            message.setRandom(timeoutEntry.getRandom());
+                                            
+                                            m.withRow(queueColumnFamily, getShardKey(message))
+                                             .putColumn(timeoutEntry, column.getStringValue(), settings.getRetentionTimeout());
+                                            
+                                            MessageMetadataEntry messageIdEntry = MessageMetadataEntry.newMessageId(getCompositeKey(getShardKey(message), timeoutEntry.getMessageId()));
+                                            
+                                            // Add the timeout column to the key
+                                            if (message.hasKey()) {
+                                                m.withRow(keyIndexColumnFamily, getCompositeKey(settings.getQueueName(), message.getKey()))
+                                                    .putEmptyColumn(messageIdEntry, settings.getRetentionTimeout());
+                                            }
+                                            
+                                            context.setAckMessageId(messageIdEntry.getName());
                                         }
+                                        else {
+                                            message.setToken(null);
+                                        }
+    
+                                        // Update some stats
+                                        switch (entry.getState()) {
+                                        case Waiting:
+                                            stats.incProcessCount();
+                                            break;
+                                        case Busy:
+                                            stats.incReprocessCount();
+                                            break;
+                                        default:
+                                            LOG.warn("Unknown message state: " + entry.getState());
+                                            // TODO:
+                                            break;
+                                        }
+                                        
+                                        entries.add(context);
                                     }
-                                    
-                                    // Update some stats
-                                    switch (entry.getState()) {
-                                    case Waiting:
-                                        stats.incProcessCount();
-                                        break;
-                                    case Busy:
-                                        stats.incReprocessCount();
-                                        break;
-                                    default:
-                                        LOG.warn("Unknown message state: " + entry.getState());
-                                        // TODO:
-                                        break;
+                                    // The message metadata was invalid so we just get rid of it.
+                                    else {
+                                        stats.incInvalidMessageCount();
+                                        // TODO: Add to poison queue
                                     }
-                                    
-                                    entries.add(context);
                                 }
-                                // The message metadata was invalid so we just get rid of it.
-                                else {
-                                    stats.incInvalidMessageCount();
-                                    // TODO: Add to poison queue
+                                catch (DuplicateMessageException e) {
+                                    // OK to ignore this error.  All the proper columns will have been deleted in the batch.
                                 }
                                 break;
                             }
@@ -1085,7 +1145,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     // Remove entry lookup from the key, if one exists
                     if (message.hasKey()) {
                         mb.withRow(keyIndexColumnFamily, getCompositeKey(settings.getQueueName(), message.getKey()))
-                            .deleteColumn(MessageMetadataEntry.newMessageId(entry.getMessageId()));
+                            .putEmptyColumn(MessageMetadataEntry.newMessageId(getCompositeKey(getShardKey(message), entry.getMessageId())), metadataDeleteTTL);
                         
                         if (message.isKeepHistory()) {
                             MessageHistory history = context.getHistory();

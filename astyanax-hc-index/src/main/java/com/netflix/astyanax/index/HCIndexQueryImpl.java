@@ -2,11 +2,8 @@ package com.netflix.astyanax.index;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Future;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,10 +27,22 @@ import com.netflix.astyanax.serializers.SerializerTypeInferer;
 import com.netflix.astyanax.serializers.TypeInferringSerializer;
 
 /**
- * The problem with the approach is that we have to do double iteration 
- * of the rows returned from a {@link RowSliceQuery}.
+ * Implementation of {@link HighCardinalityQuery}.
  * 
- * The trade off is that the number of rows is low (it's a high cardinality index)
+ * It also returns a wrapped implementation of the {@link RowSliceQuery}, which would be the logical
+ * return type from a row slice or indexed slice query.
+ * 
+ * 2 interaction points
+ * <ul>
+ * <li> {@link Index} - reads from the index based on {@link #equals(Object, Object)} operation
+ * performed by client
+ * <li> {@link IndexCoordination} - puts reads in transient memory for potential downstream puts
+ * </ul>
+ * 
+ * The problem with the approach of detecting changes in column index modification
+ * is that we have to do double iteration 
+ * of the rows returned from a {@link RowSliceQuery}.
+ *  * The trade off is that the number of rows is low (it's a high cardinality index)
  * 
  * 
  * 
@@ -86,7 +95,7 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 			return wrapper;
 			
 		}catch (ConnectionException e) {
-			e.printStackTrace();
+			log.error(e.getMessage(),e);
 			throw new RuntimeException(e.getCause());
 		}
 		

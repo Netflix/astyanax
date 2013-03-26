@@ -12,7 +12,7 @@ import com.netflix.astyanax.util.TimeUUIDUtils;
 
 public class Message {
     
-    private static final int DEFAULT_TIMEOUT        = 5;
+    private static final int DEFAULT_TIMEOUT_SECONDS = 120;
     
     /**
      * Last execution time, this value changes as the task state is transitioned.  
@@ -44,7 +44,7 @@ public class Message {
     /**
      * Timeout value in seconds
      */
-    private int timeout = DEFAULT_TIMEOUT;
+    private int timeout = DEFAULT_TIMEOUT_SECONDS;
     
     /**
      * Unique key for this message.
@@ -238,9 +238,27 @@ public class Message {
 
     @Override
     public String toString() {
-        return "Message [token=" + token + ", random=" + random + ", trigger=" + trigger + ", parameters=" + parameters
-                + ", priority=" + priority + ", timeout=" + timeout + ", key=" + key + ", taskClass=" + taskClass
-                + ", isKeepHistory=" + isKeepHistory + ", hasUniqueKey=" + hasUniqueKey + "]";
+    	StringBuilder sb = new StringBuilder();
+    	sb.append("Message[token=" + token + " (" + TimeUUIDUtils.getMicrosTimeFromUUID(token) + ")");
+    	if (random != null)
+    		sb.append(", random=" + random);
+    	if (trigger != null)
+    		sb.append(", trigger=" + trigger);
+    	if (parameters != null)
+    		sb.append(", parameters=" + parameters);
+		sb.append(", priority=" + priority);
+		sb.append(", timeout=" + timeout);
+		if (key != null)
+			sb.append(", key=" + key);
+		if (hasUniqueKey)
+			sb.append(", hasUniqueKey=" + hasUniqueKey);
+		if (taskClass != null)
+			sb.append(", taskClass=" + taskClass);
+		if (isKeepHistory)
+			sb.append(", isKeepHistory=" + isKeepHistory);
+		
+		sb.append("]");
+		return sb.toString();
     }
 
 }

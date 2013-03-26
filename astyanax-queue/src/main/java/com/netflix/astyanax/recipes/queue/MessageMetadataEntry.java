@@ -54,14 +54,9 @@ public class MessageMetadataEntry {
     }
 
     public static MessageMetadataEntry newLock() {
-        return new MessageMetadataEntry(MessageMetadataEntryType.Unique, TimeUUIDUtils.getUniqueTimeUUIDinMicros().toString());
+        return new MessageMetadataEntry(MessageMetadataEntryType.Lock,   TimeUUIDUtils.getUniqueTimeUUIDinMicros().toString());
     }
     
-    @Override
-    public String toString() {
-        return "MessageMetadata [type=" + type + ", name=" + name + "]";
-    }
-
     @Override
     public int hashCode() {
         final int prime = 31;
@@ -91,5 +86,10 @@ public class MessageMetadataEntry {
         } else if (!type.equals(other.type))
             return false;
         return true;
+    }
+    
+    @Override
+    public String toString() {
+        return "MessageMetadata [type=" + MessageMetadataEntryType.values()[type] + ", name=" + name + "]";
     }
 }

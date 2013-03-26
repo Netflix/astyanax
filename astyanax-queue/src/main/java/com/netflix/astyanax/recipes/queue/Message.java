@@ -238,27 +238,30 @@ public class Message {
 
     @Override
     public String toString() {
-    	StringBuilder sb = new StringBuilder();
-    	sb.append("Message[token=" + token + " (" + TimeUUIDUtils.getMicrosTimeFromUUID(token) + ")");
-    	if (random != null)
-    		sb.append(", random=" + random);
-    	if (trigger != null)
-    		sb.append(", trigger=" + trigger);
-    	if (parameters != null)
-    		sb.append(", parameters=" + parameters);
-		sb.append(", priority=" + priority);
-		sb.append(", timeout=" + timeout);
-		if (key != null)
-			sb.append(", key=" + key);
-		if (hasUniqueKey)
-			sb.append(", hasUniqueKey=" + hasUniqueKey);
-		if (taskClass != null)
-			sb.append(", taskClass=" + taskClass);
-		if (isKeepHistory)
-			sb.append(", isKeepHistory=" + isKeepHistory);
-		
-		sb.append("]");
-		return sb.toString();
+        StringBuilder sb = new StringBuilder();
+        sb.append("Message[");
+        if (token != null) {
+            sb.append("token=" + token + " (" + TimeUUIDUtils.getMicrosTimeFromUUID(token) + ")");
+        }
+        if (random != null)
+            sb.append(", random=" + random);
+        if (trigger != null)
+            sb.append(", trigger=" + trigger);
+        if (parameters != null)
+            sb.append(", parameters=" + parameters);           
+        sb.append(", priority=" + priority);
+        sb.append(", timeout=" + timeout);
+        if (key != null)
+            sb.append(", key=" + key);
+        if (hasUniqueKey)
+            sb.append(", hasUniqueKey=" + hasUniqueKey);
+        if (taskClass != null)
+            sb.append(", taskClass=" + taskClass);
+        if (isKeepHistory)
+            sb.append(", isKeepHistory=" + isKeepHistory);
+        
+        sb.append("]");
+        return sb.toString();
     }
 
 }

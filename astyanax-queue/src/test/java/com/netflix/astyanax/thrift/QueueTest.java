@@ -30,6 +30,7 @@ import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.ConsistencyLevel;
+import com.netflix.astyanax.recipes.functions.TraceFunction;
 import com.netflix.astyanax.recipes.queue.CountingQueueStats;
 import com.netflix.astyanax.recipes.queue.KeyExistsException;
 import com.netflix.astyanax.recipes.queue.Message;
@@ -43,6 +44,7 @@ import com.netflix.astyanax.recipes.queue.SendMessageResponse;
 import com.netflix.astyanax.recipes.queue.ShardedDistributedMessageQueue;
 import com.netflix.astyanax.recipes.queue.triggers.RepeatingTrigger;
 import com.netflix.astyanax.recipes.queue.triggers.RunOnceTrigger;
+import com.netflix.astyanax.recipes.reader.AllRowsReader;
 import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
 
 public class QueueTest {
@@ -315,7 +317,7 @@ public class QueueTest {
             final Message m1rmd = scheduler.peekMessage(messageId);
             Assert.assertNull(m1rmd);
         }
-        
+
         {
             // Send another message
             final Message m = new Message().setUniqueKey(key);
@@ -365,6 +367,7 @@ public class QueueTest {
         
         {
             final Message m = new Message()
+                .setKey("Key12345")
                 .setTrigger(new RepeatingTrigger.Builder()
                     .withInterval(3,  TimeUnit.SECONDS)
                     .withRepeatCount(10)
@@ -375,7 +378,9 @@ public class QueueTest {
             Assert.assertNotNull(m3rm);
             LOG.info(m3rm.toString());
             Assert.assertEquals(1,  scheduler.getMessageCount());
+            
             scheduler.deleteMessage(messageId3);
+
             Assert.assertEquals(0,  scheduler.getMessageCount());
         }
         

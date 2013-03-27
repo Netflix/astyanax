@@ -148,7 +148,8 @@ public class MessageQueueEntry {
         sb.append("MessageQueueEntry [");
         sb.append(  "type="      + MessageQueueEntryType.values()[type]);
         sb.append(", priority="  + priority);
-        sb.append(", timestamp=" + timestamp + "(" + TimeUUIDUtils.getMicrosTimeFromUUID(timestamp) + ")");
+        if (timestamp != null)
+            sb.append(", timestamp=" + timestamp + "(" + TimeUUIDUtils.getMicrosTimeFromUUID(timestamp) + ")");
         sb.append(", random="    + random);
         sb.append(", state="     + MessageQueueEntryState.values()[state]);
         sb.append("]");

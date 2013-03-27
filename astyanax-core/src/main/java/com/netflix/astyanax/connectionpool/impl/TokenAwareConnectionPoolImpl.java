@@ -76,8 +76,21 @@ public class TokenAwareConnectionPoolImpl<CL> extends AbstractHostPartitionConne
             if (index > MAX_RR_COUNTER) {
                 roundRobinCounter.set(0);
             }
-    
-            return new RoundRobinExecuteWithFailover<CL, R>(config, monitor, pools, isSorted ? 0 : index);
+
+            AbstractExecuteWithFailoverImpl executeWithFailover = null;
+            switch (config.getHostSelectorStrategy()) {
+                case ROUND_ROBIN:
+                    executeWithFailover = new RoundRobinExecuteWithFailover<CL, R>(config, monitor, pools, isSorted ? 0 : index);
+                    break;
+                case LEAST_OUTSTANDING:
+                    executeWithFailover = new LeastOutstandingExecuteWithFailover<CL, R>(config, monitor, pools);
+                    break;
+                default:
+                    executeWithFailover = new RoundRobinExecuteWithFailover<CL, R>(config, monitor, pools, isSorted ? 0 : index);
+                    break;
+
+            }
+            return executeWithFailover;
         }
         catch (ConnectionException e) {
             monitor.incOperationFailure(e.getHost(), e);

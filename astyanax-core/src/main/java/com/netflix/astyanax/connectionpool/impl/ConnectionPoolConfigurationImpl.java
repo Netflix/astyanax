@@ -103,6 +103,7 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
 
     private String seeds = null;
     private RetryBackoffStrategy hostRetryBackoffStrategy = null;
+    private HostSelectorStrategy hostSelectorStrategy     = HostSelectorStrategy.ROUND_ROBIN;
     private LatencyScoreStrategy latencyScoreStrategy     = new EmptyLatencyScoreStrategyImpl();
     private BadHostDetector badHostDetector               = DEFAULT_BAD_HOST_DETECTOR;
     private AuthenticationCredentials credentials         = null;
@@ -305,6 +306,16 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
 
     public ConnectionPoolConfigurationImpl setRetryBackoffStrategy(RetryBackoffStrategy hostRetryBackoffStrategy) {
         this.hostRetryBackoffStrategy = hostRetryBackoffStrategy;
+        return this;
+    }
+
+    @Override
+    public HostSelectorStrategy getHostSelectorStrategy() {
+        return this.hostSelectorStrategy;
+    }
+
+    public ConnectionPoolConfigurationImpl setHostSelectorStrategy(HostSelectorStrategy hostSelectorStrategy) {
+        this.hostSelectorStrategy = hostSelectorStrategy;
         return this;
     }
 

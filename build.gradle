@@ -25,7 +25,7 @@ subprojects {
     dependencies {
         compile 'joda-time:joda-time:1.6.2'
         compile 'com.github.stephenc.high-scale-lib:high-scale-lib:1.1.2'
-        compile 'com.google.guava:guava:11.0.1'
+        compile 'com.google.guava:guava:14.0.1'
         compile 'com.eaio.uuid:uuid:3.2'
         compile 'org.slf4j:slf4j-api:1.6.4'
         compile 'org.codehaus.jettison:jettison:1.2'
@@ -35,7 +35,6 @@ subprojects {
         compile 'org.codehaus.jackson:jackson-core-asl:1.9.2'
         compile 'org.codehaus.jackson:jackson-mapper-asl:1.9.2'
         compile 'org.xerial.snappy:snappy-java:1.0.4.1'
-        compile 'org.apache.servicemix.bundles:org.apache.servicemix.bundles.commons-csv:1.0-r706900_3'
         testCompile 'junit:junit:4.8.1'
     }
 }
@@ -72,6 +71,7 @@ project(':astyanax-cassandra') {
     dependencies {
         compile 'org.apache.cassandra:cassandra-all:1.2+'
         compile 'org.jboss.netty:netty:3.2.4.Final'
+        compile 'org.apache.servicemix.bundles:org.apache.servicemix.bundles.commons-csv:1.0-r706900_3' 
         compile  project(':astyanax-core')
     }
 }

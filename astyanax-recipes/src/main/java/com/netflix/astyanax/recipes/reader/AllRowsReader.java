@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax.recipes.reader;
 
+import java.io.Flushable;
 import java.math.BigInteger;
 import java.util.Collection;
 import java.util.List;
@@ -583,6 +584,10 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                 cancel();
                 throw e;
             }
+        }
+        
+        if (this.rowFunction instanceof Flushable) {
+            ((Flushable)rowFunction).flush();
         }
         return true;
     }

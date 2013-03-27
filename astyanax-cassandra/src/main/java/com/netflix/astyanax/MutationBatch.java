@@ -98,7 +98,8 @@ public interface MutationBatch extends Execution<Void> {
 
     /**
      * Discard any pending mutations. All previous references returned by row
-     * are now invalid.
+     * are now invalid.  Note also that this will reset the mutation timestamp
+     * so that the next call to withRow will set the timestamp to the current time
      */
     void discardMutations();
 

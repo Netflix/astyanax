@@ -51,7 +51,7 @@ project(':astyanax-thrift') {
     dependencies {
         compile  project(':astyanax-core')
         compile  project(':astyanax-cassandra')
-        compile 'org.apache.cassandra:cassandra-thrift:1.2+'
+        compile 'org.apache.cassandra:cassandra-thrift:[1.2.2,2.0['
         compile 'org.apache.thrift:libthrift:0.7.0'
     }
 }
@@ -69,7 +69,7 @@ project(':astyanax-queue') {
 project(':astyanax-cassandra') {
     apply plugin: 'java'
     dependencies {
-        compile 'org.apache.cassandra:cassandra-all:1.2+'
+        compile 'org.apache.cassandra:cassandra-all:[1.2.2,2.0['
         compile 'org.jboss.netty:netty:3.2.4.Final'
         compile 'org.apache.servicemix.bundles:org.apache.servicemix.bundles.commons-csv:1.0-r706900_3' 
         compile  project(':astyanax-core')

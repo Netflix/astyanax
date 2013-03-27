@@ -1489,4 +1489,17 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     public Map<String, MessageQueueShardStats> getShardStats() {
         return shardReaderPolicy.getShardStats();
     }
+    
+    public ColumnFamily<String, MessageQueueEntry>     getQueueColumnFamily() {
+        return this.queueColumnFamily;
+    }
+    
+    public ColumnFamily<String, MessageMetadataEntry>  getKeyIndexColumnFamily() {
+        return this.keyIndexColumnFamily;
+    }
+    
+    public ColumnFamily<String, UUID>                  getHistoryColumnFamily() {
+        return this.historyColumnFamily;
+    }
+
 }

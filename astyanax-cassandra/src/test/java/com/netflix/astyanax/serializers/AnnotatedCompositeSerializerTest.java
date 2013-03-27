@@ -5,6 +5,7 @@ import com.netflix.astyanax.annotations.Component;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.util.Date;
 
 /**
  * Created with IntelliJ IDEA.
@@ -22,14 +23,45 @@ public class AnnotatedCompositeSerializerTest {
 
         Foo foo = new Foo();
         foo.bar = Strings.repeat("b", 2000);
+        foo.bar1 = Strings.repeat("b", 2000);
+        foo.bar2 = Strings.repeat("b", 4192);
 
         ByteBuffer byteBuffer = serializer.toByteBuffer(foo);
+    }
+
+    @Test
+    public void testOverflow2() {
+        AnnotatedCompositeSerializer<Foo2> serializer = new AnnotatedCompositeSerializer<Foo2>(
+                Foo2.class);
+
+        Foo2 foo = new Foo2();
+        foo.bar  = Strings.repeat("b", 500);
+        foo.test = Strings.repeat("b", 12);
+
+        ByteBuffer byteBuffer = serializer.toByteBuffer(foo);
+    }
+    
+    public static class Foo2 {
+        @Component(ordinal = 0)
+        private Date updateTimestamp;
+
+        @Component(ordinal = 1)
+        private String bar;
+
+        @Component(ordinal = 2)
+        private String test;
     }
 
     public static class Foo {
 
         @Component(ordinal = 0)
         private String bar;
+
+        @Component(ordinal = 0)
+        private String bar1;
+
+        @Component(ordinal = 0)
+        private String bar2;
 
     }
 

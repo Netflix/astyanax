@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 
 import com.netflix.astyanax.AuthenticationCredentials;
+import com.netflix.astyanax.connectionpool.impl.HostSelectorStrategy;
 import com.netflix.astyanax.partitioner.Partitioner;
 
 public interface ConnectionPoolConfiguration {
@@ -78,6 +79,13 @@ public interface ConnectionPoolConfiguration {
      * @see com.netflix.astyanax.connectionpool.RetryBackoffStrategy
      */
     RetryBackoffStrategy getRetryBackoffStrategy();
+
+    /**
+     * @return Return the host selector strategy to use.
+     *
+     * @see com.netflix.astyanax.connectionpool.impl.HostSelectorStrategy
+     */
+    HostSelectorStrategy getHostSelectorStrategy();
 
     /**
      * @return List of comma delimited host:port combinations. If port is not provided

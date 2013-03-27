@@ -128,15 +128,12 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
                 }
 
                 if (cb.limit() + COMPONENT_OVERHEAD > bb.remaining()) {
-                    System.out.println(String.format("cb=%d bb=%d", cb.limit(), bb.limit()));
                     int exponent = (int) Math.ceil(Math.log((double) (cb.limit() + COMPONENT_OVERHEAD + bb.limit())) / Math.log(2));
                     int newBufferSize = (int) Math.pow(2, exponent);
                     ByteBuffer temp = ByteBuffer.allocate(newBufferSize);
                     bb.flip();
                     temp.put(bb);
                     bb = temp;
-                    
-                    System.out.println(String.format("newbb=%d exp=%d", newBufferSize, exponent));
                 }
                 // Write the data: <length><data><0>
                 bb.putShort((short) cb.remaining());

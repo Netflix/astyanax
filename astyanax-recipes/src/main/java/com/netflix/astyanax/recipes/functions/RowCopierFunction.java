@@ -4,8 +4,6 @@ import java.io.Flushable;
 import java.io.IOException;
 import java.util.Set;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,7 +74,7 @@ public class RowCopierFunction<K,C> implements Function<Row<K,C>, Boolean>, Flus
     }
     
     @Override
-    public Boolean apply(@Nullable Row<K, C> row) {
+    public Boolean apply(Row<K, C> row) {
         ThreadContext context = this.context.get();
         if (context == null) {
             context = new ThreadContext();

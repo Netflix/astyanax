@@ -96,3 +96,7 @@ project(':astyanax-entity-mapper') {
         testCompile 'junit:junit:4.8.1'
     }
 }
+
+task doc(type: Javadoc) {
+   source = sourceSets.main.allJava
+}

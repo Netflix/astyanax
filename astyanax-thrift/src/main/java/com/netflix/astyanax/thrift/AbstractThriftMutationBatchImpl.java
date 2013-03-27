@@ -17,7 +17,6 @@ package com.netflix.astyanax.thrift;
 
 import java.io.ByteArrayInputStream;
 import java.nio.ByteBuffer;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -55,7 +54,8 @@ import com.netflix.astyanax.serializers.ByteBufferOutputStream;
  * 
  */
 public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
-
+    private static final long UNSET_TIMESTAMP = -1;
+    
     protected long              timestamp;
     private ConsistencyLevel    consistencyLevel;
     private Clock               clock;
@@ -121,7 +121,7 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
     
     public AbstractThriftMutationBatchImpl(Clock clock, ConsistencyLevel consistencyLevel, RetryPolicy retry) {
         this.clock            = clock;
-        this.timestamp        = clock.getCurrentTime();
+        this.timestamp        = UNSET_TIMESTAMP;
         this.consistencyLevel = consistencyLevel;
         this.retry            = retry;
     }
@@ -131,8 +131,9 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
         Preconditions.checkNotNull(columnFamily, "columnFamily cannot be null");
         Preconditions.checkNotNull(rowKey, "Row key cannot be null");
         
-        if (clock != null && mutationMap.isEmpty())
-            this.timestamp = clock.getCurrentTime();
+        // Upon adding the first row into the mutation get the latest time from the clock
+        if (timestamp == UNSET_TIMESTAMP)
+            timestamp = clock.getCurrentTime();
 
         ByteBuffer bbKey = columnFamily.getKeySerializer().toByteBuffer(rowKey);
         
@@ -159,6 +160,7 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
 
     @Override
     public void discardMutations() {
+        this.timestamp = UNSET_TIMESTAMP;
         this.mutationMap.clear();
         this.rowLookup.clear();
     }
@@ -301,21 +303,18 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
 
     @Override
     public MutationBatch setTimestamp(long timestamp) {
-        this.clock = null;
+        return withTimestamp(timestamp);
+    }
+    
+    @Override
+    public MutationBatch withTimestamp(long timestamp) {
         this.timestamp = timestamp;
         return this;
     }
     
     @Override
-    public MutationBatch withTimestamp(long timestamp) {
-        this.clock = null;
-        this.timestamp = timestamp;
-        return this;
-    }
-
-    @Override
     public MutationBatch lockCurrentTimestamp() {
-        this.timestamp = this.clock.getCurrentTime();
+        this.timestamp = clock.getCurrentTime();
         return this;
     }
     

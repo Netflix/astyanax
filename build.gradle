@@ -39,6 +39,17 @@ subprojects {
     }
 }
 
+project(':astyanax') {
+    dependencies {
+        compile  project(':astyanax-core')
+        compile  project(':astyanax-cassandra')
+        compile  project(':astyanax-thrift')
+        compile  project(':astyanax-queue')
+        compile  project(':astyanax-recipes')
+        compile  project(':astyanax-entity-mapper')
+    }
+}
+
 project(':astyanax-core') {
     apply plugin: 'java'
     dependencies {

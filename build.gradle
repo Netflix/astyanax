@@ -62,7 +62,7 @@ project(':astyanax-thrift') {
     dependencies {
         compile  project(':astyanax-core')
         compile  project(':astyanax-cassandra')
-        compile 'org.apache.cassandra:cassandra-thrift:[1.2.2,2.0['
+        compile 'org.apache.cassandra:cassandra-thrift:1.2.2'
         compile 'org.apache.thrift:libthrift:0.7.0'
     }
 }

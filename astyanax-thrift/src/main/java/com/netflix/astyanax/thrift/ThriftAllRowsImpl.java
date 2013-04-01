@@ -56,10 +56,13 @@ public class ThriftAllRowsImpl<K, C> implements Rows<K, C> {
             private boolean bIgnoreTombstones = true;
 
             {
+	            String startToken = query.getStartToken() == null ? partitioner.getMinToken() : query.getStartToken();
+	            String endToken = query.getEndToken() == null ? partitioner.getMaxToken() : query.getEndToken();
+
                 range = new KeyRange()
                         .setCount(query.getBlockSize())
-                        .setStart_token(partitioner.getMinToken())
-                        .setEnd_token(partitioner.getMaxToken());
+                        .setStart_token(startToken)
+                        .setEnd_token(endToken);
                 
                 if (query.getIncludeEmptyRows() == null) {
                     if (query.getPredicate().isSetSlice_range() && query.getPredicate().getSlice_range().getCount() == 0) {

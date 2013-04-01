@@ -36,7 +36,7 @@ subprojects {
         compile "org.codehaus.jackson:jackson-core-asl:$jacksonVersion"
         compile "org.codehaus.jackson:jackson-mapper-asl:$jacksonVersion"
         compile "org.xerial.snappy:snappy-java:$snappyVersion"
-        testCompile "junit:junit:junitVersion"
+        testCompile "junit:junit:$junitVersion"
     }
 }
 

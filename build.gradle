@@ -48,7 +48,7 @@ project(':astyanax') {
         compile  project(':astyanax-queue')
         compile  project(':astyanax-recipes')
         compile  project(':astyanax-entity-mapper')
-		compile  project(':astyanax-examples')
+        compile  project(':astyanax-examples')
     }
 }
 

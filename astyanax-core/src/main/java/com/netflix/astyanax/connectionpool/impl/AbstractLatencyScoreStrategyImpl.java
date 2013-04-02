@@ -166,22 +166,8 @@ public abstract class AbstractLatencyScoreStrategyImpl implements LatencyScoreSt
                 iter.remove();
             }
         }
-        
-        // Step 2: Filter out hosts that are too slow and keep at least the best keepRatio hosts
-        if (pools.size() > keep) {
-            Collections.sort(pools, busyComparator);
-            HostConnectionPool<CL> poolFirst = pools.get(0);
-            int firstBusy = poolFirst.getBusyConnectionCount() - poolFirst.getBlockedThreadCount();
-            for (int i = pools.size() - 1; i >= keep; i--) {
-                HostConnectionPool<CL> pool  = pools.get(i);
-                int busy = pool.getBusyConnectionCount() + pool.getBlockedThreadCount();
-                if ( (busy - firstBusy) > getBlockedThreshold()) {
-//                    System.out.println("**** Removing host (blocked) : " + pool.toString());
-                    pools.remove(i);
-                }
-            }
-        }
-        
+       
+	//step 2  
         if (pools.size() > 0) {
             // Step 3: Filter out hosts that are too slow and keep at least the best keepRatio hosts
             int first = 0;
@@ -205,6 +191,21 @@ public abstract class AbstractLatencyScoreStrategyImpl implements LatencyScoreSt
                 }
             }
         }
+        // Step 3: Filter out hosts that are too slow and keep at least the best keepRatio hosts
+        if (pools.size() > keep) {
+            Collections.sort(pools, busyComparator);
+            HostConnectionPool<CL> poolFirst = pools.get(0);
+            int firstBusy = poolFirst.getBusyConnectionCount() - poolFirst.getBlockedThreadCount();
+            for (int i = pools.size() - 1; i >= keep; i--) {
+                HostConnectionPool<CL> pool  = pools.get(i);
+                int busy = pool.getBusyConnectionCount() + pool.getBlockedThreadCount();
+                if ( (busy - firstBusy) > getBlockedThreshold()) {
+//                    System.out.println("**** Removing host (blocked) : " + pool.toString());
+                    pools.remove(i);
+                }
+            }
+        }
+        
         // Step 4: Shuffle the hosts 
         Collections.shuffle(pools);
         

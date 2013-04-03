@@ -47,6 +47,7 @@ import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.query.CheckpointManager;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.query.RowSliceQuery;
+import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.shallows.EmptyCheckpointManager;
 import com.netflix.astyanax.util.Callables;
 import com.netflix.astyanax.model.ConsistencyLevel;
@@ -83,6 +84,7 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
     private final   AtomicBoolean       cancelling = new AtomicBoolean(false);
     private final   Partitioner         partitioner;
     private final   ConsistencyLevel	consistencyLevel;
+    private final   RetryPolicy         retryPolicy;
     private AtomicReference<Exception>  error = new AtomicReference<Exception>();
 
 	private String dc;
@@ -108,6 +110,7 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
         private String				dc;
         private String				rack;
         private ConsistencyLevel	consistencyLevel = null;
+        private RetryPolicy         retryPolicy;
         
         public Builder(Keyspace ks, ColumnFamily<K, C> columnFamily) {
             this.keyspace     = ks;
@@ -308,6 +311,11 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
         	return this;
         }
         
+        public Builder<K,C> withRetryPolicy(RetryPolicy policy) {
+            this.retryPolicy = policy;
+            return this;
+        }
+        
         public AllRowsReader<K,C> build() {
             if (partitioner == null) {
                 try {
@@ -332,7 +340,8 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                     partitioner,
                     dc,
                     rack,
-                    consistencyLevel);
+                    consistencyLevel, 
+                    retryPolicy);
         }
     }
     
@@ -351,7 +360,8 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
             Partitioner partitioner,
             String dc,
             String rack,
-            ConsistencyLevel consistencyLevel) {
+            ConsistencyLevel consistencyLevel,
+            RetryPolicy retryPolicy) {
         super();
         this.keyspace           = keyspace;
         this.columnFamily       = columnFamily;
@@ -369,6 +379,7 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
         this.dc					= dc;
         this.rack				= rack;
         this.consistencyLevel   = consistencyLevel;
+        this.retryPolicy        = retryPolicy;
         
         // Flag explicitly set
         if (includeEmptyRows != null) 
@@ -385,6 +396,8 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
     	ColumnFamilyQuery<K, C> query = keyspace.prepareQuery(columnFamily);
     	if (consistencyLevel != null)
     		query.setConsistencyLevel(consistencyLevel);
+    	if (retryPolicy != null)
+    	    query.withRetryPolicy(retryPolicy);
     	return query;
     }
 

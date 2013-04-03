@@ -76,7 +76,7 @@ public class MessageQueueEntry {
     }
     
     public static MessageQueueEntry newMetadataEntry() {
-        return new MessageQueueEntry(MessageQueueEntryType.Metadata, (byte)0, null, null, MessageQueueEntryState.None);
+        return new MessageQueueEntry(MessageQueueEntryType.Metadata, (byte)0, null, TimeUUIDUtils.getMicrosTimeUUID(0), MessageQueueEntryState.None);
     }
     
     public static MessageQueueEntry newMessageEntry(byte priority, UUID timestamp, MessageQueueEntryState state) {

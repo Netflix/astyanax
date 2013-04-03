@@ -232,8 +232,9 @@ public class Message {
         return isAutoCommitTrigger;
     }
 
-    public void setAutoCommitTrigger(boolean isAutoCommitTrigger) {
+    public Message setAutoCommitTrigger(boolean isAutoCommitTrigger) {
         this.isAutoCommitTrigger = isAutoCommitTrigger;
+        return this;
     }
 
     @Override

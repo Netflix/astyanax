@@ -781,6 +781,8 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     
                     if (timeoutTime != 0 && System.currentTimeMillis() > timeoutTime) 
                         return Lists.newLinkedList();
+                    
+                    Thread.sleep(settings.getPollInterval());
                 }
             }
             

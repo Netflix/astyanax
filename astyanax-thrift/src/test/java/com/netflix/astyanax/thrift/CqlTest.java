@@ -1,6 +1,7 @@
 package com.netflix.astyanax.thrift;
 
 import java.util.Map;
+import java.util.UUID;
 import java.util.Map.Entry;
 
 import junit.framework.Assert;
@@ -8,7 +9,6 @@ import junit.framework.Assert;
 import org.apache.cassandra.db.marshal.UTF8Type;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +34,7 @@ import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.MapSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
+import com.netflix.astyanax.serializers.UUIDSerializer;
 import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
 
 public class CqlTest {
@@ -60,6 +61,10 @@ public class CqlTest {
     static ColumnFamily<String, String> User_CF = ColumnFamily.newColumnFamily(
             "UserCF", 
             StringSerializer.get(), 
+            StringSerializer.get());
+    static ColumnFamily<UUID, String> UUID_CF = ColumnFamily.newColumnFamily(
+            "uuidtest", 
+            UUIDSerializer.get(), 
             StringSerializer.get());
     
     @BeforeClass
@@ -133,6 +138,10 @@ public class CqlTest {
         result = keyspace.prepareCqlStatement()
             .withCql("CREATE TABLE users (id text PRIMARY KEY, given text, surname text, favs map<text, text>);")
             .execute();
+        
+        result = keyspace.prepareCqlStatement()
+                .withCql("CREATE TABLE uuidtest (id UUID PRIMARY KEY, given text, surname text);")
+                .execute();
         
         Thread.sleep(CASSANDRA_WAIT_TIME);
         
@@ -252,4 +261,74 @@ public class CqlTest {
             }
         }
     }
+    @Test
+    public  void testUUID() throws Exception{
+    	CqlStatementResult result = keyspace.prepareCqlStatement()
+    	        .withCql("SELECT * FROM uuidtest ;")
+    	        .execute()
+    	        .getResult();
+    	OperationResult<CqlResult<UUID,String>>  res1 =keyspace.prepareQuery(UUID_CF)
+        .withCql("INSERT INTO uuidtest (id, given, surname) VALUES (00000000-0000-0000-0000-000000000000, 'x', 'arielle');")
+        .execute();
+    	CqlResult<UUID,String> res2 = res1.getResult();
+//    	boolean b = res2.hasRows();
+//    	int num = res2.getNumber();
+
+    	result = keyspace.prepareCqlStatement()
+        .withCql("SELECT * FROM uuidtest ;")
+        .execute()
+        .getResult();
+    	String b = result.toString();
+
+    	CqlSchema schema = result.getSchema();
+    	Rows<UUID, String> rows = result.getRows(UUID_CF);
+
+    	Assert.assertEquals(1,  rows.size());
+//		AstyanaxContext<Keyspace> context = new AstyanaxContext.Builder()
+//				.forCluster("Test Cluster")
+//				.forKeyspace("grd")
+//				.withAstyanaxConfiguration(
+//						new AstyanaxConfigurationImpl()
+//								.setDiscoveryType(
+//										NodeDiscoveryType.RING_DESCRIBE)
+//								.setCqlVersion("3.0.0")
+//								.setTargetCassandraVersion("1.2.3"))
+//				// TODO: set both connectionTimeout and readTimeout
+//				.withConnectionPoolConfiguration(
+//						new ConnectionPoolConfigurationImpl("MyConnectionPool")
+//								.setPort(50825).setMaxConnsPerHost(10)
+//								.setSeeds("localhost:9160")
+//								.setConnectTimeout(20000))
+//				.withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
+//				.buildKeyspace(ThriftFamilyFactory.getInstance());
+//
+//		context.start();
+//
+//		// logger.log(Level.INFO, "getting context.. done ");
+//		Keyspace keyspace = context.getEntity();
+//
+//		ColumnFamily<UUID, String> routeCF = new ColumnFamily<UUID, String>(
+//				"grd.test1", (Serializer<UUID>) UUIDSerializer.get(),
+//				(Serializer<String>) StringSerializer.get());
+
+//		OperationResult<CqlResult<UUID, String>> result;
+//		try {
+//			result = keyspace.prepareQuery(routeCF)
+//					.withCql("select * from grd.test1;").execute();
+//			for (Row<UUID, String> row : result.getResult().getRows()) {
+//				System.out.println("Row Key: " + row.getKey());
+//				ColumnList<String> columns = row.getColumns();
+//				System.out.println("col1: "
+//						+ columns.getUUIDValue("col1", null));
+//				System.out.println("col2: "
+//						+ columns.getStringValue("col2", null));
+//				System.out.println("col3: "
+//						+ columns.getStringValue("col3", null));
+//			}
+//		} catch (ConnectionException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+
+	}
 }

@@ -20,9 +20,8 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
+import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.CqlRow;
-
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -31,62 +30,64 @@ import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 
 public class ThriftCqlRowsImpl<K, C> implements Rows<K, C> {
-    private List<Row<K, C>>   rows;
-    private Map<K, Row<K, C>> lookup;
+	private List<Row<K, C>> rows;
+	private Map<K, Row<K, C>> lookup;
 
-    public ThriftCqlRowsImpl(List<CqlRow> rows, Serializer<K> keySer, Serializer<C> colSer) {
-        this.rows = Lists.newArrayListWithCapacity(rows.size());
-        for (CqlRow row : rows) {
-            this.rows.add(new ThriftRowImpl<K, C>(
-                    keySer.fromBytes(row.getKey()), 
-                    ByteBuffer.wrap(row.getKey()),
-                    new ThriftColumnListImpl<C>(row.getColumns(), colSer)));
-        }
-    }
+	public ThriftCqlRowsImpl(final List<CqlRow> rows,
+			final Serializer<K> keySer, final Serializer<C> colSer) {
+		this.rows = Lists.newArrayListWithCapacity(rows.size());
+		for (CqlRow row : rows) {
+			row.key.rewind();
+			byte[] keyBytes = row.getKey();
+			this.rows.add(new ThriftRowImpl<K, C>(keySer.fromBytes(keyBytes),
+					ByteBuffer.wrap(keyBytes), new ThriftColumnListImpl<C>(row
+							.getColumns(), colSer)));
+		}
+	}
 
-    @Override
-    public Iterator<Row<K, C>> iterator() {
-        return rows.iterator();
-    }
+	@Override
+	public Iterator<Row<K, C>> iterator() {
+		return rows.iterator();
+	}
 
-    @Override
-    public Row<K, C> getRow(K key) {
-        lazyBuildLookup();
-        return lookup.get(key);
-    }
-    
-    @Override
-    public int size() {
-        return this.rows.size();
-    }
+	@Override
+	public Row<K, C> getRow(K key) {
+		lazyBuildLookup();
+		return lookup.get(key);
+	}
 
-    @Override
-    public boolean isEmpty() {
-        return this.rows.isEmpty();
-    }
+	@Override
+	public int size() {
+		return this.rows.size();
+	}
 
-    @Override
-    public Row<K, C> getRowByIndex(int i) {
-        return rows.get(i);
-    }
+	@Override
+	public boolean isEmpty() {
+		return this.rows.isEmpty();
+	}
 
-    @Override
-    public Collection<K> getKeys() {
-        return Lists.transform(rows, new Function<Row<K,C>, K>() {
-            @Override
-            public K apply(Row<K, C> input) {
-                return input.getKey();
-            }
-        });
-    }
-    
-    private void lazyBuildLookup() {
-        if (lookup == null) {
-            this.lookup = Maps.newHashMap();
-            for (Row<K,C> row : rows) {
-                this.lookup.put(row.getKey(),  row);
-            }
-        }
-    }
+	@Override
+	public Row<K, C> getRowByIndex(int i) {
+		return rows.get(i);
+	}
+
+	@Override
+	public Collection<K> getKeys() {
+		return Lists.transform(rows, new Function<Row<K, C>, K>() {
+			@Override
+			public K apply(Row<K, C> input) {
+				return input.getKey();
+			}
+		});
+	}
+
+	private void lazyBuildLookup() {
+		if (lookup == null) {
+			this.lookup = Maps.newHashMap();
+			for (Row<K, C> row : rows) {
+				this.lookup.put(row.getKey(), row);
+			}
+		}
+	}
 
 }

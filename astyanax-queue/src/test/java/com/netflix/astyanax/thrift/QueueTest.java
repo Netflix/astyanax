@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.netflix.astyanax.AstyanaxContext;
@@ -223,6 +224,16 @@ public class QueueTest {
         
         // There should be only one message
 //        Assert.assertEquals(1, queue.getMessageCount());
+        
+        for (int i = 0; i < 10; i++) {
+            final List<MessageContext> m5 = consumer.readMessages(10);
+            Assert.assertEquals(1, m5.size());
+            
+            long systemtime = System.currentTimeMillis();
+            MessageContext m = Iterables.getFirst(m5, null);
+            LOG.info("MessageTime: " + (systemtime - m.getMessage().getTrigger().getTriggerTime()));
+            consumer.ackMessages(m5);
+        }
     }
     
     private <T> void printMessages(String caption, List<T> messages) {

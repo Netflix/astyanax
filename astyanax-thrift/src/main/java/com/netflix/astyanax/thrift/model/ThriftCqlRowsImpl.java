@@ -36,8 +36,7 @@ public class ThriftCqlRowsImpl<K, C> implements Rows<K, C> {
             final Serializer<K> keySer, final Serializer<C> colSer) {
         this.rows = Lists.newArrayListWithCapacity(rows.size());
         for (CqlRow row : rows) {
-            row.key.rewind();
-            byte[] keyBytes = row.getKey();
+            byte[] keyBytes = row.bufferForKey().array();
             this.rows.add(new ThriftRowImpl<K, C>(keySer.fromBytes(keyBytes),
                     ByteBuffer.wrap(keyBytes), new ThriftColumnListImpl<C>(row
                             .getColumns(), colSer)));

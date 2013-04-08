@@ -5,6 +5,7 @@ package com.netflix.astyanax.index;
  * Every time an indexed column gets "updated" we need to keep that old value.
  * This is the meta data that stores it.
  * 
+ * This now gets exposed through the {@link RepairListener} interface.
  * 
  * @author marcus
  *

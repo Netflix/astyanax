@@ -111,7 +111,7 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 			//The real row slice query
 			RowSliceQuery<K,C> rsqImpl = query.getRowSlice(keys);
 			//a wrapped version of the real row slice query
-			RowSliceQueryWrapper wrapper = new RowSliceQueryWrapper(rsqImpl,indexCoordination,columnFamily,name,value);
+			RowSliceQueryWrapper wrapper = new RowSliceQueryWrapper(rsqImpl,indexCoordination,columnFamily,name,value,repairListener);
 			
 			
 			return wrapper;
@@ -171,7 +171,7 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 		V typedValue;
 		RepairListener<K, C, V> repairListener;
 		
-		RowSliceQueryWrapper(RowSliceQuery<K, C> impl,IndexCoordination indexContext,ColumnFamily<K, C> cf,C colEQ, V val) {
+		RowSliceQueryWrapper(RowSliceQuery<K, C> impl,IndexCoordination indexContext,ColumnFamily<K, C> cf,C colEQ, V val,RepairListener<K, C, V> repair) {
 			this.impl = impl;
 			this.indexContext = indexContext;
 			this.cf = cf;
@@ -179,6 +179,7 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 			this.colEq = colEQ;
 			this.colValEq = TypeInferringSerializer.get().toByteBuffer(val);
 			this.typedValue = val;
+			this.repairListener = repair;
 		}
 		@Override
 		public OperationResult<Rows<K, C>> execute() throws ConnectionException {
@@ -258,15 +259,17 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 			try {
 				ListenableFuture<OperationResult<Void>> future = repairBatch.executeAsync();
 				final RepairListener<K, C, V> rl = this.repairListener;
-				future.addListener(new Runnable() {
-					//
-					public void run() {
-						rl.onRepair(mapping, key);
-						
-					}
-				
-				
-				}, repairExecutor);
+				if (rl != null)
+					future.addListener(new Runnable() {
+						//
+						public void run() {
+							
+							rl.onRepair(mapping, key);
+							
+						}
+					
+					
+					}, repairExecutor);
 				
 			} catch (ConnectionException e) {
 				log.error("Error repairing index cf " + cf.getName() + " rowkey= " + pkValue, e);

@@ -11,8 +11,7 @@ import com.netflix.astyanax.query.RowSliceQuery;
  *   {@link Index#insertIndex(Object, Object, Object)}
  *   
  *   
- *  could introduce a read repair type model, but this seems more costly to a read.
- *  It will be coordinated at the client.
+ *  
  * 
  * 
  * @author marcus
@@ -34,6 +33,13 @@ public interface HighCardinalityQuery<K, C, V>  {
 	RowSliceQuery<K, C> equals(C name, V value);
 	
 	//IndexRead<K,C,V> readIndex();
-	
+	/**
+	 * Register a repair listener that will be informed of changes
+	 * when reading from index CF that doesn't make map back to
+	 * the original CF that contains the indexed values - which are considered
+	 * master values 
+	 * 
+	 * @param repairListener
+	 */
 	void registerRepairListener(RepairListener<K, C, V> repairListener);
 }

@@ -167,18 +167,18 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 		Map<C,IndexMappingKey<C>> colsMapped = null;
 		boolean columnsSelected  = false;
 		C colEq;
-		ByteBuffer colValEq;
-		V typedValue;
+		//ByteBuffer buffColVal;
+		V colVal;
 		RepairListener<K, C, V> repairListener;
 		
-		RowSliceQueryWrapper(RowSliceQuery<K, C> impl,IndexCoordination indexContext,ColumnFamily<K, C> cf,C colEQ, V val,RepairListener<K, C, V> repair) {
+		RowSliceQueryWrapper(RowSliceQuery<K, C> impl,IndexCoordination indexContext,ColumnFamily<K, C> cf,C colEQ, V colVal,RepairListener<K, C, V> repair) {
 			this.impl = impl;
 			this.indexContext = indexContext;
 			this.cf = cf;
 			this.colsMapped = indexContext.getColumnsMapped(cf.getName());
 			this.colEq = colEQ;
-			this.colValEq = TypeInferringSerializer.get().toByteBuffer(val);
-			this.typedValue = val;
+			//this.buffColVal = TypeInferringSerializer.get().toByteBuffer(colVal);
+			this.colVal = colVal;
 			this.repairListener = repair;
 		}
 		@Override
@@ -218,15 +218,12 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 					if (column == null)
 						continue;
 					
-					//we don't know the value type - get it from meta data
-					ByteBuffer bb = column.getByteBufferValue();
 					IndexMappingKey<C> mappingKey = colsMapped.get(col);
-					//IndexMetadata<C,K> md = indexContext.getMetaData(mappingKey);
-					//Serializer<K> serializer = SerializerTypeInferer.getSerializer(md.getRowKeyClass());
 					
-					//cast to the key type
-					//K colVal = serializer.fromBytes(bb.array());
-					IndexMapping<C,V> indMap = new IndexMapping<C,V>(mappingKey,typedValue,typedValue);
+					Serializer<V> colSerializer = SerializerTypeInferer.getSerializer(colVal.getClass());
+					V newColVal = column.getValue(colSerializer);
+					
+					IndexMapping<C,V> indMap = new IndexMapping<C,V>(mappingKey,newColVal,colVal);
 					indexContext.reading(indMap);
 					
 					//invoke repair
@@ -234,7 +231,7 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 					//And the column value returned this query doesn't
 					//match the one one from the index
 					if (colEq.equals(col) &&
-							!colValEq.equals(bb)) {
+							!colVal.equals(newColVal)) {
 						iter.remove();
 						
 						repair(row.getKey(),indMap,row.getKey());
@@ -254,7 +251,7 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 			MutationBatch repairBatch = keyspace.prepareMutationBatch();
 			IndexImpl<C, V, K> ind = new IndexImpl<C, V, K>(keyspace,repairBatch , cf.getName());
 			
-			ind.updateIndex(colEq, typedValue, mapping.getOldValueofCol(),pkValue);
+			ind.updateIndex(colEq, colVal, mapping.getOldValueofCol(),pkValue);
 			
 			try {
 				ListenableFuture<OperationResult<Void>> future = repairBatch.executeAsync();

@@ -1,5 +1,8 @@
 package com.netflix.astyanax.index;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 import junit.framework.Assert;
 
 import org.junit.AfterClass;
@@ -82,8 +85,11 @@ public class HCIndexUpdateTest {
 		Rows<String,String> rowResults= sliceQuery.execute().getResult();
 		Row<String,String> row = rowResults.getRowByIndex(0);
 		
-		//Assert.assertEquals(2,rowResults.size());
-		
+		//ensure that the index coordinator is reading:
+		IndexCoordination coordinator = IndexCoordinationFactory.getIndexContext();
+		IndexMapping<String,String> mapping = coordinator.get(new IndexMappingKey<String>("device_service", "pin"));
+		Assert.assertEquals("100998880", mapping.getValueOfCol() );
+		Assert.assertEquals("100998880", mapping.getOldValueofCol() );
 		
 		//Now update the index
 		batch = keyspace.prepareMutationBatch();
@@ -91,7 +97,9 @@ public class HCIndexUpdateTest {
 		ColumnListMutation<String> mutation = indexedBatch.withRow(CF, row.getKey());
 		
 		mutation.putColumn("pin", "100998880_m");
-		
+		mapping = coordinator.get(new IndexMappingKey<String>("device_service", "pin") );
+		Assert.assertEquals("100998880_m", mapping.getValueOfCol() );
+		Assert.assertEquals("100998880", mapping.getOldValueofCol() );
 		batch.execute();
 		
 		//Now read from it.
@@ -120,6 +128,69 @@ public class HCIndexUpdateTest {
 	}
 	
 	
+	@Test
+	public void testRepair() throws Exception {
+		
+		MutationBatch batch = keyspace.prepareMutationBatch();
+		Index<String,String,String> ind = new IndexImpl<String, String, String>( keyspace, batch,"device_service" );
+		ind.buildIndex("device_service", "pin", String.class);
+		batch.execute();
+				
+		
+		RowSliceQuery<String, String> sliceQuery = hcq.equals("pin", "100998880");
+		
+		Rows<String,String> rowResults= sliceQuery.execute().getResult();
+		Row<String,String> row = rowResults.getRowByIndex(0);
+		//Row<String,String> row2 = rowResults.getRowByIndex(1);
+		
+		//ensure that the index coordinator is reading:
+		IndexCoordination coordinator = IndexCoordinationFactory.getIndexContext();
+		IndexMapping<String,String> mapping = coordinator.get(new IndexMappingKey<String>("device_service", "pin"));
+		Assert.assertEquals("100998880", mapping.getValueOfCol() );
+		Assert.assertEquals("100998880", mapping.getOldValueofCol() );
+		
+		//Now update the index - without going through HC update interface
+		batch = keyspace.prepareMutationBatch();
+		ColumnListMutation<String> mutation = batch.withRow(CF, row.getKey());
+		mutation.putColumn("pin", "100998880_m");
+		batch.execute();
+		
+		//then we insert to the index (there are a couple of ways we can 
+		//arrive here)
+		batch = keyspace.prepareMutationBatch();
+		ind = new IndexImpl<String, String, String>( keyspace, batch,"device_service" );
+		//only modify the first row - the second will still be a false positive.
+		ind.insertIndex("pin", "100998880_m",row.getKey());
+		batch.execute();
+		
+		//Now read from it - with a read listener attached.
+		//from the old value that didn't get replaced
+		CountDownLatch latch = new CountDownLatch(1);
+		hcq.registerRepairListener(new TestRepairListener(latch));
+		rowResults = hcq.equals("pin", "100998880").execute().getResult();
+		
+		Assert.assertTrue( latch.await(1, TimeUnit.SECONDS) );
+		
+		//Assert.assertEquals(1,rowResults.size());
+	}
+	
+	
 	
 
+}
+
+class TestRepairListener implements RepairListener<String, String, String> {
+
+	CountDownLatch latch = null;
+	
+	public TestRepairListener(CountDownLatch latch) {
+		this.latch = latch;
+	}
+	@Override
+	public void onRepair(IndexMapping<String, String> mapping, String key) {
+		System.out.println("Repaired key: " + key + "value: " + mapping.getValueOfCol() + " old_value: " + mapping.getOldValueofCol());
+		latch.countDown();
+		
+	}
+	
 }

@@ -41,9 +41,9 @@ import com.netflix.astyanax.serializers.TypeInferringSerializer;
  * 
  * @author marcus
  *
- * @param <N>
- * @param <V>
- * @param <K>
+ * @param <N> - the name of the column to be indexed
+ * @param <V> - the value of the column to be compared (equals only)
+ * @param <K> - the key to store as the reverse index
  */
 /*
  drop column family index_cf;

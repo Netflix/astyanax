@@ -4,6 +4,8 @@ import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,16 +63,36 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 	
 	private IndexCoordination indexCoordination = null;
 	
+	private RepairListener<K, C, V> repairListener;
+	
+	/**
+	 * Repair executor.
+	 * 
+	 */
+	private Executor repairExecutor;
+	
 	public HCIndexQueryImpl(Keyspace keyspace,ColumnFamily<K, C> columnFamily) {
 		this.keyspace = keyspace;
 		this.columnFamily = columnFamily;
 		
 		indexCoordination = IndexCoordinationFactory.getIndexContext();
+		
+		repairExecutor = Executors.newFixedThreadPool(1);
 	}
 	
+	public HCIndexQueryImpl(Keyspace keyspace,ColumnFamily<K, C> columnFamily,RepairListener<K, C, V> repairListener) {
+		this(keyspace,columnFamily);
+		registerRepairListener(repairListener);
+	}
+	/**
+	 * Not yet implemented.  Have to think of the what executor will be used
+	 * for the notification
+	 */
+	@Override
+	public void registerRepairListener(RepairListener<K, C, V> repairListener) {
+		this.repairListener = repairListener;
 		
-
-
+	}
 
 	@Override
 	public RowSliceQuery<K, C> equals(C name, V value) {
@@ -147,6 +169,8 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 		C colEq;
 		ByteBuffer colValEq;
 		V typedValue;
+		RepairListener<K, C, V> repairListener;
+		
 		RowSliceQueryWrapper(RowSliceQuery<K, C> impl,IndexCoordination indexContext,ColumnFamily<K, C> cf,C colEQ, V val) {
 			this.impl = impl;
 			this.indexContext = indexContext;
@@ -196,12 +220,13 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 					//we don't know the value type - get it from meta data
 					ByteBuffer bb = column.getByteBufferValue();
 					IndexMappingKey<C> mappingKey = colsMapped.get(col);
-					IndexMetadata<C,K> md = indexContext.getMetaData(mappingKey);
-					Serializer<K> serializer = SerializerTypeInferer.getSerializer(md.getRowKeyClass());
+					//IndexMetadata<C,K> md = indexContext.getMetaData(mappingKey);
+					//Serializer<K> serializer = SerializerTypeInferer.getSerializer(md.getRowKeyClass());
 					
 					//cast to the key type
-					K colVal = serializer.fromBytes(bb.array());
-					indexContext.reading(new IndexMapping<C,K>(mappingKey,colVal,colVal));
+					//K colVal = serializer.fromBytes(bb.array());
+					IndexMapping<C,V> indMap = new IndexMapping<C,V>(mappingKey,typedValue,typedValue);
+					indexContext.reading(indMap);
 					
 					//invoke repair
 					//if the colEq and being compared
@@ -211,7 +236,7 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 							!colValEq.equals(bb)) {
 						iter.remove();
 						
-						repair(row.getKey(),(V) column.getValue(SerializerTypeInferer.getSerializer(typedValue)));
+						repair(row.getKey(),indMap,row.getKey());
 					}
 					
 					
@@ -224,14 +249,25 @@ public class HCIndexQueryImpl<K, C, V> implements HighCardinalityQuery<K, C, V> 
 			return opResult;
 		}
 		
-		private void repair(K pkValue,V newVal) {
+		private void repair(K pkValue,final IndexMapping<C, V> mapping,final K key) {
 			MutationBatch repairBatch = keyspace.prepareMutationBatch();
 			IndexImpl<C, V, K> ind = new IndexImpl<C, V, K>(keyspace,repairBatch , cf.getName());
 			
-			ind.updateIndex(colEq, typedValue, newVal,pkValue);
+			ind.updateIndex(colEq, typedValue, mapping.getOldValueofCol(),pkValue);
 			
 			try {
-				repairBatch.executeAsync();
+				ListenableFuture<OperationResult<Void>> future = repairBatch.executeAsync();
+				final RepairListener<K, C, V> rl = this.repairListener;
+				future.addListener(new Runnable() {
+					//
+					public void run() {
+						rl.onRepair(mapping, key);
+						
+					}
+				
+				
+				}, repairExecutor);
+				
 			} catch (ConnectionException e) {
 				log.error("Error repairing index cf " + cf.getName() + " rowkey= " + pkValue, e);
 			}

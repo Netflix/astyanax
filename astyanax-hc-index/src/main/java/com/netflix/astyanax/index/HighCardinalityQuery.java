@@ -35,4 +35,5 @@ public interface HighCardinalityQuery<K, C, V>  {
 	
 	//IndexRead<K,C,V> readIndex();
 	
+	void registerRepairListener(RepairListener<K, C, V> repairListener);
 }

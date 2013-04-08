@@ -5,10 +5,12 @@ package com.netflix.astyanax.index;
  * Every time an indexed column gets "updated" we need to keep that old value.
  * This is the meta data that stores it.
  * 
+ * 
  * @author marcus
  *
- * @param <C>
- * @param <V>
+ * @param <C> - the column type
+ * @param <V> - This is the value of the column
+ * 
  */
 public class IndexMapping<C,V> {
 

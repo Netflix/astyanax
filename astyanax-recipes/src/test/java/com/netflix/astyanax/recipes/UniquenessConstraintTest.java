@@ -101,11 +101,10 @@ public class UniquenessConstraintTest {
     }
 
     @Test
-    public void testUniqueness() {
+    public void testUniqueness() throws Exception {
         LOG.info("Starting");
 
-        Keyspace keyspace = clusterContext.getEntity().getKeyspace(
-                TEST_KEYSPACE_NAME);
+        Keyspace keyspace = clusterContext.getEntity().getKeyspace(TEST_KEYSPACE_NAME);
 
         UniquenessConstraintWithPrefix<Long> unique = new UniquenessConstraintWithPrefix<Long>(
                 keyspace, CF_DATA)

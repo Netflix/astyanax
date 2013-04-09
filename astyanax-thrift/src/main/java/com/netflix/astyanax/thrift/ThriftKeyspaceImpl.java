@@ -19,12 +19,15 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Properties;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.cassandra.thrift.Cassandra;
+import org.apache.cassandra.thrift.CfDef;
 import org.apache.cassandra.thrift.CounterColumn;
+import org.apache.cassandra.thrift.KsDef;
 import org.apache.cassandra.thrift.Cassandra.Client;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +54,7 @@ import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.TokenRange;
+import com.netflix.astyanax.connectionpool.exceptions.BadRequestException;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.IsDeadConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
@@ -58,6 +62,7 @@ import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.connectionpool.exceptions.SchemaDisagreementException;
 import com.netflix.astyanax.connectionpool.impl.TokenRangeImpl;
 import com.netflix.astyanax.cql.CqlStatement;
+import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
 import com.netflix.astyanax.ddl.impl.SchemaChangeResponseImpl;
@@ -522,67 +527,55 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     }
 
     @Override
-    public <K, C> OperationResult<SchemaChangeResult> createColumnFamily(final Map<String, Object> options) throws ConnectionException {
-        return executeDdlOperation(
-                        new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
-                                tracerFactory.newTracer(CassandraOperationType.ADD_COLUMN_FAMILY), getKeyspaceName()) {
-                            @Override
-                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                precheckSchemaAgreement(client);
-
-                                return new SchemaChangeResponseImpl()
-                                    .setSchemaId(client.system_add_column_family(toThriftColumnFamilyDefinition(options, null).getThriftColumnFamilyDefinition()));
-                            }
-                        }, RunOnce.get());
+    public OperationResult<SchemaChangeResult> createColumnFamily(final Map<String, Object> options) throws ConnectionException {
+        final CfDef cfDef = toThriftColumnFamilyDefinition(options, null).getThriftColumnFamilyDefinition();
+        return internalCreateColumnFamily(cfDef);
     }
 
     @Override
     public OperationResult<SchemaChangeResult> createKeyspace(
             final Map<String, Object> options,
             final Map<ColumnFamily, Map<String, Object>> cfs) throws ConnectionException {
-        return executeDdlOperation(
-                        new AbstractOperationImpl<SchemaChangeResult>(
-                                tracerFactory.newTracer(CassandraOperationType.ADD_KEYSPACE)) {
-                            @Override
-                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                precheckSchemaAgreement(client);
-                                
-                                ThriftKeyspaceDefinitionImpl ksDef = toThriftKeyspaceDefinition(options);
-                                for (Entry<ColumnFamily, Map<String, Object>> cf : cfs.entrySet()) {
-                                    ksDef.addColumnFamily(toThriftColumnFamilyDefinition(cf.getValue(), cf.getKey()));
-                                }
-                                return new SchemaChangeResponseImpl()
-                                    .setSchemaId(client.system_add_keyspace(ksDef.getThriftKeyspaceDefinition()));
-                            }
-                        }, RunOnce.get());
+        
+        ThriftKeyspaceDefinitionImpl ksDef = toThriftKeyspaceDefinition(options);
+        for (Entry<ColumnFamily, Map<String, Object>> cf : cfs.entrySet()) {
+            ksDef.addColumnFamily(toThriftColumnFamilyDefinition(cf.getValue(), cf.getKey()));
+        }
+        
+        ksDef.setName(getKeyspaceName());
+
+        return internalCreateKeyspace(ksDef.getThriftKeyspaceDefinition());
     }    
+    
+    @Override
+    public OperationResult<SchemaChangeResult> createKeyspace(final Properties props) throws ConnectionException {
+        if (props.containsKey("name") && !props.get("name").equals(getKeyspaceName())) { 
+            throw new BadRequestException(
+                    String.format("'name' attribute must match keyspace name. Expected '%s' but got '%s'", 
+                                  getKeyspaceName(), props.get("name")));
+        }
+        
+        final KsDef ksDef;
+        try {
+            ksDef = ThriftUtils.getThriftObjectFromProperties(KsDef.class, props);
+        } catch (Exception e) {
+            throw new BadRequestException("Unable to convert props to keyspace definition");
+        }
+        
+        return internalCreateKeyspace(ksDef);
+    }
+
 
     @Override
     public <K, C> OperationResult<SchemaChangeResult> createColumnFamily(final ColumnFamily<K, C> columnFamily, final Map<String, Object> options) throws ConnectionException {
-        return executeDdlOperation(
-                        new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
-                                tracerFactory.newTracer(CassandraOperationType.ADD_COLUMN_FAMILY), getKeyspaceName()) {
-                            @Override
-                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                precheckSchemaAgreement(client);
-                                return new SchemaChangeResponseImpl()
-                                    .setSchemaId(client.system_add_column_family(toThriftColumnFamilyDefinition(options, columnFamily).getThriftColumnFamilyDefinition()));
-                            }
-                        }, RunOnce.get());
+        final CfDef cfDef = toThriftColumnFamilyDefinition(options, columnFamily).getThriftColumnFamilyDefinition();
+        return internalCreateColumnFamily(cfDef);
     }
 
     @Override
     public <K, C> OperationResult<SchemaChangeResult> updateColumnFamily(final ColumnFamily<K, C> columnFamily, final Map<String, Object> options) throws ConnectionException  {
-        return executeDdlOperation(
-                        new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
-                                tracerFactory.newTracer(CassandraOperationType.UPDATE_COLUMN_FAMILY), getKeyspaceName()) {
-                            @Override
-                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                precheckSchemaAgreement(client);
-                                return new SchemaChangeResponseImpl()
-                                    .setSchemaId(client.system_update_column_family(toThriftColumnFamilyDefinition(options, columnFamily).getThriftColumnFamilyDefinition()));
-                            }
-                        }, RunOnce.get());
+        final CfDef cfDef = toThriftColumnFamilyDefinition(options, columnFamily).getThriftColumnFamilyDefinition();
+        return internalUpdateColumnFamily(cfDef);
     }
 
     @Override
@@ -601,45 +594,20 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
     @Override
     public <K, C> OperationResult<SchemaChangeResult> dropColumnFamily(final ColumnFamily<K, C> columnFamily) throws ConnectionException  {
-        return executeDdlOperation(
-                        new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
-                                tracerFactory.newTracer(CassandraOperationType.DROP_COLUMN_FAMILY), getKeyspaceName()) {
-                            @Override
-                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                precheckSchemaAgreement(client);
-                                return new SchemaChangeResponseImpl()
-                                    .setSchemaId(client.system_drop_column_family(columnFamily.getName()));
-                            }
-                        }, RunOnce.get());
+        return dropColumnFamily(columnFamily.getName());
     }
 
     @Override
     public OperationResult<SchemaChangeResult> createKeyspace(final Map<String, Object> options) throws ConnectionException  {
-        return executeDdlOperation(
-                        new AbstractOperationImpl<SchemaChangeResult>(
-                                tracerFactory.newTracer(CassandraOperationType.ADD_KEYSPACE)) {
-                            @Override
-                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                precheckSchemaAgreement(client);
-                                return new SchemaChangeResponseImpl()
-                                    .setSchemaId(client.system_add_keyspace(toThriftKeyspaceDefinition(options).getThriftKeyspaceDefinition()));
-                            }
-                        }, RunOnce.get());
+        final KsDef ksDef = toThriftKeyspaceDefinition(options).getThriftKeyspaceDefinition();
+        return internalCreateKeyspace(ksDef);
     }
 
 
     @Override
     public OperationResult<SchemaChangeResult> updateKeyspace(final Map<String, Object> options) throws ConnectionException  {
-        return executeDdlOperation(
-                        new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
-                                tracerFactory.newTracer(CassandraOperationType.UPDATE_KEYSPACE), getKeyspaceName()) {
-                            @Override
-                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                precheckSchemaAgreement(client);
-                                return new SchemaChangeResponseImpl()
-                                    .setSchemaId(client.system_update_keyspace(toThriftKeyspaceDefinition(options).getThriftKeyspaceDefinition()));
-                            }
-                        }, RunOnce.get());
+        final KsDef ksDef = toThriftKeyspaceDefinition(options).getThriftKeyspaceDefinition();
+        return internalUpdateKeyspace(ksDef);
     }
 
     @Override
@@ -650,7 +618,6 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
                                 precheckSchemaAgreement(client);
-
                                 return new SchemaChangeResponseImpl()
                                     .setSchemaId(client.system_drop_keyspace(getKeyspaceName()));
                             }
@@ -731,10 +698,190 @@ public final class ThriftKeyspaceImpl implements Keyspace {
         Map<String, Object> internalOptions = Maps.newHashMap();
         if (options != null)
             internalOptions.putAll(options);
-        internalOptions.put("name",                 getKeyspaceName());
+        
+        if (options.containsKey("name") && !options.get("name").equals(getKeyspaceName())) {
+            throw new RuntimeException(
+                    String.format("'name' attribute must match keyspace name. Expected '%s' but got '%s'", 
+                                  getKeyspaceName(), options.get("name")));
+        }
+        else {
+            internalOptions.put("name", getKeyspaceName());
+        }
+        
         def.setFields(internalOptions); 
         
         return def;
     }
+
+    @Override
+    public OperationResult<SchemaChangeResult> updateKeyspace(final Properties props) throws ConnectionException {
+        if (props.containsKey("name") && props.get("name").equals(getKeyspaceName())) { 
+            throw new RuntimeException(
+                    String.format("'name' attribute must match keyspace name. Expected '%s' but got '%s'", 
+                                  getKeyspaceName(), props.get("name")));
+        }
+        
+        final KsDef ksDef;
+        try {
+            ksDef = ThriftUtils.getThriftObjectFromProperties(KsDef.class, props);
+        } catch (Exception e) {
+            throw new BadRequestException("Unable to convert properties to KsDef", e);
+        }
+        ksDef.setName(getKeyspaceName());
+        
+        return internalUpdateKeyspace(ksDef);
+    }
+
+    public OperationResult<SchemaChangeResult> internalUpdateKeyspace(final KsDef ksDef) throws ConnectionException {
+        return connectionPool
+                .executeWithFailover(
+                        new AbstractOperationImpl<SchemaChangeResult>(
+                                tracerFactory.newTracer(CassandraOperationType.UPDATE_KEYSPACE)) {
+                            @Override
+                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                                precheckSchemaAgreement(client);
+                                return new SchemaChangeResponseImpl().setSchemaId(client.system_update_keyspace(ksDef));
+                            }
+                        }, RunOnce.get());
+    }
+
+    public OperationResult<SchemaChangeResult> internalCreateKeyspace(final KsDef ksDef) throws ConnectionException {
+        if (ksDef.getCf_defs() == null)
+            ksDef.setCf_defs(Lists.<CfDef>newArrayList());
+        
+        return executeDdlOperation(
+                        new AbstractOperationImpl<SchemaChangeResult>(
+                                tracerFactory.newTracer(CassandraOperationType.ADD_KEYSPACE)) {
+                            @Override
+                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                                precheckSchemaAgreement(client);
+                                System.out.println(ksDef);
+                                return new SchemaChangeResponseImpl().setSchemaId(client.system_add_keyspace(ksDef));
+                            }
+                        }, RunOnce.get());
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResult> createColumnFamily(final Properties props) throws ConnectionException {
+        if (props.containsKey("keyspace") && props.get("keyspace").equals(getKeyspaceName())) { 
+            throw new RuntimeException(
+                    String.format("'keyspace' attribute must match keyspace name. Expected '%s' but got '%s'", 
+                                  getKeyspaceName(), props.get("keyspace")));
+        }
+        
+        CfDef cfDef;
+        try {
+            cfDef = ThriftUtils.getThriftObjectFromProperties(CfDef.class, props);
+        } catch (Exception e) {
+            throw new BadRequestException("Unable to convert properties to CfDef", e);
+        }
+        cfDef.setKeyspace(getKeyspaceName());
+        return internalCreateColumnFamily(cfDef);
+    }
     
+    private OperationResult<SchemaChangeResult> internalCreateColumnFamily(final CfDef cfDef) throws ConnectionException {
+        return executeDdlOperation(new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
+                                tracerFactory.newTracer(CassandraOperationType.ADD_COLUMN_FAMILY), getKeyspaceName()) {
+                            @Override
+                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                                precheckSchemaAgreement(client);
+                                LOG.info(cfDef.toString());
+                                return new SchemaChangeResponseImpl().setSchemaId(client.system_add_column_family(cfDef));
+                            }
+                        }, RunOnce.get());
+    }
+    
+    private OperationResult<SchemaChangeResult> internalUpdateColumnFamily(final CfDef cfDef) throws ConnectionException {
+        return executeDdlOperation(
+                        new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
+                                tracerFactory.newTracer(CassandraOperationType.ADD_COLUMN_FAMILY), getKeyspaceName()) {
+                            @Override
+                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                                precheckSchemaAgreement(client);
+                                return new SchemaChangeResponseImpl().setSchemaId(client.system_update_column_family(cfDef));
+                            }
+                        }, RunOnce.get());
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResult> updateColumnFamily(final Map<String, Object> options) throws ConnectionException  {
+        if (options.containsKey("keyspace") && options.get("keyspace").equals(getKeyspaceName())) { 
+            throw new RuntimeException(
+                    String.format("'keyspace' attribute must match keyspace name. Expected '%s' but got '%s'", 
+                                  getKeyspaceName(), options.get("name")));
+        }
+        
+        return connectionPool
+                .executeWithFailover(
+                        new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
+                                tracerFactory.newTracer(CassandraOperationType.UPDATE_COLUMN_FAMILY), (String)options.get("keyspace")) {
+                            @Override
+                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                                ThriftColumnFamilyDefinitionImpl def = new ThriftColumnFamilyDefinitionImpl();
+                                def.setFields(options);
+                                def.setKeyspace(getKeyspaceName());
+                                
+                                return new SchemaChangeResponseImpl()
+                                    .setSchemaId(client.system_update_column_family(def.getThriftColumnFamilyDefinition()));
+                            }
+                        }, RunOnce.get());
+    }
+    
+    @Override
+    public OperationResult<SchemaChangeResult> updateColumnFamily(final Properties props) throws ConnectionException {
+        if (props.containsKey("keyspace") && props.get("keyspace").equals(getKeyspaceName())) { 
+            throw new RuntimeException(
+                    String.format("'keyspace' attribute must match keyspace name. Expected '%s' but got '%s'", 
+                                  getKeyspaceName(), props.get("name")));
+        }
+        
+        return connectionPool
+                .executeWithFailover(
+                        new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
+                                tracerFactory.newTracer(CassandraOperationType.ADD_COLUMN_FAMILY), (String)props.getProperty("name")) {
+                            @Override
+                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                                CfDef def = ThriftUtils.getThriftObjectFromProperties(CfDef.class, props);
+                                def.setKeyspace(getKeyspaceName());
+                                return new SchemaChangeResponseImpl().setSchemaId(client.system_update_column_family(def));
+                            }
+                        }, RunOnce.get());
+    }
+
+    @Override
+    public Properties getKeyspaceProperties() throws ConnectionException {
+        KeyspaceDefinition ksDef = this.describeKeyspace();
+        if (ksDef == null)
+            throw new NotFoundException(String.format("Keyspace '%s' not found", getKeyspaceName()));
+        
+        Properties props = new Properties();
+        ThriftKeyspaceDefinitionImpl thriftKsDef = (ThriftKeyspaceDefinitionImpl)ksDef;
+        try {
+            for (Entry<Object, Object> prop : thriftKsDef.getProperties().entrySet()) {
+                props.setProperty((String)prop.getKey(), (String) prop.getValue());
+            }
+        } catch (Exception e) {
+            LOG.error(String.format("Error fetching properties for keyspace '%s'", getKeyspaceName()));
+        }
+        return props;
+    }
+
+    @Override
+    public Properties getColumnFamilyProperties(String columnFamily) throws ConnectionException {
+        KeyspaceDefinition ksDef = this.describeKeyspace();
+        ColumnFamilyDefinition cfDef = ksDef.getColumnFamily(columnFamily);
+        if (cfDef == null)
+            throw new NotFoundException(String.format("Column family '%s' in keyspace '%s' not found", getKeyspaceName(), columnFamily));
+        
+        Properties props = new Properties();
+        ThriftColumnFamilyDefinitionImpl thriftCfDef = (ThriftColumnFamilyDefinitionImpl)cfDef;
+        try {
+            for (Entry<Object, Object> prop : thriftCfDef.getProperties().entrySet()) {
+                props.setProperty((String)prop.getKey(), (String) prop.getValue());
+            }
+        } catch (Exception e) {
+            LOG.error("Error processing column family properties");
+        }
+        return props;    
+    }
 }

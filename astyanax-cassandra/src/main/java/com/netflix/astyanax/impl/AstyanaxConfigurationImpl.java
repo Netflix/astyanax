@@ -19,6 +19,8 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.apache.commons.lang.builder.ToStringBuilder;
+
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.netflix.astyanax.AstyanaxConfiguration;
@@ -32,7 +34,6 @@ import com.netflix.astyanax.partitioner.Murmur3Partitioner;
 import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.retry.RunOnce;
-import com.netflix.astyanax.util.StringUtils;
 
 public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
     private ConsistencyLevel   defaultReadConsistencyLevel  = ConsistencyLevel.CL_ONE;
@@ -122,7 +123,7 @@ public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
     }
 
     public String toString() {
-        return StringUtils.joinClassGettersValues(this, "A6xConfig", AstyanaxConfigurationImpl.class);
+        return ToStringBuilder.reflectionToString(this);
     }
 
     @Override

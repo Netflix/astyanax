@@ -15,7 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax.retry;
 
-import com.netflix.astyanax.util.StringUtils;
+import org.apache.commons.lang.builder.ToStringBuilder;
 
 public class RetryNTimes implements RetryPolicy {
     private final int max;
@@ -59,6 +59,6 @@ public class RetryNTimes implements RetryPolicy {
     }
 
     public String toString() {
-        return StringUtils.joinClassAttributeValues(this, "RetryNTimes", RetryNTimes.class);
+        return ToStringBuilder.reflectionToString(this);
     }
 }

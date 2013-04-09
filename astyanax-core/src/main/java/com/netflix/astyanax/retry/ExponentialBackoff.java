@@ -17,7 +17,7 @@ package com.netflix.astyanax.retry;
 
 import java.util.Random;
 
-import com.netflix.astyanax.util.StringUtils;
+import org.apache.commons.lang.builder.ToStringBuilder;
 
 /**
  * Unbounded exponential backoff will sleep a random number of intervals within an
@@ -51,6 +51,6 @@ public class ExponentialBackoff extends SleepingRetryPolicy {
     }
 
     public String toString() {
-        return StringUtils.joinClassAttributeValues(this, "ExponentialBackoff", ExponentialBackoff.class);
+        return ToStringBuilder.reflectionToString(this);
     }
 }

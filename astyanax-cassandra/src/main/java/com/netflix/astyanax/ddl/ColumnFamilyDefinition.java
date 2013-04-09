@@ -19,58 +19,66 @@ import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
+/**
+ * Wrapper for a column family definition.  This provides additional utility methods on 
+ * top of the existing thrift structure.  
+ * 
+ * @author elandau
+ *
+ */
 public interface ColumnFamilyDefinition {
 
-    ColumnFamilyDefinition setComment(String comment);
+    public ColumnFamilyDefinition setComment(String comment);
 
-    String getComment();
+    public String getComment();
 
-    ColumnFamilyDefinition setKeyspace(String keyspace);
+    public ColumnFamilyDefinition setKeyspace(String keyspace);
 
-    String getKeyspace();
-
-    @Deprecated
-    ColumnFamilyDefinition setMemtableFlushAfterMins(Integer value);
+    public String getKeyspace();
 
     @Deprecated
-    Integer getMemtableFlushAfterMins();
+    public ColumnFamilyDefinition setMemtableFlushAfterMins(Integer value);
 
     @Deprecated
-    ColumnFamilyDefinition setMemtableOperationsInMillions(Double value);
+    public Integer getMemtableFlushAfterMins();
 
     @Deprecated
-    Double getMemtableOperationsInMillions();
+    public ColumnFamilyDefinition setMemtableOperationsInMillions(Double value);
 
     @Deprecated
-    ColumnFamilyDefinition setMemtableThroughputInMb(Integer value);
+    public Double getMemtableOperationsInMillions();
 
     @Deprecated
-    Integer getMemtableThroughputInMb();
+    public ColumnFamilyDefinition setMemtableThroughputInMb(Integer value);
 
-    ColumnFamilyDefinition setMergeShardsChance(Double value);
+    @Deprecated
+    public Integer getMemtableThroughputInMb();
 
-    Double getMergeShardsChance();
+    public ColumnFamilyDefinition setMergeShardsChance(Double value);
 
-    ColumnFamilyDefinition setMinCompactionThreshold(Integer value);
+    public Double getMergeShardsChance();
 
-    Integer getMinCompactionThreshold();
+    public ColumnFamilyDefinition setMinCompactionThreshold(Integer value);
 
-    ColumnFamilyDefinition setMaxCompactionThreshold(Integer value);
+    public Integer getMinCompactionThreshold();
 
-    Integer getMaxCompactionThreshold();
+    public ColumnFamilyDefinition setMaxCompactionThreshold(Integer value);
 
-    ColumnFamilyDefinition setCompactionStrategy(String strategy);
+    public Integer getMaxCompactionThreshold();
 
-    String getCompactionStrategy();
+    public ColumnFamilyDefinition setCompactionStrategy(String strategy);
 
-    ColumnFamilyDefinition setCompactionStrategyOptions(Map<String, String>  options);
+    public String getCompactionStrategy();
+
+    public ColumnFamilyDefinition setCompactionStrategyOptions(Map<String, String>  options);
     
-    Map<String, String> getCompactionStrategyOptions();
+    public Map<String, String> getCompactionStrategyOptions();
 
-    ColumnFamilyDefinition setCompressionOptions(Map<String, String>  options);
+    public ColumnFamilyDefinition setCompressionOptions(Map<String, String>  options);
     
-    Map<String, String> getCompressionOptions();
+    public Map<String, String> getCompressionOptions();
     
     ColumnFamilyDefinition setBloomFilterFpChance(Double chance);
     
@@ -162,4 +170,17 @@ public interface ColumnFamilyDefinition {
     
     public void setFields(Map<String, Object> options);
 
+    /**
+     * Get the entire column family definition as a Properties object
+     * with maps and lists flattened into '.' delimited properties
+     * @return
+     */
+    Properties getProperties() throws Exception;
+    
+    /**
+     * Set the column family definition from a properties file
+     * @param properties
+     * @throws Exception 
+     */
+    void setProperties(Properties properties) throws Exception;
 }

@@ -15,7 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax.retry;
 
-import com.netflix.astyanax.util.StringUtils;
+import org.apache.commons.lang.builder.ToStringBuilder;
 
 /**
  * Base sleeping retry policy with optional count limit.  The sleep time
@@ -77,6 +77,6 @@ public abstract class SleepingRetryPolicy implements RetryPolicy {
     }
 
     public String toString() {
-        return StringUtils.joinClassAttributeValues(this, "SleepingRetryPolicy", SleepingRetryPolicy.class);
+        return ToStringBuilder.reflectionToString(this);
     }
 }

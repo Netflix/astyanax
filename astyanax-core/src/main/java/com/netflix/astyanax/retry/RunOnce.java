@@ -15,7 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax.retry;
 
-import com.netflix.astyanax.util.StringUtils;
+import org.apache.commons.lang.builder.ToStringBuilder;
 
 public class RunOnce implements RetryPolicy {
     public static RunOnce instance = new RunOnce();
@@ -52,7 +52,7 @@ public class RunOnce implements RetryPolicy {
     }
 
     public String toString() {
-        return StringUtils.joinClassAttributeValues(this, "RunOnce", RunOnce.class);
+        return ToStringBuilder.reflectionToString(this);
     }
 
 }

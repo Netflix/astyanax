@@ -21,8 +21,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Properties;
 
 import org.apache.cassandra.thrift.CfDef;
+import org.apache.cassandra.thrift.KsDef;
 import org.apache.cassandra.thrift.CfDef._Fields;
 import org.apache.cassandra.thrift.ColumnDef;
 import org.apache.thrift.meta_data.FieldMetaData;
@@ -32,6 +34,7 @@ import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.FieldMetadata;
 import com.netflix.astyanax.thrift.ThriftTypes;
+import com.netflix.astyanax.thrift.ThriftUtils;
 
 public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
     private final static Map<String, FieldMetadata> fieldsMetadata = Maps.newHashMap();
@@ -47,7 +50,7 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
         }
     }
     
-    private final CfDef cfDef;
+    private CfDef cfDef;
 
     public ThriftColumnFamilyDefinitionImpl() {
         this.cfDef = new CfDef();
@@ -460,5 +463,15 @@ public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition 
                 }
             }
         }
+    }
+
+    @Override
+    public Properties getProperties() throws Exception {
+        return ThriftUtils.getPropertiesFromThrift(cfDef);
+    }
+
+    @Override
+    public void setProperties(Properties properties) throws Exception {
+        ThriftUtils.populateObjectFromProperties(cfDef, properties);
     }
 }

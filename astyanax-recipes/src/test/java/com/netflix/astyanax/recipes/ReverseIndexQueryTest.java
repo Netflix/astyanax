@@ -177,12 +177,11 @@ public class ReverseIndexQueryTest {
     }
 
     @Test
-    public void testReverseIndex() {
+    public void testReverseIndex() throws Exception{
         LOG.info("Starting");
         final AtomicLong counter = new AtomicLong();
 
-        Keyspace keyspace = clusterContext.getEntity().getKeyspace(
-                TEST_KEYSPACE_NAME);
+        Keyspace keyspace = clusterContext.getEntity().getKeyspace(TEST_KEYSPACE_NAME);
         ReverseIndexQuery
                 .newQuery(keyspace, CF_DATA, CF_INDEX.getName(),
                         LongSerializer.get())

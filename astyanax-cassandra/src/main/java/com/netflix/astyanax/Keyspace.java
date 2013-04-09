@@ -17,6 +17,7 @@ package com.netflix.astyanax;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.Operation;
@@ -103,6 +104,22 @@ public interface Keyspace {
      */
     KeyspaceDefinition describeKeyspace() throws ConnectionException;
 
+    /**
+     * Get this keyspace's configuration (including column families) as flattened
+     * properties
+     * @throws ConnectionException 
+     */
+    Properties getKeyspaceProperties() throws ConnectionException;
+    
+    /**
+     * Get the properties for a column family
+     * 
+     * @param columnFamily
+     * @return
+     * @throws ConnectionException 
+     */
+    Properties getColumnFamilyProperties(String columnFamily) throws ConnectionException;
+    
     /**
      * Return the serializer package for a specific column family. This requires
      * a call to the Cassandra cluster and is therefore cached to reduce load on
@@ -194,11 +211,19 @@ public interface Keyspace {
     <K, C>  OperationResult<SchemaChangeResult> createColumnFamily(ColumnFamily<K, C> columnFamily, Map<String, Object> options) throws ConnectionException ;
     
     /**
-     * Create a column family from the provied options
+     * Create a column family in this keyspace using the provided properties.  
+     * @param props
+     * @return
+     * @throws ConnectionException 
+     */
+    OperationResult<SchemaChangeResult> createColumnFamily(Properties props) throws ConnectionException;
+    
+    /**
+     * Create a column family from the provided options
      * @param options - For list of options see http://www.datastax.com/docs/1.0/configuration/storage_configuration
      * @throws ConnectionException
      */
-    <K, C>  OperationResult<SchemaChangeResult> createColumnFamily(Map<String, Object> options) throws ConnectionException ;
+    OperationResult<SchemaChangeResult> createColumnFamily(Map<String, Object> options) throws ConnectionException ;
     
     /**
      * Update the column family in cassandra
@@ -208,6 +233,20 @@ public interface Keyspace {
      */
     <K, C>  OperationResult<SchemaChangeResult> updateColumnFamily(ColumnFamily<K, C> columnFamily, Map<String, Object> options) throws ConnectionException ;
     
+    /**
+     * Update the column family definition from properties
+     * @param props
+     * @throws ConnectionException
+     */
+    OperationResult<SchemaChangeResult> updateColumnFamily(Properties props) throws ConnectionException ;
+    
+    /**
+     * Update the column family definition from a map of string to object
+     * @param props
+     * @throws ConnectionException
+     */
+    OperationResult<SchemaChangeResult> updateColumnFamily(Map<String, Object> options) throws ConnectionException;
+
     /**
      * Drop a column family from this keyspace
      * @param columnFamilyName
@@ -229,6 +268,14 @@ public interface Keyspace {
     OperationResult<SchemaChangeResult> createKeyspace(Map<String, Object> options) throws ConnectionException ;
     
     /**
+     * Create the keyspace in cassandra.  This call will create the keyspace and any column families.
+     * @param properties
+     * @return
+     * @throws ConnectionException
+     */
+    OperationResult<SchemaChangeResult> createKeyspace(Properties properties) throws ConnectionException;
+    
+    /**
      * Bulk create for a keyspace and a bunch of column famlies
      * @param options
      * @param cfs
@@ -241,6 +288,16 @@ public interface Keyspace {
      * @param options - For list of options see http://www.datastax.com/docs/1.0/configuration/storage_configuration
      */
     OperationResult<SchemaChangeResult> updateKeyspace(Map<String, Object> options) throws ConnectionException ;
+    
+    /**
+     * Update the keyspace definition using properties.  Only keyspace options and NO column family options
+     * may be set here.
+     * 
+     * @param props
+     * @return
+     * @throws ConnectionException
+     */
+    OperationResult<SchemaChangeResult> updateKeyspace(Properties props) throws ConnectionException;
     
     /**
      * Drop this keyspace from cassandra

@@ -32,14 +32,14 @@ import com.netflix.astyanax.shallows.EmptyKeyspaceTracerFactory;
  * 
  * @param <T>
  */
-public class AstyanaxContext<Entity> {
+public class AstyanaxContext<T> {
     private final ConnectionPool<?> cp;
     private final NodeDiscovery discovery;
     private final ConnectionPoolConfiguration cpConfig;
     private final AstyanaxConfiguration asConfig;
     private final String clusterName;
     private final String keyspaceName;
-    private final Entity entity;
+    private final T client;
     private final ConnectionPoolMonitor monitor;
 
     public static class Builder {
@@ -187,19 +187,27 @@ public class AstyanaxContext<Entity> {
         }
     }
 
-    private AstyanaxContext(Builder builder, Entity entity) {
+    private AstyanaxContext(Builder builder, T client) {
         this.cpConfig = builder.cpConfig;
         this.asConfig = builder.asConfig;
         this.cp = builder.cp;
         this.clusterName = builder.clusterName;
         this.keyspaceName = builder.keyspaceName;
-        this.entity = entity;
+        this.client = client;
         this.discovery = builder.discovery;
         this.monitor = builder.monitor;
     }
 
-    public Entity getEntity() {
-        return this.entity;
+    /**
+     * @deprecated  This should be called getClient
+     * @return
+     */
+    public T getEntity() {
+        return getClient();
+    }
+
+    public T getClient() {
+        return this.client;
     }
 
     public ConnectionPool<?> getConnectionPool() {

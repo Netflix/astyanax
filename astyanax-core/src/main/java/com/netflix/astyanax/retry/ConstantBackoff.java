@@ -15,7 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax.retry;
 
-import com.netflix.astyanax.util.StringUtils;
+import org.apache.commons.lang.builder.ToStringBuilder;
 
 public class ConstantBackoff extends SleepingRetryPolicy {
 
@@ -37,7 +37,7 @@ public class ConstantBackoff extends SleepingRetryPolicy {
     }
 
     public String toString() {
-        return StringUtils.joinClassAttributeValues(this, "ConstantBackoff", ConstantBackoff.class);
+        return ToStringBuilder.reflectionToString(this);
     }
 
 }

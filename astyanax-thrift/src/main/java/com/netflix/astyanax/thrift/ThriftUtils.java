@@ -212,7 +212,10 @@ public class ThriftUtils {
                     break;
                 case ENUM   : {
                     org.apache.thrift.meta_data.EnumMetaData meta = (org.apache.thrift.meta_data.EnumMetaData)f.getValue().valueMetaData;
-                    entity.setFieldValue(f.getKey(), Enum.valueOf((Class<Enum>) meta.enumClass, (String)value));
+                    Object e = meta.enumClass;
+                    if (e instanceof Enum) {
+                        entity.setFieldValue(f.getKey(), Enum.valueOf((Class<Enum>) e, (String)value));
+                    }
                     break;
                 }
                 case MAP    : {

@@ -54,6 +54,9 @@ public class ObjectSerializer extends AbstractSerializer<Object> implements Seri
         catch (Exception ex) {
             throw new SerializationException(ex);
         }
+        finally {
+            if (bytes != null) bytes.rewind();
+        }
     }
 
     public static ObjectSerializer get() {

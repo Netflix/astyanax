@@ -29,12 +29,17 @@ public class Int32Serializer extends AbstractSerializer<Integer> {
 
     @Override
     public Integer fromByteBuffer(ByteBuffer byteBuffer) {
-        if ((byteBuffer == null) || (byteBuffer.remaining() != 4)) {
-            return null;
+        try {
+            if ((byteBuffer == null) || (byteBuffer.remaining() != 4)) {
+                return null;
+            }
+            int in = byteBuffer.getInt();
+            byteBuffer.rewind();
+            return in;
+        } finally {
+            if (byteBuffer != null)
+                byteBuffer.rewind();
         }
-        int in = byteBuffer.getInt();
-        byteBuffer.rewind();
-        return in;
     }
 
     @Override
@@ -54,16 +59,26 @@ public class Int32Serializer extends AbstractSerializer<Integer> {
 
     @Override
     public String getString(ByteBuffer byteBuffer) {
-        return Integer.toString(fromByteBuffer(byteBuffer));
+        try {
+            return Integer.toString(fromByteBuffer(byteBuffer));
+        } finally {
+            if (byteBuffer != null)
+                byteBuffer.rewind();
+        }
     }
 
     @Override
     public ByteBuffer getNext(ByteBuffer byteBuffer) {
-        Integer val = fromByteBuffer(byteBuffer.duplicate());
-        if (val == Integer.MAX_VALUE) {
-            throw new ArithmeticException("Can't paginate past max int");
+        try {
+            Integer val = fromByteBuffer(byteBuffer.duplicate());
+            if (val == Integer.MAX_VALUE) {
+                throw new ArithmeticException("Can't paginate past max int");
+            }
+            return toByteBuffer(val + 1);
+        } finally {
+            if (byteBuffer != null)
+                byteBuffer.rewind();
         }
-        return toByteBuffer(val + 1);
     }
 
     public ComparatorType getComparatorType() {

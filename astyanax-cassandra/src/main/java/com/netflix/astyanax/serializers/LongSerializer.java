@@ -28,16 +28,19 @@ public final class LongSerializer extends AbstractSerializer<Long> {
 
     @Override
     public Long fromByteBuffer(ByteBuffer byteBuffer) {
-        if (byteBuffer == null) {
+        try {
+            if (byteBuffer == null) {
+                return null;
+            } else if (byteBuffer.remaining() == 8) {
+                return byteBuffer.getLong();
+            } else if (byteBuffer.remaining() == 4) {
+                return (long) byteBuffer.getInt();
+            }
             return null;
+        } finally {
+            if (byteBuffer != null)
+                byteBuffer.rewind();
         }
-        else if (byteBuffer.remaining() == 8) {
-            return byteBuffer.getLong();
-        }
-        else if (byteBuffer.remaining() == 4) {
-            return (long) byteBuffer.getInt();
-        }
-        return null;
     }
 
     @Override
@@ -52,15 +55,25 @@ public final class LongSerializer extends AbstractSerializer<Long> {
     
     @Override
     public String getString(ByteBuffer byteBuffer) {
-        return LongType.instance.getString(byteBuffer);
+        try {
+            return LongType.instance.getString(byteBuffer);
+        } finally {
+            if (byteBuffer != null)
+                byteBuffer.rewind();
+        }
     }
 
     @Override
     public ByteBuffer getNext(ByteBuffer byteBuffer) {
-        Long val = fromByteBuffer(byteBuffer.duplicate());
-        if (val == Long.MAX_VALUE) {
-            throw new ArithmeticException("Can't paginate past max long");
+        try {
+            Long val = fromByteBuffer(byteBuffer.duplicate());
+            if (val == Long.MAX_VALUE) {
+                throw new ArithmeticException("Can't paginate past max long");
+            }
+            return toByteBuffer(val + 1);
+        } finally {
+            if (byteBuffer != null)
+                byteBuffer.rewind();
         }
-        return toByteBuffer(val + 1);
     }
 }

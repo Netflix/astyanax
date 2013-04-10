@@ -32,10 +32,15 @@ public final class DateSerializer extends AbstractSerializer<Date> {
 
     @Override
     public Date fromByteBuffer(ByteBuffer bytes) {
-        if (bytes == null) {
-            return null;
+        try {
+            if (bytes == null) {
+                return null;
+            }
+            return new Date(LONG_SERIALIZER.fromByteBuffer(bytes));
+        } finally {
+            if (bytes != null)
+                bytes.rewind();
         }
-        return new Date(LONG_SERIALIZER.fromByteBuffer(bytes));
     }
 
     @Override
@@ -45,12 +50,23 @@ public final class DateSerializer extends AbstractSerializer<Date> {
 
     @Override
     public String getString(ByteBuffer byteBuffer) {
-        return DateType.instance.getString(byteBuffer);
+        try {
+            return DateType.instance.getString(byteBuffer);
+        } finally {
+            if (byteBuffer != null)
+                byteBuffer.rewind();
+        }
     }
 
     @Override
     public ByteBuffer getNext(ByteBuffer byteBuffer) {
-        return toByteBuffer(new Date(fromByteBuffer(byteBuffer).getTime() + 1));
+        try {
+            return toByteBuffer(new Date(
+                    fromByteBuffer(byteBuffer).getTime() + 1));
+        } finally {
+            if (byteBuffer != null)
+                byteBuffer.rewind();
+        }
     }
 
     @Override

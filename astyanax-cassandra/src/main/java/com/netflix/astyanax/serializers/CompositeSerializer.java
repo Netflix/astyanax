@@ -20,12 +20,15 @@ public class CompositeSerializer extends AbstractSerializer<Composite> {
 
     @Override
     public Composite fromByteBuffer(ByteBuffer byteBuffer) {
-        Composite composite = new Composite();
-
-        composite.setComparatorsByPosition(getComparators());
-        composite.deserialize(byteBuffer);
-
-        return composite;
+        try {
+            Composite composite = new Composite();
+            composite.setComparatorsByPosition(getComparators());
+            composite.deserialize(byteBuffer);
+            return composite;
+        } finally {
+            if (byteBuffer != null)
+                byteBuffer.rewind();
+        }
     }
 
     @Override

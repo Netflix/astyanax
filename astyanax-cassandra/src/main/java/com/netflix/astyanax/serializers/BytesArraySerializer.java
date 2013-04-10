@@ -30,12 +30,17 @@ public final class BytesArraySerializer extends AbstractSerializer<byte[]> imple
 
     @Override
     public byte[] fromByteBuffer(ByteBuffer byteBuffer) {
-        if (byteBuffer == null) {
-            return null;
+        try {
+            if (byteBuffer == null) {
+                return null;
+            }
+            byte[] bytes = new byte[byteBuffer.remaining()];
+            byteBuffer.get(bytes, 0, bytes.length);
+            return bytes;
+        } finally {
+            if (byteBuffer != null)
+                byteBuffer.rewind();
         }
-        byte[] bytes = new byte[byteBuffer.remaining()];
-        byteBuffer.get(bytes, 0, bytes.length);
-        return bytes;
     }
 
     @Override
@@ -45,6 +50,11 @@ public final class BytesArraySerializer extends AbstractSerializer<byte[]> imple
 
     @Override
     public String getString(ByteBuffer byteBuffer) {
-        return BytesType.instance.getString(byteBuffer);
+        try {
+            return BytesType.instance.getString(byteBuffer);
+        } finally {
+            if (byteBuffer != null)
+                byteBuffer.rewind();
+        }
     }
 }

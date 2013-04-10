@@ -24,7 +24,13 @@ public class DoubleSerializer extends AbstractSerializer<Double> {
 
     @Override
     public Double fromByteBuffer(ByteBuffer bytes) {
-        return Double.longBitsToDouble(LongSerializer.get().fromByteBuffer(bytes));
+        try {
+            return Double.longBitsToDouble(LongSerializer.get().fromByteBuffer(
+                    bytes));
+        } finally {
+            if (bytes != null)
+                bytes.rewind();
+        }
     }
 
     @Override
@@ -34,17 +40,26 @@ public class DoubleSerializer extends AbstractSerializer<Double> {
 
     @Override
     public String getString(ByteBuffer byteBuffer) {
-        return DoubleType.instance.getString(byteBuffer);
+        try {
+            return DoubleType.instance.getString(byteBuffer);
+        } finally {
+            if (byteBuffer != null)
+                byteBuffer.rewind();
+        }
     }
 
     @Override
     public ByteBuffer getNext(ByteBuffer byteBuffer) {
-        double val = fromByteBuffer(byteBuffer.duplicate());
-        if (val == Double.MAX_VALUE) {
-            throw new ArithmeticException("Can't paginate past max double");
+        try {
+            double val = fromByteBuffer(byteBuffer.duplicate());
+            if (val == Double.MAX_VALUE) {
+                throw new ArithmeticException("Can't paginate past max double");
+            }
+            return toByteBuffer(val + Double.MIN_VALUE);
+        } finally {
+            if (byteBuffer != null)
+                byteBuffer.rewind();
         }
-
-        return toByteBuffer(val + Double.MIN_VALUE);
     }
 
     @Override

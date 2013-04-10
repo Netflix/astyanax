@@ -40,10 +40,15 @@ public class UUIDSerializer extends AbstractSerializer<UUID> {
 
     @Override
     public UUID fromByteBuffer(ByteBuffer bytes) {
-        if (bytes == null) {
-            return null;
+        try {
+            if (bytes == null) {
+                return null;
+            }
+            return new UUID(bytes.getLong(), bytes.getLong());
+        } finally {
+            if (bytes != null)
+                bytes.rewind();
         }
-        return new UUID(bytes.getLong(), bytes.getLong());
     }
 
     @Override

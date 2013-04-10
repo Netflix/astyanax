@@ -30,10 +30,15 @@ public class CharSerializer extends AbstractSerializer<Character> {
 
     @Override
     public Character fromByteBuffer(ByteBuffer bytes) {
-        if (bytes == null) {
-            return null;
+        try {
+            if (bytes == null) {
+                return null;
+            }
+            return bytes.getChar();
+        } finally {
+            if (bytes != null)
+                bytes.rewind();
         }
-        return bytes.getChar();
     }
 
     @Override
@@ -45,7 +50,12 @@ public class CharSerializer extends AbstractSerializer<Character> {
 
     @Override
     public String getString(ByteBuffer byteBuffer) {
-        return fromByteBuffer(byteBuffer).toString();
+        try {
+            return fromByteBuffer(byteBuffer).toString();
+        } finally {
+            if (byteBuffer != null)
+                byteBuffer.rewind();
+        }
     }
 
     @Override

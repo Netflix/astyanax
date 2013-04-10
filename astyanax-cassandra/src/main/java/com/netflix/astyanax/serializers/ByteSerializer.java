@@ -25,11 +25,16 @@ public class ByteSerializer extends AbstractSerializer<Byte> {
 
     @Override
     public Byte fromByteBuffer(ByteBuffer byteBuffer) {
-        if (byteBuffer == null) {
-            return null;
+        try {
+            if (byteBuffer == null) {
+                return null;
+            }
+            byte in = byteBuffer.get();
+            return in;
+        } finally {
+            if (byteBuffer != null)
+                byteBuffer.rewind();
         }
-        byte in = byteBuffer.get();
-        return in;
     }
 
     @Override
@@ -40,17 +45,27 @@ public class ByteSerializer extends AbstractSerializer<Byte> {
 
     @Override
     public String getString(ByteBuffer byteBuffer) {
-        return IntegerType.instance.getString(byteBuffer);
+        try {
+            return IntegerType.instance.getString(byteBuffer);
+        } finally {
+            if (byteBuffer != null)
+                byteBuffer.rewind();
+        }
     }
 
     @Override
     public ByteBuffer getNext(ByteBuffer byteBuffer) {
-        Byte val = fromByteBuffer(byteBuffer.duplicate());
-        if (val == Byte.MAX_VALUE) {
-            throw new ArithmeticException("Can't paginate past max byte");
+        try {
+            Byte val = fromByteBuffer(byteBuffer.duplicate());
+            if (val == Byte.MAX_VALUE) {
+                throw new ArithmeticException("Can't paginate past max byte");
+            }
+            val++;
+            return toByteBuffer(val);
+        } finally {
+            if (byteBuffer != null)
+                byteBuffer.rewind();
         }
-        val++;
-        return toByteBuffer(val);
     }
     
 }

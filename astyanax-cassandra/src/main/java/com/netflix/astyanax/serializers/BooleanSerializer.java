@@ -32,11 +32,16 @@ public final class BooleanSerializer extends AbstractSerializer<Boolean> {
 
     @Override
     public Boolean fromByteBuffer(ByteBuffer bytes) {
-        if ((bytes == null) || (bytes.remaining() < 1)) {
-            return null;
+        try {
+            if ((bytes == null) || (bytes.remaining() < 1)) {
+                return null;
+            }
+            byte b = bytes.get();
+            return b == (byte) 1;
+        } finally {
+            if (bytes != null)
+                bytes.rewind();
         }
-        byte b = bytes.get();
-        return b == (byte) 1;
     }
 
     @Override

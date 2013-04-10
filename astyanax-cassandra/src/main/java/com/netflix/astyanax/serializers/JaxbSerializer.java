@@ -121,6 +121,9 @@ public class JaxbSerializer extends AbstractSerializer<Object> {
         catch (XMLStreamException e) {
             throw new SerializationException("Exception reading XML stream.", e);
         }
+        finally {
+            if (bytes != null) bytes.rewind();
+        }
     }
 
     /**

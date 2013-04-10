@@ -22,9 +22,14 @@ public class DynamicCompositeSerializer extends AbstractSerializer<DynamicCompos
 
     @Override
     public DynamicComposite fromByteBuffer(ByteBuffer byteBuffer) {
-        DynamicComposite composite = new DynamicComposite();
-        composite.deserialize(byteBuffer);
-        return composite;
+        try {
+            DynamicComposite composite = new DynamicComposite();
+            composite.deserialize(byteBuffer);
+            return composite;
+        } finally {
+            if (byteBuffer != null)
+                byteBuffer.rewind();
+        }
     }
 
     @Override

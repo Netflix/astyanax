@@ -74,6 +74,7 @@ public class SnappyStringSerializer extends AbstractSerializer<String> {
                 } catch (IOException e) {
                 }
             }
+            if (byteBuffer != null) byteBuffer.rewind();
         }
     }
 
@@ -89,6 +90,11 @@ public class SnappyStringSerializer extends AbstractSerializer<String> {
 
     @Override
     public String getString(ByteBuffer byteBuffer) {
-        return UTF8Type.instance.getString(byteBuffer);
+        try {
+            return UTF8Type.instance.getString(byteBuffer);
+        } finally {
+            if (byteBuffer != null)
+                byteBuffer.rewind();
+        }
     }
 }

@@ -38,7 +38,9 @@ class LeafColumnMapper extends AbstractColumnMapper {
 		final Serializer valueSerializer = serializer;
 		// TODO: suppress the unchecked raw type now.
 		// we have to use the raw type to avoid compiling error
-		clm.putColumn(prefix + columnName, value, valueSerializer, null);
+		if (value != null) {
+			clm.putColumn(prefix + columnName, value, valueSerializer, null);
+		}
 		return true;
 	}
 	

@@ -19,19 +19,15 @@ public final class BigIntegerSerializer extends AbstractSerializer<BigInteger> {
     }
 
     @Override
-    public BigInteger fromByteBuffer(ByteBuffer byteBuffer) {
-        try {
-            if (byteBuffer == null) {
-                return null;
-            }
-            int length = byteBuffer.remaining();
-            byte[] bytes = new byte[length];
-            byteBuffer.duplicate().get(bytes);
-            return new BigInteger(bytes);
-        } finally {
-            if (byteBuffer != null)
-                byteBuffer.rewind();
+    public BigInteger fromByteBuffer(final ByteBuffer byteBuffer) {
+        if (byteBuffer == null) {
+            return null;
         }
+        ByteBuffer dup = byteBuffer.duplicate();
+        int length = dup.remaining();
+        byte[] bytes = new byte[length];
+        dup.get(bytes);
+        return new BigInteger(bytes);
     }
 
     @Override
@@ -54,24 +50,16 @@ public final class BigIntegerSerializer extends AbstractSerializer<BigInteger> {
 
     @Override
     public String getString(ByteBuffer byteBuffer) {
-        try {
-            return IntegerType.instance.getString(byteBuffer);
-        } finally {
-            if (byteBuffer != null)
-                byteBuffer.rewind();
-        }
+        return IntegerType.instance.getString(byteBuffer);
     }
 
     @Override
-    public ByteBuffer getNext(ByteBuffer byteBuffer) {
-        try {
-            BigInteger bigint = fromByteBuffer(byteBuffer.duplicate());
-            bigint = bigint.add(new BigInteger("1"));
-            return toByteBuffer(bigint);
-        } finally {
-            if (byteBuffer != null)
-                byteBuffer.rewind();
-        }
+    public ByteBuffer getNext(final ByteBuffer byteBuffer) {
+        if (byteBuffer == null)
+            return null;
+        BigInteger bigint = fromByteBuffer(byteBuffer.duplicate());
+        bigint = bigint.add(new BigInteger("1"));
+        return toByteBuffer(bigint);
     }
 
 }

@@ -45,9 +45,10 @@ public class SnappyStringSerializer extends AbstractSerializer<String> {
         SnappyInputStream snappy = null;
         ByteArrayOutputStream baos = null;
         try {
+            ByteBuffer dup = byteBuffer.duplicate();
             snappy = new SnappyInputStream(
-                    new ByteArrayInputStream(byteBuffer.array(), 0,
-                            byteBuffer.limit()));
+                    new ByteArrayInputStream(dup.array(), 0,
+                            dup.limit()));
             
             baos = new ByteArrayOutputStream();
             for (int value = 0; value != -1;) {
@@ -74,7 +75,6 @@ public class SnappyStringSerializer extends AbstractSerializer<String> {
                 } catch (IOException e) {
                 }
             }
-            if (byteBuffer != null) byteBuffer.rewind();
         }
     }
 
@@ -90,11 +90,6 @@ public class SnappyStringSerializer extends AbstractSerializer<String> {
 
     @Override
     public String getString(ByteBuffer byteBuffer) {
-        try {
             return UTF8Type.instance.getString(byteBuffer);
-        } finally {
-            if (byteBuffer != null)
-                byteBuffer.rewind();
-        }
-    }
+            }
 }

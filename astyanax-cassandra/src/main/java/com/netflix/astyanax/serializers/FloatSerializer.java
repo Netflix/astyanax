@@ -20,18 +20,17 @@ public class FloatSerializer extends AbstractSerializer<Float> {
 
     @Override
     public ByteBuffer toByteBuffer(Float obj) {
-        return IntegerSerializer.get().toByteBuffer(Float.floatToRawIntBits(obj));
+        return IntegerSerializer.get().toByteBuffer(
+                Float.floatToRawIntBits(obj));
     }
 
     @Override
     public Float fromByteBuffer(ByteBuffer bytes) {
-        try {
-            return Float.intBitsToFloat(IntegerSerializer.get().fromByteBuffer(
-                    bytes));
-        } finally {
-            if (bytes != null)
-                bytes.rewind();
-        }
+        if (bytes == null)
+            return null;
+        ByteBuffer dup = bytes.duplicate();
+        return Float
+                .intBitsToFloat(IntegerSerializer.get().fromByteBuffer(dup));
     }
 
     @Override
@@ -46,16 +45,11 @@ public class FloatSerializer extends AbstractSerializer<Float> {
 
     @Override
     public ByteBuffer getNext(ByteBuffer byteBuffer) {
-        try {
-            float val = fromByteBuffer(byteBuffer.duplicate());
-            if (val == Float.MAX_VALUE) {
-                throw new ArithmeticException("Can't paginate past max float");
-            }
-            return toByteBuffer(val + Float.MIN_VALUE);
-        } finally {
-            if (byteBuffer != null)
-                byteBuffer.rewind();
+        float val = fromByteBuffer(byteBuffer.duplicate());
+        if (val == Float.MAX_VALUE) {
+            throw new ArithmeticException("Can't paginate past max float");
         }
+        return toByteBuffer(val + Float.MIN_VALUE);
     }
 
     @Override

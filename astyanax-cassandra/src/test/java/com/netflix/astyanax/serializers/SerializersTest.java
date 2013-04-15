@@ -48,6 +48,57 @@ public class SerializersTest {
         T deSerVal1 = ser.fromByteBuffer(bb);
         Assert.assertEquals(val, deSerVal1);
     }
+    
+    @Test
+    public void testMultiLongs() {
+        try {
+            ByteBuffer bb = ByteBuffer.allocate(100);
+            bb.putLong(1L);
+            bb.putLong(2L);
+            ByteBuffer bb2 = ByteBuffer.wrap(bb.array(), 8, 8);
+            LongSerializer ser = LongSerializer.get();
+            Long ret = ser.fromByteBuffer(bb2);
+            Long ret2 = ser.fromByteBuffer(bb2);
+            Assert.assertTrue(2 == ret);
+            Assert.assertTrue(2 == ret2);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    static class LongLong {
+        @Component
+        Long comp1;
+        @Component
+        Long comp2;
+        public LongLong() {
+            
+        }
+        public LongLong(long c1, long c2) {
+            this.comp1 = c1;
+            this.comp2 = c2; 
+        }
+        @Override
+        public boolean equals(Object c2) {
+            if (!(c2 instanceof LongLong)) return false;
+            if (this.comp1 == ((LongLong)c2).comp1 && this.comp2 == ((LongLong)c2).comp2) return true;
+            return false;
+        }
+    };
+    @Test
+    public void testMultiLongsComposite() {
+    try {
+            
+            AnnotatedCompositeSerializer<LongLong> ser = new AnnotatedCompositeSerializer<LongLong>(LongLong.class);
+            LongLong comp = new LongLong(1L, 2L);
+            ByteBuffer bb = ser.toByteBuffer(comp);
+            LongLong comp2 = ser.fromByteBuffer(bb);
+            Assert.assertEquals(comp, comp2);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     @Test
     public void testAsciiSerializer() {

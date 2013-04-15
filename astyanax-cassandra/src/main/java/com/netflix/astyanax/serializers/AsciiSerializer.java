@@ -22,15 +22,12 @@ public final class AsciiSerializer extends AbstractSerializer<String> {
     }
 
     @Override
-    public String fromByteBuffer(ByteBuffer byteBuffer) {
-        try {
-            if (byteBuffer == null) {
-                return null;
-            }
-            return charset.decode(byteBuffer).toString();
-        } finally {
-           if (byteBuffer != null) byteBuffer.rewind();
+    public String fromByteBuffer(final ByteBuffer byteBuffer) {
+        if (byteBuffer == null) {
+            return null;
         }
+        ByteBuffer dup = byteBuffer.duplicate();
+        return charset.decode(dup).toString();
     }
 
     @Override
@@ -52,12 +49,9 @@ public final class AsciiSerializer extends AbstractSerializer<String> {
     }
 
     @Override
-    public String getString(ByteBuffer byteBuffer) {
-        try {
-            return AsciiType.instance.getString(byteBuffer);
-        } finally {
-            if (byteBuffer != null)
-                byteBuffer.rewind();
-        }
+    public String getString(final ByteBuffer byteBuffer) {
+        if (byteBuffer == null)
+            return null;
+        return AsciiType.instance.getString(byteBuffer);
     }
 }

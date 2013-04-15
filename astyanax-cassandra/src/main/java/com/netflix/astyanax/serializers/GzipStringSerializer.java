@@ -26,7 +26,7 @@ public class GzipStringSerializer extends AbstractSerializer<String> {
         if (obj == null) {
             return null;
         }
-        
+
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         GZIPOutputStream gzip;
         try {
@@ -36,7 +36,7 @@ public class GzipStringSerializer extends AbstractSerializer<String> {
             return ByteBuffer.wrap(out.toByteArray());
         } catch (IOException e) {
             throw new RuntimeException("Error compressing column data", e);
-        }        
+        }
     }
 
     @Override
@@ -44,14 +44,14 @@ public class GzipStringSerializer extends AbstractSerializer<String> {
         if (byteBuffer == null) {
             return null;
         }
-        
+
         GZIPInputStream gzipInputStream = null;
         ByteArrayOutputStream baos = null;
+        ByteBuffer dup = byteBuffer.duplicate();
         try {
-            gzipInputStream = new GZIPInputStream(
-                    new ByteArrayInputStream(byteBuffer.array(), 0,
-                            byteBuffer.limit()));
-            
+            gzipInputStream = new GZIPInputStream(new ByteArrayInputStream(
+                    dup.array(), 0, dup.limit()));
+
             baos = new ByteArrayOutputStream();
             for (int value = 0; value != -1;) {
                 value = gzipInputStream.read();
@@ -77,8 +77,6 @@ public class GzipStringSerializer extends AbstractSerializer<String> {
                 } catch (IOException e) {
                 }
             }
-            if (byteBuffer != null)
-                byteBuffer.rewind();
         }
     }
 
@@ -94,11 +92,6 @@ public class GzipStringSerializer extends AbstractSerializer<String> {
 
     @Override
     public String getString(ByteBuffer byteBuffer) {
-        try {
-            return UTF8Type.instance.getString(byteBuffer);
-        } finally {
-            if (byteBuffer != null)
-                byteBuffer.rewind();
-        }
+        return UTF8Type.instance.getString(byteBuffer);
     }
 }

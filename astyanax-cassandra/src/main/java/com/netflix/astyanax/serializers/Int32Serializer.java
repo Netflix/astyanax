@@ -3,10 +3,11 @@ package com.netflix.astyanax.serializers;
 import java.nio.ByteBuffer;
 
 /**
- * Same as IntegerSerializer but more explicitly linked with Int32Type cmparator 
- * in cassandra.  
+ * Same as IntegerSerializer but more explicitly linked with Int32Type cmparator
+ * in cassandra.
+ * 
  * @author elandau
- *
+ * 
  */
 public class Int32Serializer extends AbstractSerializer<Integer> {
 
@@ -29,17 +30,12 @@ public class Int32Serializer extends AbstractSerializer<Integer> {
 
     @Override
     public Integer fromByteBuffer(ByteBuffer byteBuffer) {
-        try {
-            if ((byteBuffer == null) || (byteBuffer.remaining() != 4)) {
-                return null;
-            }
-            int in = byteBuffer.getInt();
-            byteBuffer.rewind();
-            return in;
-        } finally {
-            if (byteBuffer != null)
-                byteBuffer.rewind();
+        if ((byteBuffer == null) || (byteBuffer.remaining() != 4)) {
+            return null;
         }
+        ByteBuffer dup = byteBuffer.duplicate();
+        int in = dup.getInt();
+        return in;
     }
 
     @Override
@@ -59,26 +55,16 @@ public class Int32Serializer extends AbstractSerializer<Integer> {
 
     @Override
     public String getString(ByteBuffer byteBuffer) {
-        try {
-            return Integer.toString(fromByteBuffer(byteBuffer));
-        } finally {
-            if (byteBuffer != null)
-                byteBuffer.rewind();
-        }
+        return Integer.toString(fromByteBuffer(byteBuffer));
     }
 
     @Override
     public ByteBuffer getNext(ByteBuffer byteBuffer) {
-        try {
-            Integer val = fromByteBuffer(byteBuffer.duplicate());
-            if (val == Integer.MAX_VALUE) {
-                throw new ArithmeticException("Can't paginate past max int");
-            }
-            return toByteBuffer(val + 1);
-        } finally {
-            if (byteBuffer != null)
-                byteBuffer.rewind();
+        Integer val = fromByteBuffer(byteBuffer.duplicate());
+        if (val == Integer.MAX_VALUE) {
+            throw new ArithmeticException("Can't paginate past max int");
         }
+        return toByteBuffer(val + 1);
     }
 
     public ComparatorType getComparatorType() {

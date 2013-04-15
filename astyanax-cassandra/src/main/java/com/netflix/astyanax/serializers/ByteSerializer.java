@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 import org.apache.cassandra.db.marshal.IntegerType;
 
 public class ByteSerializer extends AbstractSerializer<Byte> {
-	
+
     private static final ByteSerializer instance = new ByteSerializer();
 
     public static ByteSerializer get() {
@@ -25,16 +25,12 @@ public class ByteSerializer extends AbstractSerializer<Byte> {
 
     @Override
     public Byte fromByteBuffer(ByteBuffer byteBuffer) {
-        try {
-            if (byteBuffer == null) {
-                return null;
-            }
-            byte in = byteBuffer.get();
-            return in;
-        } finally {
-            if (byteBuffer != null)
-                byteBuffer.rewind();
+        if (byteBuffer == null) {
+            return null;
         }
+        ByteBuffer dup = byteBuffer.duplicate();
+        byte in = dup.get();
+        return in;
     }
 
     @Override
@@ -45,27 +41,17 @@ public class ByteSerializer extends AbstractSerializer<Byte> {
 
     @Override
     public String getString(ByteBuffer byteBuffer) {
-        try {
-            return IntegerType.instance.getString(byteBuffer);
-        } finally {
-            if (byteBuffer != null)
-                byteBuffer.rewind();
-        }
+        return IntegerType.instance.getString(byteBuffer);
     }
 
     @Override
     public ByteBuffer getNext(ByteBuffer byteBuffer) {
-        try {
-            Byte val = fromByteBuffer(byteBuffer.duplicate());
-            if (val == Byte.MAX_VALUE) {
-                throw new ArithmeticException("Can't paginate past max byte");
-            }
-            val++;
-            return toByteBuffer(val);
-        } finally {
-            if (byteBuffer != null)
-                byteBuffer.rewind();
+        Byte val = fromByteBuffer(byteBuffer.duplicate());
+        if (val == Byte.MAX_VALUE) {
+            throw new ArithmeticException("Can't paginate past max byte");
         }
+        val++;
+        return toByteBuffer(val);
     }
-    
+
 }

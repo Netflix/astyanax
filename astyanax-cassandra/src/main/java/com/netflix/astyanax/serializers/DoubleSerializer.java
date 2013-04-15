@@ -19,18 +19,17 @@ public class DoubleSerializer extends AbstractSerializer<Double> {
 
     @Override
     public ByteBuffer toByteBuffer(Double obj) {
-        return LongSerializer.get().toByteBuffer(Double.doubleToRawLongBits(obj));
+        return LongSerializer.get().toByteBuffer(
+                Double.doubleToRawLongBits(obj));
     }
 
     @Override
     public Double fromByteBuffer(ByteBuffer bytes) {
-        try {
-            return Double.longBitsToDouble(LongSerializer.get().fromByteBuffer(
-                    bytes));
-        } finally {
-            if (bytes != null)
-                bytes.rewind();
-        }
+        if (bytes == null)
+            return null;
+        ByteBuffer dup = bytes.duplicate();
+        return Double
+                .longBitsToDouble(LongSerializer.get().fromByteBuffer(dup));
     }
 
     @Override
@@ -40,26 +39,16 @@ public class DoubleSerializer extends AbstractSerializer<Double> {
 
     @Override
     public String getString(ByteBuffer byteBuffer) {
-        try {
-            return DoubleType.instance.getString(byteBuffer);
-        } finally {
-            if (byteBuffer != null)
-                byteBuffer.rewind();
-        }
+        return DoubleType.instance.getString(byteBuffer);
     }
 
     @Override
     public ByteBuffer getNext(ByteBuffer byteBuffer) {
-        try {
-            double val = fromByteBuffer(byteBuffer.duplicate());
-            if (val == Double.MAX_VALUE) {
-                throw new ArithmeticException("Can't paginate past max double");
-            }
-            return toByteBuffer(val + Double.MIN_VALUE);
-        } finally {
-            if (byteBuffer != null)
-                byteBuffer.rewind();
+        double val = fromByteBuffer(byteBuffer.duplicate());
+        if (val == Double.MAX_VALUE) {
+            throw new ArithmeticException("Can't paginate past max double");
         }
+        return toByteBuffer(val + Double.MIN_VALUE);
     }
 
     @Override

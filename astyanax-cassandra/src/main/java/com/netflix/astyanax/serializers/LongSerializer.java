@@ -28,19 +28,16 @@ public final class LongSerializer extends AbstractSerializer<Long> {
 
     @Override
     public Long fromByteBuffer(ByteBuffer byteBuffer) {
-        try {
-            if (byteBuffer == null) {
-                return null;
-            } else if (byteBuffer.remaining() == 8) {
-                return byteBuffer.getLong();
-            } else if (byteBuffer.remaining() == 4) {
-                return (long) byteBuffer.getInt();
-            }
+        if (byteBuffer == null)
             return null;
-        } finally {
-            if (byteBuffer != null)
-                byteBuffer.rewind();
+        ByteBuffer dup = byteBuffer.duplicate();
+        if (dup.remaining() == 8) {
+            long l = dup.getLong();
+            return l;
+        } else if (dup.remaining() == 4) {
+            return (long) dup.getInt();
         }
+        return null;
     }
 
     @Override
@@ -52,28 +49,18 @@ public final class LongSerializer extends AbstractSerializer<Long> {
     public ByteBuffer fromString(String str) {
         return LongType.instance.fromString(str);
     }
-    
+
     @Override
     public String getString(ByteBuffer byteBuffer) {
-        try {
-            return LongType.instance.getString(byteBuffer);
-        } finally {
-            if (byteBuffer != null)
-                byteBuffer.rewind();
-        }
+        return LongType.instance.getString(byteBuffer);
     }
 
     @Override
     public ByteBuffer getNext(ByteBuffer byteBuffer) {
-        try {
-            Long val = fromByteBuffer(byteBuffer.duplicate());
-            if (val == Long.MAX_VALUE) {
-                throw new ArithmeticException("Can't paginate past max long");
-            }
-            return toByteBuffer(val + 1);
-        } finally {
-            if (byteBuffer != null)
-                byteBuffer.rewind();
+        Long val = fromByteBuffer(byteBuffer.duplicate());
+        if (val == Long.MAX_VALUE) {
+            throw new ArithmeticException("Can't paginate past max long");
         }
+        return toByteBuffer(val + 1);
     }
 }

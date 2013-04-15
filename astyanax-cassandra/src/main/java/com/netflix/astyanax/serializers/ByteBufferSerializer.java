@@ -26,15 +26,10 @@ public final class ByteBufferSerializer extends AbstractSerializer<ByteBuffer> {
 
     @Override
     public ByteBuffer fromByteBuffer(ByteBuffer bytes) {
-        try {
-            if (bytes == null) {
-                return null;
-            }
-            return bytes.duplicate();
-        } finally {
-            if (bytes != null)
-                bytes.rewind();
+        if (bytes == null) {
+            return null;
         }
+        return bytes.duplicate();
     }
 
     @Override
@@ -72,11 +67,6 @@ public final class ByteBufferSerializer extends AbstractSerializer<ByteBuffer> {
 
     @Override
     public String getString(ByteBuffer byteBuffer) {
-        try {
-            return BytesType.instance.getString(byteBuffer);
-        } finally {
-            if (byteBuffer != null)
-                byteBuffer.rewind();
-        }
+        return BytesType.instance.getString(byteBuffer);
     }
 }

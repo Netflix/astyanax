@@ -29,16 +29,12 @@ public final class ShortSerializer extends AbstractSerializer<Short> {
 
     @Override
     public Short fromByteBuffer(ByteBuffer byteBuffer) {
-        try {
-            if (byteBuffer == null) {
-                return null;
-            }
-            short in = byteBuffer.getShort();
-            return in;
-        } finally {
-            if (byteBuffer != null)
-                byteBuffer.rewind();
+        if (byteBuffer == null) {
+            return null;
         }
+        ByteBuffer dup = byteBuffer.duplicate();
+        short in = dup.getShort();
+        return in;
     }
 
     @Override
@@ -49,26 +45,16 @@ public final class ShortSerializer extends AbstractSerializer<Short> {
 
     @Override
     public String getString(ByteBuffer byteBuffer) {
-        try {
-            return IntegerType.instance.getString(byteBuffer);
-        } finally {
-            if (byteBuffer != null)
-                byteBuffer.rewind();
-        }
+        return IntegerType.instance.getString(byteBuffer);
     }
 
     @Override
     public ByteBuffer getNext(ByteBuffer byteBuffer) {
-        try {
-            Short val = fromByteBuffer(byteBuffer.duplicate());
-            if (val == Short.MAX_VALUE) {
-                throw new ArithmeticException("Can't paginate past max short");
-            }
-            val++;
-            return toByteBuffer(val);
-        } finally {
-            if (byteBuffer != null)
-                byteBuffer.rewind();
+        Short val = fromByteBuffer(byteBuffer.duplicate());
+        if (val == Short.MAX_VALUE) {
+            throw new ArithmeticException("Can't paginate past max short");
         }
+        val++;
+        return toByteBuffer(val);
     }
 }

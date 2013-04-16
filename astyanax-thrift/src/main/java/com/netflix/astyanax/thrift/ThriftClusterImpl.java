@@ -495,7 +495,7 @@ public class ThriftClusterImpl implements Cluster {
         KeyspaceDefinition ksDef = this.describeKeyspace(keyspace);
         ColumnFamilyDefinition cfDef = ksDef.getColumnFamily(columnFamily);
         if (cfDef == null)
-            throw new NotFoundException(String.format("Column family '%s' in keyspace '%s' not found", keyspace, columnFamily));
+            throw new NotFoundException(String.format("Column family '%s' in keyspace '%s' not found", columnFamily, keyspace));
         
         Properties props = new Properties();
         ThriftColumnFamilyDefinitionImpl thriftCfDef = (ThriftColumnFamilyDefinitionImpl)cfDef;

@@ -51,23 +51,21 @@ public class PrefixedSerializer<P, S> extends AbstractSerializer<S> {
 
     @Override
     public S fromByteBuffer(ByteBuffer bytes) throws SerializationException {
-        if ((bytes == null) || !bytes.hasArray()) {
-            return null;
-        }
-
-        bytes = bytes.duplicate();
-        bytes.rewind();
-
-        if (compareByteArrays(prefixBytes.array(), prefixBytes.arrayOffset() + prefixBytes.position(),
-                prefixBytes.remaining(), bytes.array(), bytes.arrayOffset() + bytes.position(), prefixBytes.remaining()) != 0) {
-            log.error("Unprefixed value received, throwing exception...");
-            throw new SerializationException("Unexpected prefix value");
-        }
-        bytes.position(prefixBytes.remaining());
-
-        S s = suffixSerializer.fromByteBuffer(bytes);
-        return s;
-    }
+            if ((bytes == null) || !bytes.hasArray()) {
+                return null;
+            }
+            ByteBuffer dup = bytes.duplicate();
+            if (compareByteArrays(prefixBytes.array(),
+                    prefixBytes.arrayOffset() + prefixBytes.position(),
+                    prefixBytes.remaining(), dup.array(), dup.arrayOffset()
+                            + dup.position(), prefixBytes.remaining()) != 0) {
+                log.error("Unprefixed value received, throwing exception...");
+                throw new SerializationException("Unexpected prefix value");
+            }
+            dup.position(prefixBytes.remaining());
+            S s = suffixSerializer.fromByteBuffer(dup);
+            return s;
+     }
 
     @Override
     public List<S> fromBytesList(List<ByteBuffer> list) {

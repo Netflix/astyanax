@@ -3,10 +3,11 @@ package com.netflix.astyanax.serializers;
 import java.nio.ByteBuffer;
 
 /**
- * Same as IntegerSerializer but more explicitly linked with Int32Type cmparator 
- * in cassandra.  
+ * Same as IntegerSerializer but more explicitly linked with Int32Type cmparator
+ * in cassandra.
+ * 
  * @author elandau
- *
+ * 
  */
 public class Int32Serializer extends AbstractSerializer<Integer> {
 
@@ -32,8 +33,8 @@ public class Int32Serializer extends AbstractSerializer<Integer> {
         if ((byteBuffer == null) || (byteBuffer.remaining() != 4)) {
             return null;
         }
-        int in = byteBuffer.getInt();
-        byteBuffer.rewind();
+        ByteBuffer dup = byteBuffer.duplicate();
+        int in = dup.getInt();
         return in;
     }
 

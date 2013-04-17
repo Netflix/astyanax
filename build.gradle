@@ -11,7 +11,6 @@ allprojects {
 }
 
 apply plugin: 'idea'
-apply plugin: 'eclipse'
 apply plugin: 'osgi'
 
 apply from: file('gradle/convention.gradle')
@@ -22,6 +21,9 @@ apply from: file('gradle/release.gradle')
 apply from: file('gradle/dependency-versions.gradle')
 
 subprojects {
+
+    apply plugin: 'eclipse'
+
     group = "com.netflix.${githubProjectName}"
     dependencies {
         compile "joda-time:joda-time:$jodaTimeVersion"

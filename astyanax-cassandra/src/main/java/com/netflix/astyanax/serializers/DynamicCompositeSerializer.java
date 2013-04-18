@@ -8,7 +8,8 @@ import com.netflix.astyanax.model.DynamicComposite;
  * @author Todd Nine
  * 
  */
-public class DynamicCompositeSerializer extends AbstractSerializer<DynamicComposite> {
+public class DynamicCompositeSerializer extends
+        AbstractSerializer<DynamicComposite> {
     private static final DynamicCompositeSerializer instance = new DynamicCompositeSerializer();
 
     public static DynamicCompositeSerializer get() {
@@ -22,8 +23,11 @@ public class DynamicCompositeSerializer extends AbstractSerializer<DynamicCompos
 
     @Override
     public DynamicComposite fromByteBuffer(ByteBuffer byteBuffer) {
+        if (byteBuffer == null)
+            return null;
+        ByteBuffer dup = byteBuffer.duplicate();
         DynamicComposite composite = new DynamicComposite();
-        composite.deserialize(byteBuffer);
+        composite.deserialize(dup);
         return composite;
     }
 
@@ -44,6 +48,7 @@ public class DynamicCompositeSerializer extends AbstractSerializer<DynamicCompos
 
     @Override
     public ByteBuffer getNext(ByteBuffer byteBuffer) {
-        throw new IllegalStateException("DynamicComposite columns can't be paginated this way.");
+        throw new IllegalStateException(
+                "DynamicComposite columns can't be paginated this way.");
     }
 }

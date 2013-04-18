@@ -43,7 +43,8 @@ public class UUIDSerializer extends AbstractSerializer<UUID> {
         if (bytes == null) {
             return null;
         }
-        return new UUID(bytes.getLong(), bytes.getLong());
+        ByteBuffer dup = bytes.duplicate();
+        return new UUID(dup.getLong(), dup.getLong());
     }
 
     @Override

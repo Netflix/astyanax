@@ -18,6 +18,7 @@ package com.netflix.astyanax.ddl;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 public interface KeyspaceDefinition {
 
@@ -54,4 +55,18 @@ public interface KeyspaceDefinition {
     Collection<FieldMetadata> getFieldsMetadata();
 
     void setFields(Map<String, Object> options);
+
+    /**
+     * Return the entire keyspace defintion as a set of flattened properties
+     * @return
+     * @throws Exception 
+     */
+    Properties getProperties() throws Exception;
+
+    /**
+     * Populate the definition from a set of properties
+     * @param data
+     * @throws Exception 
+     */
+    void setProperties(Properties props) throws Exception;
 }

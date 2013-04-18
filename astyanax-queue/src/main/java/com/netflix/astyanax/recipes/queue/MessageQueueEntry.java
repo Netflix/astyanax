@@ -76,7 +76,7 @@ public class MessageQueueEntry {
     }
     
     public static MessageQueueEntry newMetadataEntry() {
-        return new MessageQueueEntry(MessageQueueEntryType.Metadata, (byte)0, null, null, MessageQueueEntryState.None);
+        return new MessageQueueEntry(MessageQueueEntryType.Metadata, (byte)0, null, TimeUUIDUtils.getMicrosTimeUUID(0), MessageQueueEntryState.None);
     }
     
     public static MessageQueueEntry newMessageEntry(byte priority, UUID timestamp, MessageQueueEntryState state) {
@@ -85,6 +85,11 @@ public class MessageQueueEntry {
     
     public static MessageQueueEntry newBusyEntry(Message message) {
         return new MessageQueueEntry(MessageQueueEntryType.Message, (byte)message.getPriority(), message.getToken(), message.getRandom(), MessageQueueEntryState.Busy);
+    }
+    
+    public static MessageQueueEntry fromMetadata(MessageMetadataEntry meta) {
+        String parts[] = StringUtils.split(meta.getName(), "$");
+        return new MessageQueueEntry(parts[1]);
     }
 
     public MessageQueueEntryType getType() {
@@ -95,7 +100,7 @@ public class MessageQueueEntry {
         return timestamp;
     }
     
-    public long getTimetsamp(TimeUnit units) {
+    public long getTimestamp(TimeUnit units) {
         return units.convert(TimeUUIDUtils.getMicrosTimeFromUUID(timestamp), TimeUnit.MICROSECONDS);
     }
 

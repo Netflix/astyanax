@@ -135,7 +135,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     public static final RetryPolicy      DEFAULT_RETRY_POLICY            = RunOnce.get();
     public static final long             DEFAULT_LOCK_TIMEOUT            = TimeUnit.MICROSECONDS.convert(30,  TimeUnit.SECONDS);
     public static final Integer          DEFAULT_LOCK_TTL                = (int)TimeUnit.SECONDS.convert(2,   TimeUnit.MINUTES);
-    public static final Integer          DEFAULT_METADATA_DELETE_TTL     = (int)TimeUnit.SECONDS.convert(2,   TimeUnit.MINUTES);
+    public static final Integer          DEFAULT_METADATA_DELETE_TTL     = (int)TimeUnit.SECONDS.convert(2,  TimeUnit.SECONDS);
     public static final Boolean          DEFAULT_POISON_QUEUE_ENABLED    = false;
     public static final String           DEFAULT_QUEUE_SUFFIX            = "_queue";
     public static final String           DEFAULT_METADATA_SUFFIX         = "_metadata";
@@ -781,6 +781,8 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     
                     if (timeoutTime != 0 && System.currentTimeMillis() > timeoutTime) 
                         return Lists.newLinkedList();
+                    
+                    Thread.sleep(settings.getPollInterval());
                 }
             }
             
@@ -966,18 +968,42 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                                                     .execute()
                                                     .getResult();
                                                 
-                                                MessageMetadataEntry thisMessageMetadata = null;
-                                                for (Column<MessageMetadataEntry> pendingMessageEntry : columns) {
-                                                    if (pendingMessageEntry.getTtl() == 0) {
-                                                        if (thisMessageMetadata != null) {
-                                                            LOG.warn("Need to discard : " + entry.getMessageId() + " => " + pendingMessageEntry.getName() + " ttl=" + pendingMessageEntry.getTtl());
-                                                            m.withRow(keyIndexColumnFamily, getCompositeKey(settings.getQueueName(), message.getKey()))
-                                                             .putEmptyColumn(thisMessageMetadata, metadataDeleteTTL);
-                                                            throw new DuplicateMessageException("Duplicate trigger for " + messageId);
+                                                MessageMetadataEntry mostRecentMessageMetadata = null;
+                                                long mostRecentTriggerTime = 0;
+                                                for (Column<MessageMetadataEntry> currMessageEntry : columns) {
+                                                    MessageQueueEntry pendingMessageEntry = MessageQueueEntry.fromMetadata(currMessageEntry.getName());
+                                                    if (currMessageEntry.getTtl() == 0) {
+                                                        long currMessageTriggerTime = pendingMessageEntry.getTimestamp(TimeUnit.MICROSECONDS);
+                                                        
+                                                        // First message we found, so treat as the most recent
+                                                        if (mostRecentMessageMetadata == null) {
+                                                            mostRecentMessageMetadata = currMessageEntry.getName();
+                                                            mostRecentTriggerTime     = currMessageTriggerTime;
                                                         }
-                                                        else if (pendingMessageEntry.getName().getName().endsWith(entry.getMessageId())) {
-                                                            thisMessageMetadata = pendingMessageEntry.getName();
+                                                        // This is a duplicate
+                                                        else {
+                                                            // This message's trigger time is after what we thought was the most recent.
+                                                            // Discard the previous 'most' recent and accept this one instead
+                                                            if (currMessageTriggerTime > mostRecentTriggerTime) {
+                                                                LOG.warn("Need to discard : " + entry.getMessageId() + " => " + mostRecentMessageMetadata.getName());
+                                                                m.withRow(keyIndexColumnFamily, getCompositeKey(settings.getQueueName(), message.getKey()))
+                                                                 .putEmptyColumn(mostRecentMessageMetadata, metadataDeleteTTL);
+                                                                
+                                                                mostRecentTriggerTime     = currMessageTriggerTime;
+                                                                mostRecentMessageMetadata = currMessageEntry.getName();
+                                                            }
+                                                            else {
+                                                                LOG.warn("Need to discard : " + entry.getMessageId() + " => " + currMessageEntry.getName());
+                                                                m.withRow(keyIndexColumnFamily, getCompositeKey(settings.getQueueName(), message.getKey()))
+                                                               .putEmptyColumn(currMessageEntry.getName(), metadataDeleteTTL);
+                                                            }
                                                         }
+                                                    }
+                                                }
+
+                                                if (mostRecentMessageMetadata != null) {
+                                                    if (!mostRecentMessageMetadata.getName().endsWith(entry.getMessageId())) {
+                                                        throw new DuplicateMessageException("Duplicate trigger for " + messageId);
                                                     }
                                                 }
                                             } catch (NotFoundException e) {

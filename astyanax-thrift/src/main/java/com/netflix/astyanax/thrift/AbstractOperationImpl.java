@@ -27,7 +27,7 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 
 public abstract class AbstractOperationImpl<R> implements Operation<Cassandra.Client, R> {
     private final CassandraOperationTracer tracer;
-    private final Host pinnedHost;
+    private Host pinnedHost;
 
     public AbstractOperationImpl(CassandraOperationTracer tracer, Host host) {
         this.tracer = tracer;
@@ -39,6 +39,10 @@ public abstract class AbstractOperationImpl<R> implements Operation<Cassandra.Cl
         this.pinnedHost = null;
     }
 
+    public void setPinnedHost(Host host) {
+        this.pinnedHost = host;
+    }
+    
     @Override
     public ByteBuffer getRowKey() {
         return null;

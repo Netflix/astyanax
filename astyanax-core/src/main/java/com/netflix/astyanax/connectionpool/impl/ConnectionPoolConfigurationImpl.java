@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
+import org.apache.commons.lang.builder.ToStringBuilder;
+
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.netflix.astyanax.AuthenticationCredentials;
@@ -35,7 +37,6 @@ import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.shallows.EmptyBadHostDetectorImpl;
 import com.netflix.astyanax.shallows.EmptyLatencyScoreStrategyImpl;
 import com.netflix.astyanax.shallows.EmptyOperationFilterFactory;
-import com.netflix.astyanax.util.StringUtils;
 
 public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfiguration {
     /**
@@ -529,7 +530,7 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     }
 
     public String toString() {
-        return StringUtils.joinClassGettersValues(this, "CpConfig", ConnectionPoolConfigurationImpl.class);
+        return ToStringBuilder.reflectionToString(this);
     }
 
     @Override

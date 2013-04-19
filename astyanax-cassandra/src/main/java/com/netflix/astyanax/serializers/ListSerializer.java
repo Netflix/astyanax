@@ -29,7 +29,9 @@ public class ListSerializer<T> extends AbstractSerializer<List<T>> {
 
     @Override
     public List<T> fromByteBuffer(ByteBuffer arg0) {
-        return arg0 == null ? null : myList.compose(arg0);
+        if (arg0 ==  null) return null;
+        ByteBuffer dup = arg0.duplicate();
+        return myList.compose(dup);
     }
 
     @Override

@@ -28,14 +28,14 @@ public final class LongSerializer extends AbstractSerializer<Long> {
 
     @Override
     public Long fromByteBuffer(ByteBuffer byteBuffer) {
-        if (byteBuffer == null) {
+        if (byteBuffer == null)
             return null;
-        }
-        else if (byteBuffer.remaining() == 8) {
-            return byteBuffer.getLong();
-        }
-        else if (byteBuffer.remaining() == 4) {
-            return (long) byteBuffer.getInt();
+        ByteBuffer dup = byteBuffer.duplicate();
+        if (dup.remaining() == 8) {
+            long l = dup.getLong();
+            return l;
+        } else if (dup.remaining() == 4) {
+            return (long) dup.getInt();
         }
         return null;
     }
@@ -49,7 +49,7 @@ public final class LongSerializer extends AbstractSerializer<Long> {
     public ByteBuffer fromString(String str) {
         return LongType.instance.fromString(str);
     }
-    
+
     @Override
     public String getString(ByteBuffer byteBuffer) {
         return LongType.instance.getString(byteBuffer);

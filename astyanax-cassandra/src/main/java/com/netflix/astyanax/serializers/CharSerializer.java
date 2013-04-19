@@ -33,7 +33,8 @@ public class CharSerializer extends AbstractSerializer<Character> {
         if (bytes == null) {
             return null;
         }
-        return bytes.getChar();
+        ByteBuffer dup = bytes.duplicate();
+        return dup.getChar();
     }
 
     @Override

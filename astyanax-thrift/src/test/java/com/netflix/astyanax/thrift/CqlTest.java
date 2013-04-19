@@ -264,8 +264,7 @@ public class CqlTest {
                 .withCql(
                         "CREATE TABLE uuidtest (id UUID PRIMARY KEY, given text, surname text);")
                 .execute();
-        OperationResult<CqlResult<UUID, String>> res1 = keyspace
-                .prepareQuery(UUID_CF)
+        keyspace.prepareCqlStatement()
                 .withCql(
                         "INSERT INTO uuidtest (id, given, surname) VALUES (00000000-0000-0000-0000-000000000000, 'x', 'arielle');")
                 .execute();
@@ -292,7 +291,8 @@ public class CqlTest {
                     String val = col.getValue(StringSerializer.get());
                     Log.info("columnname=  " + name + "  columnvalue= " + val);
                     Assert.assertEquals("arielle", val);
-                }            }
+                }
+            }
             Log.info("*************************************");
         }
         Assert.assertEquals(1, rows.size());
@@ -304,8 +304,7 @@ public class CqlTest {
                 .withCql(
                         "CREATE TABLE uuidtest (id UUID PRIMARY KEY, given text, surname text);")
                 .execute();
-        OperationResult<CqlResult<UUID, String>> res1 = keyspace
-                .prepareQuery(UUID_CF)
+        keyspace.prepareCqlStatement()
                 .withCql(
                         "INSERT INTO uuidtest (id, given, surname) VALUES (00000000-0000-0000-0000-000000000000, 'x', 'arielle');")
                 .execute();
@@ -330,7 +329,8 @@ public class CqlTest {
                 }
                 if (name.equals("given")) {
                     String val = col.getValue(StringSerializer.get());
-                    Log.info("columnname=  " + name + "  columnvalue= " + val.toString());
+                    Log.info("columnname=  " + name + "  columnvalue= "
+                            + val.toString());
                     Assert.assertEquals("x", val);
                 }
                 if (name.equals("surname")) {

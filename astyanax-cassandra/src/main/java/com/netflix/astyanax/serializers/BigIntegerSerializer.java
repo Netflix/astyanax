@@ -19,13 +19,14 @@ public final class BigIntegerSerializer extends AbstractSerializer<BigInteger> {
     }
 
     @Override
-    public BigInteger fromByteBuffer(ByteBuffer byteBuffer) {
+    public BigInteger fromByteBuffer(final ByteBuffer byteBuffer) {
         if (byteBuffer == null) {
             return null;
         }
-        int length = byteBuffer.remaining();
+        ByteBuffer dup = byteBuffer.duplicate();
+        int length = dup.remaining();
         byte[] bytes = new byte[length];
-        byteBuffer.duplicate().get(bytes);
+        dup.get(bytes);
         return new BigInteger(bytes);
     }
 
@@ -53,7 +54,9 @@ public final class BigIntegerSerializer extends AbstractSerializer<BigInteger> {
     }
 
     @Override
-    public ByteBuffer getNext(ByteBuffer byteBuffer) {
+    public ByteBuffer getNext(final ByteBuffer byteBuffer) {
+        if (byteBuffer == null)
+            return null;
         BigInteger bigint = fromByteBuffer(byteBuffer.duplicate());
         bigint = bigint.add(new BigInteger("1"));
         return toByteBuffer(bigint);

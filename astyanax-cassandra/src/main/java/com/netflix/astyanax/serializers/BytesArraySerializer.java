@@ -46,6 +46,7 @@ public final class BytesArraySerializer extends AbstractSerializer<byte[]> imple
 
     @Override
     public String getString(ByteBuffer byteBuffer) {
-            return BytesType.instance.getString(byteBuffer);
+	    if (byteBuffer == null) return null;
+            return BytesType.instance.getString(byteBuffer.duplicate());
     }
 }

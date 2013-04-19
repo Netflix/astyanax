@@ -52,6 +52,6 @@ public final class AsciiSerializer extends AbstractSerializer<String> {
     public String getString(final ByteBuffer byteBuffer) {
         if (byteBuffer == null)
             return null;
-        return AsciiType.instance.getString(byteBuffer);
+        return AsciiType.instance.getString(byteBuffer.duplicate());
     }
 }

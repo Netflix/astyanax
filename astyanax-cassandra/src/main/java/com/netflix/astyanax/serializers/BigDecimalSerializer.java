@@ -40,7 +40,7 @@ public class BigDecimalSerializer extends AbstractSerializer<BigDecimal> {
     public String getString(final ByteBuffer byteBuffer) {
         if (byteBuffer == null)
             return null;
-        return DecimalType.instance.getString(byteBuffer);
+        return DecimalType.instance.getString(byteBuffer.duplicate());
     }
 
     @Override

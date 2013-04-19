@@ -18,11 +18,11 @@ package com.netflix.astyanax.retry;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
 public class RetryNTimes implements RetryPolicy {
-    private final int max;
+    private final int maxAttemptCount;
     private int attempts;
 
-    public RetryNTimes(int max) {
-        this.max = max;
+    public RetryNTimes(int maxAttemptCount) {
+        this.maxAttemptCount = maxAttemptCount;
         this.attempts = 0;
     }
 
@@ -41,7 +41,7 @@ public class RetryNTimes implements RetryPolicy {
 
     @Override
     public boolean allowRetry() {
-        if (max == -1 || attempts < max) {
+        if (maxAttemptCount == -1 || attempts < maxAttemptCount) {
             attempts++;
             return true;
         }
@@ -53,9 +53,13 @@ public class RetryNTimes implements RetryPolicy {
         return attempts;
     }
 
+    public int getMaxAttemptCount() {
+        return maxAttemptCount;
+    }
+
     @Override
     public RetryPolicy duplicate() {
-        return new RetryNTimes(max);
+        return new RetryNTimes(maxAttemptCount);
     }
 
     public String toString() {

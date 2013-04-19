@@ -16,11 +16,11 @@ public class Slf4jConnectionPoolMonitorImpl extends CountingConnectionPoolMonito
     public void incOperationFailure(Host host, Exception reason) {
         if (reason instanceof NotFoundException) {
             // Ignore this
-            return;
         }
-
+        else {
+            LOG.warn(reason.getMessage());
+        }
         super.incOperationFailure(host, reason);
-        LOG.warn(reason.getMessage());
     }
 
     @Override

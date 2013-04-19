@@ -48,6 +48,9 @@ public class BoundedExponentialBackoff extends ExponentialBackoff {
         return new BoundedExponentialBackoff(getBaseSleepTimeMs(), maxSleepTimeMs, getMaxAttemptCount());
     }
 
+    public int getMaxSleepTimeMs() {
+        return maxSleepTimeMs;
+    }
 
     public String toString() {
         return ToStringBuilder.reflectionToString(this);

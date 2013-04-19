@@ -33,13 +33,13 @@ public final class IntegerSerializer extends AbstractSerializer<Integer> {
 
     @Override
     public Integer fromByteBuffer(ByteBuffer byteBuffer) {
-            if ((byteBuffer == null) || (byteBuffer.remaining() != 4)) {
-                return null;
-            }
-            ByteBuffer dup = byteBuffer.duplicate();
-            int in = dup.getInt();
-            return in;
-            }
+        if ((byteBuffer == null) || (byteBuffer.remaining() != 4)) {
+            return null;
+        }
+        ByteBuffer dup = byteBuffer.duplicate();
+        int in = dup.getInt();
+        return in;
+    }
 
     @Override
     public Integer fromBytes(byte[] bytes) {

@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 import org.apache.cassandra.db.marshal.IntegerType;
 
 public class ByteSerializer extends AbstractSerializer<Byte> {
-	
+
     private static final ByteSerializer instance = new ByteSerializer();
 
     public static ByteSerializer get() {
@@ -28,7 +28,8 @@ public class ByteSerializer extends AbstractSerializer<Byte> {
         if (byteBuffer == null) {
             return null;
         }
-        byte in = byteBuffer.get();
+        ByteBuffer dup = byteBuffer.duplicate();
+        byte in = dup.get();
         return in;
     }
 
@@ -52,5 +53,5 @@ public class ByteSerializer extends AbstractSerializer<Byte> {
         val++;
         return toByteBuffer(val);
     }
-    
+
 }

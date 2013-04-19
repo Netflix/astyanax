@@ -35,7 +35,8 @@ public final class DateSerializer extends AbstractSerializer<Date> {
         if (bytes == null) {
             return null;
         }
-        return new Date(LONG_SERIALIZER.fromByteBuffer(bytes));
+        ByteBuffer dup = bytes.duplicate();
+        return new Date(LONG_SERIALIZER.fromByteBuffer(dup));
     }
 
     @Override

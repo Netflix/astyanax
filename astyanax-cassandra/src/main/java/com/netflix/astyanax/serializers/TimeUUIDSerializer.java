@@ -30,7 +30,9 @@ public class TimeUUIDSerializer extends UUIDSerializer {
 
     @Override
     public String getString(ByteBuffer byteBuffer) {
-        long micros = TimeUUIDUtils.getMicrosTimeFromUUID(this.fromByteBuffer(byteBuffer.duplicate()));
+        if (byteBuffer == null) return null;
+        ByteBuffer dup = byteBuffer.duplicate();
+        long micros = TimeUUIDUtils.getMicrosTimeFromUUID(this.fromByteBuffer(dup));
         return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").format(new Date(micros / 1000));
     }
 

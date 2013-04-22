@@ -16,5 +16,4 @@ ext {
  snappyVersion = "1.0.4.1"
  jpaVersion = "1.0"
  nettyVersion = "3.2.4.Final"
- commonsIOVersion = "2.1"
 }

@@ -12,7 +12,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Properties;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -23,9 +22,10 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import junit.framework.Assert;
 
-import org.apache.cassandra.thrift.KsDef;
+import org.apache.cassandra.db.marshal.UTF8Type;
 import org.apache.cassandra.utils.Pair;
 import org.apache.commons.lang.RandomStringUtils;
+import org.codehaus.jackson.impl.Utf8Generator;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -36,7 +36,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Cluster;
@@ -51,13 +50,13 @@ import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.TokenRange;
-import com.netflix.astyanax.connectionpool.exceptions.BadRequestException;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
 import com.netflix.astyanax.cql.CqlStatementResult;
+import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.FieldMetadata;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
@@ -88,6 +87,7 @@ import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.TimeUUIDSerializer;
 import com.netflix.astyanax.serializers.UnknownComparatorException;
 import com.netflix.astyanax.test.SessionEvent;
+import com.netflix.astyanax.thrift.ddl.ThriftColumnFamilyDefinitionImpl;
 import com.netflix.astyanax.util.ColumnarRecordWriter;
 import com.netflix.astyanax.util.CsvColumnReader;
 import com.netflix.astyanax.util.CsvRecordReader;
@@ -104,6 +104,9 @@ public class ThriftKeyspaceImplTest {
 
     private static Keyspace                  keyspace;
     private static AstyanaxContext<Keyspace> keyspaceContext;
+
+    private static String TEST_CLUSTER_NAME  = "cass_sandbox";
+    private static String TEST_KEYSPACE_NAME = "AstyanaxUnitTests";
 
     private static ColumnFamily<String, String> CF_USER_INFO = ColumnFamily.newColumnFamily(
             "UserInfo", // Column Family Name
@@ -197,12 +200,21 @@ public class ThriftKeyspaceImplTest {
     public static ColumnFamily<String, SessionEvent> CF_CLICK_STREAM = ColumnFamily
             .newColumnFamily("ClickStream", StringSerializer.get(),
                     SE_SERIALIZER);
+    public static ColumnFamily<String, String> CF_INDEX_POST = ColumnFamily
+            .newColumnFamily(
+                    "Indexpost", 
+                    StringSerializer.get(),
+                    StringSerializer.get());
 
     private static final String SEEDS = "localhost:9160";
-    private static final long   CASSANDRA_WAIT_TIME = 3000;
-    private static String TEST_CLUSTER_NAME  = "cass_sandbox";
-    private static String TEST_KEYSPACE_NAME = "AstyanaxUnitTests";
 
+    private static final long   CASSANDRA_WAIT_TIME = 3000;
+
+    private static final ColumnFamily<String, MockCompositeType> CF_COMPOSITE_PREF = ColumnFamily
+            .newColumnFamily(
+                    "CompositeColumnPref", 
+                    StringSerializer.get(),
+                    M_SERIALIZER);
     
     @BeforeClass
     public static void setup() throws Exception {
@@ -230,7 +242,7 @@ public class ThriftKeyspaceImplTest {
                 .withAstyanaxConfiguration(
                         new AstyanaxConfigurationImpl()
                                 .setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
-                                .setConnectionPoolType(ConnectionPoolType.ROUND_ROBIN)
+                                .setConnectionPoolType(ConnectionPoolType.TOKEN_AWARE)
                                 .setDiscoveryDelayInSeconds(60000))
                 .withConnectionPoolConfiguration(
                         new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME
@@ -246,7 +258,7 @@ public class ThriftKeyspaceImplTest {
 
         keyspaceContext.start();
         
-        keyspace = keyspaceContext.getClient();
+        keyspace = keyspaceContext.getEntity();
         
         try {
             keyspace.dropKeyspace();
@@ -299,6 +311,9 @@ public class ThriftKeyspaceImplTest {
         keyspace.createColumnFamily(CF_COMPOSITE, ImmutableMap.<String, Object>builder()
                 .put("comparator_type", "CompositeType(AsciiType, IntegerType(reversed=true), IntegerType, BytesType, UTF8Type)")
                 .build());
+        keyspace.createColumnFamily(CF_COMPOSITE_PREF, ImmutableMap.<String, Object>builder()
+                .put("comparator_type", "CompositeType(AsciiType, IntegerType, IntegerType, BytesType, UTF8Type)")
+                .build());
         keyspace.createColumnFamily(CF_COMPOSITE_KEY, ImmutableMap.<String, Object>builder()
                 .put("key_validation_class", "BytesType")
                 .build());
@@ -322,7 +337,7 @@ public class ThriftKeyspaceImplTest {
                         .build())
                      .build());
         
-        KeyspaceDefinition ki = keyspaceContext.getClient().describeKeyspace();
+        KeyspaceDefinition ki = keyspaceContext.getEntity().describeKeyspace();
         System.out.println("Describe Keyspace: " + ki.getName());
 
         try {
@@ -480,8 +495,10 @@ public class ThriftKeyspaceImplTest {
         }
         LOG.info(fieldNames.toString());
         
+        System.out.println(fieldNames.toString());
+        
         for (FieldMetadata field : def.getFieldsMetadata()) {
-            LOG.info(field.getName() + " = " + def.getFieldValue(field.getName()) + " (" + field.getType() + ")");
+            System.out.println(field.getName() + " = " + def.getFieldValue(field.getName()) + " (" + field.getType() + ")");
         }
         
         for (ColumnFamilyDefinition cfDef : def.getColumnFamilyList()) {
@@ -492,28 +509,6 @@ public class ThriftKeyspaceImplTest {
         }
     }
     
-    @Test 
-    public void testCopyKeyspace() throws Exception {
-        KeyspaceDefinition def = keyspaceContext.getEntity().describeKeyspace();
-        Properties props = def.getProperties();
-        
-        for (Entry<Object, Object> prop : props.entrySet()) {
-            LOG.info(prop.getKey() + " : " + prop.getValue());
-        }
-        
-        KsDef def2 = ThriftUtils.getThriftObjectFromProperties(KsDef.class, props);
-        Properties props2 = ThriftUtils.getPropertiesFromThrift(def2);
-
-        LOG.info("Props2:" + props2);
-        MapDifference<Object, Object> diff = Maps.difference(props,  props2);
-        LOG.info("Not copied : " + diff.entriesOnlyOnLeft());
-        LOG.info("Added      : " + diff.entriesOnlyOnRight());
-        LOG.info("Differing  : " + diff.entriesDiffering());
-        
-        
-        Assert.assertTrue(diff.areEqual());
-    }
-    
     @Test
     public void testNonExistentKeyspace()  {
         AstyanaxContext<Keyspace> ctx = new AstyanaxContext.Builder()
@@ -522,7 +517,7 @@ public class ThriftKeyspaceImplTest {
             .withAstyanaxConfiguration(
                     new AstyanaxConfigurationImpl()
                             .setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
-                            .setConnectionPoolType(ConnectionPoolType.ROUND_ROBIN)
+                            .setConnectionPoolType(ConnectionPoolType.TOKEN_AWARE)
                             .setDiscoveryDelayInSeconds(60000))
             .withConnectionPoolConfiguration(
                     new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME
@@ -1365,14 +1360,29 @@ public class ThriftKeyspaceImplTest {
         ColumnListMutation<MockCompositeType> mRow = m.withRow(CF_COMPOSITE,
                 rowKey);
         int columnCount = 0;
-        for (char part1 = 'a'; part1 <= 'b'; part1++) {
+        for (char part1 = 'a'; part1 <= 'd'; part1++) {
             for (int part2 = 0; part2 < 10; part2++) {
                 for (int part3 = 10; part3 < 11; part3++) {
                     bool = !bool;
                     columnCount++;
+                    if (bool) {
                     mRow.putEmptyColumn(
                             new MockCompositeType(Character.toString(part1),
                                     part2, part3, bool, "UTF"), null);
+                    mRow.putEmptyColumn(
+                            new MockCompositeType(Character.toString(part1),
+                                    part2, part3, !bool, "NOTUTF"), null);
+                    }
+                    else
+                    {
+//                        mRow.putEmptyColumn(
+//                                new MockCompositeType(Character.toString(part1),
+//                                        part2, part3, !bool, "NOTUTF"), null);
+                        
+//                        mRow.putEmptyColumn(
+//                                new MockCompositeType(Character.toString(part1),
+//                                        part2, part3, !bool, "UTF"), null);
+                    }
                 }
             }
         }
@@ -1408,19 +1418,49 @@ public class ThriftKeyspaceImplTest {
             LOG.error(e.getMessage(), e);
             Assert.fail();
         }
+    }
+    /*
+     * Unit Test for composite prefix queries with auto addition of ranges
+     */
+    @Test
+    public void testCompositePrefix() {
+        String rowKey = "Composite1";
 
-        LOG.info("Range builder");
+        boolean bool = false;
+        MutationBatch m = keyspace.prepareMutationBatch();
+        ColumnListMutation<MockCompositeType> mRow = m.withRow(CF_COMPOSITE_PREF,
+                rowKey);
+        int columnCount = 0;
+        for (char part1 = 'a'; part1 <= 'd'; part1++) {
+            for (int part2 = 0; part2 < 10; part2++) {
+                for (int part3 = 10; part3 < 11; part3++) {
+                    bool = !bool;
+                    columnCount++;
+                    if (bool) {
+                    mRow.putEmptyColumn(
+                            new MockCompositeType(Character.toString(part1),
+                                    part2, part3, bool, "UTF"), null);
+                    mRow.putEmptyColumn(
+                            new MockCompositeType(Character.toString(part1),
+                                    part2, part3, !bool, "NOTUTF"), null);
+                    }
+                }
+            }
+        }
+        LOG.info("Created " + columnCount + " columns");
+        
         try {
-            result = keyspace
-                    .prepareQuery(CF_COMPOSITE)
-                    .getKey(rowKey)
-                    .withColumnRange(
-                            M_SERIALIZER
-                                    .buildRange()
-                                    .withPrefix("a")
-                                    .greaterThanEquals(1)
-                                    .lessThanEquals(1)
-                                    .build()).execute();
+            m.execute();
+        } catch (ConnectionException e) {
+            LOG.error(e.getMessage(), e);
+            Assert.fail();
+        }
+
+        OperationResult<ColumnList<MockCompositeType>> result;
+        try {
+            result = keyspace.prepareQuery(CF_COMPOSITE_PREF).getKey(rowKey)
+                    .execute();
+            Assert.assertEquals(columnCount,  result.getResult().size());
             for (Column<MockCompositeType> col : result.getResult()) {
                 LOG.info("COLUMN: " + col.getName().toString());
             }
@@ -1429,23 +1469,97 @@ public class ThriftKeyspaceImplTest {
             Assert.fail();
         }
 
-        
-        /*
-         * Composite c = new Composite(); c.addComponent("String1",
-         * StringSerializer.get()) .addComponent(123, IntegerSerializer.get());
-         * 
-         * MutationBatch m = keyspace.prepareMutationBatch();
-         * m.withRow(CF_COMPOSITE, "Key1") .putColumn(c, 123, null);
-         * 
-         * try { m.execute(); } catch (ConnectionException e) { Assert.fail(); }
-         * 
-         * try { OperationResult<Column<Composite>> result =
-         * keyspace.prepareQuery(CF_COMPOSITE) .getKey("Key1") .getColumn(c)
-         * .execute();
-         * 
-         * Assert.assertEquals(123, result.getResult().getIntegerValue()); }
-         * catch (ConnectionException e) { Assert.fail(); }
-         */
+        try {
+            Column<MockCompositeType> column = keyspace
+                    .prepareQuery(CF_COMPOSITE_PREF).getKey(rowKey)
+                    .getColumn(new MockCompositeType("a", 0, 10, true, "UTF"))
+                    .execute().getResult();
+            LOG.info("Got single column: " + column.getName().toString());
+        } catch (ConnectionException e) {
+            LOG.error(e.getMessage(), e);
+            Assert.fail();
+        }
+
+        LOG.info("Range builder Testing Level 0 wild card");
+        try {
+            result = keyspace
+                    .prepareQuery(CF_COMPOSITE_PREF)
+                    .getKey(rowKey)
+                    .withColumnRange(
+                            M_SERIALIZER
+                                    .buildRange()
+                                    .build()).execute();
+            for (Column<MockCompositeType> col : result.getResult()) {
+                LOG.info("COLUMN: " + col.getName().toString());
+            }
+            
+            LOG.info("Range builder Testing Level 1 wild card with level0='a'");
+            result = keyspace
+                    .prepareQuery(CF_COMPOSITE_PREF)
+                    .getKey(rowKey)
+                    .withColumnRange(
+                            M_SERIALIZER
+                                    .buildRange()
+                                    .withPrefix("a")
+                                    .build()).execute();
+            for (Column<MockCompositeType> col : result.getResult()) {
+                LOG.info("COLUMN: " + col.getName().toString());
+            }
+            
+            LOG.info("Range builder Testing Level 2 wild card with level0='a' and level1=4");
+            result = keyspace
+                    .prepareQuery(CF_COMPOSITE_PREF)
+                    .getKey(rowKey)
+                    .withColumnRange(
+                            M_SERIALIZER
+                                    .buildRange()
+                                    .withPrefix("a")
+                                    .withPrefix(4)
+                                    .greaterThanEquals(Integer.MIN_VALUE)
+                                    .lessThanEquals(Integer.MAX_VALUE)
+                                    .build()).execute();
+            for (Column<MockCompositeType> col : result.getResult()) {
+                LOG.info("COLUMN: " + col.getName().toString());
+            }
+            
+            
+            LOG.info("Range builder Testing Level 3 wild card with level0='a' and level1=4 and level2=10");
+
+            result = keyspace
+                    .prepareQuery(CF_COMPOSITE_PREF)
+                    .getKey(rowKey)
+                    .withColumnRange(
+                            M_SERIALIZER
+                                    .buildRange()
+                                    .withPrefix("a")
+                                    .withPrefix(4)
+                                    .withPrefix(10)
+                                    .build()).execute();
+            for (Column<MockCompositeType> col : result.getResult()) {
+                LOG.info("COLUMN: " + col.getName().toString());
+            }
+            
+            LOG.info("Range builder Testing Level 4 wild card with level0='a' and level1=4 and level2=10 and level3=true");
+            result = keyspace
+                    .prepareQuery(CF_COMPOSITE_PREF)
+                    .getKey(rowKey)
+                    .withColumnRange(
+                            M_SERIALIZER
+                                    .buildRange()
+                                    .withPrefix("a")
+                                    .withPrefix(4)
+                                    .withPrefix(10)
+                                    .withPrefix(true)
+                                    .build()).execute();
+            for (Column<MockCompositeType> col : result.getResult()) {
+                LOG.info("COLUMN: " + col.getName().toString());
+            }
+            
+          } catch (ConnectionException e) {
+            LOG.error(e.getMessage(), e);
+            Assert.fail();
+        }
+
     }
 
     @Test
@@ -2619,54 +2733,134 @@ public class ThriftKeyspaceImplTest {
         
         keyspace.prepareQuery(CF2).getKey("anything").execute();
     }
-    
+    /*
+     * Unit Test for testing that index definitiion update is working
+     */
     @Test
-    public void testDDLWithProperties() throws Exception {
-        String keyspaceName = "DDLPropertiesKeyspace";
-        
-        Properties props = new Properties();
-        props.put("name", keyspaceName + "_wrong");
-        props.put("strategy_class", "SimpleStrategy");
-        props.put("strategy_options.replication_factor", "1");
-        
-        AstyanaxContext<Keyspace> kc = new AstyanaxContext.Builder()
-            .forCluster(TEST_CLUSTER_NAME)
-            .forKeyspace(keyspaceName)
-            .withAstyanaxConfiguration(
-                    new AstyanaxConfigurationImpl()
-                            .setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
-                            .setConnectionPoolType(ConnectionPoolType.ROUND_ROBIN)
-                            .setDiscoveryDelayInSeconds(60000))
-            .withConnectionPoolConfiguration(
-                    new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME + "_" + keyspaceName)
-                            .setSocketTimeout(30000)
-                            .setMaxTimeoutWhenExhausted(2000)
-                            .setMaxConnsPerHost(20)
-                            .setInitConnsPerHost(10)
-                            .setSeeds(SEEDS)
-                            )
-            .withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
-            .buildKeyspace(ThriftFamilyFactory.getInstance());
-        
-        kc.start();
+    public void testIndexQueryPost() throws Exception {
+        OperationResult<Rows<String, String>> result;
+        ImmutableMap<String, Object> NO_OPTIONS = ImmutableMap.of();
+       
+        Map<ColumnFamily, Map<String, Object>> cfs = ImmutableMap.<ColumnFamily, Map<String, Object>>builder()
+                .put(CF_INDEX_POST, 
+                     ImmutableMap.<String, Object>builder()
+                         .put("column_metadata", ImmutableMap.<String, Object>builder()
+                             .put("Index1", ImmutableMap.<String, Object>builder()
+                                 .put("validation_class", "UTF8Type")
+                                 .put("index_type",       "KEYS")
+                                 .build())
+                             .put("Index2", ImmutableMap.<String, Object>builder()
+                                 .put("validation_class", "UTF8Type")
+                                 .put("index_type",       "KEYS")
+                                 .build())
+                              .put("Nonindex",ImmutableMap.<String, Object>builder()
+                                 .put("validation_class", "UTF8Type")
+                                 .build())   
+                             .build())
+                         .build())
+                .put(CF_TTL,        NO_OPTIONS)
+                .build();
+//        keyspace.createColumnFamily(CF_INDEX_POST, ImmutableMap.<String, Object>builder()
+//                .put("comparator_type", "UTF8Type")
+//                .build());
+        keyspace.createColumnFamily(CF_INDEX_POST, ImmutableMap.<String, Object>builder()
+                .put("column_metadata", ImmutableMap.<String, Object>builder()
+                        .put("Index1", ImmutableMap.<String, Object>builder()
+                            .put("validation_class", "UTF8Type")
+                            .put("index_type",       "KEYS")
+                            .build())
+                         .put("Nonindex",ImmutableMap.<String, Object>builder()
+                                 .put("validation_class", "UTF8Type")
+                                 .build()) 
+                        .build())
+                    .build());
+        MutationBatch m;
+        m = keyspace.prepareMutationBatch();
 
-        Keyspace ks = kc.getClient();
-        
+        for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
+            String rowKey = Character.toString(keyName);
+            ColumnListMutation<String> cfmStandard = m.withRow(
+                    CF_INDEX_POST, rowKey);
+            for (char cName = 'a'; cName <= 'z'; cName++) {
+                cfmStandard.putColumn(Character.toString(cName),
+                        (int) (cName - 'a') + 1, null);
+            }
+            cfmStandard
+                    .putColumn("Index1", 100 , null);
+            cfmStandard
+//            .putColumn("Index2", 200 , null);
+//            cfmStandard
+            .putColumn("Nonindex", 300 , null);
+            m.execute();
+        }
         try {
-            ks.createKeyspace(props);
-            Assert.fail("Should have gotten name mismatch error");
+            
+            result = keyspace.prepareQuery(CF_INDEX_POST).searchWithIndex()
+                    .setStartKey("").addExpression().whereColumn("Index1")
+                    .equals().value(100).execute();
+            int sz = result.getResult().size();
+            LOG.info("************************************************** prepareGetMultiRowIndexQuery: ");
+            ColumnFamilyDefinition cfDef = keyspace.describeKeyspace().getColumnFamily(CF_INDEX_POST.getName());
+            ColumnFamilyDefinition targetDef = keyspace.describeKeyspace().getColumnFamily(CF_INDEX_POST.getName());
+            List<ColumnDefinition> columnDefs = cfDef.getColumnDefinitionList();
+            boolean needToIndexThisColumn = true;
+            targetDef.clearColumnDefinitionList();
+            String targetColumnName = "Nonindex";
+            String targetIdxName = CF_INDEX_POST.getName()+"_index1";
+            for (ColumnDefinition def : columnDefs) {
+               if (def.getName().equals(targetColumnName)) {
+                   ColumnDefinition newColumnDef = cfDef.makeColumnDefinition();
+                   newColumnDef.setName(def.getName());
+                   newColumnDef.setValidationClass(def.getValidationClass());
+                   if (needToIndexThisColumn) {
+                     newColumnDef.setKeysIndex(targetIdxName);
+                   }
+                   targetDef.addColumnDefinition(newColumnDef);
+               } else {
+                   targetDef.addColumnDefinition(def);
+               }
+            }
+            Map<String,Object> immMap = ImmutableMap.<String, Object>builder().build();
+            List<ColumnDefinition> targetDefs = targetDef.getColumnDefinitionList();
+
+            Collection<String> defNames = targetDef.getFieldNames();
+            AstyanaxContext<Cluster> clusterContext = new AstyanaxContext.Builder()
+            .forCluster(TEST_CLUSTER_NAME)
+            .withAstyanaxConfiguration(new AstyanaxConfigurationImpl())
+            .withConnectionPoolConfiguration(
+                    new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME)
+                            .setSeeds(SEEDS).setSocketTimeout(30000)
+                            .setMaxTimeoutWhenExhausted(200)
+                            .setMaxConnsPerHost(1))
+            .withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
+            .buildCluster(ThriftFamilyFactory.getInstance());
+
+            clusterContext.start();
+            Cluster cluster = clusterContext.getEntity();
+            cluster.updateColumnFamily(targetDef);
+            Thread.sleep(100);
+            ColumnFamilyDefinition cfDef2 = keyspace.describeKeyspace().getColumnFamily(CF_INDEX_POST.getName());
+            List<ColumnDefinition> columnDefs2 = cfDef2.getColumnDefinitionList();
+
+            result = keyspace.prepareQuery(CF_INDEX_POST).searchWithIndex()
+                    .setStartKey("").addExpression().whereColumn("Index1")
+                    .equals().value(100).execute();
+            sz = result.getResult().size();
+            result = keyspace.prepareQuery(CF_INDEX_POST).searchWithIndex()
+                    .setStartKey("").addExpression().whereColumn("Nonindex")
+                    .equals().value(300).execute();
+             sz = result.getResult().size();
+             
+            Assert.assertEquals(26, sz);
+        } catch (ConnectionException e) {
+            LOG.error(e.getMessage(), e);
+            e.printStackTrace();
+            Assert.fail();
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+            e.printStackTrace();
+            Assert.fail();
         }
-        catch (BadRequestException e) {
-            LOG.info(e.getMessage());
-        }
-        
-        props.put("name", keyspaceName);
-        ks.createKeyspace(props);
-        
-        Properties props1 = ks.getKeyspaceProperties();
-        
-        LOG.info(props.toString());
-        LOG.info(props1.toString());
     }
     
     private boolean deleteColumn(ColumnFamily<String, String> cf,

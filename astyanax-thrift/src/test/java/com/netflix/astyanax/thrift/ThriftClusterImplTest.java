@@ -15,6 +15,8 @@ import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
+import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
+import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
 
@@ -95,11 +97,16 @@ public class ThriftClusterImplTest {
         Properties cfProps = new Properties();
         cfProps.put("keyspace",   keyspaceName);
         cfProps.put("name",       "cf1");
+        cfProps.put("compression_options.sstable_compression", "");
         
         cluster.createColumnFamily(cfProps);
         
         Properties cfProps1 = cluster.getKeyspaceProperties(keyspaceName);
+        KeyspaceDefinition ksdef = cluster.describeKeyspace(keyspaceName);
+        ColumnFamilyDefinition cfdef = ksdef.getColumnFamily("cf1");
         LOG.info(cfProps1.toString());
+        
+        LOG.info(cfdef.getProperties().toString());
         Assert.assertEquals(cfProps1.get("cf_defs.cf1.comparator_type"), "org.apache.cassandra.db.marshal.BytesType");
         
     }

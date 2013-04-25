@@ -260,30 +260,30 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         }
     }
     // Immutable after configuration
-    ShardLockManager lockManager = null;
+    ShardLockManager lockManager                                    = null;
     ColumnFamily<String, MessageQueueEntry> queueColumnFamily;
     ColumnFamily<String, MessageMetadataEntry> keyIndexColumnFamily;
     ColumnFamily<String, UUID> historyColumnFamily;
     Keyspace keyspace;
-    ConsistencyLevel consistencyLevel = DEFAULT_CONSISTENCY_LEVEL;
-    long lockTimeout = DEFAULT_LOCK_TIMEOUT;
-    int lockTtl = DEFAULT_LOCK_TTL;
-    int metadataDeleteTTL = DEFAULT_METADATA_DELETE_TTL;
-    MessageQueueStats stats = new CountingQueueStats();
-    AtomicLong counter = new AtomicLong(new Random().nextInt(1000));
-    Collection<MessageQueueHooks> hooks = Lists.newArrayList();
-    MessageQueueSettings settings = new MessageQueueSettings();
-    Boolean bPoisonQueueEnabled = DEFAULT_POISON_QUEUE_ENABLED;
-    Map<String, Object> columnFamilySettings = DEFAULT_COLUMN_FAMILY_SETTINGS;
+    ConsistencyLevel consistencyLevel                               = DEFAULT_CONSISTENCY_LEVEL;
+    long lockTimeout                                                = DEFAULT_LOCK_TIMEOUT;
+    int lockTtl                                                     = DEFAULT_LOCK_TTL;
+    int metadataDeleteTTL                                           = DEFAULT_METADATA_DELETE_TTL;
+    MessageQueueStats stats                                         = new CountingQueueStats();
+    AtomicLong counter                                              = new AtomicLong(new Random().nextInt(1000));
+    Collection<MessageQueueHooks> hooks                             = Lists.newArrayList();
+    MessageQueueSettings settings                                   = new MessageQueueSettings();
+    Boolean bPoisonQueueEnabled                                     = DEFAULT_POISON_QUEUE_ENABLED;
+    Map<String, Object> columnFamilySettings                        = DEFAULT_COLUMN_FAMILY_SETTINGS;
     ShardReaderPolicy shardReaderPolicy;
     ModShardPolicy modShardPolicy;
-    Function<String, Message> invalidMessageHandler = new Function<String, Message>() {
-        @Override
-        public Message apply(String input) {
-            LOG.warn("Invalid message: " + input);
-            return null;
-        }
-    };
+    Function<String, Message> invalidMessageHandler                 = new Function<String, Message>() {
+                                                                            @Override
+                                                                            public Message apply(String input) {
+                                                                                LOG.warn("Invalid message: " + input);
+                                                                                return null;
+                                                                            }
+                                                                      };
 
     private void initialize() throws MessageQueueException {
         Preconditions.checkArgument(

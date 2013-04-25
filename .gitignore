@@ -49,6 +49,7 @@ Thumbs.db
 
 # IntelliJ specific files/directories #
 #######################################
+>>>>>>> build/multi-project
 out
 .idea
 *.ipr

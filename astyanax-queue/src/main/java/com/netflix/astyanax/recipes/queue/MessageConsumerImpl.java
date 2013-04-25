@@ -27,9 +27,9 @@ import org.slf4j.LoggerFactory;
 class MessageConsumerImpl implements MessageConsumer {
     private static final Logger LOG = LoggerFactory.getLogger(MessageConsumerImpl.class);
 
-    private final NewShardedQueue queue;
+    private final ShardedDistributedMessageQueue queue;
 
-    public MessageConsumerImpl(NewShardedQueue q) {
+    public MessageConsumerImpl(ShardedDistributedMessageQueue q) {
         this.queue = q;
     }
 
@@ -121,7 +121,7 @@ class MessageConsumerImpl implements MessageConsumer {
             m.withRow(queue.queueColumnFamily, shardName).putColumn(lockColumn, curTimeMicros + queue.lockTimeout, queue.lockTtl);
             m.execute();
             // 2. Read back lock columns and entries
-            ColumnList<MessageQueueEntry> result = queue.keyspace.prepareQuery(queue.queueColumnFamily).setConsistencyLevel(queue.consistencyLevel).getKey(shardName).withColumnRange(NewShardedQueue.entrySerializer.buildRange().greaterThanEquals((byte) MessageQueueEntryType.Lock.ordinal()).lessThanEquals((byte) MessageQueueEntryType.Lock.ordinal()).build()).execute().getResult();
+            ColumnList<MessageQueueEntry> result = queue.keyspace.prepareQuery(queue.queueColumnFamily).setConsistencyLevel(queue.consistencyLevel).getKey(shardName).withColumnRange(ShardedDistributedMessageQueue.entrySerializer.buildRange().greaterThanEquals((byte) MessageQueueEntryType.Lock.ordinal()).lessThanEquals((byte) MessageQueueEntryType.Lock.ordinal()).build()).execute().getResult();
             m = queue.keyspace.prepareMutationBatch().setConsistencyLevel(queue.consistencyLevel);
             rowMutation = m.withRow(queue.queueColumnFamily, shardName);
             rowMutation.deleteColumn(lockColumn);
@@ -261,7 +261,7 @@ class MessageConsumerImpl implements MessageConsumer {
 
         try {
             List<MessageContext> entries = Lists.newArrayList();
-            RangeEndpoint re = NewShardedQueue.entrySerializer
+            RangeEndpoint re = ShardedDistributedMessageQueue.entrySerializer
                                               .makeEndpoint((byte) MessageQueueEntryType.Message.ordinal(), Equality.EQUAL)
                                               .append((byte) 0, Equality.EQUAL);
             if(lockColumn!=null) {
@@ -311,7 +311,7 @@ class MessageConsumerImpl implements MessageConsumer {
                                         String groupRowKey = queue.getCompositeKey(queue.settings.getQueueName(), message.getKey());
                                         try {
                                             // Use consistency level
-                                            ColumnList<MessageMetadataEntry> columns = queue.keyspace.prepareQuery(queue.keyIndexColumnFamily).getRow(groupRowKey).withColumnRange(NewShardedQueue.metadataSerializer.buildRange().greaterThanEquals((byte) MessageMetadataEntryType.MessageId.ordinal()).lessThanEquals((byte) MessageMetadataEntryType.MessageId.ordinal()).build()).execute().getResult();
+                                            ColumnList<MessageMetadataEntry> columns = queue.keyspace.prepareQuery(queue.keyIndexColumnFamily).getRow(groupRowKey).withColumnRange(ShardedDistributedMessageQueue.metadataSerializer.buildRange().greaterThanEquals((byte) MessageMetadataEntryType.MessageId.ordinal()).lessThanEquals((byte) MessageMetadataEntryType.MessageId.ordinal()).build()).execute().getResult();
                                             MessageMetadataEntry mostRecentMessageMetadata = null;
                                             long mostRecentTriggerTime = 0;
                                             for (Column<MessageMetadataEntry> currMessageEntry : columns) {

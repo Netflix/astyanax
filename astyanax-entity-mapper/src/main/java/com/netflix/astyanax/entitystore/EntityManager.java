@@ -110,4 +110,11 @@ public interface EntityManager<T, K> {
      * @throws PersistenceException
      */
     public void truncate() throws PersistenceException;
+    
+    /**
+     * Commit the internal batch after multiple operations.  Note that an entity
+     * manager implementation may autocommit after each operation.
+     * @throws PersistenceException
+     */
+    public void commit() throws PersistenceException;
 }

@@ -243,29 +243,29 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
             }
             @Override
             public ByteBufferRange build() {
-                if (!gtltcalled && position < (components.size())) {
+                if ((!gtcalled || !ltcalled) && position < (components.size())) {
                     LOG.info("Adding a full range scan beyond the previous component of the composite");
                     ComponentSerializer<?> serializer = components.get(position);
                     Field f = serializer.getField();
                     Class<?> type = f.getType();
                     if (type.getName().equals("java.lang.Integer")) {                            
-                        super.lessThanEquals(Integer.MAX_VALUE);
-                        super.greaterThanEquals(Integer.MIN_VALUE);
+                        if (!ltcalled) super.lessThanEquals(Integer.MAX_VALUE);
+                        if (!gtcalled) super.greaterThanEquals(Integer.MIN_VALUE);
                     } else if  (type.getName().equals("java.lang.String")) {
-                        super.lessThanEquals("~");
-                        super.greaterThanEquals(null);
+                        if (!ltcalled) super.lessThanEquals("~");
+                        if (!gtcalled) super.greaterThanEquals(null);
                     } else if  (type.getName().equals("boolean")){
-                        super.greaterThanEquals(Boolean.FALSE);
-                        super.lessThanEquals(Boolean.TRUE);
+                        if (!gtcalled) super.greaterThanEquals(Boolean.FALSE);
+                        if (!ltcalled) super.lessThanEquals(Boolean.TRUE);
                     } else if (type.getName().equals("java.lang.Long")) {
-                        super.lessThanEquals(Long.MAX_VALUE);
-                        super.greaterThanEquals(Long.MIN_VALUE);
+                        if (!ltcalled) super.lessThanEquals(Long.MAX_VALUE);
+                        if (!gtcalled) super.greaterThanEquals(Long.MIN_VALUE);
                     } else if (type.getName().equals("java.lang.Short")) {
-                        super.lessThanEquals(Short.MAX_VALUE);
-                        super.greaterThanEquals(Short.MIN_VALUE);
+                        if (!ltcalled) super.lessThanEquals(Short.MAX_VALUE);
+                        if (!gtcalled) super.greaterThanEquals(Short.MIN_VALUE);
                     } else if (type.getName().equals("java.lang.String")) {
-                        super.lessThanEquals(Byte.MAX_VALUE);
-                        super.greaterThanEquals(Byte.MIN_VALUE);
+                        if (!ltcalled) super.lessThanEquals(Byte.MAX_VALUE);
+                        if (!gtcalled) super.greaterThanEquals(Byte.MIN_VALUE);
                     }
                 }
                 return super.build();

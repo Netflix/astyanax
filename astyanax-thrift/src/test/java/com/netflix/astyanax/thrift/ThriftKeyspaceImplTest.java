@@ -8,11 +8,14 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -86,6 +89,7 @@ import com.netflix.astyanax.serializers.SerializerPackageImpl;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.TimeUUIDSerializer;
 import com.netflix.astyanax.serializers.UnknownComparatorException;
+import com.netflix.astyanax.shallows.EmptyColumnList;
 import com.netflix.astyanax.test.SessionEvent;
 import com.netflix.astyanax.thrift.ddl.ThriftColumnFamilyDefinitionImpl;
 import com.netflix.astyanax.util.ColumnarRecordWriter;
@@ -100,98 +104,73 @@ import com.netflix.astyanax.util.TimeUUIDUtils;
 
 public class ThriftKeyspaceImplTest {
 
-    private static Logger LOG = LoggerFactory.getLogger(ThriftKeyspaceImplTest.class);
+    private static Logger LOG = LoggerFactory
+            .getLogger(ThriftKeyspaceImplTest.class);
 
-    private static Keyspace                  keyspace;
+    private static Keyspace keyspace;
     private static AstyanaxContext<Keyspace> keyspaceContext;
 
-    private static String TEST_CLUSTER_NAME  = "cass_sandbox";
+    private static String TEST_CLUSTER_NAME = "cass_sandbox";
     private static String TEST_KEYSPACE_NAME = "AstyanaxUnitTests";
 
-    private static ColumnFamily<String, String> CF_USER_INFO = ColumnFamily.newColumnFamily(
-            "UserInfo", // Column Family Name
-            StringSerializer.get(), // Key Serializer
-            StringSerializer.get()); // Column Serializer
+    private static ColumnFamily<String, String> CF_USER_INFO = ColumnFamily
+            .newColumnFamily("UserInfo", // Column Family Name
+                    StringSerializer.get(), // Key Serializer
+                    StringSerializer.get()); // Column Serializer
 
     private static ColumnFamily<Long, Long> CF_DELETE = ColumnFamily
-            .newColumnFamily(
-                    "delete", 
-                    LongSerializer.get(),
+            .newColumnFamily("delete", LongSerializer.get(),
                     LongSerializer.get());
-    
+
     private static ColumnFamily<Long, String> CF_USERS = ColumnFamily
-            .newColumnFamily(
-                    "users", 
-                    LongSerializer.get(),
+            .newColumnFamily("users", LongSerializer.get(),
                     StringSerializer.get());
 
     private static ColumnFamily<String, String> CF_TTL = ColumnFamily
-            .newColumnFamily(
-                    "ttl", 
-                    StringSerializer.get(),
+            .newColumnFamily("ttl", StringSerializer.get(),
                     StringSerializer.get());
 
     public static ColumnFamily<String, String> CF_STANDARD1 = ColumnFamily
-            .newColumnFamily(
-                    "Standard1", 
-                    StringSerializer.get(),
+            .newColumnFamily("Standard1", StringSerializer.get(),
                     StringSerializer.get());
 
     public static ColumnFamily<String, Long> CF_LONGCOLUMN = ColumnFamily
-            .newColumnFamily(
-                    "LongColumn1", 
-                    StringSerializer.get(),
+            .newColumnFamily("LongColumn1", StringSerializer.get(),
                     LongSerializer.get());
 
     public static ColumnFamily<String, String> CF_STANDARD2 = ColumnFamily
-            .newColumnFamily(
-                    "Standard2", 
-                    StringSerializer.get(),
+            .newColumnFamily("Standard2", StringSerializer.get(),
                     StringSerializer.get());
 
     public static ColumnFamily<String, String> CF_COUNTER1 = ColumnFamily
-            .newColumnFamily(
-                    "Counter1", 
-                    StringSerializer.get(),
+            .newColumnFamily("Counter1", StringSerializer.get(),
                     StringSerializer.get());
 
     public static ColumnFamily<String, String> CF_NOT_DEFINED = ColumnFamily
-            .newColumnFamily(
-                    "NotDefined", 
-                    StringSerializer.get(),
+            .newColumnFamily("NotDefined", StringSerializer.get(),
                     StringSerializer.get());
 
     public static ColumnFamily<String, String> CF_EMPTY = ColumnFamily
-            .newColumnFamily(
-                    "NotDefined", 
-                    StringSerializer.get(),
+            .newColumnFamily("NotDefined", StringSerializer.get(),
                     StringSerializer.get());
 
     public static AnnotatedCompositeSerializer<MockCompositeType> M_SERIALIZER = new AnnotatedCompositeSerializer<MockCompositeType>(
             MockCompositeType.class);
-    
+
     public static ColumnFamily<String, MockCompositeType> CF_COMPOSITE = ColumnFamily
-            .newColumnFamily(
-                    "CompositeColumn", 
-                    StringSerializer.get(),
+            .newColumnFamily("CompositeColumn", StringSerializer.get(),
                     M_SERIALIZER);
 
     public static ColumnFamily<ByteBuffer, ByteBuffer> CF_COMPOSITE_CSV = ColumnFamily
-            .newColumnFamily(
-                    "CompositeCsv", 
-                    ByteBufferSerializer.get(),
+            .newColumnFamily("CompositeCsv", ByteBufferSerializer.get(),
                     ByteBufferSerializer.get());
 
     public static ColumnFamily<MockCompositeType, String> CF_COMPOSITE_KEY = ColumnFamily
-            .newColumnFamily(
-                    "CompositeKey",
-                    M_SERIALIZER, 
+            .newColumnFamily("CompositeKey", M_SERIALIZER,
                     StringSerializer.get());
 
     public static ColumnFamily<String, UUID> CF_TIME_UUID = ColumnFamily
-            .newColumnFamily(
-                    "TimeUUID1", 
-                    StringSerializer.get(),
+            .newColumnFamily("TimeUUID1", StringSerializer.get(),
                     TimeUUIDSerializer.get());
 
     public static AnnotatedCompositeSerializer<SessionEvent> SE_SERIALIZER = new AnnotatedCompositeSerializer<SessionEvent>(
@@ -201,29 +180,25 @@ public class ThriftKeyspaceImplTest {
             .newColumnFamily("ClickStream", StringSerializer.get(),
                     SE_SERIALIZER);
     public static ColumnFamily<String, String> CF_INDEX_POST = ColumnFamily
-            .newColumnFamily(
-                    "Indexpost", 
-                    StringSerializer.get(),
+            .newColumnFamily("Indexpost", StringSerializer.get(),
                     StringSerializer.get());
 
     private static final String SEEDS = "localhost:9160";
 
-    private static final long   CASSANDRA_WAIT_TIME = 3000;
+    private static final long CASSANDRA_WAIT_TIME = 3000;
 
     private static final ColumnFamily<String, MockCompositeType> CF_COMPOSITE_PREF = ColumnFamily
-            .newColumnFamily(
-                    "CompositeColumnPref", 
-                    StringSerializer.get(),
+            .newColumnFamily("CompositeColumnPref", StringSerializer.get(),
                     M_SERIALIZER);
-    
+
     @BeforeClass
     public static void setup() throws Exception {
         System.out.println("TESTING THRIFT KEYSPACE");
 
         SingletonEmbeddedCassandra.getInstance();
-        
+
         Thread.sleep(CASSANDRA_WAIT_TIME);
-        
+
         createKeyspace();
     }
 
@@ -231,7 +206,7 @@ public class ThriftKeyspaceImplTest {
     public static void teardown() throws Exception {
         if (keyspaceContext != null)
             keyspaceContext.shutdown();
-        
+
         Thread.sleep(CASSANDRA_WAIT_TIME);
     }
 
@@ -241,102 +216,142 @@ public class ThriftKeyspaceImplTest {
                 .forKeyspace(TEST_KEYSPACE_NAME)
                 .withAstyanaxConfiguration(
                         new AstyanaxConfigurationImpl()
-                                .setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
-                                .setConnectionPoolType(ConnectionPoolType.TOKEN_AWARE)
+                                .setDiscoveryType(
+                                        NodeDiscoveryType.RING_DESCRIBE)
+                                .setConnectionPoolType(
+                                        ConnectionPoolType.TOKEN_AWARE)
                                 .setDiscoveryDelayInSeconds(60000))
                 .withConnectionPoolConfiguration(
                         new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME
                                 + "_" + TEST_KEYSPACE_NAME)
                                 .setSocketTimeout(30000)
                                 .setMaxTimeoutWhenExhausted(2000)
-                                .setMaxConnsPerHost(20)
-                                .setInitConnsPerHost(10)
-                                .setSeeds(SEEDS)
-                                )
+                                .setMaxConnsPerHost(20).setInitConnsPerHost(10)
+                                .setSeeds(SEEDS))
                 .withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
                 .buildKeyspace(ThriftFamilyFactory.getInstance());
 
         keyspaceContext.start();
-        
+
         keyspace = keyspaceContext.getEntity();
-        
+
         try {
             keyspace.dropKeyspace();
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             LOG.info(e.getMessage());
         }
-        
-        ImmutableMap<String, Object> ksOptions = ImmutableMap.<String, Object>builder()
-                .put("strategy_options", ImmutableMap.<String, Object>builder()
-                        .put("replication_factor", "1")
-                        .build())
-                .put("strategy_class",     "SimpleStrategy")
-                .build();
-        
+
+        ImmutableMap<String, Object> ksOptions = ImmutableMap
+                .<String, Object> builder()
+                .put("strategy_options",
+                        ImmutableMap.<String, Object> builder()
+                                .put("replication_factor", "1").build())
+                .put("strategy_class", "SimpleStrategy").build();
+
         ImmutableMap<String, Object> NO_OPTIONS = ImmutableMap.of();
-        
-        Map<ColumnFamily, Map<String, Object>> cfs = ImmutableMap.<ColumnFamily, Map<String, Object>>builder()
-                .put(CF_STANDARD1, 
-                     ImmutableMap.<String, Object>builder()
-                         .put("column_metadata", ImmutableMap.<String, Object>builder()
-                             .put("Index1", ImmutableMap.<String, Object>builder()
-                                 .put("validation_class", "UTF8Type")
-                                 .put("index_type",       "KEYS")
-                                 .build())
-                             .put("Index2", ImmutableMap.<String, Object>builder()
-                                 .put("validation_class", "UTF8Type")
-                                 .put("index_type",       "KEYS")
-                                 .build())
-                             .build())
-                         .build())
-                .put(CF_TTL,        NO_OPTIONS)
-                .build();
+
+        Map<ColumnFamily, Map<String, Object>> cfs = ImmutableMap
+                .<ColumnFamily, Map<String, Object>> builder()
+                .put(CF_STANDARD1,
+                        ImmutableMap
+                                .<String, Object> builder()
+                                .put("column_metadata",
+                                        ImmutableMap
+                                                .<String, Object> builder()
+                                                .put("Index1",
+                                                        ImmutableMap
+                                                                .<String, Object> builder()
+                                                                .put("validation_class",
+                                                                        "UTF8Type")
+                                                                .put("index_type",
+                                                                        "KEYS")
+                                                                .build())
+                                                .put("Index2",
+                                                        ImmutableMap
+                                                                .<String, Object> builder()
+                                                                .put("validation_class",
+                                                                        "UTF8Type")
+                                                                .put("index_type",
+                                                                        "KEYS")
+                                                                .build())
+                                                .build()).build())
+                .put(CF_TTL, NO_OPTIONS).build();
         keyspace.createKeyspace(ksOptions, cfs);
-        
-        keyspace.createColumnFamily(CF_STANDARD2,  null);
+
+        keyspace.createColumnFamily(CF_STANDARD2, null);
         keyspace.createColumnFamily(CF_LONGCOLUMN, null);
-        keyspace.createColumnFamily(CF_DELETE,     null);
-        keyspace.createColumnFamily(CF_COUNTER1, ImmutableMap.<String, Object>builder()
-                .put("default_validation_class", "CounterColumnType")
-                .build());
-        keyspace.createColumnFamily(CF_CLICK_STREAM, ImmutableMap.<String, Object>builder()
-                .put("comparator_type", "CompositeType(UTF8Type, TimeUUIDType)")
-                .build());
-        keyspace.createColumnFamily(CF_COMPOSITE_CSV, ImmutableMap.<String, Object>builder()
-                .put("default_validation_class", "UTF8Type")
-                .put("key_validation_class",     "UTF8Type")
-                .put("comparator_type",          "CompositeType(UTF8Type, LongType)")
-                .build());
-        keyspace.createColumnFamily(CF_COMPOSITE, ImmutableMap.<String, Object>builder()
-                .put("comparator_type", "CompositeType(AsciiType, IntegerType(reversed=true), IntegerType, BytesType, UTF8Type)")
-                .build());
-        keyspace.createColumnFamily(CF_COMPOSITE_PREF, ImmutableMap.<String, Object>builder()
-                .put("comparator_type", "CompositeType(AsciiType, IntegerType, IntegerType, BytesType, UTF8Type)")
-                .build());
-        keyspace.createColumnFamily(CF_COMPOSITE_KEY, ImmutableMap.<String, Object>builder()
-                .put("key_validation_class", "BytesType")
-                .build());
-        keyspace.createColumnFamily(CF_TIME_UUID,         null);
-        keyspace.createColumnFamily(CF_USER_INFO,         null);
-        keyspace.createColumnFamily(CF_USERS, ImmutableMap.<String, Object>builder()
-                .put("default_validation_class", "UTF8Type")
-                .put("column_metadata", ImmutableMap.<String, Object>builder()
-                        .put("firstname",  ImmutableMap.<String, Object>builder()
-                                .put("validation_class", "UTF8Type")
-                                .put("index_type",       "KEYS")
-                                .build())
-                        .put("lastname", ImmutableMap.<String, Object>builder()
-                                .put("validation_class", "UTF8Type")
-                                .put("index_type",       "KEYS")
-                                .build())
-                        .put("age", ImmutableMap.<String, Object>builder()
-                                .put("validation_class", "LongType")
-                                .put("index_type",       "KEYS")
-                                .build())
-                        .build())
-                     .build());
-        
+        keyspace.createColumnFamily(CF_DELETE, null);
+        keyspace.createColumnFamily(
+                CF_COUNTER1,
+                ImmutableMap.<String, Object> builder()
+                        .put("default_validation_class", "CounterColumnType")
+                        .build());
+        keyspace.createColumnFamily(
+                CF_CLICK_STREAM,
+                ImmutableMap
+                        .<String, Object> builder()
+                        .put("comparator_type",
+                                "CompositeType(UTF8Type, TimeUUIDType)")
+                        .build());
+        keyspace.createColumnFamily(
+                CF_COMPOSITE_CSV,
+                ImmutableMap
+                        .<String, Object> builder()
+                        .put("default_validation_class", "UTF8Type")
+                        .put("key_validation_class", "UTF8Type")
+                        .put("comparator_type",
+                                "CompositeType(UTF8Type, LongType)").build());
+        keyspace.createColumnFamily(
+                CF_COMPOSITE,
+                ImmutableMap
+                        .<String, Object> builder()
+                        .put("comparator_type",
+                                "CompositeType(AsciiType, IntegerType(reversed=true), IntegerType, BytesType, UTF8Type)")
+                        .build());
+        keyspace.createColumnFamily(
+                CF_COMPOSITE_PREF,
+                ImmutableMap
+                        .<String, Object> builder()
+                        .put("comparator_type",
+                                "CompositeType(AsciiType, IntegerType, IntegerType, BytesType, UTF8Type)")
+                        .build());
+        keyspace.createColumnFamily(
+                CF_COMPOSITE_KEY,
+                ImmutableMap.<String, Object> builder()
+                        .put("key_validation_class", "BytesType").build());
+        keyspace.createColumnFamily(CF_TIME_UUID, null);
+        keyspace.createColumnFamily(CF_USER_INFO, null);
+        keyspace.createColumnFamily(
+                CF_USERS,
+                ImmutableMap
+                        .<String, Object> builder()
+                        .put("default_validation_class", "UTF8Type")
+                        .put("column_metadata",
+                                ImmutableMap
+                                        .<String, Object> builder()
+                                        .put("firstname",
+                                                ImmutableMap
+                                                        .<String, Object> builder()
+                                                        .put("validation_class",
+                                                                "UTF8Type")
+                                                        .put("index_type",
+                                                                "KEYS").build())
+                                        .put("lastname",
+                                                ImmutableMap
+                                                        .<String, Object> builder()
+                                                        .put("validation_class",
+                                                                "UTF8Type")
+                                                        .put("index_type",
+                                                                "KEYS").build())
+                                        .put("age",
+                                                ImmutableMap
+                                                        .<String, Object> builder()
+                                                        .put("validation_class",
+                                                                "LongType")
+                                                        .put("index_type",
+                                                                "KEYS").build())
+                                        .build()).build());
+
         KeyspaceDefinition ki = keyspaceContext.getEntity().describeKeyspace();
         System.out.println("Describe Keyspace: " + ki.getName());
 
@@ -397,11 +412,10 @@ public class ThriftKeyspaceImplTest {
             result = m.execute();
 
             m.withRow(CF_USER_INFO, "acct1234")
-                .putColumn("firstname", "john", null)
-                .putColumn("lastname", "smith", null)
-                .putColumn("address", "555 Elm St", null)
-                .putColumn("age", 30, null)
-                .putEmptyColumn("empty");
+                    .putColumn("firstname", "john", null)
+                    .putColumn("lastname", "smith", null)
+                    .putColumn("address", "555 Elm St", null)
+                    .putColumn("age", 30, null).putEmptyColumn("empty");
 
             m.execute();
 
@@ -414,46 +428,47 @@ public class ThriftKeyspaceImplTest {
     @Test
     public void testMultiColumnDelete() throws Exception {
         MutationBatch mb = keyspace.prepareMutationBatch();
-        mb.withRow(CF_DELETE, 1L)
-            .setTimestamp(1).putEmptyColumn(1L, null)
-            .setTimestamp(10).putEmptyColumn(2L, null)
-            ;
+        mb.withRow(CF_DELETE, 1L).setTimestamp(1).putEmptyColumn(1L, null)
+                .setTimestamp(10).putEmptyColumn(2L, null);
         mb.execute();
-        
-        ColumnList<Long> result1 = keyspace.prepareQuery(CF_DELETE).getRow(1L).execute().getResult();
+
+        ColumnList<Long> result1 = keyspace.prepareQuery(CF_DELETE).getRow(1L)
+                .execute().getResult();
         Assert.assertEquals(2, result1.size());
         Assert.assertNotNull(result1.getColumnByName(1L));
         Assert.assertNotNull(result1.getColumnByName(2L));
-        
+
         logColumnList("Insert", result1);
-        
+
         mb = keyspace.prepareMutationBatch();
-        mb.withRow(CF_DELETE,  1L)
-            .setTimestamp(result1.getColumnByName(1L).getTimestamp()-1)
-            .deleteColumn(1L)
-            .setTimestamp(result1.getColumnByName(2L).getTimestamp()-1)
-            .deleteColumn(2L)
-            .putEmptyColumn(3L, null);
-        
+        mb.withRow(CF_DELETE, 1L)
+                .setTimestamp(result1.getColumnByName(1L).getTimestamp() - 1)
+                .deleteColumn(1L)
+                .setTimestamp(result1.getColumnByName(2L).getTimestamp() - 1)
+                .deleteColumn(2L).putEmptyColumn(3L, null);
+
         mb.execute();
-        
-        result1 = keyspace.prepareQuery(CF_DELETE).getRow(1L).execute().getResult();
+
+        result1 = keyspace.prepareQuery(CF_DELETE).getRow(1L).execute()
+                .getResult();
         logColumnList("Delete with older timestamp", result1);
         Assert.assertEquals(3, result1.size());
-        
-        LOG.info("Delete L2 with TS: " + (result1.getColumnByName(2L).getTimestamp()+1));
-        mb.withRow(CF_DELETE,  1L)
-            .setTimestamp(result1.getColumnByName(1L).getTimestamp()+1)
-            .deleteColumn(1L)
-            .setTimestamp(result1.getColumnByName(2L).getTimestamp()+1)
-            .deleteColumn(2L);
+
+        LOG.info("Delete L2 with TS: "
+                + (result1.getColumnByName(2L).getTimestamp() + 1));
+        mb.withRow(CF_DELETE, 1L)
+                .setTimestamp(result1.getColumnByName(1L).getTimestamp() + 1)
+                .deleteColumn(1L)
+                .setTimestamp(result1.getColumnByName(2L).getTimestamp() + 1)
+                .deleteColumn(2L);
         mb.execute();
-        
-        result1 = keyspace.prepareQuery(CF_DELETE).getRow(1L).execute().getResult();
+
+        result1 = keyspace.prepareQuery(CF_DELETE).getRow(1L).execute()
+                .getResult();
         logColumnList("Delete with newer timestamp", result1);
         Assert.assertEquals(1, result1.size());
     }
-    
+
     <T> void logColumnList(String label, ColumnList<T> cl) {
         LOG.info(">>>>>> " + label);
         for (Column<T> c : cl) {
@@ -461,30 +476,35 @@ public class ThriftKeyspaceImplTest {
         }
         LOG.info("<<<<<<");
     }
-    
+
     @Test
     public void testCqlComposite() throws Exception {
         CqlStatementResult result = keyspace.prepareCqlStatement()
-            .withCql("SELECT * FROM " + CF_COMPOSITE_CSV.getName())
-            .execute()
-            .getResult();
-        
+                .withCql("SELECT * FROM " + CF_COMPOSITE_CSV.getName())
+                .execute().getResult();
+
         result.getSchema();
         result.getRows(CF_COMPOSITE_CSV);
     }
-    
+
     @Test
     public void testHasValue() throws Exception {
-        ColumnList<String> response = keyspace.prepareQuery(CF_USER_INFO).getRow("acct1234").execute().getResult();
-        Assert.assertEquals("firstname", response.getColumnByName("firstname").getName());
-        Assert.assertEquals("firstname", response.getColumnByName("firstname").getName());
-        Assert.assertEquals("john", response.getColumnByName("firstname").getStringValue());
-        Assert.assertEquals("john", response.getColumnByName("firstname").getStringValue());
-        Assert.assertEquals(true,  response.getColumnByName("firstname").hasValue());
+        ColumnList<String> response = keyspace.prepareQuery(CF_USER_INFO)
+                .getRow("acct1234").execute().getResult();
+        Assert.assertEquals("firstname", response.getColumnByName("firstname")
+                .getName());
+        Assert.assertEquals("firstname", response.getColumnByName("firstname")
+                .getName());
+        Assert.assertEquals("john", response.getColumnByName("firstname")
+                .getStringValue());
+        Assert.assertEquals("john", response.getColumnByName("firstname")
+                .getStringValue());
+        Assert.assertEquals(true, response.getColumnByName("firstname")
+                .hasValue());
         Assert.assertEquals(false, response.getColumnByName("empty").hasValue());
-        
+
     }
-    
+
     @Test
     public void getKeyspaceDefinition() throws Exception {
         KeyspaceDefinition def = keyspaceContext.getEntity().describeKeyspace();
@@ -494,84 +514,94 @@ public class ThriftKeyspaceImplTest {
             LOG.info(field);
         }
         LOG.info(fieldNames.toString());
-        
+
         System.out.println(fieldNames.toString());
-        
+
         for (FieldMetadata field : def.getFieldsMetadata()) {
-            System.out.println(field.getName() + " = " + def.getFieldValue(field.getName()) + " (" + field.getType() + ")");
+            System.out.println(field.getName() + " = "
+                    + def.getFieldValue(field.getName()) + " ("
+                    + field.getType() + ")");
         }
-        
+
         for (ColumnFamilyDefinition cfDef : def.getColumnFamilyList()) {
-            LOG.info("----------" );
+            LOG.info("----------");
             for (FieldMetadata field : cfDef.getFieldsMetadata()) {
-                LOG.info(field.getName() + " = " + cfDef.getFieldValue(field.getName()) + " (" + field.getType() + ")");
+                LOG.info(field.getName() + " = "
+                        + cfDef.getFieldValue(field.getName()) + " ("
+                        + field.getType() + ")");
             }
         }
     }
-    
+
     @Test
-    public void testNonExistentKeyspace()  {
+    public void testNonExistentKeyspace() {
         AstyanaxContext<Keyspace> ctx = new AstyanaxContext.Builder()
-            .forCluster(TEST_CLUSTER_NAME)
-            .forKeyspace(TEST_KEYSPACE_NAME + "_NonExistent")
-            .withAstyanaxConfiguration(
-                    new AstyanaxConfigurationImpl()
-                            .setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
-                            .setConnectionPoolType(ConnectionPoolType.TOKEN_AWARE)
-                            .setDiscoveryDelayInSeconds(60000))
-            .withConnectionPoolConfiguration(
-                    new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME
-                            + "_" + TEST_KEYSPACE_NAME)
-                            .setSocketTimeout(30000)
-                            .setMaxTimeoutWhenExhausted(2000)
-                            .setMaxConnsPerHost(20)
-                            .setInitConnsPerHost(10)
-                            .setSeeds(SEEDS))
-            .withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
-            .buildKeyspace(ThriftFamilyFactory.getInstance());        
-        
+                .forCluster(TEST_CLUSTER_NAME)
+                .forKeyspace(TEST_KEYSPACE_NAME + "_NonExistent")
+                .withAstyanaxConfiguration(
+                        new AstyanaxConfigurationImpl()
+                                .setDiscoveryType(
+                                        NodeDiscoveryType.RING_DESCRIBE)
+                                .setConnectionPoolType(
+                                        ConnectionPoolType.TOKEN_AWARE)
+                                .setDiscoveryDelayInSeconds(60000))
+                .withConnectionPoolConfiguration(
+                        new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME
+                                + "_" + TEST_KEYSPACE_NAME)
+                                .setSocketTimeout(30000)
+                                .setMaxTimeoutWhenExhausted(2000)
+                                .setMaxConnsPerHost(20).setInitConnsPerHost(10)
+                                .setSeeds(SEEDS))
+                .withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
+                .buildKeyspace(ThriftFamilyFactory.getInstance());
+
         ctx.start();
-        
+
         try {
             KeyspaceDefinition keyspaceDef = ctx.getEntity().describeKeyspace();
             Assert.fail();
         } catch (ConnectionException e) {
             LOG.info(e.getMessage());
         }
-        
+
     }
-    
+
     @Test
     public void testDescribeRing() throws Exception {
         // [TokenRangeImpl [startToken=0, endToken=0, endpoints=[127.0.0.1]]]
         List<TokenRange> ring = keyspaceContext.getEntity().describeRing();
         LOG.info(ring.toString());
-        
+
         // 127.0.0.1
-        RingDescribeHostSupplier ringSupplier = new RingDescribeHostSupplier(keyspaceContext.getEntity(), 9160);
+        RingDescribeHostSupplier ringSupplier = new RingDescribeHostSupplier(
+                keyspaceContext.getEntity(), 9160);
         List<Host> hosts = ringSupplier.get();
         Assert.assertEquals(1, hosts.get(0).getTokenRanges().size());
         LOG.info(hosts.toString());
-        
-        Supplier<List<Host>> sourceSupplier1 = Suppliers.ofInstance((List<Host>)Lists.newArrayList(new Host("127.0.0.1", 9160)));
-        Supplier<List<Host>> sourceSupplier2 = Suppliers.ofInstance((List<Host>)Lists.newArrayList(new Host("127.0.0.2", 9160)));
-        
+
+        Supplier<List<Host>> sourceSupplier1 = Suppliers
+                .ofInstance((List<Host>) Lists.newArrayList(new Host(
+                        "127.0.0.1", 9160)));
+        Supplier<List<Host>> sourceSupplier2 = Suppliers
+                .ofInstance((List<Host>) Lists.newArrayList(new Host(
+                        "127.0.0.2", 9160)));
+
         // 127.0.0.1
         LOG.info(sourceSupplier1.get().toString());
-        
+
         // 127.0.0.2
         LOG.info(sourceSupplier2.get().toString());
-        
+
         hosts = new FilteringHostSupplier(ringSupplier, sourceSupplier1).get();
         LOG.info(hosts.toString());
-        
+
         Assert.assertEquals(1, hosts.size());
         Assert.assertEquals(1, hosts.get(0).getTokenRanges().size());
         hosts = new FilteringHostSupplier(ringSupplier, sourceSupplier2).get();
         LOG.info(hosts.toString());
         Assert.assertEquals(1, hosts.size());
     }
-    
+
     @Test
     public void paginateColumns() throws Exception {
         String column = "";
@@ -582,8 +612,8 @@ public class ThriftKeyspaceImplTest {
                 .getKey("A")
                 .autoPaginate(true)
                 .withColumnRange(
-                        new RangeBuilder().setStart(column)
-                                .setLimit(pageize).build());
+                        new RangeBuilder().setStart(column).setLimit(pageize)
+                                .build());
 
         while (!(columns = query.execute().getResult()).isEmpty()) {
             for (Column<String> c : columns) {
@@ -640,7 +670,7 @@ public class ThriftKeyspaceImplTest {
         }
 
     }
-    
+
     @Test
     public void paginateLongColumns() {
         Long column = Long.MIN_VALUE;
@@ -671,7 +701,8 @@ public class ThriftKeyspaceImplTest {
         AtomicLong counter = new AtomicLong(0);
         try {
             OperationResult<Rows<String, String>> rows = keyspace
-                    .prepareQuery(CF_STANDARD1).getAllRows().setConcurrencyLevel(2).setRowLimit(10)
+                    .prepareQuery(CF_STANDARD1).getAllRows()
+                    .setConcurrencyLevel(2).setRowLimit(10)
                     .withColumnRange(new RangeBuilder().setLimit(0).build())
                     .setExceptionCallback(new ExceptionCallback() {
                         @Override
@@ -689,15 +720,14 @@ public class ThriftKeyspaceImplTest {
             Assert.fail();
         }
     }
-    
+
     @Test
     public void getAllWithCallback() {
         try {
             final AtomicLong counter = new AtomicLong();
 
             keyspace.prepareQuery(CF_STANDARD1).getAllRows().setRowLimit(3)
-                    .setRepeatLastToken(false)
-                    .setConcurrencyLevel(2)
+                    .setRepeatLastToken(false).setConcurrencyLevel(2)
                     .withColumnRange(new RangeBuilder().setLimit(2).build())
                     .executeWithCallback(new RowCallback<String, String>() {
                         @Override
@@ -716,7 +746,7 @@ public class ThriftKeyspaceImplTest {
                         }
                     });
             LOG.info("Read " + counter.get() + " keys");
-            Assert.assertEquals(27,  counter.get());
+            Assert.assertEquals(27, counter.get());
         } catch (ConnectionException e) {
             Assert.fail();
         }
@@ -774,8 +804,8 @@ public class ThriftKeyspaceImplTest {
         } catch (ConnectionException e) {
             Assert.fail();
         }
-    }    
-    
+    }
+
     @Test
     public void testSingleOps() throws Exception {
         String key = "SingleOpsTest";
@@ -789,12 +819,12 @@ public class ThriftKeyspaceImplTest {
             keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
                     .putValue(value, null).execute();
             // Read
-            ColumnQuery<String> query = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
-                    .getColumn(column);
-            
+            ColumnQuery<String> query = keyspace.prepareQuery(CF_STANDARD1)
+                    .getKey(key).getColumn(column);
+
             String v = query.execute().getResult().getStringValue();
             Assert.assertEquals(value, v);
-            
+
             v = query.execute().getResult().getStringValue();
             Assert.assertEquals(value, v);
 
@@ -810,7 +840,7 @@ public class ThriftKeyspaceImplTest {
             } catch (ConnectionException e) {
                 Assert.fail();
             }
-        } 
+        }
 
         // Set a byte value
         {
@@ -832,10 +862,10 @@ public class ThriftKeyspaceImplTest {
                         .getColumn(column).execute().getResult().getByteValue();
                 Assert.fail();
             } catch (NotFoundException e) {
-            	// expected
+                // expected
             }
-        } 
-        
+        }
+
         // Set a short value
         {
             String column = "ShortColumn";
@@ -853,13 +883,14 @@ public class ThriftKeyspaceImplTest {
             // verify column gone
             try {
                 keyspace.prepareQuery(CF_STANDARD1).getKey(key)
-                        .getColumn(column).execute().getResult().getShortValue();
+                        .getColumn(column).execute().getResult()
+                        .getShortValue();
                 Assert.fail();
             } catch (NotFoundException e) {
-            	// expected
+                // expected
             }
-        } 
-        
+        }
+
         // Set a int value
         {
             String column = "IntColumn";
@@ -877,13 +908,14 @@ public class ThriftKeyspaceImplTest {
             // verify column gone
             try {
                 keyspace.prepareQuery(CF_STANDARD1).getKey(key)
-                        .getColumn(column).execute().getResult().getIntegerValue();
+                        .getColumn(column).execute().getResult()
+                        .getIntegerValue();
                 Assert.fail();
             } catch (NotFoundException e) {
-            	// expected
+                // expected
             }
         }
-        
+
         // Set a long value
         {
             String column = "LongColumn";
@@ -895,14 +927,14 @@ public class ThriftKeyspaceImplTest {
             long v = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
                     .getColumn(column).execute().getResult().getLongValue();
             Assert.assertEquals(value, v);
-         // get as integer should fail
+            // get as integer should fail
             try {
                 keyspace.prepareQuery(CF_STANDARD1).getKey(key)
                         .getColumn(column).execute().getResult()
                         .getIntegerValue();
                 Assert.fail();
             } catch (Exception e) {
-            	// expected
+                // expected
             }
             // Delete
             keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
@@ -913,10 +945,10 @@ public class ThriftKeyspaceImplTest {
                         .getColumn(column).execute().getResult().getLongValue();
                 Assert.fail();
             } catch (NotFoundException e) {
-            	// expected
+                // expected
             }
         }
-        
+
         // Set a float value
         {
             String column = "FloatColumn";
@@ -934,10 +966,11 @@ public class ThriftKeyspaceImplTest {
             // verify column gone
             try {
                 keyspace.prepareQuery(CF_STANDARD1).getKey(key)
-                        .getColumn(column).execute().getResult().getFloatValue();
+                        .getColumn(column).execute().getResult()
+                        .getFloatValue();
                 Assert.fail();
             } catch (NotFoundException e) {
-            	// expected
+                // expected
             }
         }
 
@@ -959,7 +992,7 @@ public class ThriftKeyspaceImplTest {
                         .getIntegerValue();
                 Assert.fail();
             } catch (Exception e) {
-            	// expected
+                // expected
             }
             // Delete
             keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
@@ -973,8 +1006,8 @@ public class ThriftKeyspaceImplTest {
             } catch (ConnectionException e) {
                 Assert.fail();
             }
-        } 
-        
+        }
+
         // Set long column with timestamp
         {
             String column = "TimestampColumn";
@@ -982,15 +1015,13 @@ public class ThriftKeyspaceImplTest {
 
             // Set
             keyspace.prepareColumnMutation(CF_STANDARD1, key, column)
-                    .withTimestamp(100)
-                    .putValue(value, null)
-                    .execute();
+                    .withTimestamp(100).putValue(value, null).execute();
 
             // Read
             Column<String> c = keyspace.prepareQuery(CF_STANDARD1).getKey(key)
                     .getColumn(column).execute().getResult();
-            Assert.assertEquals(100,  c.getTimestamp());
-        } 
+            Assert.assertEquals(100, c.getTimestamp());
+        }
     }
 
     @Test
@@ -1196,19 +1227,20 @@ public class ThriftKeyspaceImplTest {
     @Test
     public void testMutationBatchMultipleWithRow() throws Exception {
         MutationBatch mb = keyspace.prepareMutationBatch();
-        
+
         Long key = 9L;
-        
+
         mb.withRow(CF_USERS, key).delete();
         mb.withRow(CF_USERS, key).putEmptyColumn("test", null);
-        
+
         mb.execute();
-        
-        ColumnList<String> result = keyspace.prepareQuery(CF_USERS).getRow(key).execute().getResult();
-        
+
+        ColumnList<String> result = keyspace.prepareQuery(CF_USERS).getRow(key)
+                .execute().getResult();
+
         Assert.assertEquals(1, result.size());
     }
-    
+
     @Test
     public void testClickStream() {
         MutationBatch m = keyspace.prepareMutationBatch();
@@ -1366,28 +1398,28 @@ public class ThriftKeyspaceImplTest {
                     bool = !bool;
                     columnCount++;
                     if (bool) {
-                    mRow.putEmptyColumn(
-                            new MockCompositeType(Character.toString(part1),
-                                    part2, part3, bool, "UTF"), null);
-                    mRow.putEmptyColumn(
-                            new MockCompositeType(Character.toString(part1),
-                                    part2, part3, !bool, "NOTUTF"), null);
-                    }
-                    else
-                    {
-//                        mRow.putEmptyColumn(
-//                                new MockCompositeType(Character.toString(part1),
-//                                        part2, part3, !bool, "NOTUTF"), null);
-                        
-//                        mRow.putEmptyColumn(
-//                                new MockCompositeType(Character.toString(part1),
-//                                        part2, part3, !bool, "UTF"), null);
+                        mRow.putEmptyColumn(
+                                new MockCompositeType(
+                                        Character.toString(part1), part2,
+                                        part3, bool, "UTF"), null);
+                        mRow.putEmptyColumn(
+                                new MockCompositeType(
+                                        Character.toString(part1), part2,
+                                        part3, !bool, "NONUTF"), null);
+                    } else {
+                        // mRow.putEmptyColumn(
+                        // new MockCompositeType(Character.toString(part1),
+                        // part2, part3, !bool, "NOTUTF"), null);
+
+                        // mRow.putEmptyColumn(
+                        // new MockCompositeType(Character.toString(part1),
+                        // part2, part3, !bool, "UTF"), null);
                     }
                 }
             }
         }
         LOG.info("Created " + columnCount + " columns");
-        
+
         try {
             m.execute();
         } catch (ConnectionException e) {
@@ -1399,7 +1431,7 @@ public class ThriftKeyspaceImplTest {
         try {
             result = keyspace.prepareQuery(CF_COMPOSITE).getKey(rowKey)
                     .execute();
-            Assert.assertEquals(columnCount,  result.getResult().size());
+            Assert.assertEquals(columnCount, result.getResult().size());
             for (Column<MockCompositeType> col : result.getResult()) {
                 LOG.info("COLUMN: " + col.getName().toString());
             }
@@ -1419,6 +1451,7 @@ public class ThriftKeyspaceImplTest {
             Assert.fail();
         }
     }
+
     /*
      * Unit Test for composite prefix queries with auto addition of ranges
      */
@@ -1428,27 +1461,39 @@ public class ThriftKeyspaceImplTest {
 
         boolean bool = false;
         MutationBatch m = keyspace.prepareMutationBatch();
-        ColumnListMutation<MockCompositeType> mRow = m.withRow(CF_COMPOSITE_PREF,
-                rowKey);
+        ColumnListMutation<MockCompositeType> mRow = m.withRow(
+                CF_COMPOSITE_PREF, rowKey);
         int columnCount = 0;
+        List<MockCompositeType> expectedAList = new ArrayList<MockCompositeType>();
         for (char part1 = 'a'; part1 <= 'd'; part1++) {
             for (int part2 = 0; part2 < 10; part2++) {
                 for (int part3 = 10; part3 < 11; part3++) {
                     bool = !bool;
                     columnCount++;
                     if (bool) {
-                    mRow.putEmptyColumn(
-                            new MockCompositeType(Character.toString(part1),
-                                    part2, part3, bool, "UTF"), null);
-                    mRow.putEmptyColumn(
-                            new MockCompositeType(Character.toString(part1),
-                                    part2, part3, !bool, "NOTUTF"), null);
+                        mRow.putEmptyColumn(
+                                new MockCompositeType(
+                                        Character.toString(part1), part2,
+                                        part3, bool, "UTF"), null);
+                        mRow.putEmptyColumn(
+                                new MockCompositeType(
+                                        Character.toString(part1), part2,
+                                        part3, !bool, "NONUTF"), null);
+                        if (part1 == 'a') {
+                            expectedAList
+                                    .add(new MockCompositeType(Character
+                                            .toString(part1), part2, part3,
+                                            bool, "UTF"));
+                            expectedAList.add(new MockCompositeType(Character
+                                    .toString(part1), part2, part3, !bool,
+                                    "NONUTF"));
+                        }
                     }
                 }
             }
         }
         LOG.info("Created " + columnCount + " columns");
-        
+
         try {
             m.execute();
         } catch (ConnectionException e) {
@@ -1460,7 +1505,7 @@ public class ThriftKeyspaceImplTest {
         try {
             result = keyspace.prepareQuery(CF_COMPOSITE_PREF).getKey(rowKey)
                     .execute();
-            Assert.assertEquals(columnCount,  result.getResult().size());
+            Assert.assertEquals(columnCount, result.getResult().size());
             for (Column<MockCompositeType> col : result.getResult()) {
                 LOG.info("COLUMN: " + col.getName().toString());
             }
@@ -1470,11 +1515,80 @@ public class ThriftKeyspaceImplTest {
         }
 
         try {
+            MockCompositeType expected = new MockCompositeType("a", 0, 10,
+                    true, "UTF");
             Column<MockCompositeType> column = keyspace
                     .prepareQuery(CF_COMPOSITE_PREF).getKey(rowKey)
-                    .getColumn(new MockCompositeType("a", 0, 10, true, "UTF"))
-                    .execute().getResult();
+                    .getColumn(expected).execute().getResult();
             LOG.info("Got single column: " + column.getName().toString());
+            Assert.assertEquals(true,
+                    column.getName().toString().equals(expected.toString()));
+        } catch (ConnectionException e) {
+            LOG.error(e.getMessage(), e);
+            Assert.fail();
+        }
+
+        try {
+            ColumnList<MockCompositeType> columns = keyspace
+                    .prepareQuery(CF_COMPOSITE_PREF)
+                    .getKey(rowKey)
+                    .withColumnRange(
+                            M_SERIALIZER.buildRange().withPrefix("a").greaterThanEquals(6)
+                                    .build()).execute().getResult(); //Mid-range GT query
+            List<MockCompositeType> expectedlev = new ArrayList<MockCompositeType>();
+            MockCompositeType mock = new MockCompositeType("a", 6, 10,
+                    true, "UTF");
+            expectedlev.add(mock);
+            mock = new MockCompositeType("a", 6, 10,
+                    false, "NONUTF");
+            expectedlev.add(mock);
+            mock = new MockCompositeType("a", 8, 10,
+                    true, "UTF");
+            expectedlev.add(mock);
+            mock = new MockCompositeType("a", 8, 10,
+                    false, "NONUTF");
+            expectedlev.add(mock);
+            for (Column<MockCompositeType> col : columns) {
+                LOG.info("GT6 COLUMN: " + col.getName().toString());
+                Assert.assertEquals(true, expectedlev.contains(col.getName()));//name check
+            }
+            Assert.assertEquals(expectedlev.size(), columns.size());
+        } catch (ConnectionException e) {
+            LOG.error(e.getMessage(), e);
+            Assert.fail();
+        }
+
+        try {
+            ColumnList<MockCompositeType> columns = keyspace
+                    .prepareQuery(CF_COMPOSITE_PREF)
+                    .getKey(rowKey)
+                    .withColumnRange(
+                            M_SERIALIZER.buildRange().withPrefix("a").lessThanEquals(4)
+                                    .build()).execute().getResult();//Mid-Range less than query
+            List<MockCompositeType> expectedlev = new ArrayList<MockCompositeType>();
+            MockCompositeType mock = new MockCompositeType("a", 0, 10,
+                    true, "UTF");
+            expectedlev.add(mock);
+            mock = new MockCompositeType("a", 0, 10,
+                    false, "NONUTF");
+            expectedlev.add(mock);
+            mock = new MockCompositeType("a", 2, 10,
+                    true, "UTF");
+            expectedlev.add(mock);
+            mock = new MockCompositeType("a", 2, 10,
+                    false, "NONUTF");
+            expectedlev.add(mock);
+            mock = new MockCompositeType("a", 4, 10,
+                    true, "UTF");
+            expectedlev.add(mock);
+            mock = new MockCompositeType("a", 4, 10,
+                    false, "NONUTF");
+            expectedlev.add(mock);
+            for (Column<MockCompositeType> col : columns) {
+                LOG.info("GT6 COLUMN: " + col.getName().toString());
+                Assert.assertEquals(true, expectedlev.contains(col.getName()));//name check
+            }
+            Assert.assertEquals(expectedlev.size(), columns.size());
         } catch (ConnectionException e) {
             LOG.error(e.getMessage(), e);
             Assert.fail();
@@ -1482,80 +1596,95 @@ public class ThriftKeyspaceImplTest {
 
         LOG.info("Range builder Testing Level 0 wild card");
         try {
-            result = keyspace
-                    .prepareQuery(CF_COMPOSITE_PREF)
-                    .getKey(rowKey)
-                    .withColumnRange(
-                            M_SERIALIZER
-                                    .buildRange()
-                                    .build()).execute();
+            result = keyspace.prepareQuery(CF_COMPOSITE_PREF).getKey(rowKey)
+                    .withColumnRange(M_SERIALIZER.buildRange().build())
+                    .execute();
+            Assert.assertEquals(columnCount, result.getResult().size());
             for (Column<MockCompositeType> col : result.getResult()) {
                 LOG.info("COLUMN: " + col.getName().toString());
             }
-            
+
             LOG.info("Range builder Testing Level 1 wild card with level0='a'");
             result = keyspace
                     .prepareQuery(CF_COMPOSITE_PREF)
                     .getKey(rowKey)
                     .withColumnRange(
-                            M_SERIALIZER
-                                    .buildRange()
-                                    .withPrefix("a")
-                                    .build()).execute();
+                            M_SERIALIZER.buildRange().withPrefix("a").build())
+                    .execute();
+            Assert.assertEquals(expectedAList.size(), result.getResult().size());
             for (Column<MockCompositeType> col : result.getResult()) {
                 LOG.info("COLUMN: " + col.getName().toString());
+                Assert.assertEquals(true, expectedAList.contains(col.getName()));//name check
             }
-            
+
             LOG.info("Range builder Testing Level 2 wild card with level0='a' and level1=4");
             result = keyspace
                     .prepareQuery(CF_COMPOSITE_PREF)
                     .getKey(rowKey)
                     .withColumnRange(
-                            M_SERIALIZER
-                                    .buildRange()
-                                    .withPrefix("a")
-                                    .withPrefix(4)
-                                    .greaterThanEquals(Integer.MIN_VALUE)
-                                    .lessThanEquals(Integer.MAX_VALUE)
-                                    .build()).execute();
+                            M_SERIALIZER.buildRange().withPrefix("a")
+                                    .withPrefix(4).build()).execute();
+            List<MockCompositeType> expectedlev = new ArrayList<MockCompositeType>();
+            MockCompositeType mock1 = new MockCompositeType("a", 4, 10,
+                    true, "UTF");
+            expectedlev.add(mock1);
+            MockCompositeType mock2 = new MockCompositeType("a", 4, 10,
+                    false, "NONUTF");
+            expectedlev.add(mock2);
             for (Column<MockCompositeType> col : result.getResult()) {
                 LOG.info("COLUMN: " + col.getName().toString());
+                Assert.assertEquals(true, expectedlev.contains(col.getName()));//name check
             }
             
-            
+            Assert.assertEquals(2, result.getResult().size());
+
             LOG.info("Range builder Testing Level 3 wild card with level0='a' and level1=4 and level2=10");
 
             result = keyspace
                     .prepareQuery(CF_COMPOSITE_PREF)
                     .getKey(rowKey)
                     .withColumnRange(
-                            M_SERIALIZER
-                                    .buildRange()
-                                    .withPrefix("a")
-                                    .withPrefix(4)
-                                    .withPrefix(10)
-                                    .build()).execute();
+                            M_SERIALIZER.buildRange().withPrefix("a")
+                                    .withPrefix(4).withPrefix(10).build())
+                    .execute();
+            expectedlev = new ArrayList<MockCompositeType>();
+            mock1 = new MockCompositeType("a", 4, 10,
+                    true, "UTF");
+            expectedlev.add(mock1);
+            mock2 = new MockCompositeType("a", 4, 10,
+                    false, "NONUTF");
+            expectedlev.add(mock2);
+            for (Column<MockCompositeType> col : result.getResult()) {
+                LOG.info("COLUMN: " + col.getName().toString());
+                Assert.assertEquals(true, expectedlev.contains(col.getName()));//name check
+            }
             for (Column<MockCompositeType> col : result.getResult()) {
                 LOG.info("COLUMN: " + col.getName().toString());
             }
-            
+            Assert.assertEquals(2, result.getResult().size());
+
             LOG.info("Range builder Testing Level 4 wild card with level0='a' and level1=4 and level2=10 and level3=true");
             result = keyspace
                     .prepareQuery(CF_COMPOSITE_PREF)
                     .getKey(rowKey)
                     .withColumnRange(
-                            M_SERIALIZER
-                                    .buildRange()
-                                    .withPrefix("a")
-                                    .withPrefix(4)
-                                    .withPrefix(10)
-                                    .withPrefix(true)
-                                    .build()).execute();
+                            M_SERIALIZER.buildRange().withPrefix("a")
+                                    .withPrefix(4).withPrefix(10)
+                                    .withPrefix(true).build()).execute();
+            Assert.assertEquals(1, result.getResult().size());
+            MockCompositeType expected = new MockCompositeType("a", 4, 10,
+                    true, "UTF");
+
             for (Column<MockCompositeType> col : result.getResult()) {
                 LOG.info("COLUMN: " + col.getName().toString());
             }
-            
-          } catch (ConnectionException e) {
+            Assert.assertEquals(
+                    true,
+                    expected.toString().equals(
+                            result.getResult().getColumnByIndex(0).getName()
+                                    .toString()));//name check
+
+        } catch (ConnectionException e) {
             LOG.error(e.getMessage(), e);
             Assert.fail();
         }
@@ -1783,25 +1912,25 @@ public class ThriftKeyspaceImplTest {
             Assert.assertTrue(result.getResult().hasRows());
             Assert.assertEquals(29, result.getResult().getRows().size());
             Assert.assertFalse(result.getResult().hasNumber());
-            
+
             Row<String, String> row;
-            
+
             row = result.getResult().getRows().getRow("A");
             Assert.assertEquals("A", row.getKey());
-            
+
             row = result.getResult().getRows().getRow("B");
             Assert.assertEquals("B", row.getKey());
-            
+
             row = result.getResult().getRows().getRow("NonExistent");
             Assert.assertNull(row);
-            
+
             row = result.getResult().getRows().getRowByIndex(9);
             Assert.assertEquals("I", row.getKey());
-            
+
             for (Row<String, String> row1 : result.getResult().getRows()) {
-              LOG.info("KEY***: " + row1.getKey()); 
+                LOG.info("KEY***: " + row1.getKey());
             }
-            
+
         } catch (ConnectionException e) {
             LOG.error(e.getMessage(), e);
             Assert.fail();
@@ -1817,7 +1946,8 @@ public class ThriftKeyspaceImplTest {
                     .withCql("SELECT count(*) FROM Standard1 where KEY='A';")
                     .execute();
 
-            long count = result.getResult().getRows().getRowByIndex(0).getColumns().getColumnByName("count").getLongValue();
+            long count = result.getResult().getRows().getRowByIndex(0)
+                    .getColumns().getColumnByName("count").getLongValue();
             LOG.info("CQL Count: " + count);
         } catch (ConnectionException e) {
             LOG.error(e.getMessage(), e);
@@ -1932,21 +2062,18 @@ public class ThriftKeyspaceImplTest {
          * 5) .execute();
          */
     }
-    
+
     @Test
     public void testNullKeyInMutation() throws ConnectionException {
         try {
-            keyspace.prepareMutationBatch()
-                .withRow(CF_STANDARD1,  null)
-                .putColumn("abc", "def");
-            
+            keyspace.prepareMutationBatch().withRow(CF_STANDARD1, null)
+                    .putColumn("abc", "def");
+
             Assert.fail();
-        }
-        catch (NullPointerException e) {
-            
+        } catch (NullPointerException e) {
+
         }
     }
-    
 
     @Test
     public void testColumnSlice() throws ConnectionException {
@@ -2076,19 +2203,19 @@ public class ThriftKeyspaceImplTest {
                     .getKeySlice(keys.toArray(new String[keys.size()]))
                     .execute();
 
-            Assert.assertEquals(26,  result.getResult().size());
-            
+            Assert.assertEquals(26, result.getResult().size());
+
             Row<String, String> row;
-            
+
             row = result.getResult().getRow("A");
             Assert.assertEquals("A", row.getKey());
-            
+
             row = result.getResult().getRow("B");
             Assert.assertEquals("B", row.getKey());
-            
+
             row = result.getResult().getRow("NonExistent");
             Assert.assertNull(row);
-            
+
             row = result.getResult().getRowByIndex(10);
             Assert.assertEquals("M", row.getKey());
             /*
@@ -2157,19 +2284,18 @@ public class ThriftKeyspaceImplTest {
             // System.out.println("  Column: " + column.getName());
             // }
             // }
-            
+
             OperationResult<Map<String, Integer>> counts = keyspace
-                .prepareQuery(CF_STANDARD1)
-                .getKeySlice(keys.toArray(new String[keys.size()]))
-                .getColumnCounts()
-                .execute();
-                        
+                    .prepareQuery(CF_STANDARD1)
+                    .getKeySlice(keys.toArray(new String[keys.size()]))
+                    .getColumnCounts().execute();
+
             Assert.assertEquals(26, counts.getResult().size());
-            
+
             for (Entry<String, Integer> count : counts.getResult().entrySet()) {
                 Assert.assertEquals(new Integer(28), count.getValue());
             }
-            
+
         } catch (ConnectionException e) {
             LOG.error(e.getMessage(), e);
             Assert.fail();
@@ -2177,7 +2303,7 @@ public class ThriftKeyspaceImplTest {
 
         LOG.info("Starting testGetAllKeysPath...");
     }
-    
+
     @Test
     public void testDeleteMultipleKeys() {
         LOG.info("Starting testDeleteMultipleKeys...");
@@ -2573,24 +2699,22 @@ public class ThriftKeyspaceImplTest {
     @Test
     public void testTtlValues() throws Exception {
         MutationBatch mb = keyspace.prepareMutationBatch();
-        mb.withRow(CF_TTL, "row")
-          .putColumn("TTL0", "TTL0", 0)
-          .putColumn("TTLNULL", "TTLNULL", null)
-          .putColumn("TTL1", "TTL1", 1);
-        
+        mb.withRow(CF_TTL, "row").putColumn("TTL0", "TTL0", 0)
+                .putColumn("TTLNULL", "TTLNULL", null)
+                .putColumn("TTL1", "TTL1", 1);
+
         mb.execute();
-        
+
         Thread.sleep(2000);
-        
-        ColumnList<String> result = keyspace.prepareQuery(CF_TTL)
-            .getRow("row")
-            .execute().getResult();
-       
-        Assert.assertEquals(2,  result.size());
+
+        ColumnList<String> result = keyspace.prepareQuery(CF_TTL).getRow("row")
+                .execute().getResult();
+
+        Assert.assertEquals(2, result.size());
         Assert.assertNotNull(result.getColumnByName("TTL0"));
         Assert.assertNotNull(result.getColumnByName("TTLNULL"));
     }
-    
+
     @Test
     public void testCluster() {
         AstyanaxContext<Cluster> clusterContext = new AstyanaxContext.Builder()
@@ -2702,37 +2826,41 @@ public class ThriftKeyspaceImplTest {
             LOG.info(e.getMessage());
         }
     }
-    
-    // This test confirms the fix for https://github.com/Netflix/astyanax/issues/170
+
+    // This test confirms the fix for
+    // https://github.com/Netflix/astyanax/issues/170
     @Test
     public void columnAutoPaginateTest() throws Exception {
-        final ColumnFamily<String, UUID> CF1 = ColumnFamily.newColumnFamily("CF1", StringSerializer.get(),
-                TimeUUIDSerializer.get());
-        final ColumnFamily<String, String> CF2 = ColumnFamily.newColumnFamily("CF2", StringSerializer.get(),
-                StringSerializer.get());
-        
+        final ColumnFamily<String, UUID> CF1 = ColumnFamily.newColumnFamily(
+                "CF1", StringSerializer.get(), TimeUUIDSerializer.get());
+        final ColumnFamily<String, String> CF2 = ColumnFamily.newColumnFamily(
+                "CF2", StringSerializer.get(), StringSerializer.get());
+
         keyspace.createColumnFamily(CF1, null);
         Thread.sleep(3000);
         keyspace.createColumnFamily(CF2, null);
         Thread.sleep(3000);
-    
+
         // query on another column family with different column key type
         // does not seem to work after the first query
         keyspace.prepareQuery(CF2).getKey("anything").execute();
 
         MutationBatch m = keyspace.prepareMutationBatch();
-        m.withRow(CF1, "test").putColumn(TimeUUIDUtils.getUniqueTimeUUIDinMillis(), "value1", null);
+        m.withRow(CF1, "test").putColumn(
+                TimeUUIDUtils.getUniqueTimeUUIDinMillis(), "value1", null);
         m.execute();
-    
-        RowQuery<String, UUID> query = keyspace.prepareQuery(CF1).getKey("test").autoPaginate(true);
-    
+
+        RowQuery<String, UUID> query = keyspace.prepareQuery(CF1)
+                .getKey("test").autoPaginate(true);
+
         // Adding a column range removes the problem
         // query.withColumnRange(new RangeBuilder().build());
-    
+
         ColumnList<UUID> columns = query.execute().getResult();
-        
+
         keyspace.prepareQuery(CF2).getKey("anything").execute();
     }
+
     /*
      * Unit Test for testing that index definitiion update is working
      */
@@ -2740,107 +2868,139 @@ public class ThriftKeyspaceImplTest {
     public void testIndexQueryPost() throws Exception {
         OperationResult<Rows<String, String>> result;
         ImmutableMap<String, Object> NO_OPTIONS = ImmutableMap.of();
-       
-        Map<ColumnFamily, Map<String, Object>> cfs = ImmutableMap.<ColumnFamily, Map<String, Object>>builder()
-                .put(CF_INDEX_POST, 
-                     ImmutableMap.<String, Object>builder()
-                         .put("column_metadata", ImmutableMap.<String, Object>builder()
-                             .put("Index1", ImmutableMap.<String, Object>builder()
-                                 .put("validation_class", "UTF8Type")
-                                 .put("index_type",       "KEYS")
-                                 .build())
-                             .put("Index2", ImmutableMap.<String, Object>builder()
-                                 .put("validation_class", "UTF8Type")
-                                 .put("index_type",       "KEYS")
-                                 .build())
-                              .put("Nonindex",ImmutableMap.<String, Object>builder()
-                                 .put("validation_class", "UTF8Type")
-                                 .build())   
-                             .build())
-                         .build())
-                .put(CF_TTL,        NO_OPTIONS)
-                .build();
-//        keyspace.createColumnFamily(CF_INDEX_POST, ImmutableMap.<String, Object>builder()
-//                .put("comparator_type", "UTF8Type")
-//                .build());
-        keyspace.createColumnFamily(CF_INDEX_POST, ImmutableMap.<String, Object>builder()
-                .put("column_metadata", ImmutableMap.<String, Object>builder()
-                        .put("Index1", ImmutableMap.<String, Object>builder()
-                            .put("validation_class", "UTF8Type")
-                            .put("index_type",       "KEYS")
-                            .build())
-                         .put("Nonindex",ImmutableMap.<String, Object>builder()
-                                 .put("validation_class", "UTF8Type")
-                                 .build()) 
-                        .build())
-                    .build());
+
+        Map<ColumnFamily, Map<String, Object>> cfs = ImmutableMap
+                .<ColumnFamily, Map<String, Object>> builder()
+                .put(CF_INDEX_POST,
+                        ImmutableMap
+                                .<String, Object> builder()
+                                .put("column_metadata",
+                                        ImmutableMap
+                                                .<String, Object> builder()
+                                                .put("Index1",
+                                                        ImmutableMap
+                                                                .<String, Object> builder()
+                                                                .put("validation_class",
+                                                                        "UTF8Type")
+                                                                .put("index_type",
+                                                                        "KEYS")
+                                                                .build())
+                                                .put("Index2",
+                                                        ImmutableMap
+                                                                .<String, Object> builder()
+                                                                .put("validation_class",
+                                                                        "UTF8Type")
+                                                                .put("index_type",
+                                                                        "KEYS")
+                                                                .build())
+                                                .put("Nonindex",
+                                                        ImmutableMap
+                                                                .<String, Object> builder()
+                                                                .put("validation_class",
+                                                                        "UTF8Type")
+                                                                .build())
+                                                .build()).build())
+                .put(CF_TTL, NO_OPTIONS).build();
+        // keyspace.createColumnFamily(CF_INDEX_POST, ImmutableMap.<String,
+        // Object>builder()
+        // .put("comparator_type", "UTF8Type")
+        // .build());
+        keyspace.createColumnFamily(
+                CF_INDEX_POST,
+                ImmutableMap
+                        .<String, Object> builder()
+                        .put("column_metadata",
+                                ImmutableMap
+                                        .<String, Object> builder()
+                                        .put("Index1",
+                                                ImmutableMap
+                                                        .<String, Object> builder()
+                                                        .put("validation_class",
+                                                                "UTF8Type")
+                                                        .put("index_type",
+                                                                "KEYS").build())
+                                        .put("Nonindex",
+                                                ImmutableMap
+                                                        .<String, Object> builder()
+                                                        .put("validation_class",
+                                                                "UTF8Type")
+                                                        .build()).build())
+                        .build());
         MutationBatch m;
         m = keyspace.prepareMutationBatch();
 
         for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
             String rowKey = Character.toString(keyName);
-            ColumnListMutation<String> cfmStandard = m.withRow(
-                    CF_INDEX_POST, rowKey);
+            ColumnListMutation<String> cfmStandard = m.withRow(CF_INDEX_POST,
+                    rowKey);
             for (char cName = 'a'; cName <= 'z'; cName++) {
                 cfmStandard.putColumn(Character.toString(cName),
                         (int) (cName - 'a') + 1, null);
             }
+            cfmStandard.putColumn("Index1", 100, null);
             cfmStandard
-                    .putColumn("Index1", 100 , null);
-            cfmStandard
-//            .putColumn("Index2", 200 , null);
-//            cfmStandard
-            .putColumn("Nonindex", 300 , null);
+            // .putColumn("Index2", 200 , null);
+            // cfmStandard
+                    .putColumn("Nonindex", 300, null);
             m.execute();
         }
         try {
-            
+
             result = keyspace.prepareQuery(CF_INDEX_POST).searchWithIndex()
                     .setStartKey("").addExpression().whereColumn("Index1")
                     .equals().value(100).execute();
             int sz = result.getResult().size();
             LOG.info("************************************************** prepareGetMultiRowIndexQuery: ");
-            ColumnFamilyDefinition cfDef = keyspace.describeKeyspace().getColumnFamily(CF_INDEX_POST.getName());
-            ColumnFamilyDefinition targetDef = keyspace.describeKeyspace().getColumnFamily(CF_INDEX_POST.getName());
+            ColumnFamilyDefinition cfDef = keyspace.describeKeyspace()
+                    .getColumnFamily(CF_INDEX_POST.getName());
+            ColumnFamilyDefinition targetDef = keyspace.describeKeyspace()
+                    .getColumnFamily(CF_INDEX_POST.getName());
             List<ColumnDefinition> columnDefs = cfDef.getColumnDefinitionList();
             boolean needToIndexThisColumn = true;
             targetDef.clearColumnDefinitionList();
             String targetColumnName = "Nonindex";
-            String targetIdxName = CF_INDEX_POST.getName()+"_index1";
+            String targetIdxName = CF_INDEX_POST.getName() + "_index1";
             for (ColumnDefinition def : columnDefs) {
-               if (def.getName().equals(targetColumnName)) {
-                   ColumnDefinition newColumnDef = cfDef.makeColumnDefinition();
-                   newColumnDef.setName(def.getName());
-                   newColumnDef.setValidationClass(def.getValidationClass());
-                   if (needToIndexThisColumn) {
-                     newColumnDef.setKeysIndex(targetIdxName);
-                   }
-                   targetDef.addColumnDefinition(newColumnDef);
-               } else {
-                   targetDef.addColumnDefinition(def);
-               }
+                if (def.getName().equals(targetColumnName)) {
+                    ColumnDefinition newColumnDef = cfDef
+                            .makeColumnDefinition();
+                    newColumnDef.setName(def.getName());
+                    newColumnDef.setValidationClass(def.getValidationClass());
+                    if (needToIndexThisColumn) {
+                        newColumnDef.setKeysIndex(targetIdxName);
+                    }
+                    targetDef.addColumnDefinition(newColumnDef);
+                } else {
+                    targetDef.addColumnDefinition(def);
+                }
             }
-            Map<String,Object> immMap = ImmutableMap.<String, Object>builder().build();
-            List<ColumnDefinition> targetDefs = targetDef.getColumnDefinitionList();
+            Map<String, Object> immMap = ImmutableMap
+                    .<String, Object> builder().build();
+            List<ColumnDefinition> targetDefs = targetDef
+                    .getColumnDefinitionList();
 
             Collection<String> defNames = targetDef.getFieldNames();
             AstyanaxContext<Cluster> clusterContext = new AstyanaxContext.Builder()
-            .forCluster(TEST_CLUSTER_NAME)
-            .withAstyanaxConfiguration(new AstyanaxConfigurationImpl())
-            .withConnectionPoolConfiguration(
-                    new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME)
-                            .setSeeds(SEEDS).setSocketTimeout(30000)
-                            .setMaxTimeoutWhenExhausted(200)
-                            .setMaxConnsPerHost(1))
-            .withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
-            .buildCluster(ThriftFamilyFactory.getInstance());
+                    .forCluster(TEST_CLUSTER_NAME)
+                    .withAstyanaxConfiguration(new AstyanaxConfigurationImpl())
+                    .withConnectionPoolConfiguration(
+                            new ConnectionPoolConfigurationImpl(
+                                    TEST_CLUSTER_NAME).setSeeds(SEEDS)
+                                    .setSocketTimeout(30000)
+                                    .setMaxTimeoutWhenExhausted(200)
+                                    .setMaxConnsPerHost(1))
+                    .withConnectionPoolMonitor(
+                            new CountingConnectionPoolMonitor())
+                    .buildCluster(ThriftFamilyFactory.getInstance());
 
             clusterContext.start();
             Cluster cluster = clusterContext.getEntity();
             cluster.updateColumnFamily(targetDef);
             Thread.sleep(100);
-            ColumnFamilyDefinition cfDef2 = keyspace.describeKeyspace().getColumnFamily(CF_INDEX_POST.getName());
-            List<ColumnDefinition> columnDefs2 = cfDef2.getColumnDefinitionList();
+            ColumnFamilyDefinition cfDef2 = keyspace.describeKeyspace()
+                    .getColumnFamily(CF_INDEX_POST.getName());
+            List<ColumnDefinition> columnDefs2 = cfDef2
+                    .getColumnDefinitionList();
 
             result = keyspace.prepareQuery(CF_INDEX_POST).searchWithIndex()
                     .setStartKey("").addExpression().whereColumn("Index1")
@@ -2849,8 +3009,8 @@ public class ThriftKeyspaceImplTest {
             result = keyspace.prepareQuery(CF_INDEX_POST).searchWithIndex()
                     .setStartKey("").addExpression().whereColumn("Nonindex")
                     .equals().value(300).execute();
-             sz = result.getResult().size();
-             
+            sz = result.getResult().size();
+
             Assert.assertEquals(26, sz);
         } catch (ConnectionException e) {
             LOG.error(e.getMessage(), e);
@@ -2862,7 +3022,7 @@ public class ThriftKeyspaceImplTest {
             Assert.fail();
         }
     }
-    
+
     private boolean deleteColumn(ColumnFamily<String, String> cf,
             String rowKey, String columnName) {
         MutationBatch m = keyspace.prepareMutationBatch();

@@ -2,12 +2,17 @@
 ext.githubProjectName = rootProject.name // Change if github project name is not the same as the root project's name
 
 buildscript {
-    repositories { mavenCentral() }
+    repositories {
+        mavenLocal()
+        mavenCentral() // maven { url 'http://jcenter.bintray.com' }
+    }
     apply from: file('gradle/buildscript.gradle'), to: buildscript 
 }
 
 allprojects {
-    repositories { mavenCentral() }
+    repositories { 
+        mavenCentral() // maven { url: 'http://jcenter.bintray.com' }
+    }
 }
 
 apply plugin: 'idea'
@@ -21,10 +26,10 @@ apply from: file('gradle/release.gradle')
 apply from: file('gradle/dependency-versions.gradle')
 
 subprojects {
+    group = "com.netflix.${githubProjectName}"
 
     apply plugin: 'eclipse'
 
-    group = "com.netflix.${githubProjectName}"
     dependencies {
         compile "joda-time:joda-time:$jodaTimeVersion"
         compile "com.github.stephenc.high-scale-lib:high-scale-lib:$highScaleLibVersion"
@@ -86,7 +91,7 @@ project(':astyanax-cassandra') {
     dependencies {
     	compile "org.apache.cassandra:cassandra-all:$cassandraVersion"
         compile "org.apache.servicemix.bundles:org.apache.servicemix.bundles.commons-csv:$commonsCsvVersion"
-	compile "org.jboss.netty:netty:$nettyVersion"   
+        compile "org.jboss.netty:netty:$nettyVersion"   
         compile  project(':astyanax-core')
     }
 }
@@ -117,9 +122,7 @@ project(':astyanax-examples') {
     dependencies {
         compile  project(':astyanax-core')
         compile  project(':astyanax-cassandra')
-	compile  project(':astyanax-thrift')
+        compile  project(':astyanax-thrift')
         testCompile project(':astyanax-thrift')
     }
 }
-
-

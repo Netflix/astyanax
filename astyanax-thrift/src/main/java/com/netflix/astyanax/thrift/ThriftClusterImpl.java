@@ -212,26 +212,75 @@ public class ThriftClusterImpl implements Cluster {
 
     @Override
     public OperationResult<SchemaChangeResult> addColumnFamily(final ColumnFamilyDefinition def) throws ConnectionException {
+        return internalCreateColumnFamily(((ThriftColumnFamilyDefinitionImpl) def)
+                .getThriftColumnFamilyDefinition());
+    }
+    
+    @Override
+    public OperationResult<SchemaChangeResult> createColumnFamily(final Map<String, Object> options) throws ConnectionException {
+        final ThriftColumnFamilyDefinitionImpl def = new ThriftColumnFamilyDefinitionImpl();
+        def.setFields(options);
+        
+        return internalCreateColumnFamily(def.getThriftColumnFamilyDefinition());
+    }
+    
+    @Override
+    public OperationResult<SchemaChangeResult> createColumnFamily(final Properties props) throws ConnectionException {
+        final CfDef def;
+        try {
+            def = ThriftUtils.getThriftObjectFromProperties(CfDef.class, props);
+            System.out.println(def);
+        } catch (Exception e) {
+            throw new BadRequestException("Error converting properties to CfDef", e);
+        }
+        
+        return internalCreateColumnFamily(def);
+    }
+    
+    private OperationResult<SchemaChangeResult> internalCreateColumnFamily(final CfDef def) throws ConnectionException {
         return executeSchemaChangeOperation(new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
                 tracerFactory.newTracer(CassandraOperationType.ADD_COLUMN_FAMILY), def.getKeyspace()) {
             @Override
             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                precheckSchemaAgreement(client);
                 return new SchemaChangeResponseImpl()
-                    .setSchemaId(client.system_add_column_family(((ThriftColumnFamilyDefinitionImpl) def)
-                        .getThriftColumnFamilyDefinition()));
+                    .setSchemaId(client.system_add_column_family(def));
             }
         });
     }
 
     @Override
     public OperationResult<SchemaChangeResult>  updateColumnFamily(final ColumnFamilyDefinition def) throws ConnectionException {
+        return internalColumnFamily(((ThriftColumnFamilyDefinitionImpl) def).getThriftColumnFamilyDefinition());
+    }
+    
+    @Override
+    public OperationResult<SchemaChangeResult> updateColumnFamily(final Map<String, Object> options) throws ConnectionException  {
+        final ThriftColumnFamilyDefinitionImpl def = new ThriftColumnFamilyDefinitionImpl();
+        def.setFields(options);
+        
+        return internalColumnFamily(def.getThriftColumnFamilyDefinition());
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResult> updateColumnFamily(final Properties props) throws ConnectionException {
+        final CfDef def;
+        try {
+            def = ThriftUtils.getThriftObjectFromProperties(CfDef.class, props);
+        } catch (Exception e) {
+            throw new BadRequestException("Error converting properties to CfDef", e);
+        }
+        
+        return internalColumnFamily(def);
+    }
+    
+    private OperationResult<SchemaChangeResult>  internalColumnFamily(final CfDef def) throws ConnectionException {
         return executeSchemaChangeOperation(new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
                 tracerFactory.newTracer(CassandraOperationType.UPDATE_COLUMN_FAMILY), def.getKeyspace()) {
             @Override
             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                return new SchemaChangeResponseImpl()
-                    .setSchemaId(client.system_update_column_family(((ThriftColumnFamilyDefinitionImpl) def)
-                        .getThriftColumnFamilyDefinition()));
+                precheckSchemaAgreement(client);
+                return new SchemaChangeResponseImpl().setSchemaId(client.system_update_column_family(def));
             }
         });
     }
@@ -243,25 +292,82 @@ public class ThriftClusterImpl implements Cluster {
 
     @Override
     public OperationResult<SchemaChangeResult>  addKeyspace(final KeyspaceDefinition def) throws ConnectionException {
+        return internalCreateKeyspace(((ThriftKeyspaceDefinitionImpl) def).getThriftKeyspaceDefinition());
+    }
+    
+    @Override
+    public OperationResult<SchemaChangeResult> createKeyspace(final Map<String, Object> options) throws ConnectionException  {
+        final ThriftKeyspaceDefinitionImpl def = new ThriftKeyspaceDefinitionImpl();
+        def.setFields(options);
+        
+        return internalCreateKeyspace(def.getThriftKeyspaceDefinition());
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResult> createKeyspace(final Properties props) throws ConnectionException {
+        final KsDef def;
+        try {
+            def = ThriftUtils.getThriftObjectFromProperties(KsDef.class, props);
+            if (def.getCf_defs() == null) {
+                def.setCf_defs(Lists.<CfDef>newArrayList());
+            }
+        } catch (Exception e) {
+            throw new BadRequestException("Error converting properties to KsDef", e);
+        }
+        
+        return internalCreateKeyspace(def);
+    }
+    
+    private OperationResult<SchemaChangeResult> internalCreateKeyspace(final KsDef def) throws ConnectionException {
         return executeSchemaChangeOperation(new AbstractOperationImpl<SchemaChangeResult>(
                 tracerFactory.newTracer(CassandraOperationType.ADD_KEYSPACE)) {
             @Override
             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
+                precheckSchemaAgreement(client);
                 return new SchemaChangeResponseImpl()
-                    .setSchemaId(client.system_add_keyspace(((ThriftKeyspaceDefinitionImpl) def).getThriftKeyspaceDefinition()));
+                    .setSchemaId(client.system_add_keyspace(def));
             }
         });
     }
 
     @Override
     public OperationResult<SchemaChangeResult>  updateKeyspace(final KeyspaceDefinition def) throws ConnectionException {
+        return internalUpdateKeyspace(((ThriftKeyspaceDefinitionImpl) def).getThriftKeyspaceDefinition());
+    }
+    
+    @Override
+    public OperationResult<SchemaChangeResult> updateKeyspace(final Map<String, Object> options) throws ConnectionException  {
+        final ThriftKeyspaceDefinitionImpl def = new ThriftKeyspaceDefinitionImpl();
+        try {
+            def.setFields(options);
+        } catch (Exception e) {
+            throw new BadRequestException("Error converting properties to KsDef", e);
+        }
+        
+        return internalUpdateKeyspace(def.getThriftKeyspaceDefinition());
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResult> updateKeyspace(final Properties props) throws ConnectionException {
+        final KsDef def;
+        try {
+            def = ThriftUtils.getThriftObjectFromProperties(KsDef.class, props);
+            if (def.getCf_defs() == null) {
+                def.setCf_defs(Lists.<CfDef>newArrayList());
+            }
+        } catch (Exception e) {
+            throw new BadRequestException("Error converting properties to KsDef", e);
+        }
+        return internalUpdateKeyspace(def);
+    }
+
+    private OperationResult<SchemaChangeResult> internalUpdateKeyspace(final KsDef def) throws ConnectionException {
         return executeSchemaChangeOperation(new AbstractOperationImpl<SchemaChangeResult>(
                 tracerFactory.newTracer(CassandraOperationType.UPDATE_KEYSPACE)) {
             @Override
             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                return new SchemaChangeResponseImpl()
-                    .setSchemaId(client
-                        .system_update_keyspace(((ThriftKeyspaceDefinitionImpl) def).getThriftKeyspaceDefinition()));
+                precheckSchemaAgreement(client);
+                return new SchemaChangeResponseImpl().setSchemaId(client.system_update_keyspace(def));
             }
         });
     }
@@ -277,77 +383,6 @@ public class ThriftClusterImpl implements Cluster {
     }
     
     @Override
-    public OperationResult<SchemaChangeResult> createColumnFamily(final Map<String, Object> options) throws ConnectionException {
-        final ThriftColumnFamilyDefinitionImpl def = new ThriftColumnFamilyDefinitionImpl();
-        def.setFields(options);
-        
-        return connectionPool
-                .executeWithFailover(
-                        new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
-                                tracerFactory.newTracer(CassandraOperationType.ADD_COLUMN_FAMILY), (String)options.get("keyspace")) {
-                            @Override
-                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                return new SchemaChangeResponseImpl()
-                                    .setSchemaId(client.system_add_column_family(def.getThriftColumnFamilyDefinition()));
-                            }
-                        }, RunOnce.get());
-    }
-    
-    @Override
-    public OperationResult<SchemaChangeResult> createColumnFamily(final Properties props) throws ConnectionException {
-        final CfDef def;
-        try {
-            def = ThriftUtils.getThriftObjectFromProperties(CfDef.class, props);
-            System.out.println(def);
-        } catch (Exception e) {
-            throw new BadRequestException("Error converting properties to CfDef", e);
-        }
-        return connectionPool
-                .executeWithFailover(
-                        new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
-                                tracerFactory.newTracer(CassandraOperationType.ADD_COLUMN_FAMILY), (String)props.get("keyspace")) {
-                            @Override
-                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                return new SchemaChangeResponseImpl().setSchemaId(client.system_add_column_family(def));
-                            }
-                        }, RunOnce.get());
-    }
-
-
-    @Override
-    public OperationResult<SchemaChangeResult> updateColumnFamily(final Map<String, Object> options) throws ConnectionException  {
-        return connectionPool
-                .executeWithFailover(
-                        new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
-                                tracerFactory.newTracer(CassandraOperationType.UPDATE_COLUMN_FAMILY), (String)options.get("keyspace")) {
-                            @Override
-                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                ThriftColumnFamilyDefinitionImpl def = new ThriftColumnFamilyDefinitionImpl();
-                                def.setFields(options);
-                                
-                                return new SchemaChangeResponseImpl()
-                                    .setSchemaId(client.system_update_column_family(def.getThriftColumnFamilyDefinition()));
-                            }
-                        }, RunOnce.get());
-    }
-
-    @Override
-    public OperationResult<SchemaChangeResult> updateColumnFamily(final Properties props) throws ConnectionException {
-        return connectionPool
-                .executeWithFailover(
-                        new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
-                                tracerFactory.newTracer(CassandraOperationType.UPDATE_COLUMN_FAMILY), props.getProperty("keyspace")) {
-                            @Override
-                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                CfDef def = ThriftUtils.getThriftObjectFromProperties(CfDef.class, props);
-                                
-                                return new SchemaChangeResponseImpl()
-                                    .setSchemaId(client.system_update_column_family(def));
-                            }
-                        }, RunOnce.get());
-    }
-
-    @Override
     public OperationResult<SchemaChangeResult> dropColumnFamily(final String keyspaceName, final String columnFamilyName) throws ConnectionException  {
         return connectionPool
                 .executeWithFailover(
@@ -355,89 +390,8 @@ public class ThriftClusterImpl implements Cluster {
                                 tracerFactory.newTracer(CassandraOperationType.DROP_COLUMN_FAMILY), keyspaceName) {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                return new SchemaChangeResponseImpl()
-                                    .setSchemaId(client.system_drop_column_family(columnFamilyName));
-                            }
-                        }, RunOnce.get());
-    }
-
-    @Override
-    public OperationResult<SchemaChangeResult> createKeyspace(final Map<String, Object> options) throws ConnectionException  {
-        return connectionPool
-                .executeWithFailover(
-                        new AbstractOperationImpl<SchemaChangeResult>(
-                                tracerFactory.newTracer(CassandraOperationType.ADD_KEYSPACE)) {
-                            @Override
-                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                ThriftKeyspaceDefinitionImpl def = new ThriftKeyspaceDefinitionImpl();
-                                def.setFields(options);
-                                return new SchemaChangeResponseImpl()
-                                    .setSchemaId(client.system_add_keyspace(def.getThriftKeyspaceDefinition()));
-                            }
-                        }, RunOnce.get());
-    }
-
-    @Override
-    public OperationResult<SchemaChangeResult> createKeyspace(final Properties props) throws ConnectionException {
-        final KsDef def;
-        try {
-            def = ThriftUtils.getThriftObjectFromProperties(KsDef.class, props);
-            if (def.getCf_defs() == null) {
-                def.setCf_defs(Lists.<CfDef>newArrayList());
-            }
-        } catch (Exception e) {
-            throw new BadRequestException("Error converting properties to KsDef", e);
-        }
-        return connectionPool
-                .executeWithFailover(
-                        new AbstractOperationImpl<SchemaChangeResult>(
-                                tracerFactory.newTracer(CassandraOperationType.ADD_KEYSPACE)) {
-                            @Override
-                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                return new SchemaChangeResponseImpl().setSchemaId(client.system_add_keyspace(def));
-                            }
-                        }, RunOnce.get());
-    }
-
-    @Override
-    public OperationResult<SchemaChangeResult> updateKeyspace(final Map<String, Object> options) throws ConnectionException  {
-        final ThriftKeyspaceDefinitionImpl def = new ThriftKeyspaceDefinitionImpl();
-        try {
-            def.setFields(options);
-        } catch (Exception e) {
-            throw new BadRequestException("Error converting properties to KsDef", e);
-        }
-        
-        return connectionPool
-                .executeWithFailover(
-                        new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
-                                tracerFactory.newTracer(CassandraOperationType.UPDATE_KEYSPACE), (String)options.get("name")) {
-                            @Override
-                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                return new SchemaChangeResponseImpl()
-                                    .setSchemaId(client.system_update_keyspace(def.getThriftKeyspaceDefinition()));
-                            }
-                        }, RunOnce.get());
-    }
-
-    @Override
-    public OperationResult<SchemaChangeResult> updateKeyspace(final Properties props) throws ConnectionException {
-        final KsDef def;
-        try {
-            def = ThriftUtils.getThriftObjectFromProperties(KsDef.class, props);
-            if (def.getCf_defs() == null) {
-                def.setCf_defs(Lists.<CfDef>newArrayList());
-            }
-        } catch (Exception e) {
-            throw new BadRequestException("Error converting properties to KsDef", e);
-        }
-        return connectionPool
-                .executeWithFailover(
-                        new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
-                                tracerFactory.newTracer(CassandraOperationType.UPDATE_KEYSPACE), (String)props.getProperty("name")) {
-                            @Override
-                            public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                return new SchemaChangeResponseImpl().setSchemaId(client.system_update_keyspace(def));
+                                precheckSchemaAgreement(client);
+                                return new SchemaChangeResponseImpl().setSchemaId(client.system_drop_column_family(columnFamilyName));
                             }
                         }, RunOnce.get());
     }
@@ -450,8 +404,8 @@ public class ThriftClusterImpl implements Cluster {
                                 tracerFactory.newTracer(CassandraOperationType.DROP_KEYSPACE), keyspaceName) {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
-                                return new SchemaChangeResponseImpl()
-                                    .setSchemaId(client.system_drop_keyspace(keyspaceName));
+                                precheckSchemaAgreement(client);
+                                return new SchemaChangeResponseImpl().setSchemaId(client.system_drop_keyspace(keyspaceName));
                             }
                         }, RunOnce.get());
     }
@@ -507,5 +461,19 @@ public class ThriftClusterImpl implements Cluster {
             LOG.error("Error processing column family properties");
         }
         return props;
+    }
+    
+    /**
+     * Do a quick check to see if there is a schema disagreement.  This is done as an extra precaution
+     * to reduce the chances of putting the cluster into a bad state.  This will not gurantee however, that 
+     * by the time a schema change is made the cluster will be in the same state.
+     * @param client
+     * @throws Exception
+     */
+    private void precheckSchemaAgreement(Client client) throws Exception {
+        Map<String, List<String>> schemas = client.describe_schema_versions();
+        if (schemas.size() > 1) {
+            throw new SchemaDisagreementException("Can't change schema due to pending schema agreement");
+        }
     }
 }

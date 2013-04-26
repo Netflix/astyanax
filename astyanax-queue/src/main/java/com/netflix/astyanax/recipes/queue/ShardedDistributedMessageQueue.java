@@ -144,8 +144,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     public static final ImmutableMap<String, Object> DEFAULT_COLUMN_FAMILY_SETTINGS = ImmutableMap.<String, Object>builder()
             .put("read_repair_chance",       1.0)
             .put("gc_grace_seconds",         5)     // TODO: Calculate gc_grace_seconds
-            .put("compaction_strategy",      "LeveledCompactionStrategy")
-            .put("compaction_strategy_options", ImmutableMap.of("sstable_size_in_mb", "100"))
+            .put("compaction_strategy",      "SizeTieredCompactionStrategy")
             .build();
     
     private final static AnnotatedCompositeSerializer<MessageQueueEntry> entrySerializer     

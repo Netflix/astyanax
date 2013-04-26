@@ -121,7 +121,15 @@ class MessageConsumerImpl implements MessageConsumer {
             m.withRow(queue.queueColumnFamily, shardName).putColumn(lockColumn, curTimeMicros + queue.lockTimeout, queue.lockTtl);
             m.execute();
             // 2. Read back lock columns and entries
-            ColumnList<MessageQueueEntry> result = queue.keyspace.prepareQuery(queue.queueColumnFamily).setConsistencyLevel(queue.consistencyLevel).getKey(shardName).withColumnRange(ShardedDistributedMessageQueue.entrySerializer.buildRange().greaterThanEquals((byte) MessageQueueEntryType.Lock.ordinal()).lessThanEquals((byte) MessageQueueEntryType.Lock.ordinal()).build()).execute().getResult();
+            ColumnList<MessageQueueEntry> result = queue.keyspace.prepareQuery(queue.queueColumnFamily).setConsistencyLevel(queue.consistencyLevel).getKey(shardName)
+                    .withColumnRange(ShardedDistributedMessageQueue.entrySerializer
+                                                                                   .buildRange()
+                                                                                   .greaterThanEquals((byte) MessageQueueEntryType.Lock.ordinal())
+                                                                                   .lessThanEquals((byte) MessageQueueEntryType.Lock.ordinal())
+                                                                                   .build()
+                                                                   )
+                    .execute()
+                    .getResult();
             m = queue.keyspace.prepareMutationBatch().setConsistencyLevel(queue.consistencyLevel);
             rowMutation = m.withRow(queue.queueColumnFamily, shardName);
             rowMutation.deleteColumn(lockColumn);
@@ -267,13 +275,13 @@ class MessageConsumerImpl implements MessageConsumer {
             if(lockColumn!=null) {
                 re.append(lockColumn.getTimestamp(), Equality.LESS_THAN_EQUALS);
             } else {
-                re.append(TimeUUIDUtils.getTimeUUID(curTimeMicros), Equality.LESS_THAN_EQUALS);
+                re.append(TimeUUIDUtils.getMicrosTimeUUID(curTimeMicros), Equality.LESS_THAN_EQUALS);
             }
 
             ColumnList<MessageQueueEntry> result = queue.keyspace.prepareQuery(queue.queueColumnFamily)
                     .setConsistencyLevel(queue.consistencyLevel).getKey(shardName).
                     withColumnRange(new RangeBuilder()
-                                        .setLimit(itemsToPop + (lockColumn == null? 0:lockColumnCount + 1))
+                                        .setLimit(itemsToPop + (lockColumn == null? 0:(lockColumnCount + 1)))
                                         .setEnd(re.toBytes())
                                         .build()).execute().getResult();
             for (Column<MessageQueueEntry> column : result) {

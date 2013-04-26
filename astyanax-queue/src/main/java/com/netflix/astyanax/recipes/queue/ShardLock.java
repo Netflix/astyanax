@@ -1,11 +1,11 @@
 package com.netflix.astyanax.recipes.queue;
 
 /**
- * Represents a shard lock.
+ * Interface for a queue shard lock.
  *
  * @author pbhattacharyya
  */
 public interface ShardLock {
-    
+
     String getShardName();
 }

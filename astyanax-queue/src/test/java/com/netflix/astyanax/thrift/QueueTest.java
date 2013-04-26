@@ -51,9 +51,11 @@ import com.netflix.astyanax.recipes.queue.triggers.RunOnceTrigger;
 import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized.Parameters;
+import static org.junit.Assert.*;
 
 @RunWith(value = Parameterized.class)
 public class QueueTest {
@@ -69,7 +71,7 @@ public class QueueTest {
     private static final int TTL = 20;
     private static final int TIMEOUT = 10;
     private static final ConsistencyLevel CONSISTENCY_LEVEL = ConsistencyLevel.CL_ONE;
-    private ShardLockManager slm = null;
+    private ReentrantLockManager slm = null;
     private String qNameSfx = null;
 
     @BeforeClass
@@ -83,7 +85,7 @@ public class QueueTest {
         createKeyspace();
     }
 
-    public QueueTest(ShardLockManager s, String sfx) {
+    public QueueTest(ReentrantLockManager s, String sfx) {
         slm = s;
         qNameSfx = sfx;
         System.out.println((s == null? "Running without SLM":"Running WITH SLM") + " and suffix " + qNameSfx);
@@ -92,6 +94,7 @@ public class QueueTest {
     @Parameters
     public static Collection<Object[]> parameters() {
         Object[][] data = new Object[][]{{new ReentrantLockManager(), "WITHSLM"},{null, "NOSLM"}};
+//        Object[][] data = new Object[][]{{new ReentrantLockManager(), "WITHSLM"}};
         return Arrays.asList(data);
     }
 
@@ -662,24 +665,106 @@ public class QueueTest {
         executor.awaitTermination(1000, TimeUnit.SECONDS);
     }
 
+    @Test
+    public void testQueueBusyLock() throws Exception {
+
+        final CountingQueueStats stats = new CountingQueueStats();
+
+        final ShardedDistributedMessageQueue scheduler = new ShardedDistributedMessageQueue.Builder()
+                .withColumnFamily(SCHEDULER_NAME_CF_NAME)
+                .withQueueName("TestQueueBusyLock" + qNameSfx)
+                .withKeyspace(keyspace)
+                .withConsistencyLevel(CONSISTENCY_LEVEL)
+                .withStats(stats)
+                .withShardCount(1)
+                .withPollInterval(100L, TimeUnit.MILLISECONDS)
+                .withShardLockManager(slm)
+                .build();
+        scheduler.deleteQueue();
+        scheduler.createQueue();
+
+        MessageProducer producer = scheduler.createProducer();
+
+        // Add a batch of messages and peek
+        List<Message> messages = Lists.newArrayList();
+
+        for (int i = 0; i < 5; i++) {
+            messages.add(new Message().addParameter("body", "" + i));
+        }
+
+        producer.sendMessages(messages);
+        long queuedCount = scheduler.getMessageCount();
+        final AtomicInteger count = new AtomicInteger();
+
+        // Lock the shard. This should throw a few BusyLockExceptions
+        String shard = scheduler.getShardStats().keySet().iterator().next();
+        ShardLock l = null;
+        if(slm!=null) {
+            l = slm.acquireLock(shard);
+        }
+
+        // Consumer
+        MessageQueueDispatcher dispatcher = new MessageQueueDispatcher.Builder()
+                .withBatchSize(25)
+                .withCallback(new Function<MessageContext, Boolean>() {
+                                    @Override
+                                    public Boolean apply(MessageContext message) {
+                                        count.incrementAndGet();
+                                        return true;
+                                    }
+                                })
+                .withMessageQueue(scheduler)
+                .withConsumerCount(10)
+                .withProcessorThreadCount(10)
+                .withAckInterval(20, TimeUnit.MILLISECONDS)
+                .withPollingInterval(15, TimeUnit.MILLISECONDS)
+                .build();
+
+        // Start the consumer
+        dispatcher.start();
+
+        // Release the lock
+        if(slm!=null) {
+            // Wait
+            Thread.sleep(1000);
+            slm.releaseLock(l);
+        }
+
+        // Wait another 10 seconds and then stop the dispatcher
+        Thread.sleep(1000);
+        dispatcher.stop();
+
+        assertEquals(queuedCount, count.intValue());
+        // Check the busy lock count
+        if(slm!=null) {
+            System.out.println("Lock attempts " + slm.getLockAttempts());
+            assertTrue(slm.getBusyLockCounts().get(shard).intValue() > 0);
+        }
+    }
+
     /**
      * A shard lock manager implementation.
      */
     static class ReentrantLockManager implements ShardLockManager {
 
         private ConcurrentHashMap<String, ReentrantLock> locks = new ConcurrentHashMap<String, ReentrantLock>();
+        private ConcurrentHashMap<String, AtomicInteger> busyLockCounts = new ConcurrentHashMap<String, AtomicInteger>();
+        private AtomicLong lockAttempts = new AtomicLong();
 
         @Override
         public ShardLock acquireLock(String shardName) throws BusyLockException {
             locks.putIfAbsent(shardName, new ReentrantLock());
             ReentrantLock l = locks.get(shardName);
             try {
-                if (l.tryLock(10, TimeUnit.MILLISECONDS)) {
+                lockAttempts.incrementAndGet();
+                if (l.tryLock()) {
                     return new ReentrantShardLock(l, shardName);
                 } else {
-                    throw new BusyLockException("Shard " + shardName + " is already locked");
+                    busyLockCounts.putIfAbsent(shardName, new AtomicInteger());
+                    busyLockCounts.get(shardName).incrementAndGet();
+                    throw new BusyLockException("Shard " + shardName + " is already locked" + ": busy lock count " + busyLockCounts.get(shardName));
                 }
-            } catch (InterruptedException e) {
+            } catch (Exception e) {
                 throw new BusyLockException("Could not lock shard " + shardName, e);
             }
         }
@@ -690,6 +775,14 @@ public class QueueTest {
                 ReentrantShardLock rsl = (ReentrantShardLock) lock;
                 rsl.getLock().unlock();
             }
+        }
+
+        public Map<String,AtomicInteger> getBusyLockCounts() {
+            return busyLockCounts;
+        }
+
+        public long getLockAttempts() {
+            return lockAttempts.longValue();
         }
     }
 
@@ -708,7 +801,7 @@ public class QueueTest {
 
         @Override
         public String getShardName() {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            return shardName;
         }
 
         public ReentrantLock getLock() {

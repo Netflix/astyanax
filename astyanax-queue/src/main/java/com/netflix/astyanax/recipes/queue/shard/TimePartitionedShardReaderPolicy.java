@@ -20,8 +20,8 @@ public class TimePartitionedShardReaderPolicy implements ShardReaderPolicy {
     private final MessageQueueSettings          settings;
     private final List<MessageQueueShard>       shards;
     private final Map<String, MessageQueueShardStats> shardStats;
-    private LinkedBlockingQueue<MessageQueueShard> workQueue    = Queues.newLinkedBlockingQueue();
-    private LinkedBlockingQueue<MessageQueueShard> idleQueue    = Queues.newLinkedBlockingQueue();
+    private final LinkedBlockingQueue<MessageQueueShard> workQueue = Queues.newLinkedBlockingQueue();
+    private final LinkedBlockingQueue<MessageQueueShard> idleQueue = Queues.newLinkedBlockingQueue();
 
     private int currentTimePartition = -1;
 
@@ -35,11 +35,15 @@ public class TimePartitionedShardReaderPolicy implements ShardReaderPolicy {
             }
         }
         
+        List<MessageQueueShard> queues = Lists.newArrayList();
         shardStats = Maps.newHashMapWithExpectedSize(shards.size());
         for (MessageQueueShard shard : shards) {
-            idleQueue.add(shard);
+            queues.add(shard);
             shardStats.put(shard.getName(),  shard);
         }
+        
+        Collections.shuffle(queues);
+        workQueue.addAll(queues);
     }
 
     private int getCurrentPartitionIndex() {
@@ -57,12 +61,13 @@ public class TimePartitionedShardReaderPolicy implements ShardReaderPolicy {
             synchronized (this) {
                 // Double check
                 if (timePartition != currentTimePartition) {
+                    currentTimePartition = timePartition;
+                    
                     // Drain the idle queue and transfer all shards from the
                     // current partition to the work queue
-                    currentTimePartition = timePartition;
                     List<MessageQueueShard> temp = Lists.newArrayListWithCapacity(idleQueue.size());
                     idleQueue.drainTo(temp);
-                    for (MessageQueueShard partition : shards) {
+                    for (MessageQueueShard partition : temp) {
                         if (partition.getPartition() == currentTimePartition) {
                             workQueue.add(partition);
                         }
@@ -79,6 +84,9 @@ public class TimePartitionedShardReaderPolicy implements ShardReaderPolicy {
 
     @Override
     public void releaseShard(MessageQueueShard shard, int messagesRead) {
+        // Shard is not in the current partition and we did't final any messages so let's just put in the
+        // idle queue.  It'll be added back later when in this shard's time partition.
+        // May want to randomly check an idle queue when there is nothing in the working queue
         if (shard.getPartition() != currentTimePartition && messagesRead == 0) {
             idleQueue.add(shard);
         }

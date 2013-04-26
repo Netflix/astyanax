@@ -46,7 +46,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 		private RetryPolicy retryPolicy = null;
 		private LifecycleEvents<T> lifecycleHandler = null;
 		private String columnFamilyName = null;
-		private boolean autoCommit = false;
+		private boolean autoCommit = true;
 		
 		public Builder() {
 

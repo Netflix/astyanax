@@ -38,7 +38,7 @@ public class MappingUtils {
         if (name == null || name.isEmpty()) 
             return StringUtils.substringAfterLast(clazz.getName(), ".").toLowerCase();
         else
-            return null;
+            return name;
     }
 
 

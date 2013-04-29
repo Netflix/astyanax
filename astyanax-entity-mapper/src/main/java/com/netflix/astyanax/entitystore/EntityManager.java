@@ -91,20 +91,6 @@ public interface EntityManager<T, K> {
 	public List<T> find(String cql) throws PersistenceException;
 	
 	/**
-	 * Find a list of entities by a column value.
-	 * 
-	 * Why not support it through the above {@link #find(String)}, because I don't
-	 * want to parse cql.
-	 * 
-	 * 
-	 * @param colName
-	 * @param value
-	 * @return
-	 * @throws PersistenceException
-	 */
-	public <V> List<T> findByIndex(String colName, V value) throws PersistenceException;
-	
-	/**
 	 * Create the underlying storage for this entity.  This should only be called
 	 * once when first creating store and not part of the normal startup sequence.
 	 * @throws PersistenceException
@@ -124,4 +110,13 @@ public interface EntityManager<T, K> {
      * @throws PersistenceException
      */
     public void truncate() throws PersistenceException;
+    
+    /**
+     * Commit the internal batch after multiple operations.  Note that an entity
+     * manager implementation may autocommit after each operation.
+     * @throws PersistenceException
+     */
+    public void commit() throws PersistenceException;
+    
+    
 }

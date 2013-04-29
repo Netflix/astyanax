@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Properties;
 
 import org.apache.cassandra.thrift.CfDef;
 import org.apache.cassandra.thrift.KsDef;
@@ -32,6 +33,7 @@ import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.FieldMetadata;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.thrift.ThriftTypes;
+import com.netflix.astyanax.thrift.ThriftUtils;
 
 public class ThriftKeyspaceDefinitionImpl implements KeyspaceDefinition {
     private final static Map<String, FieldMetadata> fieldsMetadata = Maps.newHashMap();
@@ -167,4 +169,15 @@ public class ThriftKeyspaceDefinitionImpl implements KeyspaceDefinition {
             }
         }
     }
+
+    @Override
+    public Properties getProperties() throws Exception {
+        return ThriftUtils.getPropertiesFromThrift(ks_def);
+    }
+
+    @Override
+    public void setProperties(Properties properties) throws Exception {
+        ThriftUtils.populateObjectFromProperties(ks_def, properties);
+    }
+
 }

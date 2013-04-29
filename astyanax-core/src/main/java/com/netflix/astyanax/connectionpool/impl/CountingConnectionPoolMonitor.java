@@ -234,6 +234,11 @@ public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
     }
 
     @Override
+    public long getTransportErrorCount() {
+        return this.transportErrorCount.get();
+    }
+
+    @Override
     public long getBadRequestCount() {
         return this.badRequestCount.get();
     }
@@ -254,6 +259,11 @@ public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
     @Override
     public long getHostCount() {
         return getHostAddedCount() - getHostRemovedCount();
+    }
+
+    @Override
+    public long getHostActiveCount() {
+        return hostAddedCount.get() - hostRemovedCount.get() + hostReactivatedCount.get() - hostDownCount.get();
     }
 
     public String toString() {
@@ -284,7 +294,7 @@ public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
                     .append(",remove="     ).append(hostRemovedCount.get())
                     .append(",down="       ).append(hostDownCount.get())
                     .append(",reactivate=" ).append(hostReactivatedCount.get())
-                    .append(",active="     ).append(hostAddedCount.get() - hostRemovedCount.get() + hostReactivatedCount.get() - hostDownCount.get())
+                    .append(",active="     ).append(getHostActiveCount())
                 .append("])").toString();
     }
 

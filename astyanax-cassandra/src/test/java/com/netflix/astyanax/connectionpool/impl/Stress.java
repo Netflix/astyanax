@@ -23,8 +23,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -127,7 +125,7 @@ public class Stress {
         });
         final Function<TestDriver, Void> function = new ProbabalisticFunction.Builder<TestDriver, Void>()
             .withDefault(new Function<TestDriver, Void>() {
-                public Void apply(@Nullable TestDriver arg0) {
+                public Void apply(TestDriver arg0) {
                     return null;
                 }
             })
@@ -192,7 +190,7 @@ public class Stress {
             .withCallsPerSecondSupplier(Suppliers.ofInstance(200))
 //            .withFutures(100, TimeUnit.MILLISECONDS)
             .withCallback(new Function<TestDriver, Void>() {
-                public Void apply(final @Nullable TestDriver driver) {
+                public Void apply(final TestDriver driver) {
                     long startTime = System.nanoTime();
                     try {
                         pool.executeWithFailover(new TestOperation() {
@@ -224,7 +222,7 @@ public class Stress {
             //
             .withRecurringEvent(10,  TimeUnit.SECONDS,  new Function<TestDriver, Void>() {
                 @Override
-                public Void apply(@Nullable TestDriver driver) {
+                public Void apply(TestDriver driver) {
                     timeoutsEnabled.getAndSet(!timeoutsEnabled.get());
 //                    LOG.info("Toggle timeouts " + timeoutsEnabled.get());
                     return null;
@@ -236,7 +234,7 @@ public class Stress {
             //
             .withRecurringEvent(1,  TimeUnit.SECONDS,  new Function<TestDriver, Void>() {
                 @Override
-                public Void apply(@Nullable TestDriver driver) {
+                public Void apply(TestDriver driver) {
                     long opCount = lastOperationCount.get();
                     lastOperationCount.set(driver.getOperationCount());
                     
@@ -255,7 +253,7 @@ public class Stress {
             //
             .withRecurringEvent(10,  TimeUnit.SECONDS,  new Function<TestDriver, Void>() {
                 @Override
-                public Void apply(@Nullable TestDriver driver) {
+                public Void apply(TestDriver driver) {
 //                    System.out.println("Latency: " + sampler.getScore());
 //                    
 //                    List<Host> newHosts = Lists.newArrayList(hosts);

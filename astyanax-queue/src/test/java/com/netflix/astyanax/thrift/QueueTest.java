@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.netflix.astyanax.AstyanaxContext;
@@ -30,6 +31,7 @@ import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.ConsistencyLevel;
+import com.netflix.astyanax.recipes.functions.TraceFunction;
 import com.netflix.astyanax.recipes.queue.CountingQueueStats;
 import com.netflix.astyanax.recipes.queue.KeyExistsException;
 import com.netflix.astyanax.recipes.queue.Message;
@@ -43,6 +45,7 @@ import com.netflix.astyanax.recipes.queue.SendMessageResponse;
 import com.netflix.astyanax.recipes.queue.ShardedDistributedMessageQueue;
 import com.netflix.astyanax.recipes.queue.triggers.RepeatingTrigger;
 import com.netflix.astyanax.recipes.queue.triggers.RunOnceTrigger;
+import com.netflix.astyanax.recipes.reader.AllRowsReader;
 import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
 
 public class QueueTest {
@@ -99,7 +102,7 @@ public class QueueTest {
             keyspace.dropKeyspace();
         }
         catch (Exception e) {
-            LOG.info(e.getMessage(), e);
+            LOG.info(e.getMessage());
         }
         
         keyspace.createKeyspace(ImmutableMap.<String, Object>builder()
@@ -136,11 +139,11 @@ public class QueueTest {
     }
     
     @Test
-    @Ignore
     // This tests for a known bug that has yet to be fixed
     public void testRepeatingMessage() throws Exception {
         final CountingQueueStats stats = new CountingQueueStats();
         
+        // Create a simple queue
         final ShardedDistributedMessageQueue queue = new ShardedDistributedMessageQueue.Builder()
             .withColumnFamily(SCHEDULER_NAME_CF_NAME)
             .withQueueName("RepeatingMessageQueue")
@@ -155,12 +158,12 @@ public class QueueTest {
         MessageProducer producer = queue.createProducer();
         MessageConsumer consumer = queue.createConsumer();
 
-        // Enqueue a recurring messsage
-        final String key = "MyMessage";
+        // Enqueue a recurring message
+        final String key = "RepeatingMessageWithTimeout";
         final Message message = new Message()
             .setUniqueKey(key)
-            .setTimeout(1, TimeUnit.SECONDS);
-//            .setTrigger(new RepeatingTrigger.Builder().withInterval(1, TimeUnit.SECONDS).build());
+            .setTimeout(1, TimeUnit.SECONDS)
+            .setTrigger(new RepeatingTrigger.Builder().withInterval(1, TimeUnit.SECONDS).build());
         
         producer.sendMessage(message);
         
@@ -170,40 +173,74 @@ public class QueueTest {
             Assert.fail();
         }
         catch (KeyExistsException e) {
-            LOG.info("Key already exists", e);
+            LOG.info("Key already exists");
         }
         
         // Confirm that the message is there
         Assert.assertEquals(1, queue.getMessageCount());
-        final List<Message> m0 = queue.peekMessagesByKey(key);
-        LOG.info("m0: " + m0.toString());
-        Assert.assertEquals(1, m0.size());
+        printMessages("Pending messages after insert ORIG message", queue.peekMessagesByKey(key));
         
         // Consume the message
-        final List<MessageContext> m1 = consumer.readMessages(1);
-        LOG.info("M1: " + m1.toString());
+        LOG.info("*** Reading first message ***");
+        final List<MessageContext> m1 = consumer.readMessages(10);
+        printMessages("Consuming the ORIG message", m1);
         Assert.assertEquals(1, m1.size());
         
-        final List<Message> m1a = queue.peekMessagesByKey(key);
-        LOG.info("m1: " + m1a.toString());
+        printMessages("Pending messages after consume ORIG " + key, queue.peekMessagesByKey(key));
         
         // Exceed the timeout
         Thread.sleep(2000);
         
         // Consume the timeout event
-        final List<MessageContext> m2 = consumer.readMessages(1);
-        LOG.info("M2: " + m2.toString());
+        LOG.info("*** Reading timeout message ***");
+        final List<MessageContext> m2 = consumer.readMessages(10);
+        printMessages("Consuming the TIMEOUT message", m2);
         Assert.assertEquals(1, m2.size());
         
-        final List<Message> m2a = queue.peekMessagesByKey(key);
-        LOG.info("m2: " + m2a.toString());
-        Assert.assertEquals(2, m2a.size());
+        printMessages("Pending messages after consume TIMEOUT " + key, queue.peekMessagesByKey(key));
+//        Assert.assertEquals(2, m2a.size());
         
+        LOG.info("*** Acking both messages ***");
         consumer.ackMessages(m1);
         consumer.ackMessages(m2);
         
+        printMessages("Pending messages after both acks " + key, queue.peekMessagesByKey(key));
+//        Assert.assertEquals(2, m2a.size());
+        
+        // Consume anything that is in the queue
+        final List<MessageContext> m3 = consumer.readMessages(10);
+        printMessages("Consuming messages", m3);
+        Assert.assertEquals(1, m3.size());
+
+        printMessages("Pending messages after 2nd consume " + key, queue.peekMessagesByKey(key));
+        
+        consumer.ackMessages(m3);
+
+        Thread.sleep(2000);
+        
+        final List<MessageContext> m4 = consumer.readMessages(10);
+        printMessages("Consuming messages", m4);
+        Assert.assertEquals(1, m4.size());
+        
         // There should be only one message
-        Assert.assertEquals(1, queue.getMessageCount());
+//        Assert.assertEquals(1, queue.getMessageCount());
+        
+        for (int i = 0; i < 10; i++) {
+            final List<MessageContext> m5 = consumer.readMessages(10);
+            Assert.assertEquals(1, m5.size());
+            
+            long systemtime = System.currentTimeMillis();
+            MessageContext m = Iterables.getFirst(m5, null);
+            LOG.info("MessageTime: " + (systemtime - m.getMessage().getTrigger().getTriggerTime()));
+            consumer.ackMessages(m5);
+        }
+    }
+    
+    private <T> void printMessages(String caption, List<T> messages) {
+    	LOG.info(caption + "(" + messages.size() + ")");
+    	for (T message : messages) {
+        	LOG.info("   " + message);
+    	}
     }
     
     @Test
@@ -291,7 +328,7 @@ public class QueueTest {
             final Message m1rmd = scheduler.peekMessage(messageId);
             Assert.assertNull(m1rmd);
         }
-        
+
         {
             // Send another message
             final Message m = new Message().setUniqueKey(key);
@@ -341,6 +378,7 @@ public class QueueTest {
         
         {
             final Message m = new Message()
+                .setKey("Key12345")
                 .setTrigger(new RepeatingTrigger.Builder()
                     .withInterval(3,  TimeUnit.SECONDS)
                     .withRepeatCount(10)
@@ -351,7 +389,9 @@ public class QueueTest {
             Assert.assertNotNull(m3rm);
             LOG.info(m3rm.toString());
             Assert.assertEquals(1,  scheduler.getMessageCount());
+            
             scheduler.deleteMessage(messageId3);
+
             Assert.assertEquals(0,  scheduler.getMessageCount());
         }
         

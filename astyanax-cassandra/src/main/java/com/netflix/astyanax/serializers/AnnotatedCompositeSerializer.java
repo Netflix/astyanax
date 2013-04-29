@@ -128,8 +128,8 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
                 }
 
                 if (cb.limit() + COMPONENT_OVERHEAD > bb.remaining()) {
-                    int exponent = (int) Math.ceil(Math.log((double) (cb.limit() + COMPONENT_OVERHEAD) / (double) bb.limit()) / Math.log(2));
-                    int newBufferSize = bb.limit() * (int) Math.pow(2, exponent);
+                    int exponent = (int) Math.ceil(Math.log((double) (cb.limit() + COMPONENT_OVERHEAD + bb.limit())) / Math.log(2));
+                    int newBufferSize = (int) Math.pow(2, exponent);
                     ByteBuffer temp = ByteBuffer.allocate(newBufferSize);
                     bb.flip();
                     temp.put(bb);

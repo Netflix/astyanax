@@ -141,7 +141,12 @@ public interface ConnectionPoolMonitor {
      * @return Number of times operations were cancelled 
      */
     long getInterruptedCount();
-    
+
+    /**
+     * @return Number of times transport errors occurred
+     */
+    long getTransportErrorCount();
+
     /**
      * @return Return the number of hosts in the pool
      */
@@ -169,7 +174,12 @@ public interface ConnectionPoolMonitor {
      * @return Return the number of times any host was marked as down.
      */
     long getHostDownCount();
-    
+
+    /**
+     * @return Return the number of active hosts
+     */
+    long getHostActiveCount();
+
     /**
      * A host was added and given the associated pool. The pool is immutable and
      * can be used to get info about the number of open connections

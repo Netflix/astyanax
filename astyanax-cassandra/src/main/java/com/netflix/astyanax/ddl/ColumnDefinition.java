@@ -60,10 +60,8 @@ public interface ColumnDefinition {
     /**
      * Sets an index on this column.
      * 
-     * @param name
-     *            Name of index
-     * @param type
-     *            "KEYS"
+     * @param name  Name of index - This name must be globally unique
+     * @param type  "KEYS"
      */
     ColumnDefinition setIndex(String name, String type);
 
@@ -74,6 +72,19 @@ public interface ColumnDefinition {
      */
     ColumnDefinition setKeysIndex(String name);
 
+    /**
+     * Enable a secondary KEY index 
+     * @return
+     */
+    ColumnDefinition setKeysIndex();
+    
+    /**
+     * Enable a secondary index of custom type
+     * @param type
+     * @return
+     */
+    ColumnDefinition setIndexWithType(String type);
+    
     /**
      * Get the column name
      */

@@ -36,8 +36,8 @@ public final class IntegerSerializer extends AbstractSerializer<Integer> {
         if ((byteBuffer == null) || (byteBuffer.remaining() != 4)) {
             return null;
         }
-        int in = byteBuffer.getInt();
-        byteBuffer.rewind();
+        ByteBuffer dup = byteBuffer.duplicate();
+        int in = dup.getInt();
         return in;
     }
 

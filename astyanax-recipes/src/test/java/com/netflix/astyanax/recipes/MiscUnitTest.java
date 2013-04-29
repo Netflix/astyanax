@@ -9,8 +9,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import javax.annotation.Nullable;
-
 import junit.framework.Assert;
 
 import org.junit.AfterClass;
@@ -42,6 +40,10 @@ import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.partitioner.Murmur3Partitioner;
 import com.netflix.astyanax.recipes.UUIDStringSupplier;
+import com.netflix.astyanax.recipes.functions.ColumnCounterFunction;
+import com.netflix.astyanax.recipes.functions.RowCopierFunction;
+import com.netflix.astyanax.recipes.functions.RowCounterFunction;
+import com.netflix.astyanax.recipes.functions.TraceFunction;
 import com.netflix.astyanax.recipes.locks.ColumnPrefixDistributedRowLock;
 import com.netflix.astyanax.recipes.locks.StaleLockException;
 import com.netflix.astyanax.recipes.reader.AllRowsReader;
@@ -106,9 +108,21 @@ public class MiscUnitTest {
                     StringSerializer.get(),
                     StringSerializer.get());
     
+    public static ColumnFamily<String, String> CF_STANDARD1_COPY = ColumnFamily
+            .newColumnFamily(
+                    "Standard1_COPY", 
+                    StringSerializer.get(),
+                    StringSerializer.get());
+    
     public static ColumnFamily<Integer, Integer> CF_ALL_ROWS = ColumnFamily
             .newColumnFamily(
-                    "AllRowsMusicUnitTest", 
+                    "AllRowsMiscUnitTest", 
+                    IntegerSerializer.get(),
+                    IntegerSerializer.get());
+
+    public static ColumnFamily<Integer, Integer> CF_ALL_ROWS_COPY = ColumnFamily
+            .newColumnFamily(
+                    "AllRowsMiscUnitTestCopy", 
                     IntegerSerializer.get(),
                     IntegerSerializer.get());
 
@@ -209,6 +223,7 @@ public class MiscUnitTest {
                      .build());
         
         keyspace.createColumnFamily(UNIQUE_CF, null);
+        keyspace.createColumnFamily(CF_STANDARD1_COPY, null);
         
         KeyspaceDefinition ki = keyspaceContext.getEntity().describeKeyspace();
         System.out.println("Describe Keyspace: " + ki.getName());
@@ -782,7 +797,7 @@ public class MiscUnitTest {
         try {
             unique.acquireAndApplyMutation(new Function<MutationBatch, Boolean>() {
                 @Override
-                public Boolean apply(@Nullable MutationBatch m) {
+                public Boolean apply(MutationBatch m) {
                     m.withRow(UNIQUE_CF, row)
                         .putColumn(dataColumn, value, null);
                     return true;
@@ -840,7 +855,7 @@ public class MiscUnitTest {
 //                .withPartitioner(new Murmur3Partitioner())
                 .forEachRow(new Function<Row<String, String>, Boolean>() {
                     @Override
-                    public Boolean apply(@Nullable Row<String, String> row) {
+                    public Boolean apply(Row<String, String> row) {
                         counter.incrementAndGet();
                         LOG.info("Got a row: " + row.getKey().toString());
                         return true;
@@ -858,6 +873,63 @@ public class MiscUnitTest {
             Assert.fail(e.getMessage());
         }
         
+    }
+    
+    @Test
+    public void testAllRowsReaderCopier() throws Exception {
+        final ColumnCounterFunction columnCounter = new ColumnCounterFunction();
+        final RowCounterFunction    rowCounter    = new RowCounterFunction();
+                
+        new AllRowsReader.Builder<String, String>(keyspace, CF_STANDARD1)
+                .withPageSize(3)
+                .withConcurrencyLevel(2)
+                .forEachRow(columnCounter)
+                .build()
+                .call();
+        
+        LOG.info("Column count = " + columnCounter.getCount());
+        
+        new AllRowsReader.Builder<String, String>(keyspace, CF_STANDARD1)
+                .withPageSize(3)
+                .withConcurrencyLevel(2)
+                .forEachRow(rowCounter)
+                .build()
+                .call();
+        
+        LOG.info("Row count = " + rowCounter.getCount());
+        
+        new AllRowsReader.Builder<String, String>(keyspace, CF_STANDARD1)
+                .withPageSize(3)
+                .withConcurrencyLevel(2)
+                .forEachRow(RowCopierFunction.builder(keyspace, CF_STANDARD1_COPY).build())
+                .build()
+                .call();
+
+        rowCounter.reset();
+        new AllRowsReader.Builder<String, String>(keyspace, CF_STANDARD1_COPY)
+            .withPageSize(3)
+            .withConcurrencyLevel(2)
+            .forEachRow(rowCounter)
+            .build()
+            .call();
+
+        LOG.info("Copied row count = " + rowCounter.getCount());
+        
+        LOG.info("CF_STANDARD1");
+        new AllRowsReader.Builder<String, String>(keyspace, CF_STANDARD1)
+            .withPageSize(3)
+            .withConcurrencyLevel(2)
+            .forEachRow(TraceFunction.builder(CF_STANDARD1_COPY).build())
+            .build()
+            .call();
+
+        LOG.info("CF_STANDARD1_COPY");
+        new AllRowsReader.Builder<String, String>(keyspace, CF_STANDARD1_COPY)
+            .withPageSize(3)
+            .withConcurrencyLevel(2)
+            .forEachRow(TraceFunction.builder(CF_STANDARD1_COPY).build())
+            .build()
+            .call();
     }
     
     @Test
@@ -914,7 +986,7 @@ public class MiscUnitTest {
                 .withConcurrencyLevel(2)
                 .forEachRow(new Function<Row<String, String>, Boolean>() {
                     @Override
-                    public Boolean apply(@Nullable Row<String, String> row) {
+                    public Boolean apply(Row<String, String> row) {
                         try {
                             Thread.sleep(2000);
                         } catch (InterruptedException e) {
@@ -957,7 +1029,7 @@ public class MiscUnitTest {
                 .withConcurrencyLevel(2)
                 .forEachRow(new Function<Row<String, String>, Boolean>() {
                     @Override
-                    public Boolean apply(@Nullable Row<String, String> row) {
+                    public Boolean apply(Row<String, String> row) {
                         throw new RuntimeException("Very bad");
                     }
                 })

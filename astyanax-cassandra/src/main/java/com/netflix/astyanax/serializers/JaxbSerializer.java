@@ -107,8 +107,8 @@ public class JaxbSerializer extends AbstractSerializer<Object> {
         if (bytes == null || !bytes.hasRemaining()) {
             return null;
         }
-
-        ByteArrayInputStream bais = new ByteArrayInputStream(bytes.array());
+        ByteBuffer dup = bytes.duplicate();
+        ByteArrayInputStream bais = new ByteArrayInputStream(dup.array());
         try {
             XMLStreamReader reader = createStreamReader(bais);
             Object ret = unmarshaller.get().unmarshal(reader);

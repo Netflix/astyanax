@@ -28,7 +28,7 @@ public class MessageQueueDispatcher {
     private static final Logger LOG = LoggerFactory.getLogger(MessageQueueDispatcher.class);
     
     public final static int   DEFAULT_BATCH_SIZE            = 5;
-    public final static int   DEFAULT_THROTTLE_DURATION     = 1000;
+    public final static int   DEFAULT_POLLING_INTERVAL     = 1000;
     public final static int   DEFAULT_THREAD_COUNT          = 1;
     public final static int   DEFAULT_CONSUMER_COUNT        = 1;
     public final static int   DEFAULT_ACK_SIZE              = 100;
@@ -115,7 +115,7 @@ public class MessageQueueDispatcher {
          * @param units
          */
         public Builder withPollingInterval(long interval, TimeUnit units) {
-            dispatcher.pollingInterval = TimeUnit.SECONDS.convert(interval, units);
+            dispatcher.pollingInterval = TimeUnit.MILLISECONDS.convert(interval, units);
             return this;
         }
         
@@ -154,7 +154,7 @@ public class MessageQueueDispatcher {
     private int             ackSize       = DEFAULT_ACK_SIZE;
     private long            ackInterval   = DEFAULT_ACK_INTERVAL;
     private int             backlogSize   = DEFAULT_BACKLOG_SIZE;
-    private long            pollingInterval = DEFAULT_THROTTLE_DURATION;
+    private long            pollingInterval = DEFAULT_POLLING_INTERVAL;
     private boolean         terminate     = false;
     private MessageQueue    messageQueue;
     private ExecutorService executor;

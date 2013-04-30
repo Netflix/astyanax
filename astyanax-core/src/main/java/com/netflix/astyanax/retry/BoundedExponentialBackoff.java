@@ -15,7 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax.retry;
 
-import com.netflix.astyanax.util.StringUtils;
+import org.apache.commons.lang.builder.ToStringBuilder;
 
 /**
  * Bounded exponential backoff that will wait for no more than a provided max amount of time.
@@ -48,8 +48,11 @@ public class BoundedExponentialBackoff extends ExponentialBackoff {
         return new BoundedExponentialBackoff(getBaseSleepTimeMs(), maxSleepTimeMs, getMaxAttemptCount());
     }
 
+    public int getMaxSleepTimeMs() {
+        return maxSleepTimeMs;
+    }
 
     public String toString() {
-        return StringUtils.joinClassAttributeValues(this, "BoundedExponentialBackoff", BoundedExponentialBackoff.class);
+        return ToStringBuilder.reflectionToString(this);
     }
 }

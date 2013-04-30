@@ -1,17 +1,5 @@
 package com.netflix.astyanax.thrift;
 
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicLong;
-
-import junit.framework.Assert;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableMap;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.ExceptionCallback;
@@ -35,6 +23,17 @@ import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.util.RangeBuilder;
 import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
+import junit.framework.Assert;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Iterator;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class ThriftKeyspaceAllRowsTest {
     
@@ -717,4 +716,36 @@ public class ThriftKeyspaceAllRowsTest {
             Assert.fail();
         }
     }
+
+	@Test
+	public void testTokenRangeTest() {
+		try {
+			OperationResult<Rows<Long, String>> rows = keyspace.prepareQuery(CF_ALL_ROWS)
+					.getAllRows()
+					.setRowLimit(5)
+					.setExceptionCallback(new ExceptionCallback() {
+						@Override
+						public boolean onException(ConnectionException e) {
+							Assert.fail(e.getMessage());
+							return true;
+						}
+					})
+					.forTokenRange("9452287970026068429538183539771339207", "37809151880104273718152734159085356828")
+					.execute();
+
+			Iterator<Row<Long, String>> itr = rows.getResult().iterator();
+
+			while (itr.hasNext()) {
+				Row<Long, String> row = itr.next();
+				LOG.info("Row: " + row.getKey() + " count=" + row.getColumns().size());
+			}
+
+			Set<Long> set = getKeySet(rows.getResult());
+			LOG.info(set.toString());
+			// only a subset of the rows should have been returned
+			Assert.assertEquals(4,  set.size());
+		} catch (ConnectionException e) {
+			Assert.fail();
+		}
+	}
 }

@@ -18,6 +18,7 @@ package com.netflix.astyanax.test;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.ColumnMutation;
@@ -193,12 +194,6 @@ public class TestKeyspace implements Keyspace {
     }
 
     @Override
-    public <K, C> OperationResult<SchemaChangeResult> createColumnFamily(Map<String, Object> options) throws ConnectionException {
-        
-        return null;
-    }
-
-    @Override
     public Map<String, List<String>> describeSchemaVersions() throws ConnectionException {
         // TODO Auto-generated method stub
         return null;
@@ -225,6 +220,61 @@ public class TestKeyspace implements Keyspace {
     @Override
     public OperationResult<SchemaChangeResult> createKeyspace(Map<String, Object> options,
             Map<ColumnFamily, Map<String, Object>> cfs) throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResult> createColumnFamily(
+            Properties props) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResult> createKeyspace(
+            Properties properties) throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResult> updateKeyspace(Properties props)
+            throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public Properties getKeyspaceProperties() throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public Properties getColumnFamilyProperties(String columnFamily)
+            throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResult> updateColumnFamily(
+            Properties props) throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResult> updateColumnFamily(
+            Map<String, Object> options) throws ConnectionException {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResult> createColumnFamily(
+            Map<String, Object> options) throws ConnectionException {
         // TODO Auto-generated method stub
         return null;
     }

@@ -12,6 +12,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Properties;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -22,6 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import junit.framework.Assert;
 
+import org.apache.cassandra.thrift.KsDef;
 import org.apache.cassandra.utils.Pair;
 import org.apache.commons.lang.RandomStringUtils;
 import org.junit.AfterClass;
@@ -34,6 +36,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Cluster;
@@ -48,6 +51,7 @@ import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.TokenRange;
+import com.netflix.astyanax.connectionpool.exceptions.BadRequestException;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
@@ -100,9 +104,6 @@ public class ThriftKeyspaceImplTest {
 
     private static Keyspace                  keyspace;
     private static AstyanaxContext<Keyspace> keyspaceContext;
-
-    private static String TEST_CLUSTER_NAME  = "cass_sandbox";
-    private static String TEST_KEYSPACE_NAME = "AstyanaxUnitTests";
 
     private static ColumnFamily<String, String> CF_USER_INFO = ColumnFamily.newColumnFamily(
             "UserInfo", // Column Family Name
@@ -198,8 +199,10 @@ public class ThriftKeyspaceImplTest {
                     SE_SERIALIZER);
 
     private static final String SEEDS = "localhost:9160";
-
     private static final long   CASSANDRA_WAIT_TIME = 3000;
+    private static String TEST_CLUSTER_NAME  = "cass_sandbox";
+    private static String TEST_KEYSPACE_NAME = "AstyanaxUnitTests";
+
     
     @BeforeClass
     public static void setup() throws Exception {
@@ -227,7 +230,7 @@ public class ThriftKeyspaceImplTest {
                 .withAstyanaxConfiguration(
                         new AstyanaxConfigurationImpl()
                                 .setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
-                                .setConnectionPoolType(ConnectionPoolType.TOKEN_AWARE)
+                                .setConnectionPoolType(ConnectionPoolType.ROUND_ROBIN)
                                 .setDiscoveryDelayInSeconds(60000))
                 .withConnectionPoolConfiguration(
                         new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME
@@ -243,7 +246,7 @@ public class ThriftKeyspaceImplTest {
 
         keyspaceContext.start();
         
-        keyspace = keyspaceContext.getEntity();
+        keyspace = keyspaceContext.getClient();
         
         try {
             keyspace.dropKeyspace();
@@ -267,12 +270,10 @@ public class ThriftKeyspaceImplTest {
                          .put("column_metadata", ImmutableMap.<String, Object>builder()
                              .put("Index1", ImmutableMap.<String, Object>builder()
                                  .put("validation_class", "UTF8Type")
-                                 .put("index_name",       "Index1")
                                  .put("index_type",       "KEYS")
                                  .build())
                              .put("Index2", ImmutableMap.<String, Object>builder()
                                  .put("validation_class", "UTF8Type")
-                                 .put("index_name",       "Index2")
                                  .put("index_type",       "KEYS")
                                  .build())
                              .build())
@@ -308,23 +309,20 @@ public class ThriftKeyspaceImplTest {
                 .put("column_metadata", ImmutableMap.<String, Object>builder()
                         .put("firstname",  ImmutableMap.<String, Object>builder()
                                 .put("validation_class", "UTF8Type")
-                                .put("index_name",       "firstname")
                                 .put("index_type",       "KEYS")
                                 .build())
                         .put("lastname", ImmutableMap.<String, Object>builder()
                                 .put("validation_class", "UTF8Type")
-                                .put("index_name",       "lastname")
                                 .put("index_type",       "KEYS")
                                 .build())
                         .put("age", ImmutableMap.<String, Object>builder()
                                 .put("validation_class", "LongType")
-                                .put("index_name",       "age")
                                 .put("index_type",       "KEYS")
                                 .build())
                         .build())
                      .build());
         
-        KeyspaceDefinition ki = keyspaceContext.getEntity().describeKeyspace();
+        KeyspaceDefinition ki = keyspaceContext.getClient().describeKeyspace();
         System.out.println("Describe Keyspace: " + ki.getName());
 
         try {
@@ -482,10 +480,8 @@ public class ThriftKeyspaceImplTest {
         }
         LOG.info(fieldNames.toString());
         
-        System.out.println(fieldNames.toString());
-        
         for (FieldMetadata field : def.getFieldsMetadata()) {
-            System.out.println(field.getName() + " = " + def.getFieldValue(field.getName()) + " (" + field.getType() + ")");
+            LOG.info(field.getName() + " = " + def.getFieldValue(field.getName()) + " (" + field.getType() + ")");
         }
         
         for (ColumnFamilyDefinition cfDef : def.getColumnFamilyList()) {
@@ -496,6 +492,28 @@ public class ThriftKeyspaceImplTest {
         }
     }
     
+    @Test 
+    public void testCopyKeyspace() throws Exception {
+        KeyspaceDefinition def = keyspaceContext.getEntity().describeKeyspace();
+        Properties props = def.getProperties();
+        
+        for (Entry<Object, Object> prop : props.entrySet()) {
+            LOG.info(prop.getKey() + " : " + prop.getValue());
+        }
+        
+        KsDef def2 = ThriftUtils.getThriftObjectFromProperties(KsDef.class, props);
+        Properties props2 = ThriftUtils.getPropertiesFromThrift(def2);
+
+        LOG.info("Props2:" + props2);
+        MapDifference<Object, Object> diff = Maps.difference(props,  props2);
+        LOG.info("Not copied : " + diff.entriesOnlyOnLeft());
+        LOG.info("Added      : " + diff.entriesOnlyOnRight());
+        LOG.info("Differing  : " + diff.entriesDiffering());
+        
+        
+        Assert.assertTrue(diff.areEqual());
+    }
+    
     @Test
     public void testNonExistentKeyspace()  {
         AstyanaxContext<Keyspace> ctx = new AstyanaxContext.Builder()
@@ -504,7 +522,7 @@ public class ThriftKeyspaceImplTest {
             .withAstyanaxConfiguration(
                     new AstyanaxConfigurationImpl()
                             .setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
-                            .setConnectionPoolType(ConnectionPoolType.TOKEN_AWARE)
+                            .setConnectionPoolType(ConnectionPoolType.ROUND_ROBIN)
                             .setDiscoveryDelayInSeconds(60000))
             .withConnectionPoolConfiguration(
                     new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME
@@ -2600,6 +2618,55 @@ public class ThriftKeyspaceImplTest {
         ColumnList<UUID> columns = query.execute().getResult();
         
         keyspace.prepareQuery(CF2).getKey("anything").execute();
+    }
+    
+    @Test
+    public void testDDLWithProperties() throws Exception {
+        String keyspaceName = "DDLPropertiesKeyspace";
+        
+        Properties props = new Properties();
+        props.put("name", keyspaceName + "_wrong");
+        props.put("strategy_class", "SimpleStrategy");
+        props.put("strategy_options.replication_factor", "1");
+        
+        AstyanaxContext<Keyspace> kc = new AstyanaxContext.Builder()
+            .forCluster(TEST_CLUSTER_NAME)
+            .forKeyspace(keyspaceName)
+            .withAstyanaxConfiguration(
+                    new AstyanaxConfigurationImpl()
+                            .setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
+                            .setConnectionPoolType(ConnectionPoolType.ROUND_ROBIN)
+                            .setDiscoveryDelayInSeconds(60000))
+            .withConnectionPoolConfiguration(
+                    new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME + "_" + keyspaceName)
+                            .setSocketTimeout(30000)
+                            .setMaxTimeoutWhenExhausted(2000)
+                            .setMaxConnsPerHost(20)
+                            .setInitConnsPerHost(10)
+                            .setSeeds(SEEDS)
+                            )
+            .withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
+            .buildKeyspace(ThriftFamilyFactory.getInstance());
+        
+        kc.start();
+
+        Keyspace ks = kc.getClient();
+        
+        try {
+            ks.createKeyspace(props);
+            Assert.fail("Should have gotten name mismatch error");
+        }
+        catch (BadRequestException e) {
+            LOG.info(e.getMessage());
+        }
+        
+        props.put("name", keyspaceName);
+        ks.createKeyspace(props);
+        
+        Properties props1 = ks.getKeyspaceProperties();
+        
+        LOG.info(props.toString());
+        LOG.info(props1.toString());
     }
     
     private boolean deleteColumn(ColumnFamily<String, String> cf,

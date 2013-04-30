@@ -73,7 +73,7 @@ public class ThriftColumnDefinitionImpl implements ColumnDefinition {
     
     @Override
     public ColumnDefinition setName(String name) {
-        columnDef.setName(StringSerializer.get().toBytes(name));
+        columnDef.setName(name.getBytes());
         return this;
     }
     
@@ -136,6 +136,18 @@ public class ThriftColumnDefinitionImpl implements ColumnDefinition {
     public ColumnDefinition setKeysIndex(String name) {
         this.columnDef.setIndex_name(name);
         this.columnDef.setIndex_type(IndexType.KEYS);
+        return this;
+    }
+    
+    @Override
+    public ColumnDefinition setKeysIndex() {
+        this.columnDef.setIndex_type(IndexType.KEYS);
+        return this;
+    }
+
+    @Override
+    public ColumnDefinition setIndexWithType(String type) {
+        this.columnDef.setIndex_type(IndexType.valueOf(type));
         return this;
     }
 

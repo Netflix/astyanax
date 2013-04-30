@@ -80,7 +80,7 @@ public interface CqlPreparedStatement extends Execution<CqlStatementResult> {
     CqlPreparedStatement withShortValue(Short value);
     
     /**
-     * Set the next parameter value to this Short
+     * Set the next parameter value to this UUID
      * @param value
      * @return
      */

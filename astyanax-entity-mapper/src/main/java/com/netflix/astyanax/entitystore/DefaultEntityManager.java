@@ -46,6 +46,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 		private RetryPolicy retryPolicy = null;
 		private LifecycleEvents<T> lifecycleHandler = null;
 		private String columnFamilyName = null;
+		private boolean autoCommit = true;
 		
 		public Builder() {
 
@@ -144,6 +145,11 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 			this.retryPolicy = policy;
 			return this;
 		}
+		
+		public Builder<T, K> withAutoCommit(boolean autoCommit) {
+		    this.autoCommit = autoCommit;
+		    return this;
+		}
 
 		@SuppressWarnings("unchecked")
         public DefaultEntityManager<T, K> build() {
@@ -172,22 +178,25 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 	//////////////////////////////////////////////////////////////////
 	// private members
 
-	private final EntityMapper<T,K> entityMapper;
-	private final Keyspace keyspace;
-	private final ColumnFamily<K, String> columnFamily;
-	private final ConsistencyLevel readConsitency;
-	private final ConsistencyLevel writeConsistency;
-	private final RetryPolicy retryPolicy;
-	private final LifecycleEvents<T> lifecycleHandler;
+	private final EntityMapper<T,K>        entityMapper;
+	private final Keyspace                 keyspace;
+	private final ColumnFamily<K, String>  columnFamily;
+	private final ConsistencyLevel         readConsitency;
+	private final ConsistencyLevel         writeConsistency;
+	private final RetryPolicy              retryPolicy;
+	private final LifecycleEvents<T>       lifecycleHandler;
+	private final boolean                  autoCommit;
+	private final ThreadLocal<MutationBatch> tlMutation = new ThreadLocal<MutationBatch>();
 	
 	private DefaultEntityManager(Builder<T, K> builder) {
-		entityMapper = builder.entityMapper;
-		keyspace = builder.keyspace;
-		columnFamily = builder.columnFamily;
-		readConsitency = builder.readConsitency;
-		writeConsistency = builder.writeConsistency;
-		retryPolicy = builder.retryPolicy;
-		lifecycleHandler = builder.lifecycleHandler;
+		entityMapper      = builder.entityMapper;
+		keyspace          = builder.keyspace;
+		columnFamily      = builder.columnFamily;
+		readConsitency    = builder.readConsitency;
+		writeConsistency  = builder.writeConsistency;
+		retryPolicy       = builder.retryPolicy;
+		lifecycleHandler  = builder.lifecycleHandler;
+		autoCommit        = builder.autoCommit;
 	}
 
 	//////////////////////////////////////////////////////////////////
@@ -201,7 +210,8 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 		    lifecycleHandler.onPrePersist(entity);
             MutationBatch mb = newMutationBatch();
 			entityMapper.fillMutationBatch(mb, columnFamily, entity);			
-			mb.execute();
+            if (autoCommit)
+                mb.execute();
             lifecycleHandler.onPostPersist(entity);
 		} catch(Exception e) {
 			throw new PersistenceException("failed to put entity ", e);
@@ -234,9 +244,10 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 	@Override
 	public void delete(K id) throws PersistenceException {
 		try {
-			MutationBatch mb = newMutationBatch();
+			MutationBatch mb = getMutationBatch();
 			mb.withRow(columnFamily, id).delete();
-			mb.execute();
+            if (autoCommit)
+                mb.execute();
 		} catch(Exception e) {
 			throw new PersistenceException("failed to delete entity " + id, e);
 		}
@@ -250,7 +261,8 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
             id = entityMapper.getEntityId(entity);
             MutationBatch mb = newMutationBatch();
             mb.withRow(columnFamily, id).delete();
-            mb.execute();
+            if (autoCommit)
+                mb.execute();
             lifecycleHandler.onPostRemove(entity);
         } catch(Exception e) {
             throw new PersistenceException("failed to delete entity " + id, e);
@@ -306,12 +318,13 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
      */
     @Override
     public void delete(Collection<K> ids) throws PersistenceException {
-        MutationBatch mb = newMutationBatch();        
+        MutationBatch mb = getMutationBatch();        
         try {
             for (K id : ids) {
                 mb.withRow(columnFamily, id).delete();
             }
-            mb.execute();
+            if (autoCommit)
+                mb.execute();
         } catch(Exception e) {
             throw new PersistenceException("failed to delete entities " + ids, e);
         }
@@ -319,7 +332,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 
     @Override
     public void remove(Collection<T> entities) throws PersistenceException {
-        MutationBatch mb = newMutationBatch();        
+        MutationBatch mb = getMutationBatch();        
         try {
             for (T entity : entities) {
                 lifecycleHandler.onPreRemove(entity);
@@ -340,13 +353,14 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
      */
     @Override
     public void put(Collection<T> entities) throws PersistenceException {
-        MutationBatch mb = newMutationBatch();        
+        MutationBatch mb = getMutationBatch();        
         try {
             for (T entity : entities) {
                 lifecycleHandler.onPrePersist(entity);
                 entityMapper.fillMutationBatch(mb, columnFamily, entity);           
             }
-            mb.execute();
+            if (autoCommit)
+                mb.execute();
             
             for (T entity : entities) {
                 lifecycleHandler.onPostPersist(entity);
@@ -415,6 +429,20 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
         return mb;
     }
     
+    private MutationBatch getMutationBatch() {
+        if (autoCommit) {
+            return newMutationBatch();
+        }
+        else {
+            MutationBatch mb = tlMutation.get();
+            if (mb == null) {
+                mb = newMutationBatch();
+                tlMutation.set(mb);
+            }
+            return mb;
+        }
+    }
+    
     private ColumnFamilyQuery<K, String> newQuery() {
         ColumnFamilyQuery<K, String> cfq = keyspace.prepareQuery(columnFamily);
         if(readConsitency != null)
@@ -448,6 +476,18 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
             keyspace.truncateColumnFamily(this.columnFamily);
         } catch (ConnectionException e) {
             throw new PersistenceException("Unable to drop column family " + this.columnFamily.getName(), e);
+        }
+    }
+
+    @Override
+    public void commit() throws PersistenceException {
+        MutationBatch mb = tlMutation.get();
+        if (mb != null) {
+            try {
+                mb.execute();
+            } catch (ConnectionException e) {
+                throw new PersistenceException("Failed to commit mutation batch", e);
+            }
         }
     }
 

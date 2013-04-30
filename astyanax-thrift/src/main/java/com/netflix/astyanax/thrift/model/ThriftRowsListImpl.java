@@ -40,7 +40,7 @@ public class ThriftRowsListImpl<K, C> implements Rows<K, C> {
         
         for (Entry<ByteBuffer, List<ColumnOrSuperColumn>> row : rows.entrySet()) {
             Row<K,C> thriftRow = new ThriftRowImpl<K, C>(
-                    keySer.fromByteBuffer(row.getKey()), 
+                    keySer.fromByteBuffer(row.getKey().duplicate()), 
                     row.getKey(),
                     new ThriftColumnOrSuperColumnListImpl<C>(row.getValue(), colSer));
 

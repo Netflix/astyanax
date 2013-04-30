@@ -198,4 +198,14 @@ public class EmptyConnectionPoolMonitor implements ConnectionPoolMonitor {
     public long getHostDownCount() {
         return 0;
     }
+
+    @Override
+    public long getTransportErrorCount() {
+        return 0;
+    }
+
+    @Override
+    public long getHostActiveCount() {
+        return 0;
+    }
 }

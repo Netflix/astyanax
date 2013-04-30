@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax.recipes.reader;
 
+import java.io.Flushable;
 import java.math.BigInteger;
 import java.util.Collection;
 import java.util.List;
@@ -44,9 +45,12 @@ import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.partitioner.BigInteger127Partitioner;
 import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.query.CheckpointManager;
+import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.query.RowSliceQuery;
+import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.shallows.EmptyCheckpointManager;
 import com.netflix.astyanax.util.Callables;
+import com.netflix.astyanax.model.ConsistencyLevel;
 
 /**
  * Recipe that is used to read all rows from a column family.  
@@ -79,7 +83,13 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
     private final   List<Future<Boolean>> futures = Lists.newArrayList();
     private final   AtomicBoolean       cancelling = new AtomicBoolean(false);
     private final   Partitioner         partitioner;
+    private final   ConsistencyLevel	consistencyLevel;
+    private final   RetryPolicy         retryPolicy;
     private AtomicReference<Exception>  error = new AtomicReference<Exception>();
+
+	private String dc;
+
+	private String rack;
     
     public static class Builder<K, C> {
         private final Keyspace      keyspace;
@@ -97,6 +107,10 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
         private String              startToken;
         private String              endToken;
         private Boolean             includeEmptyRows;  // Default to null will discard tombstones
+        private String				dc;
+        private String				rack;
+        private ConsistencyLevel	consistencyLevel = null;
+        private RetryPolicy         retryPolicy;
         
         public Builder(Keyspace ks, ColumnFamily<K, C> columnFamily) {
             this.keyspace     = ks;
@@ -271,6 +285,37 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
             return this;
         }
         
+        public Builder<K, C> withConsistencyLevel(ConsistencyLevel consistencyLevel) {
+        	this.consistencyLevel = consistencyLevel;
+        	return this;
+        }
+        /**
+         * Specify dc to use when auto determining the token ranges to ensure that only ranges
+         * in the current dc are used.
+         * @param rack
+         * @return
+         */
+        public Builder<K, C> withDc(String dc) {
+        	this.dc = dc;
+        	return this;
+        }
+        
+        /**
+         * Specify rack to use when auto determining the token ranges to ensure that only ranges
+         * in the current rack are used.
+         * @param rack
+         * @return
+         */
+        public Builder<K,C> withRack(String rack) {
+        	this.rack = rack;
+        	return this;
+        }
+        
+        public Builder<K,C> withRetryPolicy(RetryPolicy policy) {
+            this.retryPolicy = policy;
+            return this;
+        }
+        
         public AllRowsReader<K,C> build() {
             if (partitioner == null) {
                 try {
@@ -292,7 +337,11 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                     includeEmptyRows, 
                     pageSize,
                     repeatLastToken,
-                    partitioner);
+                    partitioner,
+                    dc,
+                    rack,
+                    consistencyLevel, 
+                    retryPolicy);
         }
     }
     
@@ -308,7 +357,11 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
             Boolean includeEmptyRows,
             int pageSize,
             boolean repeatLastToken,
-            Partitioner partitioner) {
+            Partitioner partitioner,
+            String dc,
+            String rack,
+            ConsistencyLevel consistencyLevel,
+            RetryPolicy retryPolicy) {
         super();
         this.keyspace           = keyspace;
         this.columnFamily       = columnFamily;
@@ -323,6 +376,10 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
         this.pageSize           = pageSize;
         this.repeatLastToken    = repeatLastToken;
         this.partitioner        = partitioner;
+        this.dc					= dc;
+        this.rack				= rack;
+        this.consistencyLevel   = consistencyLevel;
+        this.retryPolicy        = retryPolicy;
         
         // Flag explicitly set
         if (includeEmptyRows != null) 
@@ -333,6 +390,15 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
         // Default to false
         else 
             this.includeEmptyRows = false;
+    }
+    
+    private ColumnFamilyQuery<K, C> prepareQuery() {
+    	ColumnFamilyQuery<K, C> query = keyspace.prepareQuery(columnFamily);
+    	if (consistencyLevel != null)
+    		query.setConsistencyLevel(consistencyLevel);
+    	if (retryPolicy != null)
+    	    query.withRetryPolicy(retryPolicy);
+    	return query;
     }
 
     private Callable<Boolean> makeTokenRangeTask(final String startToken, final String endToken) {
@@ -359,8 +425,7 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                     int localPageSize = pageSize;
                     int rowsToSkip = 0;
                     while (!cancelling.get()) {
-                        RowSliceQuery<K, C> query = keyspace
-                            .prepareQuery(columnFamily).getKeyRange(null, null, currentToken, endToken, localPageSize);
+                        RowSliceQuery<K, C> query = prepareQuery().getKeyRange(null, null, currentToken, endToken, localPageSize);
                         
                         if (columnSlice != null)
                             query.withColumnSlice(columnSlice);
@@ -472,7 +537,7 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
         }
         // We are iterating through each token range
         else {
-            List<TokenRange> ranges = keyspace.describeRing();
+            List<TokenRange> ranges = keyspace.describeRing(dc, rack);
             for (TokenRange range : ranges) {
                 if (range.getStartToken().equals(range.getEndToken())) 
                     subtasks.add(makeTokenRangeTask(range.getStartToken(), range.getEndToken()));
@@ -532,6 +597,10 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                 cancel();
                 throw e;
             }
+        }
+        
+        if (this.rowFunction instanceof Flushable) {
+            ((Flushable)rowFunction).flush();
         }
         return true;
     }

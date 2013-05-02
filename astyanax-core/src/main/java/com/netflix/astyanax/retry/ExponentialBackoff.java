@@ -27,7 +27,8 @@ import org.apache.commons.lang.builder.ToStringBuilder;
  *
  */
 public class ExponentialBackoff extends SleepingRetryPolicy {
-
+    private final int MAX_SHIFT = 30;
+    
     private final Random random = new Random();
     private final int baseSleepTimeMs;
 
@@ -38,9 +39,13 @@ public class ExponentialBackoff extends SleepingRetryPolicy {
 
     @Override
     public long getSleepTimeMs() {
-        return baseSleepTimeMs * Math.max(1, random.nextInt(1 << (this.getAttemptCount() + 1)));
+        int attempt = this.getAttemptCount() + 1;
+        if (attempt > MAX_SHIFT) {
+            attempt = MAX_SHIFT;
+        }
+        return baseSleepTimeMs * Math.max(1, random.nextInt(1 << attempt));
     }
-
+    
     public int getBaseSleepTimeMs() {
         return baseSleepTimeMs;
     }

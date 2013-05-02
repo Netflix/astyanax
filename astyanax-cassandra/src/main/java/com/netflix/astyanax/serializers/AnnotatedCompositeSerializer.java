@@ -244,7 +244,7 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
             @Override
             public ByteBufferRange build() {
                 if ((!gtcalled || !ltcalled) && position < (components.size())) {
-                    LOG.info("Adding a full range scan beyond the previous component of the composite");
+                    LOG.debug("Adding a full range scan beyond the previous component of the composite");
                     ComponentSerializer<?> serializer = components.get(position);
                     Field f = serializer.getField();
                     Class<?> type = f.getType();

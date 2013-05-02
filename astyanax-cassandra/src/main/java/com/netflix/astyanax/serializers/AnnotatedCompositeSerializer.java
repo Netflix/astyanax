@@ -1,5 +1,6 @@
 package com.netflix.astyanax.serializers;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -8,9 +9,14 @@ import java.util.List;
 
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.annotations.Component;
+import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.Equality;
 import com.netflix.astyanax.model.RangeEndpoint;
+
 import java.util.Arrays;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Serializer for a Pojo annotated with Component field annotations
@@ -27,6 +33,8 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
     private static final ByteBuffer EMPTY_BYTE_BUFFER   = ByteBuffer.allocate(0);
     private static final int        DEFAULT_BUFFER_SIZE = 128;
     private static final int        COMPONENT_OVERHEAD  = 3;
+    private static Logger LOG = LoggerFactory.getLogger(AnnotatedCompositeSerializer.class);
+
     
     /**
      * Serializer for a single component within the Pojo
@@ -209,7 +217,6 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
     public CompositeRangeBuilder buildRange() {
         return new CompositeRangeBuilder() {
             private int position = 0;
-
             public void nextComponent() {
                 position++;
             }
@@ -234,6 +241,36 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
                 out.write(cb.slice());
                 out.write(equality.toByte());
             }
+            @Override
+            public ByteBufferRange build() {
+                if ((!gtcalled || !ltcalled) && position < (components.size())) {
+                    LOG.debug("Adding a full range scan beyond the previous component of the composite");
+                    ComponentSerializer<?> serializer = components.get(position);
+                    Field f = serializer.getField();
+                    Class<?> type = f.getType();
+                    if (type.getName().equals("java.lang.Integer")) {                            
+                        if (!ltcalled) super.lessThanEquals(Integer.MAX_VALUE);
+                        if (!gtcalled) super.greaterThanEquals(Integer.MIN_VALUE);
+                    } else if  (type.getName().equals("java.lang.String")) {
+                        if (!ltcalled) super.lessThanEquals("~");
+                        if (!gtcalled) super.greaterThanEquals(null);
+                    } else if  (type.getName().equals("boolean")){
+                        if (!gtcalled) super.greaterThanEquals(Boolean.FALSE);
+                        if (!ltcalled) super.lessThanEquals(Boolean.TRUE);
+                    } else if (type.getName().equals("java.lang.Long")) {
+                        if (!ltcalled) super.lessThanEquals(Long.MAX_VALUE);
+                        if (!gtcalled) super.greaterThanEquals(Long.MIN_VALUE);
+                    } else if (type.getName().equals("java.lang.Short")) {
+                        if (!ltcalled) super.lessThanEquals(Short.MAX_VALUE);
+                        if (!gtcalled) super.greaterThanEquals(Short.MIN_VALUE);
+                    } else if (type.getName().equals("java.lang.String")) {
+                        if (!ltcalled) super.lessThanEquals(Byte.MAX_VALUE);
+                        if (!gtcalled) super.greaterThanEquals(Byte.MIN_VALUE);
+                    }
+                }
+                return super.build();
+            }
+            
         };
     }
 

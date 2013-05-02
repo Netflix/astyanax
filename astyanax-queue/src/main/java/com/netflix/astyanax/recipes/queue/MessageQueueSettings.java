@@ -2,29 +2,28 @@ package com.netflix.astyanax.recipes.queue;
 
 import java.util.concurrent.TimeUnit;
 
-import com.netflix.astyanax.recipes.queue.shard.TimeModShardPolicy;
-import com.netflix.astyanax.recipes.queue.shard.ModShardPolicy;
-
 /**
  * MessageQueueSettings settings that are persisted to cassandra
  */
 public class MessageQueueSettings {
     public static final Integer       DEFAULT_RETENTION_TIMEOUT = null;
     public static final int           DEFAULT_SHARD_COUNT       = 1;
-    public static final Long          DEFAULT_BUCKET_DURATION   = null; 
+    public static final Long          DEFAULT_BUCKET_DURATION   = null;
     public static final int           DEFAULT_BUCKET_COUNT      = 1;
     public static final Integer       DEFAULT_HISTORY_TTL       = null;
     public static final String        DEFAULT_QUEUE_NAME        = "Queue";
     public static final long          DEFAULT_POLL_WAIT         = TimeUnit.MILLISECONDS.convert(100, TimeUnit.MILLISECONDS);
-    
-    private Long      partitionDuration = DEFAULT_BUCKET_DURATION;
-    private int       partitionCount    = DEFAULT_BUCKET_COUNT;
-    private Integer   retentionTimeout  = DEFAULT_RETENTION_TIMEOUT;
-    private int       shardCount        = DEFAULT_SHARD_COUNT;
-    private Integer   historyTtl        = DEFAULT_HISTORY_TTL;
-    private String    queueName         = DEFAULT_QUEUE_NAME;
-    private long      pollInterval      = DEFAULT_POLL_WAIT;
-    
+
+
+    private Long      partitionDuration   = DEFAULT_BUCKET_DURATION;
+    private int       partitionCount      = DEFAULT_BUCKET_COUNT;
+    private Integer   retentionTimeout    = DEFAULT_RETENTION_TIMEOUT;
+    private int       shardCount          = DEFAULT_SHARD_COUNT;
+    private Integer   historyTtl          = DEFAULT_HISTORY_TTL;
+    private String    queueName           = DEFAULT_QUEUE_NAME;
+    private long      pollInterval        = DEFAULT_POLL_WAIT;
+    private Long      catchUpPollInterval = null;
+
     public Long getPartitionDuration() {
         return partitionDuration;
     }
@@ -70,11 +69,19 @@ public class MessageQueueSettings {
     public void setPollInterval(long pollInterval) {
         this.pollInterval = pollInterval;
     }
-    
+    public long getCatchUpPollInterval() {
+        return catchUpPollInterval == null ? pollInterval : catchUpPollInterval.longValue();
+    }
+    public void setCatchUpPollInterval(long catchUpPollInterval) {
+        this.catchUpPollInterval = Long.valueOf(catchUpPollInterval);
+    }
+
+
     @Override
     public String toString() {
         return "MessageQueueSettings [partitionDuration=" + partitionDuration + ", partitionCount=" + partitionCount
                 + ", retentionTimeout=" + retentionTimeout + ", shardCount=" + shardCount + ", historyTtl=" + historyTtl
-                + ", queueName=" + queueName + ", pollInterval=" + pollInterval + "]";
+                + ", queueName=" + queueName + ", pollInterval=" + pollInterval
+                + ", catchUpPollInterval=" + catchUpPollInterval + "]";
     }
 }

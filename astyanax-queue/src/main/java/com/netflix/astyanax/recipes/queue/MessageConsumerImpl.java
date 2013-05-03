@@ -72,6 +72,7 @@ class MessageConsumerImpl implements MessageConsumer {
     private List<MessageContext> readAndReturnShard(MessageQueueShard shard, int itemsToPop) throws MessageQueueException, BusyLockException, InterruptedException {
         List<MessageContext> messages = null;
         try {
+            // we need to assign the result to messages so that we can properly count empty partitions in the finally block.
             messages = readMessagesFromShard(shard.getName(), itemsToPop);
             return messages;
         } finally {

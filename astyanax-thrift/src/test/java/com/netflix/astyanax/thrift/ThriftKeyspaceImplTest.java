@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Random;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -504,7 +505,8 @@ public class ThriftKeyspaceImplTest {
         KsDef def2 = ThriftUtils.getThriftObjectFromProperties(KsDef.class, props);
         Properties props2 = ThriftUtils.getPropertiesFromThrift(def2);
 
-        LOG.info("Props2:" + props2);
+        LOG.info("Props1:" + new TreeMap<Object, Object>(props));
+        LOG.info("Props2:" + new TreeMap<Object, Object>(props2));
         MapDifference<Object, Object> diff = Maps.difference(props,  props2);
         LOG.info("Not copied : " + diff.entriesOnlyOnLeft());
         LOG.info("Added      : " + diff.entriesOnlyOnRight());
@@ -1658,6 +1660,64 @@ public class ThriftKeyspaceImplTest {
         }
     }
 
+    @Test
+    public void testEmptyRowKey() {
+        try {
+            keyspace.prepareMutationBatch().withRow(CF_STANDARD1, "");
+            Assert.fail();
+        }
+        catch (Exception e) {
+            LOG.info(e.getMessage());
+        }
+        
+        try {
+            keyspace.prepareMutationBatch().withRow(CF_STANDARD1, null);
+            Assert.fail();
+        }
+        catch (Exception e) {
+            LOG.info(e.getMessage());
+        }
+    }
+    
+    @Test
+    public void testEmptyColumn() {
+        ColumnListMutation<String> mutation = keyspace.prepareMutationBatch().withRow(CF_STANDARD1, "ABC");
+        
+        try {
+            mutation.putColumn(null,  1L);
+            Assert.fail();
+        }
+        catch (Exception e) {
+            LOG.info(e.getMessage());
+        }
+        
+        try {
+            mutation.putColumn("",  1L);
+            Assert.fail();
+        }
+        catch (Exception e) {
+            LOG.info(e.getMessage());
+        }
+
+        try {
+            mutation.deleteColumn("");
+            Assert.fail();
+        }
+        catch (Exception e) {
+            LOG.info(e.getMessage());
+        }
+        
+        try {
+            mutation.deleteColumn(null);
+            Assert.fail();
+        }
+        catch (Exception e) {
+            LOG.info(e.getMessage());
+        }
+        
+
+    }
+    
     @Test
     public void testCql() {
         try {

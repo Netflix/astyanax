@@ -156,7 +156,7 @@ public class ThriftColumnFamilyMutationImpl<C> extends AbstractColumnListMutatio
         }
         
         ByteBuffer bb = this.columnSerializer.toByteBuffer(columnName);
-        if (bb.limit() == 0) {
+        if (!bb.hasRemaining()) {
             throw new RuntimeException("Column name cannot be empty");
         }
 

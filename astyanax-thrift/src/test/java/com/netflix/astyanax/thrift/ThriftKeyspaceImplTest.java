@@ -1661,6 +1661,64 @@ public class ThriftKeyspaceImplTest {
     }
 
     @Test
+    public void testEmptyRowKey() {
+        try {
+            keyspace.prepareMutationBatch().withRow(CF_STANDARD1, "");
+            Assert.fail();
+        }
+        catch (Exception e) {
+            LOG.info(e.getMessage());
+        }
+        
+        try {
+            keyspace.prepareMutationBatch().withRow(CF_STANDARD1, null);
+            Assert.fail();
+        }
+        catch (Exception e) {
+            LOG.info(e.getMessage());
+        }
+    }
+    
+    @Test
+    public void testEmptyColumn() {
+        ColumnListMutation<String> mutation = keyspace.prepareMutationBatch().withRow(CF_STANDARD1, "ABC");
+        
+        try {
+            mutation.putColumn(null,  1L);
+            Assert.fail();
+        }
+        catch (Exception e) {
+            LOG.info(e.getMessage());
+        }
+        
+        try {
+            mutation.putColumn("",  1L);
+            Assert.fail();
+        }
+        catch (Exception e) {
+            LOG.info(e.getMessage());
+        }
+
+        try {
+            mutation.deleteColumn("");
+            Assert.fail();
+        }
+        catch (Exception e) {
+            LOG.info(e.getMessage());
+        }
+        
+        try {
+            mutation.deleteColumn(null);
+            Assert.fail();
+        }
+        catch (Exception e) {
+            LOG.info(e.getMessage());
+        }
+        
+
+    }
+    
+    @Test
     public void testCql() {
         try {
             System.out.println("testCQL");

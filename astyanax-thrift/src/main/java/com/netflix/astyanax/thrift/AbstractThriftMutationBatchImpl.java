@@ -136,6 +136,9 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
             timestamp = clock.getCurrentTime();
 
         ByteBuffer bbKey = columnFamily.getKeySerializer().toByteBuffer(rowKey);
+        if (!bbKey.hasRemaining()) {
+            throw new RuntimeException("Row key cannot be empty");
+        }
         
         KeyAndColumnFamily kacf = new KeyAndColumnFamily(columnFamily.getName(), bbKey);
         ColumnListMutation<C> clm = (ColumnListMutation<C>) rowLookup.get(kacf);

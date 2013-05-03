@@ -18,6 +18,7 @@ package com.netflix.astyanax.thrift;
 import java.nio.ByteBuffer;
 import java.util.List;
 
+import com.google.common.base.Preconditions;
 import com.netflix.astyanax.AbstractColumnListMutation;
 import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
@@ -55,10 +56,20 @@ public class ThriftColumnFamilyMutationImpl<C> extends AbstractColumnListMutatio
 
     @Override
     public <V> ColumnListMutation<C> putColumn(C columnName, V value, Serializer<V> valueSerializer, Integer ttl) {
+        Preconditions.checkNotNull(columnName, "Column name cannot be null");
+        
         // 1. Set up the column with all the data
         Column column = new Column();
         column.setName(columnSerializer.toByteBuffer(columnName));
-        column.setValue(valueSerializer.toByteBuffer(value));
+        if (column.getName().length == 0) {
+            throw new RuntimeException("Column name cannot be empty");
+        }
+        
+        if (value == null) 
+            column.setValue(ThriftUtils.EMPTY_BYTE_BUFFER);
+        else 
+            column.setValue(valueSerializer.toByteBuffer(value));
+        
         column.setTimestamp(timestamp);
         if (ttl != null) {
             // Treat TTL of 0 or -1 as no TTL
@@ -78,8 +89,14 @@ public class ThriftColumnFamilyMutationImpl<C> extends AbstractColumnListMutatio
 
     @Override
     public ColumnListMutation<C> putEmptyColumn(C columnName, Integer ttl) {
+        Preconditions.checkNotNull(columnName, "Column name cannot be null");
+        
         Column column = new Column();
         column.setName(columnSerializer.toByteBuffer(columnName));
+        if (column.getName().length == 0) {
+            throw new RuntimeException("Column name cannot be empty");
+        }
+        
         column.setValue(ThriftUtils.EMPTY_BYTE_BUFFER);
         column.setTimestamp(timestamp);
         if (ttl != null) {
@@ -111,9 +128,14 @@ public class ThriftColumnFamilyMutationImpl<C> extends AbstractColumnListMutatio
 
     @Override
     public ColumnListMutation<C> incrementCounterColumn(C columnName, long amount) {
+        Preconditions.checkNotNull(columnName, "Column name cannot be null");
+        
         // 1. Set up the column with all the data
         CounterColumn column = new CounterColumn();
         column.setName(columnSerializer.toByteBuffer(columnName));
+        if (column.getName().length == 0) {
+            throw new RuntimeException("Column name cannot be empty");
+        }
         column.setValue(amount);
 
         // 2. Create a mutation and append to the mutation list.
@@ -125,6 +147,8 @@ public class ThriftColumnFamilyMutationImpl<C> extends AbstractColumnListMutatio
 
     @Override
     public ColumnListMutation<C> deleteColumn(C columnName) {
+        Preconditions.checkNotNull(columnName, "Column name cannot be null");
+        
         // Create a reusable predicate for deleting columns and insert only once
         if (null == lastDeletion || lastDeletion.getTimestamp() != timestamp) {
             lastDeletion = new Deletion().setPredicate(new SlicePredicate()).setTimestamp(timestamp);
@@ -132,6 +156,10 @@ public class ThriftColumnFamilyMutationImpl<C> extends AbstractColumnListMutatio
         }
         
         ByteBuffer bb = this.columnSerializer.toByteBuffer(columnName);
+        if (bb.limit() == 0) {
+            throw new RuntimeException("Column name cannot be empty");
+        }
+
         lastDeletion.getPredicate().addToColumn_names(bb);
         return this;
     }

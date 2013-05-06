@@ -22,6 +22,8 @@ public class MessageQueueMetadata  {
     private int       shardCount        = DEFAULT_SHARD_COUNT;
     private Integer   historyTtl        = DEFAULT_HISTORY_TTL;
     private String    queueName         = DEFAULT_QUEUE_NAME;
+    
+    @Deprecated
     private long      pollInterval      = DEFAULT_POLL_WAIT;
     
     public Long getPartitionDuration() {

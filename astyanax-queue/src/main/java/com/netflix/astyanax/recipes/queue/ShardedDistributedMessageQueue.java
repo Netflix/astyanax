@@ -1107,8 +1107,12 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     }
 
     @Override
-    public Map<String, MessageQueueShardStats> getShardStats() {
+    public Map<String, MessageQueueShardStats>         getShardStats() {
         return shardReaderPolicy.getShardStats();
+    }
+    
+    public ShardReaderPolicy getShardReaderPolicy() {
+        return shardReaderPolicy;
     }
 
     public ColumnFamily<String, MessageQueueEntry>     getQueueColumnFamily() {

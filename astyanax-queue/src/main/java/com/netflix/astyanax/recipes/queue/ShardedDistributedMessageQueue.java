@@ -207,6 +207,11 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             return this;
         }
 
+        public Builder withCatchUpPollInterval(Long interval, TimeUnit units) {
+            queue.settings.setCatchUpPollInterval(TimeUnit.MILLISECONDS.convert(interval.longValue(), units));
+            return this;
+        }
+
         public Builder withQueueName(String queueName) {
             queue.settings.setQueueName(queueName);
             return this;
@@ -349,7 +354,6 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
     /**
      * Return the shard for this timestamp
-     * @param message
      * @return
      */
     private String getShardKey(long messageTime, int modShard) {
@@ -956,7 +960,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
      * Peek into messages contained in the shard.  This call does not take trigger time into account
      * and will return messages that are not yet due to be executed
      * @param shardName
-     * @param itemsToPop
+     * @param itemsToPeek
      * @return
      * @throws MessageQueueException
      */
@@ -1060,6 +1064,18 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
     public ColumnFamily<String, UUID>                  getHistoryColumnFamily() {
         return this.historyColumnFamily;
+    }
+
+    public int getWorkQueueDepth() {
+        return shardReaderPolicy.getWorkQueueDepth();
+    }
+
+    public int getIdleQueueDepth() {
+        return shardReaderPolicy.getIdleQueueDepth();
+    }
+
+    public boolean isCatchingUp() {
+        return shardReaderPolicy.isCatchingUp();
     }
 
 }

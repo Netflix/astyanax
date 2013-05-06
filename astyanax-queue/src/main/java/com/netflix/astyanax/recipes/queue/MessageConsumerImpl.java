@@ -60,7 +60,7 @@ class MessageConsumerImpl implements MessageConsumer {
             if (timeoutTime != 0 && System.currentTimeMillis() > timeoutTime) {
                 return Lists.newLinkedList();
             }
-            Thread.sleep(queue.settings.getPollInterval());
+            Thread.sleep(queue.shardReaderPolicy.getPollInterval());
         }
     }
 
@@ -72,7 +72,9 @@ class MessageConsumerImpl implements MessageConsumer {
     private List<MessageContext> readAndReturnShard(MessageQueueShard shard, int itemsToPop) throws MessageQueueException, BusyLockException, InterruptedException {
         List<MessageContext> messages = null;
         try {
-            return readMessagesFromShard(shard.getName(), itemsToPop);
+            // we need to assign the result to messages so that we can properly count empty partitions in the finally block.
+            messages = readMessagesFromShard(shard.getName(), itemsToPop);
+            return messages;
         } finally {
             if (messages == null || messages.isEmpty()) {
                 queue.stats.incEmptyPartitionCount();

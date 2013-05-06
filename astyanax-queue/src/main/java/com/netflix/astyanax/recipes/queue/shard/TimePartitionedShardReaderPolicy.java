@@ -16,7 +16,7 @@ import com.netflix.astyanax.recipes.queue.MessageQueueShardStats;
 
 public class TimePartitionedShardReaderPolicy implements ShardReaderPolicy {
     private static final String SEPARATOR = ":";
-    
+
     private final MessageQueueSettings          settings;
     private final List<MessageQueueShard>       shards;
     private final Map<String, MessageQueueShardStats> shardStats;
@@ -27,32 +27,32 @@ public class TimePartitionedShardReaderPolicy implements ShardReaderPolicy {
 
     public TimePartitionedShardReaderPolicy(MessageQueueSettings settings) {
         this.settings = settings;
-        
+
         shards = Lists.newArrayListWithCapacity(settings.getPartitionCount() * settings.getShardCount());
         for (int i = 0; i < settings.getPartitionCount(); i++) {
             for (int j = 0; j < settings.getShardCount(); j++) {
                 shards.add(new MessageQueueShard(settings.getQueueName() + SEPARATOR + i + SEPARATOR + j, i, j));
             }
         }
-        
+
         List<MessageQueueShard> queues = Lists.newArrayList();
         shardStats = Maps.newHashMapWithExpectedSize(shards.size());
         for (MessageQueueShard shard : shards) {
             queues.add(shard);
             shardStats.put(shard.getName(),  shard);
         }
-        
+
         Collections.shuffle(queues);
         workQueue.addAll(queues);
     }
 
     private int getCurrentPartitionIndex() {
-        if (settings.getPartitionCount() <= 1) 
+        if (settings.getPartitionCount() <= 1)
             return 0;
         return    (int) ((TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
                         / settings.getPartitionDuration())%settings.getPartitionCount());
     }
-    
+
     @Override
     public MessageQueueShard nextShard() throws InterruptedException {
         // We transitioned to a new time partition
@@ -62,7 +62,7 @@ public class TimePartitionedShardReaderPolicy implements ShardReaderPolicy {
                 // Double check
                 if (timePartition != currentTimePartition) {
                     currentTimePartition = timePartition;
-                    
+
                     // Drain the idle queue and transfer all shards from the
                     // current partition to the work queue
                     List<MessageQueueShard> temp = Lists.newArrayListWithCapacity(idleQueue.size());
@@ -78,8 +78,8 @@ public class TimePartitionedShardReaderPolicy implements ShardReaderPolicy {
                 }
             }
         }
-        
-        return workQueue.poll(settings.getPollInterval(), TimeUnit.MILLISECONDS);
+
+        return workQueue.poll(getPollInterval(), TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -103,5 +103,26 @@ public class TimePartitionedShardReaderPolicy implements ShardReaderPolicy {
     @Override
     public Map<String, MessageQueueShardStats> getShardStats() {
         return shardStats;
+    }
+
+    @Override
+    public int getWorkQueueDepth() {
+        return workQueue.size();
+    }
+
+    @Override
+    public int getIdleQueueDepth() {
+        return idleQueue.size();
+    }
+
+    @Override
+    public boolean isCatchingUp() {
+        // if the work queue is larger than two partitions worth of shards we are still playing catch up.
+        return getWorkQueueDepth() > (settings.getShardCount() * 2);
+    }
+
+    @Override
+    public long getPollInterval() {
+        return isCatchingUp() ? settings.getCatchUpPollInterval() : settings.getPollInterval();
     }
 }

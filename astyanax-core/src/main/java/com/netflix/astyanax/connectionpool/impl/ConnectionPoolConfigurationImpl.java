@@ -62,7 +62,7 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     public static final int DEFAULT_MAX_TIMEOUT_COUNT = 3;
     public static final int DEFAULT_TIMEOUT_WINDOW = 10000;
     public static final int DEFAULT_RETRY_SUSPEND_WINDOW = 20000;
-    public static final int DEFAULT_RETRY_DELAY_SLICE = 1000;
+    public static final int DEFAULT_RETRY_DELAY_SLICE = 10000;
     public static final int DEFAULT_RETRY_MAX_DELAY_SLICE = 10;
     public static final int DEFAULT_MAX_OPERATIONS_PER_CONNECTION = 10000;
     public static final float DEFAULT_MIN_HOST_IN_POOL_RATIO = 0.65f;

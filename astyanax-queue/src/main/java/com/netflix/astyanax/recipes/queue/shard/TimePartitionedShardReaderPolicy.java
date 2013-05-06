@@ -79,7 +79,7 @@ public class TimePartitionedShardReaderPolicy implements ShardReaderPolicy {
             }
         }
 
-        return workQueue.poll(getPollInterval(), TimeUnit.MILLISECONDS);
+        return workQueue.poll(settings.getPollInterval(), TimeUnit.MILLISECONDS);
     }
 
     @Override

@@ -8,7 +8,7 @@ public interface MessageQueueManager {
      * @param name
      * @return
      */
-    MessageQueue createMessageQueue(MessageQueueSettings name);
+    MessageQueue createMessageQueue(MessageQueueMetadata name);
     
     /**
      * Get an existing message queue
@@ -27,5 +27,5 @@ public interface MessageQueueManager {
      * List all message queues
      * @return
      */
-    List<MessageQueueSettings> listMessageQueues();
+    List<MessageQueueMetadata> listMessageQueues();
 }

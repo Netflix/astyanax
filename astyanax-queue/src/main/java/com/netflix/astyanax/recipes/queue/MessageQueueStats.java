@@ -1,7 +1,5 @@
 package com.netflix.astyanax.recipes.queue;
 
-import java.util.Map;
-
 public interface MessageQueueStats {
 
     void incEmptyPartitionCount();

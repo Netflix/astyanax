@@ -10,28 +10,71 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
+import com.netflix.astyanax.recipes.queue.MessageQueueMetadata;
 import com.netflix.astyanax.recipes.queue.MessageQueueShard;
-import com.netflix.astyanax.recipes.queue.MessageQueueSettings;
 import com.netflix.astyanax.recipes.queue.MessageQueueShardStats;
 
 public class TimePartitionedShardReaderPolicy implements ShardReaderPolicy {
+    public static final long DEFAULT_POLLING_INTERVAL  = 1000;
+    public static final long NO_CATCHUP_POLLING_INTERVAL = 0;
+    
+    public static class Factory implements ShardReaderPolicy.Factory {
+        public static class Builder {
+            private long pollingInterval        = DEFAULT_POLLING_INTERVAL;
+            private long catchupPollingInterval = NO_CATCHUP_POLLING_INTERVAL;
+            
+            public Builder withPollingInterval(long pollingInterval) {
+                this.pollingInterval = pollingInterval;
+                return this;
+            }
+            
+            public Builder withCatchupPollingInterval(long catchupPollingInterval) {
+                this.catchupPollingInterval = catchupPollingInterval;
+                return this;
+            }
+            
+            public Factory build() {
+                return new Factory(this);
+            }
+        }
+        
+        public static Builder builder() {
+            return new Builder();
+        }
+        
+        public Factory(Builder builder) {
+            this.builder = builder;
+        }
+        
+        private final Builder builder;
+                
+        @Override
+        public ShardReaderPolicy create(MessageQueueMetadata metadata) {
+            return new TimePartitionedShardReaderPolicy(builder, metadata);
+        }
+    }
+    
     private static final String SEPARATOR = ":";
     
-    private final MessageQueueSettings          settings;
-    private final List<MessageQueueShard>       shards;
-    private final Map<String, MessageQueueShardStats> shardStats;
+    private final MessageQueueMetadata                   settings;
+    private final List<MessageQueueShard>                shards;
+    private final Map<String, MessageQueueShardStats>    shardStats;
     private final LinkedBlockingQueue<MessageQueueShard> workQueue = Queues.newLinkedBlockingQueue();
     private final LinkedBlockingQueue<MessageQueueShard> idleQueue = Queues.newLinkedBlockingQueue();
+    private final long pollingInterval;
+    private final long catchupPollingInterval;
 
     private int currentTimePartition = -1;
 
-    public TimePartitionedShardReaderPolicy(MessageQueueSettings settings) {
-        this.settings = settings;
+    private TimePartitionedShardReaderPolicy(Factory.Builder builder, MessageQueueMetadata metadata) {
+        this.settings               = metadata;
+        this.pollingInterval        = builder.pollingInterval;
+        this.catchupPollingInterval = builder.catchupPollingInterval;
         
-        shards = Lists.newArrayListWithCapacity(settings.getPartitionCount() * settings.getShardCount());
-        for (int i = 0; i < settings.getPartitionCount(); i++) {
-            for (int j = 0; j < settings.getShardCount(); j++) {
-                shards.add(new MessageQueueShard(settings.getQueueName() + SEPARATOR + i + SEPARATOR + j, i, j));
+        shards = Lists.newArrayListWithCapacity(metadata.getPartitionCount() * metadata.getShardCount());
+        for (int i = 0; i < metadata.getPartitionCount(); i++) {
+            for (int j = 0; j < metadata.getShardCount(); j++) {
+                shards.add(new MessageQueueShard(metadata.getQueueName() + SEPARATOR + i + SEPARATOR + j, i, j));
             }
         }
         
@@ -79,7 +122,9 @@ public class TimePartitionedShardReaderPolicy implements ShardReaderPolicy {
             }
         }
         
-        return workQueue.poll(settings.getPollInterval(), TimeUnit.MILLISECONDS);
+        // This should only block if we have more client threads than mod shards in the queue,
+        // which we would expect to be the case
+        return workQueue.take();
     }
 
     @Override
@@ -103,5 +148,28 @@ public class TimePartitionedShardReaderPolicy implements ShardReaderPolicy {
     @Override
     public Map<String, MessageQueueShardStats> getShardStats() {
         return shardStats;
+    }
+
+    @Override
+    public int getWorkQueueDepth() {
+        return workQueue.size();
+    }
+
+    @Override
+    public int getIdleQueueDepth() {
+        return idleQueue.size();
+    }
+
+    @Override
+    public boolean isCatchingUp() {
+        // if the work queue is larger than two partitions worth of shards we are still playing catch up.
+        return getWorkQueueDepth() > (settings.getShardCount() * 2);
+    }
+
+    @Override
+    public long getPollInterval() {
+        return (isCatchingUp() && catchupPollingInterval != NO_CATCHUP_POLLING_INTERVAL )
+                    ? catchupPollingInterval 
+                    : pollingInterval;
     }
 }

@@ -60,7 +60,7 @@ class MessageConsumerImpl implements MessageConsumer {
             if (timeoutTime != 0 && System.currentTimeMillis() > timeoutTime) {
                 return Lists.newLinkedList();
             }
-            Thread.sleep(queue.settings.getPollInterval());
+            Thread.sleep(queue.shardReaderPolicy.getPollInterval());
         }
     }
 
@@ -72,12 +72,13 @@ class MessageConsumerImpl implements MessageConsumer {
     private List<MessageContext> readAndReturnShard(MessageQueueShard shard, int itemsToPop) throws MessageQueueException, BusyLockException, InterruptedException {
         List<MessageContext> messages = null;
         try {
-            return readMessagesFromShard(shard.getName(), itemsToPop);
+            messages = readMessagesFromShard(shard.getName(), itemsToPop);
         } finally {
             if (messages == null || messages.isEmpty()) {
                 queue.stats.incEmptyPartitionCount();
             }
         }
+        return messages;
     }
 
     @Override
@@ -216,7 +217,7 @@ class MessageConsumerImpl implements MessageConsumer {
             mb.withRow(queue.queueColumnFamily, queue.getShardKey(message)).deleteColumn(entry);
             // Remove entry lookup from the key, if one exists
             if (message.hasKey()) {
-                mb.withRow(queue.keyIndexColumnFamily, queue.getCompositeKey(queue.settings.getQueueName(), message.getKey()))
+                mb.withRow(queue.keyIndexColumnFamily, queue.getCompositeKey(queue.getName(), message.getKey()))
                         .putEmptyColumn(MessageMetadataEntry.newMessageId(queue.getCompositeKey(queue.getShardKey(message), entry.getMessageId())), queue.metadataDeleteTTL);
                 if (message.isKeepHistory()) {
                     MessageHistory history = context.getHistory();
@@ -226,7 +227,7 @@ class MessageConsumerImpl implements MessageConsumer {
                     history.setEndTime(TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS));
                     try {
                         mb.withRow(queue.historyColumnFamily, message.getKey())
-                                .putColumn(history.getToken(), queue.serializeToString(context.getHistory()), queue.settings.getHistoryTtl()); // TTL
+                                .putColumn(history.getToken(), queue.serializeToString(context.getHistory()), queue.metadata.getHistoryTtl()); // TTL
                     } catch (Exception e) {
                         LOG.warn("Error serializing message history for " + message.getKey(), e);
                     }
@@ -316,7 +317,7 @@ class MessageConsumerImpl implements MessageConsumer {
                                     // unfinished repeating trigger and re-add it.
                                     if (message.hasTrigger()) {
                                         // Read back all messageIds associated with this key and check to see if we have duplicates.
-                                        String groupRowKey = queue.getCompositeKey(queue.settings.getQueueName(), message.getKey());
+                                        String groupRowKey = queue.getCompositeKey(queue.getName(), message.getKey());
                                         try {
                                             // Use consistency level
                                             ColumnList<MessageMetadataEntry> columns = queue.keyspace.prepareQuery(queue.keyIndexColumnFamily).getRow(groupRowKey).withColumnRange(ShardedDistributedMessageQueue.metadataSerializer.buildRange().greaterThanEquals((byte) MessageMetadataEntryType.MessageId.ordinal()).lessThanEquals((byte) MessageMetadataEntryType.MessageId.ordinal()).build()).execute().getResult();
@@ -336,13 +337,13 @@ class MessageConsumerImpl implements MessageConsumer {
                                                         if (currMessageTriggerTime > mostRecentTriggerTime) {
                                                             LOG.warn("Need to discard : " + entry.getMessageId() + " => " + mostRecentMessageMetadata.getName());
                                                             m.withRow(queue.keyIndexColumnFamily,
-                                                                    queue.getCompositeKey(queue.settings.getQueueName(), message.getKey())).putEmptyColumn(mostRecentMessageMetadata, queue.metadataDeleteTTL);
+                                                                    queue.getCompositeKey(queue.getName(), message.getKey())).putEmptyColumn(mostRecentMessageMetadata, queue.metadataDeleteTTL);
                                                             mostRecentTriggerTime = currMessageTriggerTime;
                                                             mostRecentMessageMetadata = currMessageEntry.getName();
                                                         } else {
                                                             LOG.warn("Need to discard : " + entry.getMessageId() + " => " + currMessageEntry.getName());
                                                             m.withRow(queue.keyIndexColumnFamily,
-                                                                    queue.getCompositeKey(queue.settings.getQueueName(), message.getKey())).putEmptyColumn(currMessageEntry.getName(), queue.metadataDeleteTTL);
+                                                                    queue.getCompositeKey(queue.getName(), message.getKey())).putEmptyColumn(currMessageEntry.getName(), queue.metadataDeleteTTL);
                                                         }
                                                     }
                                                 }
@@ -372,9 +373,9 @@ class MessageConsumerImpl implements MessageConsumer {
                                     // A timeout item will be added later
                                     if (message.hasKey()) {
                                         m.withRow(queue.keyIndexColumnFamily,
-                                                queue.getCompositeKey(queue.settings.getQueueName(), message.getKey()))
+                                                queue.getCompositeKey(queue.getName(), message.getKey()))
                                                 .putEmptyColumn(MessageMetadataEntry.newMessageId(messageId), queue.metadataDeleteTTL);
-                                        LOG.debug("Removing from key  :  " + queue.getCompositeKey(queue.settings.getQueueName(), message.getKey()) + " : " + messageId);
+                                        LOG.debug("Removing from key  :  " + queue.getCompositeKey(queue.getName(), message.getKey()) + " : " + messageId);
                                         if (message.isKeepHistory()) {
                                             MessageHistory history = context.getHistory();
                                             history.setToken(entry.getTimestamp());
@@ -383,7 +384,7 @@ class MessageConsumerImpl implements MessageConsumer {
                                             history.setStatus(MessageStatus.RUNNING);
                                             try {
                                                 m.withRow(queue.historyColumnFamily, message.getKey()).putColumn(entry.getTimestamp(), queue.serializeToString(history)
-                                                        , queue.settings.getHistoryTtl());
+                                                        , queue.metadata.getHistoryTtl());
                                             } catch (Exception e) {
                                                 LOG.warn("Error serializing history for key '" + message.getKey() + "'", e);
                                             }
@@ -398,12 +399,12 @@ class MessageConsumerImpl implements MessageConsumer {
                                         message.setToken(timeoutEntry.getTimestamp());
                                         message.setRandom(timeoutEntry.getRandom());
                                         m.withRow(queue.queueColumnFamily, queue.getShardKey(message))
-                                                .putColumn(timeoutEntry, column.getStringValue(), queue.settings.getRetentionTimeout());
+                                                .putColumn(timeoutEntry, column.getStringValue(), queue.metadata.getRetentionTimeout());
                                         MessageMetadataEntry messageIdEntry = MessageMetadataEntry.newMessageId(queue.getCompositeKey(queue.getShardKey(message), timeoutEntry.getMessageId()));
                                         // Add the timeout column to the key
                                         if (message.hasKey()) {
-                                            m.withRow(queue.keyIndexColumnFamily, queue.getCompositeKey(queue.settings.getQueueName(), message.getKey()))
-                                                    .putEmptyColumn(messageIdEntry, queue.settings.getRetentionTimeout());
+                                            m.withRow(queue.keyIndexColumnFamily, queue.getCompositeKey(queue.getName(), message.getKey()))
+                                                    .putEmptyColumn(messageIdEntry, queue.metadata.getRetentionTimeout());
                                         }
                                         context.setAckMessageId(messageIdEntry.getName());
                                     } else {

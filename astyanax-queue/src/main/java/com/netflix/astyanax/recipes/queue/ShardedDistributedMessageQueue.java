@@ -32,7 +32,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
-import com.netflix.astyanax.connectionpool.exceptions.BadRequestException;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 import com.netflix.astyanax.model.Column;
@@ -161,22 +160,45 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
      * @author elandau
      */
     public static class Builder {
-        private ShardedDistributedMessageQueue queue = new ShardedDistributedMessageQueue();
-        private String columnFamilyName              = DEFAULT_COLUMN_FAMILY_NAME;
+        private String          columnFamilyName              = DEFAULT_COLUMN_FAMILY_NAME;
+        private ShardLockManager                            lockManager;
 
+        private Keyspace                        keyspace;
+        private ConsistencyLevel                consistencyLevel    = DEFAULT_CONSISTENCY_LEVEL;
+        private long                            lockTimeout         = DEFAULT_LOCK_TIMEOUT;
+        private int                             lockTtl             = DEFAULT_LOCK_TTL;
+        private String                          queueName           = MessageQueueMetadata.DEFAULT_QUEUE_NAME;
+        private int                             metadataDeleteTTL   = DEFAULT_METADATA_DELETE_TTL;
+        private Collection<MessageQueueHooks>   hooks               = Lists.newArrayList();
+        private MessageQueueMetadata            metadata            = new MessageQueueMetadata();
+        private MessageQueueStats               stats              ;
+        private Boolean                         bPoisonQueueEnabled = DEFAULT_POISON_QUEUE_ENABLED;
+        private Map<String, Object>             columnFamilySettings = DEFAULT_COLUMN_FAMILY_SETTINGS;
+        private ShardReaderPolicy.Factory       shardReaderPolicyFactory;
+        private ModShardPolicy                  modShardPolicy;
+                                               
+        public Builder() {
+            metadata.setQueueName(queueName);
+        }
+        
         public Builder withColumnFamily(String columnFamilyName) {
             this.columnFamilyName = columnFamilyName;
             return this;
         }
 
+        public Builder withMetadata(MessageQueueMetadata metadata) {
+            this.metadata = metadata;
+            return this;
+        }
+        
         public Builder withShardCount(int count) {
-            queue.settings.setShardCount(count);
+            this.metadata.setShardCount(count);
             return this;
         }
 
         public Builder withTimeBuckets(int bucketCount, int bucketDuration, TimeUnit units) {
-            queue.settings.setPartitionDuration(TimeUnit.MICROSECONDS.convert(bucketDuration,  units));
-            queue.settings.setPartitionCount(bucketCount);
+            this.metadata.setPartitionDuration(TimeUnit.MICROSECONDS.convert(bucketDuration,  units));
+            this.metadata.setPartitionCount(bucketCount);
             return this;
         }
 
@@ -188,110 +210,134 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         }
 
         public Builder withRetentionTimeout(Long timeout, TimeUnit units) {
-            queue.settings.setRetentionTimeout(timeout,  units);
+            this.metadata.setRetentionTimeout(timeout,  units);
             return this;
         }
 
         public Builder withLockTimeout(Long timeout, TimeUnit units) {
-            queue.lockTimeout = TimeUnit.MICROSECONDS.convert(timeout,  units);
+            this.lockTimeout = TimeUnit.MICROSECONDS.convert(timeout,  units);
             return this;
         }
 
         public Builder withLockTtl(Long ttl, TimeUnit units) {
-            queue.lockTtl = (int)TimeUnit.SECONDS.convert(ttl,  units);
+            this.lockTtl = (int)TimeUnit.SECONDS.convert(ttl,  units);
             return this;
         }
 
+        /**
+         * Define this on the ShardReaderPolicy instead 
+         * @param internval
+         * @param units
+         * @return
+         */
+        @Deprecated
         public Builder withPollInterval(Long internval, TimeUnit units) {
-            queue.settings.setPollInterval(TimeUnit.MILLISECONDS.convert(internval,  units));
+            this.metadata.setPollInterval(TimeUnit.MILLISECONDS.convert(internval,  units));
             return this;
         }
 
         public Builder withQueueName(String queueName) {
-            queue.settings.setQueueName(queueName);
+            this.metadata.setQueueName(queueName);
             return this;
         }
 
         public Builder withConsistencyLevel(ConsistencyLevel level) {
-            queue.consistencyLevel = level;
+            this.consistencyLevel = level;
             return this;
         }
 
         public Builder withColumnFamilySettings(Map<String, Object> settings) {
-            queue.columnFamilySettings = settings;
+            this.columnFamilySettings = settings;
             return this;
         }
 
         public Builder withKeyspace(Keyspace keyspace) {
-            queue.keyspace = keyspace;
+            this.keyspace = keyspace;
             return this;
         }
 
         public Builder withStats(MessageQueueStats stats) {
-            queue.stats = stats;
+            this.stats = stats;
             return this;
         }
 
         public Builder withHook(MessageQueueHooks hooks) {
-            queue.hooks.add(hooks);
+            this.hooks.add(hooks);
             return this;
         }
 
         public Builder withHooks(Collection<MessageQueueHooks> hooks) {
-            queue.hooks.addAll(hooks);
+            this.hooks.addAll(hooks);
             return this;
         }
 
         public Builder withPoisonQueue(Boolean enabled) {
-            queue.bPoisonQueueEnabled = enabled;
+            this.bPoisonQueueEnabled = enabled;
             return this;
         }
 
         public Builder withModShardPolicy(ModShardPolicy policy) {
-            queue.modShardPolicy = policy;
+            this.modShardPolicy = policy;
             return this;
         }
 
-        public Builder withShardReaderPolicy(ShardReaderPolicy shardReaderPolicy) {
-            queue.shardReaderPolicy = shardReaderPolicy;
+        public Builder withShardReaderPolicy(final ShardReaderPolicy shardReaderPolicy) {
+            this.shardReaderPolicyFactory = new ShardReaderPolicy.Factory() {
+                @Override
+                public ShardReaderPolicy create(MessageQueueMetadata metadata) {
+                    return shardReaderPolicy;
+                }
+            };
+            return this;
+        }
+        
+        public Builder withShardReaderPolicy(ShardReaderPolicy.Factory shardReaderPolicyFactory) {
+            this.shardReaderPolicyFactory = shardReaderPolicyFactory;
             return this;
         }
 
         public Builder withShardLockManager(ShardLockManager mgr) {
-            queue.lockManager = mgr;
+            this.lockManager = mgr;
             return this;
         }
 
         public ShardedDistributedMessageQueue build() throws MessageQueueException {
-            queue.queueColumnFamily    = ColumnFamily.newColumnFamily(columnFamilyName + DEFAULT_QUEUE_SUFFIX,    StringSerializer.get(), entrySerializer);
-            queue.keyIndexColumnFamily = ColumnFamily.newColumnFamily(columnFamilyName + DEFAULT_METADATA_SUFFIX, StringSerializer.get(), metadataSerializer);
-            queue.historyColumnFamily  = ColumnFamily.newColumnFamily(columnFamilyName + DEFAULT_HISTORY_SUFFIX,  StringSerializer.get(), TimeUUIDSerializer.get());
+            Preconditions.checkArgument(
+                    TimeUnit.SECONDS.convert(lockTimeout, TimeUnit.MICROSECONDS) < lockTtl,
+                    "Timeout " + lockTtl + " seconds must be less than TTL " + TimeUnit.SECONDS.convert(lockTtl, TimeUnit.MICROSECONDS) + " seconds");
+            Preconditions.checkNotNull(keyspace, "Must specify keyspace");
+            
+            if (shardReaderPolicyFactory == null)
+                shardReaderPolicyFactory = TimePartitionedShardReaderPolicy.Factory.builder().build();
 
-            queue.initialize();
-            return queue;
+            if (modShardPolicy == null)
+                modShardPolicy = TimeModShardPolicy.getInstance();
+
+            if (stats == null)
+                stats = new CountingQueueStats();
+            
+            return new ShardedDistributedMessageQueue(this);
         }
     }
 
     // Immutable after configuration
-    ShardLockManager                            lockManager;
-    ColumnFamily<String, MessageQueueEntry>     queueColumnFamily;
-    ColumnFamily<String, MessageMetadataEntry>  keyIndexColumnFamily;
-    ColumnFamily<String, UUID>                  historyColumnFamily;
+    final ShardLockManager                            lockManager;
+    final ColumnFamily<String, MessageQueueEntry>     queueColumnFamily;
+    final ColumnFamily<String, MessageMetadataEntry>  keyIndexColumnFamily;
+    final ColumnFamily<String, UUID>                  historyColumnFamily;
 
-    Keyspace                        keyspace;
-    ConsistencyLevel                consistencyLevel    = DEFAULT_CONSISTENCY_LEVEL;
-    long                            lockTimeout         = DEFAULT_LOCK_TIMEOUT;
-    int                             lockTtl             = DEFAULT_LOCK_TTL;
-    int                             metadataDeleteTTL   = DEFAULT_METADATA_DELETE_TTL;
-    MessageQueueStats               stats               = new CountingQueueStats();
-    AtomicLong                      counter             = new AtomicLong(new Random().nextInt(1000));
-    Collection<MessageQueueHooks>   hooks               = Lists.newArrayList();
-    MessageQueueSettings            settings            = new MessageQueueSettings();
-    Boolean                         bPoisonQueueEnabled = DEFAULT_POISON_QUEUE_ENABLED;
-    Map<String, Object>             columnFamilySettings = DEFAULT_COLUMN_FAMILY_SETTINGS;
-    ShardReaderPolicy               shardReaderPolicy;
-    ModShardPolicy                  modShardPolicy;
-    Function<String, Message>       invalidMessageHandler  = new Function<String, Message>() {
+    final Keyspace                        keyspace;
+    final ConsistencyLevel                consistencyLevel;
+    final long                            lockTimeout;
+    final int                             lockTtl;
+    final int                             metadataDeleteTTL;
+    final Collection<MessageQueueHooks>   hooks;
+    final MessageQueueMetadata            metadata;
+    final Boolean                         bPoisonQueueEnabled;
+    final Map<String, Object>             columnFamilySettings;
+    final ShardReaderPolicy               shardReaderPolicy;
+    final ModShardPolicy                  modShardPolicy;
+    final Function<String, Message>       invalidMessageHandler  = new Function<String, Message>() {
                                                                 @Override
                                                                 public Message apply(String input) {
                                                                     LOG.warn("Invalid message: " + input);
@@ -299,44 +345,58 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                                                                 }
                                                             };
 
-    private void initialize() throws MessageQueueException {
-        Preconditions.checkArgument(
-                TimeUnit.SECONDS.convert(lockTimeout, TimeUnit.MICROSECONDS) < lockTtl,
-                "Timeout " + lockTtl + " seconds must be less than TTL " + TimeUnit.SECONDS.convert(lockTtl, TimeUnit.MICROSECONDS) + " seconds");
-        Preconditions.checkNotNull(keyspace, "Must specify keyspace");
+    final MessageQueueStats               stats;
+    final AtomicLong                      counter             = new AtomicLong(new Random().nextInt(1000));
 
-        try {
-            Column<MessageQueueEntry> column = keyspace.prepareQuery(queueColumnFamily)
-                    .setConsistencyLevel(consistencyLevel)
-                    .getRow(settings.getQueueName())
-                    .getColumn(MessageQueueEntry.newMetadataEntry())
-                    .execute()
-                    .getResult();
+    private ShardedDistributedMessageQueue(Builder builder) throws MessageQueueException {
+        this.queueColumnFamily    = ColumnFamily.newColumnFamily(builder.columnFamilyName + DEFAULT_QUEUE_SUFFIX,    StringSerializer.get(), entrySerializer);
+        this.keyIndexColumnFamily = ColumnFamily.newColumnFamily(builder.columnFamilyName + DEFAULT_METADATA_SUFFIX, StringSerializer.get(), metadataSerializer);
+        this.historyColumnFamily  = ColumnFamily.newColumnFamily(builder.columnFamilyName + DEFAULT_HISTORY_SUFFIX,  StringSerializer.get(), TimeUUIDSerializer.get());
 
-            ByteArrayInputStream bais = new ByteArrayInputStream(column.getByteArrayValue());
-            settings = mapper.readValue(bais, MessageQueueSettings.class);
-        }
-        catch (NotFoundException e) {
-            LOG.info("Message queue metadata not found.  Queue does not exist in CF and will be created now.");
-        }
-        catch (BadRequestException e) {
-            if (e.isUnconfiguredColumnFamilyError()) {
-                LOG.info("Column family does not exist.  Call createStorage() to create column family.");
-            }
-            else {
-                throw new MessageQueueException("Error getting message queue metadata", e);
-            }
-        }
-        catch (Exception e) {
-            throw new MessageQueueException("Error getting message queue metadata", e);
-        }
+        this.consistencyLevel     = builder.consistencyLevel;
+        this.keyspace             = builder.keyspace;
+        this.hooks                = builder.hooks;
+        this.modShardPolicy       = builder.modShardPolicy;
+        this.lockManager          = builder.lockManager;
+        this.lockTimeout          = builder.lockTimeout;
+        this.lockTtl              = builder.lockTtl;
+        this.bPoisonQueueEnabled  = builder.bPoisonQueueEnabled;
+        this.metadata             = builder.metadata;
+        this.columnFamilySettings = builder.columnFamilySettings;
+        this.metadataDeleteTTL    = builder.metadataDeleteTTL;
+        this.stats                = builder.stats;
 
-        if (shardReaderPolicy == null)
-            shardReaderPolicy = new TimePartitionedShardReaderPolicy(settings);
+        this.shardReaderPolicy    = builder.shardReaderPolicyFactory.create(metadata);
 
-        if (modShardPolicy == null)
-            modShardPolicy = TimeModShardPolicy.getInstance();
-        }
+//        try {
+//            Column<MessageQueueEntry> column = keyspace.prepareQuery(queueColumnFamily)
+//                    .setConsistencyLevel(consistencyLevel)
+//                    .getRow(getName())
+//                    .getColumn(MessageQueueEntry.newMetadataEntry())
+//                    .execute()
+//                    .getResult();
+//
+//            ByteArrayInputStream bais = new ByteArrayInputStream(column.getByteArrayValue());
+//            MessageQueueSettings existingSettings = mapper.readValue(bais, MessageQueueSettings.class);
+//            
+//            // TODO: Override some internal settings with those persisted in the queue metadata
+//        }
+//        catch (NotFoundException e) {
+//            LOG.info("Message queue metadata not found.  Queue does not exist in CF and will be created now.");
+//        }
+//        catch (BadRequestException e) {
+//            if (e.isUnconfiguredColumnFamilyError()) {
+//                LOG.info("Column family does not exist.  Call createStorage() to create column family.");
+//            }
+//            else {
+//                throw new MessageQueueException("Error getting message queue metadata", e);
+//            }
+//        }
+//        catch (Exception e) {
+//            throw new MessageQueueException("Error getting message queue metadata", e);
+//        }
+    }
+
 
     /**
      * Return the shard for this message
@@ -344,7 +404,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
      * @return
      */
     String getShardKey(Message message) {
-        return getShardKey(message.getTokenTime(), this.modShardPolicy.getMessageShard(message, settings));
+        return getShardKey(message.getTokenTime(), this.modShardPolicy.getMessageShard(message, metadata));
     }
 
     /**
@@ -354,11 +414,11 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
      */
     private String getShardKey(long messageTime, int modShard) {
         long timePartition;
-        if (settings.getPartitionDuration() != null)
-            timePartition = (messageTime / settings.getPartitionDuration()) % settings.getPartitionCount();
+        if (metadata.getPartitionDuration() != null)
+            timePartition = (messageTime / metadata.getPartitionDuration()) % metadata.getPartitionCount();
         else
             timePartition = 0;
-        return settings.getQueueName() + ":" + timePartition + ":" + modShard;
+        return getName() + ":" + timePartition + ":" + modShard;
     }
 
     String getCompositeKey(String name, String key) {
@@ -388,6 +448,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 clazz);
     }
 
+    @SuppressWarnings({ "unused", "unchecked" })
     private <T> T deserializeString(String data, String className) throws JsonParseException, JsonMappingException, IOException, ClassNotFoundException {
         return (T) mapper.readValue(
                 new ByteArrayInputStream(data.getBytes()),
@@ -397,7 +458,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
     @Override
     public String getName() {
-        return settings.getQueueName();
+        return metadata.getQueueName();
     }
 
     @Override
@@ -414,9 +475,9 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     public Map<String, Integer> getShardCounts() throws MessageQueueException {
         try {
             List<String> keys = Lists.newArrayList();
-            for (int i = 0; i < settings.getPartitionCount(); i++) {
-                for (int j = 0; j < settings.getShardCount(); j++) {
-                    keys.add(settings.getQueueName() + ":" + i + ":" + j);
+            for (int i = 0; i < metadata.getPartitionCount(); i++) {
+                for (int j = 0; j < metadata.getShardCount(); j++) {
+                    keys.add(getName() + ":" + i + ":" + j);
                 }
             }
 
@@ -434,7 +495,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
     @Override
     public void clearMessages() throws MessageQueueException {
-        LOG.info("Clearing messages from '" + settings.getQueueName() + "'");
+        LOG.info("Clearing messages from '" + getName() + "'");
         MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
 
         for (MessageQueueShard partition : shardReaderPolicy.listShards()) {
@@ -444,25 +505,25 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         try {
             mb.execute();
         } catch (ConnectionException e) {
-            throw new MessageQueueException("Failed to clear messages from queue " + settings.getQueueName(), e);
+            throw new MessageQueueException("Failed to clear messages from queue " + getName(), e);
         }
     }
 
     @Override
     public void deleteQueue() throws MessageQueueException {
-        LOG.info("Deleting queue '" + settings.getQueueName() + "'");
+        LOG.info("Deleting queue '" + getName() + "'");
         MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
 
         for (MessageQueueShard partition : shardReaderPolicy.listShards()) {
             mb.withRow(queueColumnFamily, partition.getName()).delete();
         }
 
-        mb.withRow(queueColumnFamily, settings.getQueueName());
+        mb.withRow(queueColumnFamily, getName());
 
         try {
             mb.execute();
         } catch (ConnectionException e) {
-            throw new MessageQueueException("Failed to clear messages from queue " + settings.getQueueName(), e);
+            throw new MessageQueueException("Failed to clear messages from queue " + getName(), e);
         }
     }
 
@@ -503,7 +564,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
     @Override
     public List<Message> peekMessagesByKey(String key) throws MessageQueueException {
-        String groupRowKey = getCompositeKey(settings.getQueueName(), key);
+        String groupRowKey = getCompositeKey(getName(), key);
         List<Message> messages = Lists.newArrayList();
         try {
             ColumnList<MessageMetadataEntry> columns = keyspace.prepareQuery(keyIndexColumnFamily)
@@ -537,7 +598,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
     @Override
     public Message peekMessageByKey(String key) throws MessageQueueException {
-        String groupRowKey = getCompositeKey(settings.getQueueName(), key);
+        String groupRowKey = getCompositeKey(getName(), key);
         try {
             ColumnList<MessageMetadataEntry> columns = keyspace.prepareQuery(keyIndexColumnFamily)
                     .setConsistencyLevel(consistencyLevel)
@@ -568,7 +629,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     public boolean deleteMessageByKey(String key) throws MessageQueueException {
         MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
 
-        String groupRowKey = getCompositeKey(settings.getQueueName(), key);
+        String groupRowKey = getCompositeKey(getName(), key);
         try {
             ColumnList<MessageMetadataEntry> columns = keyspace.prepareQuery(keyIndexColumnFamily)
                     .setConsistencyLevel(consistencyLevel)
@@ -652,7 +713,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     Thread.sleep(SCHEMA_CHANGE_DELAY);
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
-                    throw new MessageQueueException("Interrupted while trying to create column family for queue " + this.settings.getQueueName(), ie);
+                    throw new MessageQueueException("Interrupted while trying to create column family for queue " + getName(), ie);
                 }
                 return;
             } catch (SchemaDisagreementException e) {
@@ -660,7 +721,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     Thread.sleep(SCHEMA_CHANGE_DELAY);
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
-                    throw new MessageQueueException("Interrupted while trying to create column family for queue " + this.settings.getQueueName(), ie);
+                    throw new MessageQueueException("Interrupted while trying to create column family for queue " + getName(), ie);
                 }
             } catch (Exception e) {
                 if (e.getMessage().contains("already exist"))
@@ -738,9 +799,9 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         try {
             // Convert the message object to JSON
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            mapper.writeValue(baos, settings);
+            mapper.writeValue(baos, metadata);
             baos.flush();
-            keyspace.prepareColumnMutation(queueColumnFamily, settings.getQueueName(), MessageQueueEntry.newMetadataEntry())
+            keyspace.prepareColumnMutation(queueColumnFamily, getName(), MessageQueueEntry.newMetadataEntry())
                     .putValue(baos.toByteArray(), null)
                     .execute();
         } catch (ConnectionException e) {
@@ -778,7 +839,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 // Get list of keys that must be unique and prepare the mutation for phase 1
                 for (Message message : messages) {
                     if (message.hasUniqueKey()) {
-                        String groupKey = getCompositeKey(settings.getQueueName(), message.getKey());
+                        String groupKey = getCompositeKey(getName(), message.getKey());
                         uniqueKeys.put(groupKey, message);
                         mb.withRow(keyIndexColumnFamily, groupKey)
                             .putEmptyColumn(lockColumn, (Integer)lockTtl);
@@ -882,13 +943,13 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         // Write the queue entry
         String shardKey = getShardKey(message);
         mb.withRow(queueColumnFamily, shardKey)
-          .putColumn(entry, new String(baos.toByteArray()), (Integer)settings.getRetentionTimeout());
+          .putColumn(entry, new String(baos.toByteArray()), metadata.getRetentionTimeout());
 
         // Write the lookup from queue key to queue entry
         if (message.hasKey()) {
-            mb.withRow(keyIndexColumnFamily, getCompositeKey(settings.getQueueName(), message.getKey()))
+            mb.withRow(keyIndexColumnFamily, getCompositeKey(getName(), message.getKey()))
                     .putEmptyColumn(MessageMetadataEntry.newMessageId(getCompositeKey(shardKey, entry.getMessageId())),
-                    settings.getRetentionTimeout());
+                    metadata.getRetentionTimeout());
         }
 
         // Allow hook processing

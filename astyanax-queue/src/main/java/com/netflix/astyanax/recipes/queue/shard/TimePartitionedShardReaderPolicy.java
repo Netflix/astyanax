@@ -67,9 +67,9 @@ public class TimePartitionedShardReaderPolicy implements ShardReaderPolicy {
     private int currentTimePartition = -1;
 
     private TimePartitionedShardReaderPolicy(Factory.Builder builder, MessageQueueMetadata metadata) {
-        this.settings          = metadata;
-        this.pollingInterval   = builder.pollingInterval;
-        catchupPollingInterval = builder.catchupPollingInterval;
+        this.settings               = metadata;
+        this.pollingInterval        = builder.pollingInterval;
+        this.catchupPollingInterval = builder.catchupPollingInterval;
         
         shards = Lists.newArrayListWithCapacity(metadata.getPartitionCount() * metadata.getShardCount());
         for (int i = 0; i < metadata.getPartitionCount(); i++) {

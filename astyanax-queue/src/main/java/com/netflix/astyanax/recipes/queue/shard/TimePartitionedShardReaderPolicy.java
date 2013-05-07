@@ -23,13 +23,13 @@ public class TimePartitionedShardReaderPolicy implements ShardReaderPolicy {
             private long pollingInterval        = DEFAULT_POLLING_INTERVAL;
             private long catchupPollingInterval = NO_CATCHUP_POLLING_INTERVAL;
             
-            public Builder withPollingInterval(long pollingInterval) {
-                this.pollingInterval = pollingInterval;
+            public Builder withPollingInterval(long pollingInterval, TimeUnit units) {
+                this.pollingInterval = TimeUnit.MILLISECONDS.convert(pollingInterval, units);
                 return this;
             }
             
-            public Builder withCatchupPollingInterval(long catchupPollingInterval) {
-                this.catchupPollingInterval = catchupPollingInterval;
+            public Builder withCatchupPollingInterval(long catchupPollingInterval, TimeUnit units) {
+                this.catchupPollingInterval = TimeUnit.MILLISECONDS.convert(catchupPollingInterval, units);
                 return this;
             }
             

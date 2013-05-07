@@ -39,6 +39,9 @@ public abstract class AbstractSerializer<T> implements Serializer<T> {
 
     @Override
     public T fromBytes(byte[] bytes) {
+        if (bytes == null) {
+            return null;
+        }
         return fromByteBuffer(ByteBuffer.wrap(bytes));
     }
 

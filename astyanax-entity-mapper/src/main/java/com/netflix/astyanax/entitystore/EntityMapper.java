@@ -12,6 +12,7 @@ import java.util.Set;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.MappedSuperclass;
 import javax.persistence.PersistenceException;
 
 import org.apache.commons.lang.StringUtils;
@@ -20,7 +21,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.model.ColumnFamily;
@@ -83,19 +83,34 @@ class EntityMapper<T, K> {
 		}
 		this.ttlMethod = tmpTtlMethod;
 
-		Field[] declaredFields = clazz.getDeclaredFields();
-		columnList = Maps.newHashMapWithExpectedSize(declaredFields.length);
-		Set<String> usedColumnNames = Sets.newHashSet();
+		columnList = Maps.newHashMap();
 		Field tmpIdField = null;
-		for (Field field : declaredFields) {
+		Map<String, Field> usedColumnNames = Maps.newHashMap();
+		for (Class<?> current = clazz; current != null; current = current.getSuperclass()) {
+			if (null != current.getAnnotation(Entity.class) || null != current.getAnnotation(MappedSuperclass.class)) {
+				tmpIdField = mapClassFields(current, tmpIdField, usedColumnNames);
+			}
+		}
+		Preconditions.checkNotNull(tmpIdField, "there are no field with @Id annotation");
+		//Preconditions.checkArgument(tmpIdField.getClass().equals(K.getClass()), String.format("@Id field type (%s) doesn't match generic type K (%s)", tmpIdField.getClass(), K.getClass()));
+		idField = tmpIdField;
+	}
+
+	private Field mapClassFields(Class<?> clazz, Field tmpIdField, Map<String, Field> usedColumnNames) {
+		for (Field field : clazz.getDeclaredFields()) {
 			Id idAnnotation = field.getAnnotation(Id.class);
-			if(idAnnotation != null) {
-				Preconditions.checkArgument(tmpIdField == null, "there are multiple fields with @Id annotation");
-				field.setAccessible(true);
-				tmpIdField = field;
+			if (idAnnotation != null) {
+				if (null != tmpIdField && tmpIdField.getDeclaringClass().equals(field.getDeclaringClass())) {
+					throw new IllegalArgumentException("there are multiple fields with @Id annotation");
+				}
+				if (null == tmpIdField) {
+					// Do not override id field from the subclass with id field from the superclass
+					field.setAccessible(true);
+					tmpIdField = field;
+				}
 			}
 			Column columnAnnotation = field.getAnnotation(Column.class);
-			if ((columnAnnotation != null)) {
+			if (columnAnnotation != null) {
 				field.setAccessible(true);
 				ColumnMapper columnMapper = null;
 				Entity compositeAnnotation = field.getType().getAnnotation(Entity.class);
@@ -108,15 +123,20 @@ class EntityMapper<T, K> {
 				} else {
 	                columnMapper = new CompositeColumnMapper(field);
 				}
-				Preconditions.checkArgument(!usedColumnNames.contains(columnMapper.getColumnName()), 
-						String.format("duplicate case-insensitive column name: %s", columnMapper.getColumnName().toLowerCase()));
-				columnList.put(columnMapper.getColumnName(), columnMapper);
-				usedColumnNames.add(columnMapper.getColumnName().toLowerCase());
+			    String lowerColumnName = columnMapper.getColumnName().toLowerCase();
+				Field previousField = usedColumnNames.get(lowerColumnName);
+				if (null != previousField && previousField.getDeclaringClass().equals(field.getDeclaringClass())) {
+					String message = String.format("duplicate case-insensitive column name: %s", lowerColumnName);
+			    	throw new IllegalArgumentException(message);
+			    }
+				if (null == previousField) {
+					// Do not override mapper for the column field defined on the subclass with the one from the superclass
+					columnList.put(columnMapper.getColumnName(), columnMapper);
+					usedColumnNames.put(lowerColumnName, field);
+				}
 			}
 		}
-		Preconditions.checkNotNull(tmpIdField, "there are no field with @Id annotation");
-		//Preconditions.checkArgument(tmpIdField.getClass().equals(K.getClass()), String.format("@Id field type (%s) doesn't match generic type K (%s)", tmpIdField.getClass(), K.getClass()));
-		idField = tmpIdField;
+		return tmpIdField;
 	}
 
     void fillMutationBatch(MutationBatch mb, ColumnFamily<K, String> columnFamily, T entity) {

@@ -393,6 +393,10 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
                             return callback.apply(entity);
                         }
                     })
+                    // Avoid using too many threads
+                    .withConcurrencyLevel(Runtime.getRuntime().availableProcessors() * 2)
+                    // Fix issue when using Murmur3Partitioner (or any other Partitioner than BigInteger127Partitioner
+                    .withPartitioner(null)
                     .build()
                     .call();
         } catch (Exception e) {

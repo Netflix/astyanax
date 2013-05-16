@@ -31,7 +31,7 @@ import com.netflix.astyanax.model.ColumnList;
  * @param <T> entity type 
  * @param <K> rowKey type
  */
-class EntityMapper<T, K> {
+public class EntityMapper<T, K> {
 
 	private final Class<T> clazz;
 	private final Integer ttl;
@@ -47,7 +47,7 @@ class EntityMapper<T, K> {
 	 * 		if clazz is NOT annotated with @Entity
 	 * 		if column name contains illegal char (like dot)
 	 */
-	EntityMapper(Class<T> clazz, Integer ttl) {
+	public EntityMapper(Class<T> clazz, Integer ttl) {
 		this.clazz = clazz;
 		
 		// clazz should be annotated with @Entity
@@ -139,7 +139,7 @@ class EntityMapper<T, K> {
 		return tmpIdField;
 	}
 
-    void fillMutationBatch(MutationBatch mb, ColumnFamily<K, String> columnFamily, T entity) {
+    public void fillMutationBatch(MutationBatch mb, ColumnFamily<K, String> columnFamily, T entity) {
 		try {
 			@SuppressWarnings("unchecked")
 			K rowKey = (K) idField.get(entity);
@@ -164,7 +164,7 @@ class EntityMapper<T, K> {
     	return retTtl;
     }
 
-	T constructEntity(K id, ColumnList<String> cl) {
+	public T constructEntity(K id, ColumnList<String> cl) {
 		try {
 		    T entity = clazz.newInstance();
 			idField.set(entity, id);

@@ -9,9 +9,12 @@ import java.util.Properties;
 import javax.persistence.PersistenceException;
 
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
@@ -23,9 +26,11 @@ import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
+import com.netflix.astyanax.query.RowSliceQuery;
 import com.netflix.astyanax.recipes.reader.AllRowsReader;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
+import com.netflix.astyanax.util.RangeBuilder;
 
 /**
  * Entity manager for a composite column family.  This entity manager expects
@@ -51,13 +56,15 @@ import com.netflix.astyanax.serializers.ByteBufferSerializer;
  * @param <K>   Partition key
  */
 public class CompositeEntityManager<T, K> implements EntityManager<T, K> {
-
+    private static final Logger LOG = LoggerFactory.getLogger(CompositeEntityManager.class);
+    private static final ConsistencyLevel DEFAULT_CONSISTENCY_LEVEL = ConsistencyLevel.CL_ONE;
+    
     public static class Builder<T, K> {
         private Keyspace                    keyspace;
         private Class<T>                    clazz;
         private ColumnFamily<K, ByteBuffer> columnFamily        = null;
-        private ConsistencyLevel            readConsitency      = null;
-        private ConsistencyLevel            writeConsistency    = null;
+        private ConsistencyLevel            readConsitency      = DEFAULT_CONSISTENCY_LEVEL;
+        private ConsistencyLevel            writeConsistency    = DEFAULT_CONSISTENCY_LEVEL;
         private CompositeEntityMapper<T, K> entityMapper;
         private Integer                     ttl                 = null;
         private RetryPolicy                 retryPolicy         = null;
@@ -298,26 +305,28 @@ public class CompositeEntityManager<T, K> implements EntityManager<T, K> {
         try {
             // Query for rows
             ColumnFamilyQuery<K, ByteBuffer> cfq = newQuery();            
-            Rows<K, ByteBuffer> rows = cfq.getRowSlice(ids).execute().getResult();
-
-            List<T> entities = Lists.newArrayList();
-            for (Row<K, ByteBuffer> row : rows) {
-                ColumnList<ByteBuffer> cl = row.getColumns();
-                // when a row is deleted in cassandra,
-                // the row key remains (without any columns) until the next compaction.
-                // simply return null (as non exist)
-                if (!cl.isEmpty()) {
-                    T entity = entityMapper.constructEntity(row.getKey(), cl);
-                    lifecycleHandler.onPostLoad(entity);
-                    entities.add(entity);
-                }
-            }
-            return entities;
+            return convertRowsToEntities(cfq.getRowSlice(ids).execute().getResult());
         } catch(Exception e) {
             throw new PersistenceException("failed to get entities " + ids, e);
         }
     }
 
+    private List<T> convertRowsToEntities(Rows<K, ByteBuffer> rows) throws Exception {
+        List<T> entities = Lists.newArrayList();
+        for (Row<K, ByteBuffer> row : rows) {
+            ColumnList<ByteBuffer> cl = row.getColumns();
+            // when a row is deleted in cassandra,
+            // the row key remains (without any columns) until the next compaction.
+            // simply return null (as non exist)
+            if (!cl.isEmpty()) {
+                T entity = entityMapper.constructEntity(row.getKey(), cl);
+                lifecycleHandler.onPostLoad(entity);
+                entities.add(entity);
+            }
+        }
+        return entities;        
+    }
+    
     /**
      * @inheritDoc
      */
@@ -505,4 +514,31 @@ public class CompositeEntityManager<T, K> implements EntityManager<T, K> {
         }
     }
 
+    @Override
+    public NativeQuery<T, K> createNativeQuery() {
+        return new NativeQuery<T, K>() {
+            @Override
+            public T getSingleResult() throws PersistenceException {
+                return Iterables.getFirst(getResultSet(), null);
+            }
+
+            @Override
+            public Collection<T> getResultSet() throws PersistenceException {
+                Preconditions.checkArgument(!ids.isEmpty(), "Must specify at least one row key (ID) to fetch");
+                
+                RowSliceQuery<K, ByteBuffer> rowQuery = keyspace.prepareQuery(columnFamily).setConsistencyLevel(readConsitency)
+                    .getRowSlice(this.ids);
+                
+                try {
+                    if (this.predicates != null && !this.predicates.isEmpty()) {
+                        ByteBuffer[] endpoints = entityMapper.getQueryEndpoints(predicates);
+                        rowQuery = rowQuery.withColumnRange(new RangeBuilder().setStart(endpoints[0]).setEnd(endpoints[1]).build());
+                    }
+                    return convertRowsToEntities(rowQuery.execute().getResult());
+                } catch (Exception e) {
+                    throw new PersistenceException("Error executing query", e);
+                }
+            }
+        };
+    }
 }

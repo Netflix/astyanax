@@ -491,4 +491,9 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
         }
     }
 
+    @Override
+    public NativeQuery<T, K> createNativeQuery() {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
 }

@@ -1,5 +1,6 @@
 package com.netflix.astyanax.entitystore;
 
+import java.util.Collection;
 import java.util.List;
 
 import javax.persistence.Column;
@@ -15,7 +16,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -102,8 +102,8 @@ public class CompositeEntityManagerTest {
             this.value = value;
         }
 
-        @Id     String part1;       // This will be the first part of the composite
-        @Id     Long   part2;       // This will be the second part of the composite
+        @Column String part1;       // This will be the first part of the composite
+        @Column Long   part2;       // This will be the second part of the composite
         @Column Long   value;       // This will be the value of the composite
         
         @Override
@@ -134,6 +134,8 @@ public class CompositeEntityManagerTest {
         Thread.sleep(1000 * 10);
     }
 
+    private static CompositeEntityManager<TestEntity, String> manager;
+
     private static void createKeyspace() throws Exception {
         keyspaceContext = new AstyanaxContext.Builder()
         .forCluster(TEST_CLUSTER_NAME)
@@ -157,7 +159,7 @@ public class CompositeEntityManagerTest {
 
         keyspaceContext.start();
 
-        keyspace = keyspaceContext.getEntity();
+        keyspace = keyspaceContext.getClient();
 
         try {
             keyspace.dropKeyspace();
@@ -173,12 +175,8 @@ public class CompositeEntityManagerTest {
                         .put("strategy_class",     "SimpleStrategy")
                         .build()
                 );
-    }
-
-    @Test
-    public void test() {
-        CompositeEntityManager<TestEntity, String> manager = 
-                CompositeEntityManager.<TestEntity, String>builder()
+        
+        manager = CompositeEntityManager.<TestEntity, String>builder()
                     .withKeyspace(keyspace)
                     .withColumnFamily("TestEntity")
                     .withEntityType(TestEntity.class)
@@ -189,32 +187,90 @@ public class CompositeEntityManagerTest {
         List<TestEntityChild> children = Lists.newArrayList();
         
         for (long i = 0; i < 10; i++) {
-            children.add(new TestEntityChild("B", i, i*i));
+            children.add(new TestEntityChild("a", i, i*i));
+            children.add(new TestEntityChild("b", i, i*i));
         }
         
         manager.put(new TestEntity("A", children));
         manager.put(new TestEntity("B", children));
-        
+    }
+
+    @Test
+    public void test() throws Exception {
+        List<TestEntity> cqlEntities;
+        Collection<TestEntity> entitiesNative;
+
+        // Simple row query
         TestEntity entity = manager.get("A");
         LOG.info("Result : " + entity);
 
-        List<TestEntity> entities = manager.find("SELECT * from TestEntity WHERE KEY IN ('A', 'B')");
-        Assert.assertEquals(2,  entities.size());
+        entitiesNative = manager.createNativeQuery()
+                .whereId().in("A")
+                .getResultSet();
+        Assert.assertEquals(entitiesNative.size(), 1);
+        LOG.info("NATIVE: " + entitiesNative);
         
-        entities = manager.find("SELECT * from TestEntity WHERE KEY = 'A' AND column1='B' AND column2>=5 AND column2<8");
-        Assert.assertEquals(1,  entities.size());
-        Assert.assertEquals(3,  Iterables.getFirst(entities, null).children.size());
-        LOG.info(entities.toString());
+        // Multi row query
+        cqlEntities = manager.find("SELECT * from TestEntity WHERE KEY IN ('A', 'B')");
+        Assert.assertEquals(2,  cqlEntities.size());
+        
+        entitiesNative = manager.createNativeQuery()
+                .whereId().in("A", "B")
+                .getResultSet();
+        LOG.info("NATIVE: " + entitiesNative);
+        Assert.assertEquals(entitiesNative.size(), 2);
+        
+        // Simple prefix
+        entitiesNative = manager.createNativeQuery()
+                .whereId().equal("A")
+                .whereColumn("part1").equal("a")
+                .getResultSet();
+        LOG.info("NATIVE: " + entitiesNative);
+        Assert.assertEquals(entitiesNative.size(), 1);
+        
+        cqlEntities = manager.find("SELECT * from TestEntity WHERE KEY = 'A' AND column1='b' AND column2>=5 AND column2<8");
+        Assert.assertEquals(1,  cqlEntities.size());
+        Assert.assertEquals(3,  Iterables.getFirst(cqlEntities, null).children.size());
+        LOG.info(cqlEntities.toString());
         
         manager.remove(new TestEntity().setRowKey("A").addChild(new TestEntityChild("B", 5L, null)));
-        entities = manager.find("SELECT * from TestEntity WHERE KEY = 'A' AND column1='B' AND column2>=5 AND column2<8");
-        Assert.assertEquals(1,  entities.size());
-        Assert.assertEquals(2,  Iterables.getFirst(entities, null).children.size());
-        LOG.info(entities.toString());
+        cqlEntities = manager.find("SELECT * from TestEntity WHERE KEY = 'A' AND column1='b' AND column2>=5 AND column2<8");
+        Assert.assertEquals(1,  cqlEntities.size());
+        Assert.assertEquals(3,  Iterables.getFirst(cqlEntities, null).children.size());
+        LOG.info(cqlEntities.toString());
         
         manager.remove(new TestEntity().setRowKey("A"));
-        entities = manager.find("SELECT * from TestEntity WHERE KEY = 'A' AND column1='B' AND column2>=5 AND column2<8");
-        Assert.assertEquals(0,  entities.size());
-//        manager.find
+        cqlEntities = manager.find("SELECT * from TestEntity WHERE KEY = 'A' AND column1='b' AND column2>=5 AND column2<8");
+        Assert.assertEquals(0,  cqlEntities.size());
+    }
+    
+    @Test
+    public void testQuery() throws Exception {
+        Collection<TestEntity> entitiesNative;
+
+        entitiesNative = manager.createNativeQuery()
+                .whereId().in("A")
+                .whereColumn("part1").equal("b")
+                .whereColumn("part2").greaterThanEqual(5L)
+                .whereColumn("part2").lessThan(8L)
+                .getResultSet();
+
+        LOG.info("NATIVE: " + entitiesNative.toString());
+        Assert.assertEquals(entitiesNative.size(), 1);
+    }
+    
+    @Test
+    public void testBadFieldName() throws Exception {
+
+        try {
+            manager.createNativeQuery()
+                    .whereId().in("A")
+                    .whereColumn("badfield").equal("b")
+                    .getResultSet();
+            Assert.fail();
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

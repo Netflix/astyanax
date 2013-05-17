@@ -4,6 +4,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
+import java.util.Collection;
 
 import javax.persistence.Entity;
 import javax.persistence.Id;
@@ -15,10 +16,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.MutationBatch;
-import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.serializers.StringSerializer;
+import com.netflix.astyanax.query.ColumnPredicate;
 
 /**
  * The composite entity mapper expects an entity which has a single one to many
@@ -219,4 +219,7 @@ public class CompositeEntityMapper<T, K> {
         return embeddedEntityMapper.getValueType();
     }
 
+    public ByteBuffer[] getQueryEndpoints(Collection<ColumnPredicate> predicates) {
+        return this.embeddedEntityMapper.getQueryEndpoints(predicates);
+    }
 }

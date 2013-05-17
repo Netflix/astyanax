@@ -91,6 +91,13 @@ public interface EntityManager<T, K> {
 	public List<T> find(String cql) throws PersistenceException;
 	
 	/**
+	 * Execute a 'native' query using a simple API that adheres to cassandra's native
+	 * model of rows and columns. 
+	 * @return
+	 */
+	public NativeQuery<T, K> createNativeQuery();
+	
+	/**
 	 * Create the underlying storage for this entity.  This should only be called
 	 * once when first creating store and not part of the normal startup sequence.
 	 * @throws PersistenceException

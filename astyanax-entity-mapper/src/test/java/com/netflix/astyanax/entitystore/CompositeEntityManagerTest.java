@@ -233,10 +233,10 @@ public class CompositeEntityManagerTest {
         Assert.assertEquals(3,  Iterables.getFirst(cqlEntities, null).children.size());
         LOG.info(cqlEntities.toString());
         
-        manager.remove(new TestEntity().setRowKey("A").addChild(new TestEntityChild("B", 5L, null)));
+        manager.remove(new TestEntity().setRowKey("A").addChild(new TestEntityChild("b", 5L, null)));
         cqlEntities = manager.find("SELECT * from TestEntity WHERE KEY = 'A' AND column1='b' AND column2>=5 AND column2<8");
         Assert.assertEquals(1,  cqlEntities.size());
-        Assert.assertEquals(3,  Iterables.getFirst(cqlEntities, null).children.size());
+        Assert.assertEquals(2,  Iterables.getFirst(cqlEntities, null).children.size());
         LOG.info(cqlEntities.toString());
         
         manager.remove(new TestEntity().setRowKey("A"));
@@ -249,7 +249,7 @@ public class CompositeEntityManagerTest {
         Collection<TestEntity> entitiesNative;
 
         entitiesNative = manager.createNativeQuery()
-                .whereId().in("A")
+                .whereId().in("B")
                 .whereColumn("part1").equal("b")
                 .whereColumn("part2").greaterThanEqual(5L)
                 .whereColumn("part2").lessThan(8L)

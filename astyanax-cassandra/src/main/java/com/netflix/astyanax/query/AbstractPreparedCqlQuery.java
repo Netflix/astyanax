@@ -35,7 +35,7 @@ public abstract class AbstractPreparedCqlQuery<K, C> implements PreparedCqlQuery
 
     @Override
     public PreparedCqlQuery<K, C> withValues(List<ByteBuffer> values) {
-        values.addAll(values);
+        this.values.addAll(values);
         return this;
     }
 

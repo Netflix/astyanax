@@ -60,6 +60,7 @@ project(':astyanax') {
 }
 
 project(':astyanax-core') {
+    apply plugin: 'osgi'
     apply plugin: 'java'
     dependencies {
         testCompile "junit:junit:$junitVersion"
@@ -67,6 +68,7 @@ project(':astyanax-core') {
 }
 
 project(':astyanax-thrift') {
+    apply plugin: 'osgi'
     apply plugin: 'java'
     dependencies {
         compile  project(':astyanax-core')
@@ -77,6 +79,7 @@ project(':astyanax-thrift') {
 }
 
 project(':astyanax-queue') {
+    apply plugin: 'osgi'
     apply plugin: 'java'
     dependencies {
         compile  project(':astyanax-core')
@@ -87,6 +90,7 @@ project(':astyanax-queue') {
 }
 
 project(':astyanax-cassandra') {
+    apply plugin: 'osgi'
     apply plugin: 'java'
     dependencies {
     	compile "org.apache.cassandra:cassandra-all:$cassandraVersion"

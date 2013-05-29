@@ -8,24 +8,37 @@ public interface MessageQueueManager {
      * @param name
      * @return
      */
-    MessageQueue createMessageQueue(MessageQueueMetadata name);
-    
-    /**
-     * Get an existing message queue
-     * @param name
-     * @return
-     */
-    MessageQueue getMessageQueue(String name);
+    public void createMessageQueue(MessageQueueInfo name);
     
     /**
      * Delete a message queue
      * @param name
      */
-    void deleteMessageQueue(String name);
+    public void deleteMessageQueue(String name);
  
     /**
      * List all message queues
      * @return
      */
-    List<MessageQueueMetadata> listMessageQueues();
+    public List<MessageQueueInfo> listMessageQueues();
+
+    /**
+     * Read the metadata for a message queue
+     * @param name
+     * @return
+     */
+    public MessageQueueInfo readQueueInfo(String name);
+    
+    /**
+     * Create the necessary storage for this queue manager.
+     * @throws MessageQueueException 
+     */
+    public void createStorage() throws MessageQueueException;
+    
+    /**
+     * Drop the storage associated with this queue manager and it's queues
+     * @throws MessageQueueException
+     */
+    public void dropStorage() throws MessageQueueException;
+
 }

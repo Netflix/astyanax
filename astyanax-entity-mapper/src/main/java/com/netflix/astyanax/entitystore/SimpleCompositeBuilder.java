@@ -33,9 +33,6 @@ public class SimpleCompositeBuilder {
     public void addWithoutControl(ByteBuffer cb) {
         Preconditions.checkState(lastEquality == Equality.EQUAL, "Cannot extend composite since non equality control already set");
         
-        if (!hasControl)
-            addControl(Equality.EQUAL);
-        
         if (cb == null) {
             cb = ByteBuffer.allocate(0);
         }
@@ -48,6 +45,15 @@ public class SimpleCompositeBuilder {
             temp.put(bb);
             bb = temp;
         }
+        
+        if (!hasControl) {
+            addControl(Equality.EQUAL);
+        }
+        else if (bb.position() > 0) {
+            bb.position(bb.position() - 1);
+            bb.put(Equality.EQUAL.toByte());
+        }
+
         // Write the data: <length><data>
         bb.putShort((short) cb.remaining());
         bb.put(cb.slice());

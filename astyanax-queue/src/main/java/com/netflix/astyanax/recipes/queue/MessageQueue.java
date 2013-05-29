@@ -38,32 +38,6 @@ public interface MessageQueue {
     void clearMessages() throws MessageQueueException;
     
     /**
-     * Create the underlying storage
-     * @throws MessageQueueExcewption
-     */
-    void createStorage() throws MessageQueueException;
-    
-    /**
-     * Destroy the storage associated with this column family
-     * @throws MessageQueueException
-     */
-    void dropStorage() throws MessageQueueException;
-    
-    /**
-     * Create any metadata in the storage necessary for the queue
-     * @throws MessageQueueException
-     */
-    void createQueue() throws MessageQueueException;
-
-    /**
-     * Deletes all the rows for this queue.  This will not 
-     * delete any 'key' columns'
-     * 
-     * @throws MessageQueueException
-     */
-    void deleteQueue() throws MessageQueueException;
-    
-    /**
      * Read a specific message from the queue.  The message isn't modified or removed from the queue.
      * 
      * @param messageId Message id returned from MessageProducer.sendMessage

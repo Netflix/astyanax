@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
-import com.netflix.astyanax.recipes.queue.MessageQueueMetadata;
+import com.netflix.astyanax.recipes.queue.MessageQueueInfo;
 import com.netflix.astyanax.recipes.queue.MessageQueueShard;
 import com.netflix.astyanax.recipes.queue.MessageQueueShardStats;
 
@@ -49,14 +49,14 @@ public class TimePartitionedShardReaderPolicy implements ShardReaderPolicy {
         private final Builder builder;
                 
         @Override
-        public ShardReaderPolicy create(MessageQueueMetadata metadata) {
+        public ShardReaderPolicy create(MessageQueueInfo metadata) {
             return new TimePartitionedShardReaderPolicy(builder, metadata);
         }
     }
     
     private static final String SEPARATOR = ":";
     
-    private final MessageQueueMetadata                   settings;
+    private final MessageQueueInfo                   settings;
     private final List<MessageQueueShard>                shards;
     private final Map<String, MessageQueueShardStats>    shardStats;
     private final LinkedBlockingQueue<MessageQueueShard> workQueue = Queues.newLinkedBlockingQueue();
@@ -66,7 +66,7 @@ public class TimePartitionedShardReaderPolicy implements ShardReaderPolicy {
 
     private int currentTimePartition = -1;
 
-    private TimePartitionedShardReaderPolicy(Factory.Builder builder, MessageQueueMetadata metadata) {
+    private TimePartitionedShardReaderPolicy(Factory.Builder builder, MessageQueueInfo metadata) {
         this.settings               = metadata;
         this.pollingInterval        = builder.pollingInterval;
         this.catchupPollingInterval = builder.catchupPollingInterval;

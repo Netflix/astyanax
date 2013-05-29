@@ -38,7 +38,7 @@ Thumbs.db
 
 # Gradle Files #
 ################
-.gradle
+*.gradle
 
 # Build output directories #
 ############################
@@ -46,6 +46,10 @@ Thumbs.db
 */target
 /build
 */build
+/test-output
+*/test-output
+/bin
+*/bin
 
 # IntelliJ specific files/directories #
 #######################################

@@ -5,12 +5,13 @@ import java.util.Collection;
 public interface MessageProducer {
     /**
      * Schedule a job for execution
+     * 
      * @param message
      * @return UUID assigned to this message 
      * 
      * @throws MessageQueueException
      */
-    String sendMessage(Message message) throws MessageQueueException;
+    MessageContext sendMessage(Message message) throws MessageQueueException;
 
     /**
      * Schedule a batch of jobs
@@ -19,5 +20,5 @@ public interface MessageProducer {
      * 
      * @throws MessageQueueException
      */
-    SendMessageResponse sendMessages(Collection<Message> messages) throws MessageQueueException;
+    Collection<MessageContext> sendMessages(Collection<Message> messages) throws MessageQueueException;
 }

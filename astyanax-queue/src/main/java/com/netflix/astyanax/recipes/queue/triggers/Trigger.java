@@ -19,7 +19,7 @@ public interface Trigger {
     /**
      * Get the current trigger time for this trigger.  This is the time
      * for the next execution of the Task
-     * @return
+     * @return Next execution time in milliseconds (TODO: confirm units)
      */
     long getTriggerTime();
 }

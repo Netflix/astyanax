@@ -2,6 +2,8 @@ package com.netflix.astyanax.recipes.queue;
 
 import org.apache.commons.lang.exception.ExceptionUtils;
 
+import com.netflix.astyanax.recipes.queue.entity.MessageQueueEntry;
+
 /**
  * Context of a message being handled by a dispatcher.
  * 
@@ -10,25 +12,39 @@ import org.apache.commons.lang.exception.ExceptionUtils;
  */
 public class MessageContext {
     /**
-     * Message being handled
+     * Message being handled.  
+     * TODO: This should be immutable
      */
     private Message message;
     
     /**
      * Next message that was queued up for processing
+     * 
+     * TODO:
      */
     private Message nextMessage;
     
     /**
      * MesasgeID used when acking
      */
-    private String ackMessageId;
+    private MessageQueueEntry ackMessageId;
+    
+    /**
+     * 
+     */
+    private MessageQueueException error;
     
     /**
      * History item associated with this message.  This is only 
-     * valid if message.hasKey() is true.
+     * valid if message.hasKey() is true.  This is the history item
+     * for the current execution only.
      */
-    private MessageHistory history = new MessageHistory();
+    private MessageHistory status = new MessageHistory();
+
+    public MessageContext(MessageQueueEntry messageId, Message message) {
+        this.ackMessageId = messageId;
+        this.message      = message;
+    }
     
     public Message getMessage() {
         return message;
@@ -49,28 +65,37 @@ public class MessageContext {
     }
 
     public MessageHistory getHistory() {
-        return history;
+        return status;
     }
 
-    public MessageContext setException(Throwable t) {
-        this.history.setStatus(MessageStatus.FAILED);
-        this.history.setError(t.getMessage());
-        this.history.setStackTrace(ExceptionUtils.getStackTrace(t));
+    public MessageContext setException(MessageQueueException t) {
+        this.error = t;
+        this.status.setStatus(MessageStatus.FAILED);
+        this.status.setError(t.getMessage());
+        this.status.setStackTrace(ExceptionUtils.getStackTrace(t));
         return this;
     }
  
     public MessageContext setStatus(MessageStatus status) {
-        this.history.setStatus(status);
+        this.status.setStatus(status);
         return this;
     }
     
-    public String getAckMessageId() {
+    public MessageQueueEntry getAckMessageId() {
         return ackMessageId;
     }
 
-    public MessageContext setAckMessageId(String ackMessageId) {
+    public MessageContext setAckMessageId(MessageQueueEntry ackMessageId) {
         this.ackMessageId = ackMessageId;
         return this;
+    }
+    
+    public MessageQueueException getError() {
+        return this.error;
+    }
+    
+    public boolean hasError() {
+        return this.error != null;
     }
     
     @Override

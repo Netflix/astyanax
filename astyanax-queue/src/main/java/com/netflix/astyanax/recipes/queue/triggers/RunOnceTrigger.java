@@ -20,6 +20,10 @@ public class RunOnceTrigger extends AbstractTrigger {
             return trigger;
         }
     }
+    
+    public static Builder builder() {
+        return new Builder();
+    }
 
     private Long delay;   // In millseconds
     

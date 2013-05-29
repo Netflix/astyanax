@@ -1,7 +1,7 @@
 package com.netflix.astyanax.recipes.queue.shard;
 
 import com.netflix.astyanax.recipes.queue.Message;
-import com.netflix.astyanax.recipes.queue.MessageQueueMetadata;
+import com.netflix.astyanax.recipes.queue.MessageQueueInfo;
 
 /**
  * Sharding based on the key with fallback to time mod sharding
@@ -16,7 +16,7 @@ public class KeyModShardPolicy extends TimeModShardPolicy {
     }
     
     @Override
-    public int getMessageShard(Message message, MessageQueueMetadata settings) {
+    public int getMessageShard(Message message, MessageQueueInfo settings) {
         if (message.hasKey())
             return message.getKey().hashCode() % settings.getShardCount();
         else

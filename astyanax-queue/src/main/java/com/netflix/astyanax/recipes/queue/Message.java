@@ -1,30 +1,25 @@
 package com.netflix.astyanax.recipes.queue;
 
+import java.util.EnumSet;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-
-import org.codehaus.jackson.annotate.JsonIgnore;
 
 import com.google.common.collect.Maps;
 import com.netflix.astyanax.recipes.queue.triggers.Trigger;
-import com.netflix.astyanax.util.TimeUUIDUtils;
 
 public class Message {
     
-    private static final int DEFAULT_TIMEOUT_SECONDS = 120;
+    private static final int  DEFAULT_TIMEOUT_SECONDS = 120;
+    private static final byte DEFAULT_PRIORITY        = 0;
     
-    /**
-     * Last execution time, this value changes as the task state is transitioned.  
-     * The token is a timeUUID and represents the next execution/expiration time
-     * within the queue.
-     */
-    private UUID  token;
+    private static String PROPERTY_TASK_CLASS_NAME = "_taskclass";
     
-    /**
-     * Random number associated with this message
-     */
-    private UUID  random;
+    public enum Options {
+        KeepHistory,
+        CompactMessage,
+        Unique,
+        AutoCommitTrigger,
+    }
     
     /**
      * Execution time for the task in milliseconds
@@ -39,7 +34,7 @@ public class Message {
     /**
      * Lower value priority tasks get executed first
      */
-    private byte priority = 0;
+    private byte priority = DEFAULT_PRIORITY;
     
     /**
      * Timeout value in seconds
@@ -52,62 +47,13 @@ public class Message {
     private String key;
 
     /**
-     * Class name to handle this message
+     * Boolean options.  See Options enum above
      */
-    private String  taskClass;
-
-    /**
-     * Set to true if history should be maintained for each handling of the message
-     */
-    private boolean isKeepHistory = false;
-
-    /**
-     * True if the key is expected to be unique
-     */
-    private boolean hasUniqueKey = false;
-    
-    /**
-     * Set to true if next trigger should be committed when the messages is
-     * popped as opposed to being sent when a messages is acked.
-     */
-    private boolean isAutoCommitTrigger = false;
+    private EnumSet<Options> options = EnumSet.noneOf(Options.class);
     
     public Message() {
-        
     }
     
-    public Message(UUID token, UUID random) {
-        this.token = token;
-        this.random = random;
-    }
-    
-    public UUID getToken() {
-        return token;
-    }
-
-    public Message setToken(UUID token) {
-        this.token = token;
-        return this;
-    }
-    
-    /**
-     * Get the micros time encoded in the token
-     * @return
-     */
-    @JsonIgnore
-    public long getTokenTime() {
-        return TimeUUIDUtils.getMicrosTimeFromUUID(token);
-    }
-
-    public UUID getRandom() {
-        return random;
-    }
-
-    public Message setRandom(UUID random) {
-        this.random = random;
-        return this;
-    }
-
     public Trigger getTrigger() {
         return trigger;
     }
@@ -181,7 +127,7 @@ public class Message {
     
     public Message setUniqueKey(String key) {
         this.key = key;
-        this.hasUniqueKey = true;
+        this.options.add(Options.Unique);
         return this;
     }
     
@@ -190,50 +136,67 @@ public class Message {
     }
 
     public boolean hasUniqueKey() {
-        return this.key != null && this.hasUniqueKey;
+        return this.key != null && options.contains(Options.Unique);
     }
 
     public String getTaskClass() {
-        return taskClass;
+        if (parameters == null)
+            return null;
+        return (String)parameters.get(PROPERTY_TASK_CLASS_NAME);
     }
 
     public Message setTaskClass(String taskClass) {
-        this.taskClass = taskClass;
+        if (parameters == null) {
+            parameters = Maps.newHashMap();
+        }
+        
+        parameters.put(PROPERTY_TASK_CLASS_NAME, taskClass);
         return this;
     }
     
     public boolean hasTaskClass() {
-        return this.taskClass != null;
+        return getTaskClass() != null;
     }
     
     public boolean isKeepHistory() {
-        return isKeepHistory;
+        return options.contains(Options.KeepHistory);
     }
 
-    public Message setKeepHistory(Boolean isKeepHistory) {
-        this.isKeepHistory = isKeepHistory;
+    public Message setKeepHistory(boolean isKeepHistory) {
+        options.add(Options.KeepHistory);
         return this;
     }
     
+    public Message setCompact(boolean isCompact) {
+        options.add(Options.CompactMessage);
+        return this;
+    }
+    
+    public boolean isCompact() {
+        return options.contains(Options.CompactMessage);
+    }
+    
+    public boolean hasParameters() {
+        return this.parameters != null && !this.parameters.isEmpty();
+    }
+    
     public Message clone() {
-        Message message = new Message();
-        message.token       = token;
+        Message message     = new Message();
         message.trigger     = trigger;
         message.parameters  = parameters;
         message.priority    = priority;
         message.timeout     = timeout;
         message.key         = key;
-        message.taskClass   = taskClass;
-        message.isKeepHistory = isKeepHistory;
+        message.options     = options;
         return message;
     }
 
     public boolean isAutoCommitTrigger() {
-        return isAutoCommitTrigger;
+        return this.options.contains(Options.AutoCommitTrigger);
     }
 
     public Message setAutoCommitTrigger(boolean isAutoCommitTrigger) {
-        this.isAutoCommitTrigger = isAutoCommitTrigger;
+        this.options.add(Options.AutoCommitTrigger);
         return this;
     }
 
@@ -241,11 +204,6 @@ public class Message {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("Message[");
-        if (token != null) {
-            sb.append("token=" + token + " (" + TimeUUIDUtils.getMicrosTimeFromUUID(token) + ")");
-        }
-        if (random != null)
-            sb.append(", random=" + random);
         if (trigger != null)
             sb.append(", trigger=" + trigger);
         if (parameters != null)
@@ -254,12 +212,7 @@ public class Message {
         sb.append(", timeout=" + timeout);
         if (key != null)
             sb.append(", key=" + key);
-        if (hasUniqueKey)
-            sb.append(", hasUniqueKey=" + hasUniqueKey);
-        if (taskClass != null)
-            sb.append(", taskClass=" + taskClass);
-        if (isKeepHistory)
-            sb.append(", isKeepHistory=" + isKeepHistory);
+        sb.append(", options=" + options);
         
         sb.append("]");
         return sb.toString();

@@ -3,6 +3,7 @@ package com.netflix.astyanax.thrift;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -32,27 +33,25 @@ import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.ConsistencyLevel;
-import com.netflix.astyanax.recipes.locks.BusyLockException;
 import com.netflix.astyanax.recipes.queue.CountingQueueStats;
 import com.netflix.astyanax.recipes.queue.KeyExistsException;
 import com.netflix.astyanax.recipes.queue.Message;
 import com.netflix.astyanax.recipes.queue.MessageConsumer;
 import com.netflix.astyanax.recipes.queue.MessageContext;
 import com.netflix.astyanax.recipes.queue.MessageProducer;
-import com.netflix.astyanax.recipes.queue.MessageQueue;
 import com.netflix.astyanax.recipes.queue.MessageQueueDispatcher;
 import com.netflix.astyanax.recipes.queue.MessageQueueException;
-import com.netflix.astyanax.recipes.queue.SendMessageResponse;
+import com.netflix.astyanax.recipes.queue.MessageQueueManager;
+import com.netflix.astyanax.recipes.queue.MessageQueueInfo;
+import com.netflix.astyanax.recipes.queue.PersistMessageResponse;
 import com.netflix.astyanax.recipes.queue.ShardLock;
-import com.netflix.astyanax.recipes.queue.ShardLockManager;
 import com.netflix.astyanax.recipes.queue.ShardedDistributedMessageQueue;
+import com.netflix.astyanax.recipes.queue.SimpleMessageQueueManager;
 import com.netflix.astyanax.recipes.queue.triggers.RepeatingTrigger;
 import com.netflix.astyanax.recipes.queue.triggers.RunOnceTrigger;
 import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
 import java.util.Arrays;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReentrantLock;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized.Parameters;
 import static org.junit.Assert.*;
@@ -65,7 +64,6 @@ public class QueueTest {
     private static AstyanaxContext<Keyspace> keyspaceContext;
     private static String TEST_CLUSTER_NAME = "cass_sandbox";
     private static String TEST_KEYSPACE_NAME = "AstyanaxUnitTests";
-    private static String SCHEDULER_NAME_CF_NAME = "SchedulerQueue";
     private static final String SEEDS = "localhost:9160";
     private static final long CASSANDRA_WAIT_TIME = 3000;
     private static final int TTL = 20;
@@ -74,6 +72,8 @@ public class QueueTest {
     private ReentrantLockManager slm = null;
     private String qNameSfx = null;
 
+    private static MessageQueueManager manager;
+    
     @BeforeClass
     public static void setup() throws Exception {
         LOG.info("TESTING THRIFT KEYSPACE");
@@ -103,12 +103,12 @@ public class QueueTest {
                 .forCluster(TEST_CLUSTER_NAME)
                 .forKeyspace(TEST_KEYSPACE_NAME)
                 .withAstyanaxConfiguration(
-                new AstyanaxConfigurationImpl()
+            new AstyanaxConfigurationImpl()
                 .setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
                 .setConnectionPoolType(ConnectionPoolType.TOKEN_AWARE)
                 .setDiscoveryDelayInSeconds(60000))
                 .withConnectionPoolConfiguration(
-                new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME
+            new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME
                 + "_" + TEST_KEYSPACE_NAME)
                 .setSocketTimeout(30000)
                 .setMaxTimeoutWhenExhausted(2000)
@@ -120,7 +120,7 @@ public class QueueTest {
 
         keyspaceContext.start();
 
-        keyspace = keyspaceContext.getEntity();
+        keyspace = keyspaceContext.getClient();
 
         try {
             keyspace.dropKeyspace();
@@ -137,19 +137,14 @@ public class QueueTest {
 
         final CountingQueueStats stats = new CountingQueueStats();
 
-        final ShardedDistributedMessageQueue queue = new ShardedDistributedMessageQueue.Builder()
-                .withColumnFamily(SCHEDULER_NAME_CF_NAME)
-                .withQueueName("TestQueue")
-                .withKeyspace(keyspace)
-                .withConsistencyLevel(CONSISTENCY_LEVEL)
-                .withStats(stats)
-                .withTimeBuckets(2, 30, TimeUnit.SECONDS)
-                .withShardCount(2)
-                .withPollInterval(100L, TimeUnit.MILLISECONDS)
-                .build();
-
-        queue.createStorage();
-
+        manager = SimpleMessageQueueManager.builder()
+                    .withKeyspace(keyspace)
+                    .withConsistencyLevel(CONSISTENCY_LEVEL)
+                    .build();
+        manager.createStorage();
+        
+        Properties props = keyspace.getKeyspaceProperties();
+        LOG.info(props.toString());
     }
 
     @AfterClass
@@ -162,23 +157,30 @@ public class QueueTest {
     }
 
     @Test
-    // This tests for a known bug that has yet to be fixed
+    public void testAdmin() throws MessageQueueException {
+        manager.createMessageQueue(MessageQueueInfo.builder().withQueueName("TEST_ADMIN").build());
+        
+        List<MessageQueueInfo> queueList = manager.listMessageQueues();
+        LOG.info(queueList.toString());
+    }
+
+    @Test
     public void testRepeatingMessage() throws Exception {
         final CountingQueueStats stats = new CountingQueueStats();
 
+        final String queueName = "RepeatingMessageQueue" + qNameSfx;
+        
+        manager.createMessageQueue(MessageQueueInfo.builder().withQueueName(queueName).build());
+        
         // Create a simple queue
         final ShardedDistributedMessageQueue queue = new ShardedDistributedMessageQueue.Builder()
-                .withColumnFamily(SCHEDULER_NAME_CF_NAME)
-                .withQueueName("RepeatingMessageQueue" + qNameSfx)
+                .withQueue(manager.readQueueInfo(queueName))
                 .withKeyspace(keyspace)
                 .withConsistencyLevel(CONSISTENCY_LEVEL)
                 .withStats(stats)
-                .withShardCount(1)
-                .withPollInterval(100L, TimeUnit.MILLISECONDS)
                 .withShardLockManager(slm)
                 .build();
 
-        queue.createQueue();
         MessageProducer producer = queue.createProducer();
         MessageConsumer consumer = queue.createConsumer();
 
@@ -270,218 +272,219 @@ public class QueueTest {
     public void testNoKeyQueue() throws Exception {
         final CountingQueueStats stats = new CountingQueueStats();
 
-        final ShardedDistributedMessageQueue scheduler = new ShardedDistributedMessageQueue.Builder()
-                .withColumnFamily(SCHEDULER_NAME_CF_NAME)
-                .withQueueName("TestNoKeyQueue" + qNameSfx)
+        final String queueName = "TestNoKeyQueue" + qNameSfx;
+        
+        manager.createMessageQueue(MessageQueueInfo.builder().withQueueName(queueName).build());
+
+        final ShardedDistributedMessageQueue queue = new ShardedDistributedMessageQueue.Builder()
+                .withQueue(manager.readQueueInfo(queueName))
                 .withKeyspace(keyspace)
                 .withConsistencyLevel(CONSISTENCY_LEVEL)
                 .withStats(stats)
-                .withShardCount(1)
-                .withPollInterval(100L, TimeUnit.MILLISECONDS)
                 .withShardLockManager(slm)
                 .build();
-
-        scheduler.createQueue();
 
         String key = "MyEvent";
         String key2 = "MyEvent2";
 
-        MessageProducer producer = scheduler.createProducer();
-        MessageConsumer consumer = scheduler.createConsumer();
+        MessageProducer producer = queue.createProducer();
+        MessageConsumer consumer = queue.createConsumer();
 
         {
             final Message m = new Message();
 
             // Add a message
             LOG.info(m.toString());
-            String messageId = producer.sendMessage(m);
-            LOG.info("MessageId: " + messageId);
+            MessageContext context = producer.sendMessage(m);
+            LOG.info("MessageId: " + context);
         }
+        
+        List<MessageContext> messages = consumer.readMessages(10);
+        LOG.info(messages.toString());
+        Assert.assertEquals(1, messages.size());
     }
-
-    @Test
-    public void testQueue() throws Exception {
-        final CountingQueueStats stats = new CountingQueueStats();
-
-        final ShardedDistributedMessageQueue scheduler = new ShardedDistributedMessageQueue.Builder()
-                .withColumnFamily(SCHEDULER_NAME_CF_NAME)
-                .withQueueName("TestQueue" + qNameSfx)
-                .withKeyspace(keyspace)
-                .withConsistencyLevel(CONSISTENCY_LEVEL)
-                .withStats(stats)
-                .withShardCount(1)
-                .withPollInterval(100L, TimeUnit.MILLISECONDS)
-                .withShardLockManager(slm)
-                .build();
-
-        scheduler.createQueue();
-
-        String key = "MyEvent";
-        String key2 = "MyEvent2";
-
-        MessageProducer producer = scheduler.createProducer();
-        MessageConsumer consumer = scheduler.createConsumer();
-
-        {
-            final Message m = new Message().setKey(key);
-
-            // Add a message
-            LOG.info(m.toString());
-            String messageId = producer.sendMessage(m);
-            LOG.info("MessageId: " + messageId);
-
-            Assert.assertEquals(1, scheduler.getMessageCount());
-
-            // Read it by the messageId
-            final Message m1rm = scheduler.peekMessage(messageId);
-            LOG.info("m1rm: " + m1rm);
-            Assert.assertNotNull(m1rm);
-
-            // Read it by the key
-            final Message m1rk = scheduler.peekMessageByKey(key);
-            LOG.info("m1rk:" + m1rk);
-            Assert.assertNotNull(m1rk);
-
-            // Delete the message
-            scheduler.deleteMessageByKey(key);
-
-            // Read and verify that it is gone
-            final Message m1rkd = scheduler.peekMessageByKey(key);
-            Assert.assertNull(m1rkd);
-
-            // Read and verify that it is gone
-            final Message m1rmd = scheduler.peekMessage(messageId);
-            Assert.assertNull(m1rmd);
-        }
-
-        {
-            // Send another message
-            final Message m = new Message().setUniqueKey(key);
-            LOG.info("m2: " + m);
-            final String messageId2 = producer.sendMessage(m);
-            LOG.info("MessageId2: " + messageId2);
-
-            try {
-                final Message m2 = new Message().setUniqueKey(key);
-                producer.sendMessage(m2);
-                Assert.fail("Message should already exists");
-            } catch (MessageQueueException e) {
-                LOG.info("Failed to insert duplicate key", e);
-            }
-
-            try {
-                List<Message> messages = Lists.newArrayList(
-                        new Message().setUniqueKey(key),
-                        new Message().setUniqueKey(key2));
-
-                SendMessageResponse result = producer.sendMessages(messages);
-                Assert.assertEquals(1, result.getMessages().size());
-                Assert.assertEquals(1, result.getNotUnique().size());
-            } catch (MessageQueueException e) {
-                Assert.fail(e.getMessage());
-            }
-
-            Map<String, Integer> counts = scheduler.getShardCounts();
-            LOG.info(counts.toString());
-            Assert.assertEquals(2, scheduler.getMessageCount());
-
-            // Delete the message
-            scheduler.deleteMessageByKey(key2);
-
-            // Read the message
-            final Collection<MessageContext> lm2 = consumer.readMessages(10, 10, TimeUnit.SECONDS);
-            LOG.info("Read message: " + lm2);
-            Assert.assertEquals(1, lm2.size());
-            LOG.info(lm2.toString());
-            Assert.assertEquals(1, scheduler.getMessageCount());
-
-            consumer.ackMessages(lm2);
-            Assert.assertEquals(0, scheduler.getMessageCount());
-        }
-
-        {
-            final Message m = new Message()
-                    .setKey("Key12345")
-                    .setTrigger(new RepeatingTrigger.Builder()
-                    .withInterval(3, TimeUnit.SECONDS)
-                    .withRepeatCount(10)
-                    .build());
-            final String messageId3 = producer.sendMessage(m);
-            Assert.assertNotNull(messageId3);
-            final Message m3rm = scheduler.peekMessage(messageId3);
-            Assert.assertNotNull(m3rm);
-            LOG.info(m3rm.toString());
-            Assert.assertEquals(1, scheduler.getMessageCount());
-
-            scheduler.deleteMessage(messageId3);
-
-            Assert.assertEquals(0, scheduler.getMessageCount());
-        }
-
-//        {
-//            final String repeatingKey = "RepeatingMessage";
-//            final Message m = new Message()
-//                .setKey(repeatingKey)
-//                .setKeepHistory(true)
-//                .setTaskClass(HelloWorldFunction.class.getCanonicalName())
-//                .setTrigger(new RepeatingTrigger.Builder()
-//                    .withInterval(3,  TimeUnit.SECONDS)
-//                    .withRepeatCount(5)
-//                    .build());
-//            final String messageId = producer.sendMessage(m);
 //
-//            final AtomicLong counter = new AtomicLong(0);
+//    @Test
+//    public void testQueue() throws Exception {
+//        final CountingQueueStats stats = new CountingQueueStats();
 //
-//            MessageQueueDispatcher dispatcher = new MessageQueueDispatcher.Builder()
-//                .withBatchSize(5)
-//                .withCallback(new Function<MessageContext, Boolean>() {
-//                    long startTime = 0;
-//
-//                    @Override
-//                    public synchronized Boolean apply(MessageContext message) {
-//                        if (startTime == 0)
-//                            startTime = System.currentTimeMillis();
-//
-//                        LOG.info("Callback : " + (System.currentTimeMillis() - startTime) + " " + message);
-//                        counter.incrementAndGet();
-//                        return true;
-//                    }
-//                })
-//                .withMessageQueue(scheduler)
-//                .withThreadCount(2)
+//        String queueName = "TestQueue" + qNameSfx;
+//        
+//        manager.createMessageQueue(MessageQueueInfo.builder().withQueueName(queueName).build());
+//        final ShardedDistributedMessageQueue queue = new ShardedDistributedMessageQueue.Builder()
+//                .withQueue(manager.readQueueInfo(queueName))
+//                .withKeyspace(keyspace)
+//                .withConsistencyLevel(CONSISTENCY_LEVEL)
+//                .withStats(stats)
+//                .withShardLockManager(slm)
 //                .build();
 //
-//            dispatcher.start();
+//        String key = "MyEvent";
+//        String key2 = "MyEvent2";
 //
-//            Thread.sleep(TimeUnit.MILLISECONDS.convert(20,  TimeUnit.SECONDS));
+//        MessageProducer producer = queue.createProducer();
+//        MessageConsumer consumer = queue.createConsumer();
 //
-//            Collection<MessageHistory> history = scheduler.getKeyHistory(repeatingKey, null, null, 10);
-//            LOG.info(history);
+//        {
+//            final Message m = new Message().setKey(key);
 //
-//            dispatcher.stop();
+//            // Add a message
+//            LOG.info(m.toString());
+//            String messageId = producer.sendMessage(m);
+//            LOG.info("MessageId: " + messageId);
 //
-//            Assert.assertEquals(5,  counter.get());
+//            Assert.assertEquals(1, queue.getMessageCount());
+//
+//            // Read it by the messageId
+//            final Message m1rm = queue.peekMessage(messageId);
+//            LOG.info("m1rm: " + m1rm);
+//            Assert.assertNotNull(m1rm);
+//
+//            // Read it by the key
+//            final Message m1rk = queue.peekMessageByKey(key);
+//            LOG.info("m1rk:" + m1rk);
+//            Assert.assertNotNull(m1rk);
+//
+//            // Delete the message
+//            queue.deleteMessageByKey(key);
+//
+//            // Read and verify that it is gone
+//            final Message m1rkd = queue.peekMessageByKey(key);
+//            Assert.assertNull(m1rkd);
+//
+//            // Read and verify that it is gone
+//            final Message m1rmd = queue.peekMessage(messageId);
+//            Assert.assertNull(m1rmd);
 //        }
-
-        // Add a batch of messages and peek
-        {
-            List<Message> messages = Lists.newArrayList();
-
-            for (int i = 0; i < 10; i++) {
-                messages.add(new Message().addParameter("body", "" + i));
-            }
-
-            producer.sendMessages(messages);
-
-            Collection<Message> all = consumer.peekMessages(Integer.MAX_VALUE);
-            Assert.assertEquals(10, all.size());
-
-            for (Message msg : all) {
-                LOG.info(msg.getParameters().toString());
-            }
-        }
-
-    }
+//
+//        {
+//            // Send another message
+//            final Message m = new Message().setUniqueKey(key);
+//            LOG.info("m2: " + m);
+//            final String messageId2 = producer.sendMessage(m);
+//            LOG.info("MessageId2: " + messageId2);
+//
+//            try {
+//                final Message m2 = new Message().setUniqueKey(key);
+//                producer.sendMessage(m2);
+//                Assert.fail("Message should already exists");
+//            } catch (MessageQueueException e) {
+//                LOG.info("Failed to insert duplicate key", e);
+//            }
+//
+//            try {
+//                List<Message> messages = Lists.newArrayList(
+//                        new Message().setUniqueKey(key),
+//                        new Message().setUniqueKey(key2));
+//
+//                PersistMessageResponse result = producer.sendMessages(messages);
+//                Assert.assertEquals(1, result.getMessages().size());
+//                Assert.assertEquals(1, result.getNotUnique().size());
+//            } catch (MessageQueueException e) {
+//                Assert.fail(e.getMessage());
+//            }
+//
+//            Map<String, Integer> counts = queue.getShardCounts();
+//            LOG.info(counts.toString());
+//            Assert.assertEquals(2, queue.getMessageCount());
+//
+//            // Delete the message
+//            queue.deleteMessageByKey(key2);
+//
+//            // Read the message
+//            final Collection<MessageContext> lm2 = consumer.readMessages(10, 10, TimeUnit.SECONDS);
+//            LOG.info("Read message: " + lm2);
+//            Assert.assertEquals(1, lm2.size());
+//            LOG.info(lm2.toString());
+//            Assert.assertEquals(1, queue.getMessageCount());
+//
+//            consumer.ackMessages(lm2);
+//            Assert.assertEquals(0, queue.getMessageCount());
+//        }
+//
+//        {
+//            final Message m = new Message()
+//                    .setKey("Key12345")
+//                    .setTrigger(new RepeatingTrigger.Builder()
+//                    .withInterval(3, TimeUnit.SECONDS)
+//                    .withRepeatCount(10)
+//                    .build());
+//            final String messageId3 = producer.sendMessage(m);
+//            Assert.assertNotNull(messageId3);
+//            final Message m3rm = queue.peekMessage(messageId3);
+//            Assert.assertNotNull(m3rm);
+//            LOG.info(m3rm.toString());
+//            Assert.assertEquals(1, queue.getMessageCount());
+//
+//            queue.deleteMessage(messageId3);
+//
+//            Assert.assertEquals(0, queue.getMessageCount());
+//        }
+//
+////        {
+////            final String repeatingKey = "RepeatingMessage";
+////            final Message m = new Message()
+////                .setKey(repeatingKey)
+////                .setKeepHistory(true)
+////                .setTaskClass(HelloWorldFunction.class.getCanonicalName())
+////                .setTrigger(new RepeatingTrigger.Builder()
+////                    .withInterval(3,  TimeUnit.SECONDS)
+////                    .withRepeatCount(5)
+////                    .build());
+////            final String messageId = producer.sendMessage(m);
+////
+////            final AtomicLong counter = new AtomicLong(0);
+////
+////            MessageQueueDispatcher dispatcher = new MessageQueueDispatcher.Builder()
+////                .withBatchSize(5)
+////                .withCallback(new Function<MessageContext, Boolean>() {
+////                    long startTime = 0;
+////
+////                    @Override
+////                    public synchronized Boolean apply(MessageContext message) {
+////                        if (startTime == 0)
+////                            startTime = System.currentTimeMillis();
+////
+////                        LOG.info("Callback : " + (System.currentTimeMillis() - startTime) + " " + message);
+////                        counter.incrementAndGet();
+////                        return true;
+////                    }
+////                })
+////                .withMessageQueue(scheduler)
+////                .withThreadCount(2)
+////                .build();
+////
+////            dispatcher.start();
+////
+////            Thread.sleep(TimeUnit.MILLISECONDS.convert(20,  TimeUnit.SECONDS));
+////
+////            Collection<MessageHistory> history = scheduler.getKeyHistory(repeatingKey, null, null, 10);
+////            LOG.info(history);
+////
+////            dispatcher.stop();
+////
+////            Assert.assertEquals(5,  counter.get());
+////        }
+//
+//        // Add a batch of messages and peek
+//        {
+//            List<Message> messages = Lists.newArrayList();
+//
+//            for (int i = 0; i < 10; i++) {
+//                messages.add(new Message().addParameter("body", "" + i));
+//            }
+//
+//            producer.sendMessages(messages);
+//
+//            Collection<Message> all = consumer.peekMessages(Integer.MAX_VALUE);
+//            Assert.assertEquals(10, all.size());
+//
+//            for (Message msg : all) {
+//                LOG.info(msg.getParameters().toString());
+//            }
+//        }
+//
+//    }
 
     @Test
     @Ignore
@@ -494,22 +497,23 @@ public class QueueTest {
 
         final CountingQueueStats stats = new CountingQueueStats();
 
-        final ConsistencyLevel cl = ConsistencyLevel.CL_ONE;
-        final MessageQueue scheduler = new ShardedDistributedMessageQueue.Builder()
-                .withColumnFamily(SCHEDULER_NAME_CF_NAME)
-                .withQueueName("StressQueue"+qNameSfx)
-                .withKeyspace(keyspace)
-                .withConsistencyLevel(cl)
-                .withStats(stats)
+        String queueName = "StressQueue"+qNameSfx;
+        
+        manager.createMessageQueue(MessageQueueInfo.builder()
+                .withQueueName(queueName)
                 .withTimeBuckets(10, 30, TimeUnit.SECONDS)
                 .withShardCount(100)
-                .withPollInterval(100L, TimeUnit.MILLISECONDS)
+                .build());
+        
+        final ShardedDistributedMessageQueue queue = new ShardedDistributedMessageQueue.Builder()
+                .withQueue(manager.readQueueInfo(queueName))
+                .withKeyspace(keyspace)
+                .withConsistencyLevel(CONSISTENCY_LEVEL)
+                .withStats(stats)
                 .withShardLockManager(slm)
                 .build();
 
-        scheduler.createStorage();
         Thread.sleep(1000);
-        scheduler.createQueue();
 
         final ConcurrentMap<String, Boolean> lookup = Maps.newConcurrentMap();
 
@@ -518,7 +522,7 @@ public class QueueTest {
         Executors.newSingleThreadExecutor().execute(new Runnable() {
             @Override
             public void run() {
-                MessageProducer producer = scheduler.createProducer();
+                MessageProducer producer = queue.createProducer();
                 for (int i = 0; i < max_count / batchSize; i++) {
                     long tm = System.currentTimeMillis();
                     List<Message> messages = Lists.newArrayList();
@@ -645,17 +649,17 @@ public class QueueTest {
         MessageQueueDispatcher dispatcher = new MessageQueueDispatcher.Builder()
                 .withBatchSize(500)
                 .withCallback(new Function<MessageContext, Boolean>() {
-            @Override
-            public Boolean apply(MessageContext message) {
-                String data = (String) message.getMessage().getParameters().get("data");
-                counter.incrementAndGet();
-                // Return true to 'ack' the message
-                // Return false to not 'ack' which will result in the message timing out
-                // Throw any exception to put the message into a poison queue
-                return true;
-            }
-        })
-                .withMessageQueue(scheduler)
+                    @Override
+                    public Boolean apply(MessageContext message) {
+                        String data = (String) message.getMessage().getParameters().get("data");
+                        counter.incrementAndGet();
+                        // Return true to 'ack' the message
+                        // Return false to not 'ack' which will result in the message timing out
+                        // Throw any exception to put the message into a poison queue
+                        return true;
+                    }
+                })
+                .withMessageQueue(queue)
                 .withConsumerCount(5)
                 .withThreadCount(1 + 10)
                 .build();
@@ -670,20 +674,19 @@ public class QueueTest {
 
         final CountingQueueStats stats = new CountingQueueStats();
 
-        final ShardedDistributedMessageQueue scheduler = new ShardedDistributedMessageQueue.Builder()
-                .withColumnFamily(SCHEDULER_NAME_CF_NAME)
-                .withQueueName("TestQueueBusyLock" + qNameSfx)
+        final String queueName = "TestQueueBusyLock" + qNameSfx;
+        
+        manager.createMessageQueue(MessageQueueInfo.builder().withQueueName(queueName).build());
+        
+        final ShardedDistributedMessageQueue queue = new ShardedDistributedMessageQueue.Builder()
+                .withQueue(manager.readQueueInfo(queueName))
                 .withKeyspace(keyspace)
                 .withConsistencyLevel(CONSISTENCY_LEVEL)
                 .withStats(stats)
-                .withShardCount(1)
-                .withPollInterval(100L, TimeUnit.MILLISECONDS)
                 .withShardLockManager(slm)
                 .build();
-        scheduler.deleteQueue();
-        scheduler.createQueue();
 
-        MessageProducer producer = scheduler.createProducer();
+        MessageProducer producer = queue.createProducer();
 
         // Add a batch of messages and peek
         List<Message> messages = Lists.newArrayList();
@@ -693,11 +696,11 @@ public class QueueTest {
         }
 
         producer.sendMessages(messages);
-        long queuedCount = scheduler.getMessageCount();
+        long queuedCount = queue.getMessageCount();
         final AtomicInteger count = new AtomicInteger();
 
         // Lock the shard. This should throw a few BusyLockExceptions
-        String shard = scheduler.getShardStats().keySet().iterator().next();
+        String shard = queue.getShardStats().keySet().iterator().next();
         ShardLock l = null;
         if(slm!=null) {
             l = slm.acquireLock(shard);
@@ -713,7 +716,7 @@ public class QueueTest {
                                         return true;
                                     }
                                 })
-                .withMessageQueue(scheduler)
+                .withMessageQueue(queue)
                 .withConsumerCount(10)
                 .withProcessorThreadCount(10)
                 .withAckInterval(20, TimeUnit.MILLISECONDS)
@@ -741,71 +744,5 @@ public class QueueTest {
             assertTrue(slm.getBusyLockCounts().get(shard).intValue() > 0);
         }
     }
-
-    /**
-     * A shard lock manager implementation.
-     */
-    static class ReentrantLockManager implements ShardLockManager {
-
-        private ConcurrentHashMap<String, ReentrantLock> locks = new ConcurrentHashMap<String, ReentrantLock>();
-        private ConcurrentHashMap<String, AtomicInteger> busyLockCounts = new ConcurrentHashMap<String, AtomicInteger>();
-        private AtomicLong lockAttempts = new AtomicLong();
-
-        @Override
-        public ShardLock acquireLock(String shardName) throws BusyLockException {
-            locks.putIfAbsent(shardName, new ReentrantLock());
-            ReentrantLock l = locks.get(shardName);
-            try {
-                lockAttempts.incrementAndGet();
-                if (l.tryLock()) {
-                    return new ReentrantShardLock(l, shardName);
-                } else {
-                    busyLockCounts.putIfAbsent(shardName, new AtomicInteger());
-                    busyLockCounts.get(shardName).incrementAndGet();
-                    throw new BusyLockException("Shard " + shardName + " is already locked" + ": busy lock count " + busyLockCounts.get(shardName));
-                }
-            } catch (Exception e) {
-                throw new BusyLockException("Could not lock shard " + shardName, e);
-            }
-        }
-
-        @Override
-        public void releaseLock(ShardLock lock) {
-            if(lock!=null) {
-                ReentrantShardLock rsl = (ReentrantShardLock) lock;
-                rsl.getLock().unlock();
-            }
-        }
-
-        public Map<String,AtomicInteger> getBusyLockCounts() {
-            return busyLockCounts;
-        }
-
-        public long getLockAttempts() {
-            return lockAttempts.longValue();
-        }
-    }
-
-    /**
-     * A shard lock implementation that uses a ReentrantLock.
-     */
-    static class ReentrantShardLock implements ShardLock {
-
-        private ReentrantLock lock;
-        private String shardName;
-
-        public ReentrantShardLock(ReentrantLock lock, String shardName) {
-            this.lock = lock;
-            this.shardName = shardName;
-        }
-
-        @Override
-        public String getShardName() {
-            return shardName;
-        }
-
-        public ReentrantLock getLock() {
-            return lock;
-        }
-    }
+    
 }

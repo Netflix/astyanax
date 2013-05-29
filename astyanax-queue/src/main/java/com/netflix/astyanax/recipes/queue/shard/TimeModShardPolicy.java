@@ -1,7 +1,7 @@
 package com.netflix.astyanax.recipes.queue.shard;
 
 import com.netflix.astyanax.recipes.queue.Message;
-import com.netflix.astyanax.recipes.queue.MessageQueueMetadata;
+import com.netflix.astyanax.recipes.queue.MessageQueueInfo;
 
 /**
  * Sharding based on time.  This policy assumes that the 
@@ -19,7 +19,7 @@ public class TimeModShardPolicy implements ModShardPolicy {
     }
     
     @Override
-    public int getMessageShard(Message message, MessageQueueMetadata settings) {
-        return (int) (message.getTokenTime() % settings.getShardCount());
+    public int getMessageShard(Message message, MessageQueueInfo settings) {
+        return (int) (message.getTrigger().getTriggerTime() % settings.getShardCount());
     }
 }

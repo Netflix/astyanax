@@ -312,7 +312,13 @@ public class MessageQueueDispatcher {
                             }
                         }
                         catch (Throwable t) {
-                            context.setException(t);
+                            MessageQueueException e;
+                            if (t instanceof MessageQueueException) 
+                                e = (MessageQueueException)t;
+                            else
+                                e = new MessageQueueException("Failed to execute message", t);
+                            
+                            context.setException(e);
                             toAck.add(context);
                             LOG.error("Error processing message " + message.getKey(), t);
 //                            try {

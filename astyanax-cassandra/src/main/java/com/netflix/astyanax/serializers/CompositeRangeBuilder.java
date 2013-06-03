@@ -36,7 +36,7 @@ public abstract class CompositeRangeBuilder implements ByteBufferRange {
             throw new IllegalStateException("Prefix cannot be added once equality has been specified");
         }
         append(start, object, Equality.EQUAL);
-        append(end, object, Equality.EQUAL);
+        append(end, object, Equality.GREATER_THAN_EQUALS);
         nextComponent();
         return this;
     }

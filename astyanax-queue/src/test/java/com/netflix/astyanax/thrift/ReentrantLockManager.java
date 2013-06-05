@@ -36,6 +36,11 @@ public class ReentrantLockManager implements ShardLockManager {
         public ReentrantLock getLock() {
             return lock;
         }
+
+        @Override
+        public int getExtraMessagesToRead() {
+            return 0;
+        }
     }
     
     private ConcurrentHashMap<String, ReentrantLock> locks = new ConcurrentHashMap<String, ReentrantLock>();

@@ -19,6 +19,7 @@ import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.recipes.queue.entity.MessageMetadataEntry;
 import com.netflix.astyanax.recipes.queue.entity.MessageQueueEntry;
+import com.netflix.astyanax.recipes.queue.exception.MessageQueueException;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.retry.RunOnce;
 import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
@@ -44,10 +45,6 @@ public class SimpleMessageQueueManager implements MessageQueueManager {
     private static final Logger LOG = LoggerFactory.getLogger(SimpleMessageQueueManager.class);
     
     public static final String           DEFAULT_MANAGER_NAME            = "Queues";
-    public static final String           CF_QUEUE_SUFFIX                 = "_queue";
-    public static final String           CF_METADATA_SUFFIX              = "_metadata";
-    public static final String           CF_HISTORY_SUFFIX               = "_history";
-    public static final String           CF_INFO_SUFFIX                  = "_info";
     public static final ConsistencyLevel DEFAULT_CONSISTENCY_LEVEL       = ConsistencyLevel.CL_LOCAL_QUORUM;
     public static final RetryPolicy      DEFAULT_RETRY_POLICY            = RunOnce.get();
     public static final long             SCHEMA_CHANGE_DELAY             = 3000;
@@ -112,9 +109,9 @@ public class SimpleMessageQueueManager implements MessageQueueManager {
         = new AnnotatedCompositeSerializer<MessageMetadataEntry>(MessageMetadataEntry.class);
     
     public SimpleMessageQueueManager(Builder builder) {
-        this.queueColumnFamily    = ColumnFamily.newColumnFamily(builder.managerName + CF_QUEUE_SUFFIX,    StringSerializer.get(), entrySerializer);
-        this.metadataColumnFamily = ColumnFamily.newColumnFamily(builder.managerName + CF_INFO_SUFFIX,     StringSerializer.get(), metadataSerializer);
-        this.historyColumnFamily  = ColumnFamily.newColumnFamily(builder.managerName + CF_HISTORY_SUFFIX,  StringSerializer.get(), TimeUUIDSerializer.get());
+        this.queueColumnFamily    = ColumnFamily.newColumnFamily(builder.managerName + MessageQueueConstants.CF_QUEUE_SUFFIX,    StringSerializer.get(), entrySerializer);
+        this.metadataColumnFamily = ColumnFamily.newColumnFamily(builder.managerName + MessageQueueConstants.CF_INFO_SUFFIX,     StringSerializer.get(), metadataSerializer);
+        this.historyColumnFamily  = ColumnFamily.newColumnFamily(builder.managerName + MessageQueueConstants.CF_HISTORY_SUFFIX,  StringSerializer.get(), TimeUUIDSerializer.get());
 
         this.managerName          = builder.managerName;
         this.columnFamilySettings = builder.columnFamilySettings;
@@ -124,7 +121,7 @@ public class SimpleMessageQueueManager implements MessageQueueManager {
                 .withKeyspace(builder.keyspace)
                 .withEntityType(MessageQueueInfo.class)
                 .withConsistency(builder.consistencyLevel)
-                .withColumnFamily(builder.managerName + CF_METADATA_SUFFIX)
+                .withColumnFamily(builder.managerName + MessageQueueConstants.CF_METADATA_SUFFIX)
                 .build();
     }
     
@@ -259,7 +256,7 @@ public class SimpleMessageQueueManager implements MessageQueueManager {
         changeSchema(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
-                keyspace.dropColumnFamily(managerName + CF_INFO_SUFFIX);
+                keyspace.dropColumnFamily(managerName + MessageQueueConstants.CF_INFO_SUFFIX);
                 return null;
             }            
         });

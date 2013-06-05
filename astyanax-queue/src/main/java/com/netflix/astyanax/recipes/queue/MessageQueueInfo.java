@@ -14,12 +14,12 @@ import com.google.common.base.Preconditions;
  */
 @Entity
 public class MessageQueueInfo  {
-    public static final String        DEFAULT_QUEUE_NAME        = "Queue";
-    public static final int           DEFAULT_RETENTION_TIMEOUT = 0;
-    public static final int           DEFAULT_SHARD_COUNT       = 1;
-    public static final Long          DEFAULT_BUCKET_DURATION   = null; 
-    public static final int           DEFAULT_BUCKET_COUNT      = 1;
-    public static final Integer       DEFAULT_HISTORY_TTL       = null;
+    public static final String        DEFAULT_QUEUE_NAME         = "Queue";
+    public static final int           DEFAULT_RETENTION_TIMEOUT  = 0;
+    public static final int           DEFAULT_SHARD_COUNT        = 1;
+    public static final Long          DEFAULT_BUCKET_DURATION    = null; 
+    public static final int           DEFAULT_BUCKET_COUNT       = 1;
+    public static final Integer       DEFAULT_HISTORY_TTL        = null;
     public static final String        DEFAULT_COLUMN_FAMILY_NAME = null;
     
     public static class Builder {

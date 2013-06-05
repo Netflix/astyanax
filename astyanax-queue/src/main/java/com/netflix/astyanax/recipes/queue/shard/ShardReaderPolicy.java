@@ -17,7 +17,7 @@ public interface ShardReaderPolicy {
     public static interface Factory {
         public ShardReaderPolicy create(MessageQueueInfo metadata);
     }
-    
+
     /**
      * Acquire the next shard to be processed.  Must call releaseShard when done reading
      * from the shard
@@ -36,6 +36,11 @@ public interface ShardReaderPolicy {
      * @return List all the shards
      */
     public Collection<MessageQueueShard> listShards();
+    
+    /**
+     * @return List of all shard names
+     */
+    public Collection<String> listShardNames();
     
     /**
      * @return Return map of all shard stats

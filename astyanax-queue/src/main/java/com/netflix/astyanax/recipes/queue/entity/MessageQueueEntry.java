@@ -1,7 +1,9 @@
 package com.netflix.astyanax.recipes.queue.entity;
 
+import java.nio.ByteBuffer;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -12,6 +14,9 @@ import org.apache.commons.lang.StringUtils;
 
 import com.netflix.astyanax.entitystore.TTL;
 import com.netflix.astyanax.recipes.queue.Message;
+import com.netflix.astyanax.recipes.queue.MessageQueueUtils;
+import com.netflix.astyanax.serializers.LongSerializer;
+import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.util.TimeUUIDUtils;
 
 /**
@@ -23,6 +28,7 @@ import com.netflix.astyanax.util.TimeUUIDUtils;
 public class MessageQueueEntry {
     private static final String ID_DELIMITER    = ":";
     private static final String SHARD_DELIMITER = "$";
+    private static AtomicLong counter = new AtomicLong();
             
     @Id
     private String shardName;
@@ -65,7 +71,7 @@ public class MessageQueueEntry {
     private Byte state;
     
     @Column
-    private String body;
+    private ByteBuffer body;
     
     @TTL
     private int ttl = 0;
@@ -91,18 +97,19 @@ public class MessageQueueEntry {
         state     = Byte.parseByte(parts[4]);
     }
     
-    private MessageQueueEntry(String shardName, MessageQueueEntryType type, byte priority, long timestamp, UUID random, MessageQueueEntryState state) {
-        this(shardName, type, priority, timestamp, random, state, null);
+    private MessageQueueEntry(String shardName, MessageQueueEntryType type, byte priority, long timestamp, UUID random, MessageQueueEntryState state, int ttl) {
+        this(shardName, type, priority, timestamp, random, state, null, ttl);
     }
 
-    private MessageQueueEntry(String shardName, MessageQueueEntryType type, byte priority, long timestamp, UUID random, MessageQueueEntryState state, String body) {
+    private MessageQueueEntry(String shardName, MessageQueueEntryType type, byte priority, long timestamp, UUID random, MessageQueueEntryState state, String body, int ttl) {
         super();
         
         this.shardName  = shardName;
         this.type       = (byte)type.ordinal();
         this.state      = (byte)state.ordinal();
         this.priority   = priority;
-        this.body       = body;
+        this.body       = StringSerializer.get().toByteBuffer(body);
+        this.ttl        = ttl;
 
         if (timestamp == 0L)
             this.timestamp  = TimeUUIDUtils.getUniqueTimeUUIDinMicros();
@@ -115,26 +122,28 @@ public class MessageQueueEntry {
             this.random     = random;
     }
     
-    public static MessageQueueEntry newLockEntry(String shardName, MessageQueueEntryState state) {
-        return new MessageQueueEntry(shardName, MessageQueueEntryType.Lock, (byte)0, 0, null, state);
+    public static MessageQueueEntry newLockEntry(String shardName, MessageQueueEntryState state, int ttl) {
+        return new MessageQueueEntry(shardName, MessageQueueEntryType.Lock, (byte)0, 0, null, state, ttl);
     }
     
-    public static MessageQueueEntry newLockEntry(String shardName, long timestamp, MessageQueueEntryState state) {
-        return new MessageQueueEntry(shardName, MessageQueueEntryType.Lock, (byte)0, timestamp, null, state);
+    public static MessageQueueEntry newLockEntry(String shardName, long timestamp, MessageQueueEntryState state, int ttl) {
+        return new MessageQueueEntry(shardName, MessageQueueEntryType.Lock, (byte)0, timestamp, null, state, ttl);
     }
     
-    public static MessageQueueEntry newMessageEntry(String shardName, byte priority, long timestamp, MessageQueueEntryState state, String body) {
-        return new MessageQueueEntry(shardName, MessageQueueEntryType.Message, priority, timestamp, null, state, body);
+    public static MessageQueueEntry newMessageEntry(String shardName, byte priority, long timestamp, MessageQueueEntryState state, String body, Integer ttl) {
+        timestamp += (counter.incrementAndGet() % 1000);
+        return new MessageQueueEntry(shardName, MessageQueueEntryType.Message, priority, timestamp, null, state, body, ttl);
     }
     
-    public static MessageQueueEntry newBusyEntry(String shardName, Message message, MessageQueueEntry previous, String body) {
+    public static MessageQueueEntry newBusyEntry(String shardName, Message message, MessageQueueEntry previous, int ttl) {
         return new MessageQueueEntry(shardName,
                                     MessageQueueEntryType.Message, 
                                     (byte)message.getPriority(), 
-                                    message.getTrigger().getTriggerTime() + message.getTimeout(),   // TODO: double check units
+                                    message.getTrigger().getTriggerTime() + message.getTimeout() + (counter.incrementAndGet() % 1000),   // TODO: double check units
                                     null, 
                                     MessageQueueEntryState.Busy, 
-                                    body);
+                                    previous.getBodyAsString(), 
+                                    ttl);
     }
     
     public static MessageQueueEntry fromMetadata(MessageMetadataEntry meta) {
@@ -172,6 +181,10 @@ public class MessageQueueEntry {
 
     public void setState(Byte state) {
         this.state = state;
+    }
+
+    public void setState(MessageQueueEntryState state) {
+        this.state = (byte)state.ordinal();
     }
 
     public void setPriorty(Byte priority) {
@@ -218,12 +231,24 @@ public class MessageQueueEntry {
         this.ttl = ttl;
     }
     
-    public String getBody() {
-        return body;
+    public String getBodyAsString() {
+        return StringSerializer.get().fromByteBuffer(body);
+    }
+    
+    public Message getBodyAsMessage() throws Exception {
+        return MessageQueueUtils.deserializeByteBuffer(body, Message.class);
     }
 
-    public void setBody(String body) {
-        this.body = body;
+    public void setBodyFromString(String body) {
+        this.body = StringSerializer.get().toByteBuffer(body);
+    }
+    
+    public Long getBodyAsLong() {
+        return LongSerializer.get().fromByteBuffer(body);
+    }
+    
+    public void setBodyFromLong(Long body) {
+        this.body = LongSerializer.get().toByteBuffer(body);
     }
 
     public String getShardName() {

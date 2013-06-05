@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
@@ -56,7 +58,7 @@ public class TimePartitionedShardReaderPolicy implements ShardReaderPolicy {
     
     private static final String SEPARATOR = ":";
     
-    private final MessageQueueInfo                   settings;
+    private final MessageQueueInfo                       queueInfo;
     private final List<MessageQueueShard>                shards;
     private final Map<String, MessageQueueShardStats>    shardStats;
     private final LinkedBlockingQueue<MessageQueueShard> workQueue = Queues.newLinkedBlockingQueue();
@@ -66,15 +68,15 @@ public class TimePartitionedShardReaderPolicy implements ShardReaderPolicy {
 
     private int currentTimePartition = -1;
 
-    private TimePartitionedShardReaderPolicy(Factory.Builder builder, MessageQueueInfo metadata) {
-        this.settings               = metadata;
+    private TimePartitionedShardReaderPolicy(Factory.Builder builder, MessageQueueInfo queueInfo) {
+        this.queueInfo              = queueInfo;
         this.pollingInterval        = builder.pollingInterval;
         this.catchupPollingInterval = builder.catchupPollingInterval;
         
-        shards = Lists.newArrayListWithCapacity(metadata.getPartitionCount() * metadata.getShardCount());
-        for (int i = 0; i < metadata.getPartitionCount(); i++) {
-            for (int j = 0; j < metadata.getShardCount(); j++) {
-                shards.add(new MessageQueueShard(metadata.getQueueName() + SEPARATOR + i + SEPARATOR + j, i, j));
+        shards = Lists.newArrayListWithCapacity(queueInfo.getPartitionCount() * queueInfo.getShardCount());
+        for (int i = 0; i < queueInfo.getPartitionCount(); i++) {
+            for (int j = 0; j < queueInfo.getShardCount(); j++) {
+                shards.add(new MessageQueueShard(queueInfo.getQueueName() + SEPARATOR + i + SEPARATOR + j, i, j));
             }
         }
         
@@ -90,10 +92,10 @@ public class TimePartitionedShardReaderPolicy implements ShardReaderPolicy {
     }
 
     private int getCurrentPartitionIndex() {
-        if (settings.getPartitionCount() <= 1) 
+        if (queueInfo.getPartitionCount() <= 1) 
             return 0;
         return    (int) ((TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
-                        / settings.getPartitionDuration())%settings.getPartitionCount());
+                        / queueInfo.getPartitionDuration())%queueInfo.getPartitionCount());
     }
     
     @Override
@@ -163,7 +165,7 @@ public class TimePartitionedShardReaderPolicy implements ShardReaderPolicy {
     @Override
     public boolean isCatchingUp() {
         // if the work queue is larger than two partitions worth of shards we are still playing catch up.
-        return getWorkQueueDepth() > (settings.getShardCount() * 2);
+        return getWorkQueueDepth() > (queueInfo.getShardCount() * 2);
     }
 
     @Override
@@ -171,5 +173,14 @@ public class TimePartitionedShardReaderPolicy implements ShardReaderPolicy {
         return (isCatchingUp() && catchupPollingInterval != NO_CATCHUP_POLLING_INTERVAL )
                     ? catchupPollingInterval 
                     : pollingInterval;
+    }
+
+    @Override
+    public Collection<String> listShardNames() {
+        return Collections2.transform(shards, new Function<MessageQueueShard, String>() {
+            public String apply(MessageQueueShard shard) {
+                return shard.getName();
+            }
+        });
     }
 }

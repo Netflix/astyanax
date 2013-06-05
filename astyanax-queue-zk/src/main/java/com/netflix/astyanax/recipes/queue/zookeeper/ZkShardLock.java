@@ -44,4 +44,9 @@ public class ZkShardLock implements ShardLock {
         this.shardName = shardName;
     }
 
+    @Override
+    public int getExtraMessagesToRead() {
+        return 0;
+    }
+
 }

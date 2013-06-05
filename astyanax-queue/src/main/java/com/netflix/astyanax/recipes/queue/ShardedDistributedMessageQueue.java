@@ -3,48 +3,43 @@ package com.netflix.astyanax.recipes.queue;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.netflix.astyanax.Keyspace;
-import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.MutationBatchManager;
 import com.netflix.astyanax.SingleMutationBatchManager;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
-import com.netflix.astyanax.model.Column;
-import com.netflix.astyanax.model.ColumnFamily;
-import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ConsistencyLevel;
-import com.netflix.astyanax.model.Equality;
+import com.netflix.astyanax.recipes.locks.BusyLockException;
+import com.netflix.astyanax.recipes.queue.entity.MessageHistoryEntry;
 import com.netflix.astyanax.recipes.queue.entity.MessageMetadataEntry;
-import com.netflix.astyanax.recipes.queue.entity.MessageMetadataEntryType;
 import com.netflix.astyanax.recipes.queue.entity.MessageQueueEntry;
-import com.netflix.astyanax.recipes.queue.entity.MessageQueueEntryType;
+import com.netflix.astyanax.recipes.queue.entity.MessageQueueEntryState;
+import com.netflix.astyanax.recipes.queue.exception.DuplicateMessageException;
+import com.netflix.astyanax.recipes.queue.exception.MessageQueueException;
+import com.netflix.astyanax.recipes.queue.lock.CassandraShardLockManager;
+import com.netflix.astyanax.recipes.queue.persist.CassandraMessageHistoryDao;
+import com.netflix.astyanax.recipes.queue.persist.CassandraMessageMetadataDao;
+import com.netflix.astyanax.recipes.queue.persist.CassandraMessageQueueDao;
 import com.netflix.astyanax.recipes.queue.shard.ModShardPolicy;
 import com.netflix.astyanax.recipes.queue.shard.QueueShardPolicy;
 import com.netflix.astyanax.recipes.queue.shard.ShardReaderPolicy;
 import com.netflix.astyanax.recipes.queue.shard.TimeModShardPolicy;
 import com.netflix.astyanax.recipes.queue.shard.TimePartitionQueueShardPolicy;
 import com.netflix.astyanax.recipes.queue.shard.TimePartitionedShardReaderPolicy;
+import com.netflix.astyanax.recipes.queue.triggers.RunOnceTrigger;
+import com.netflix.astyanax.recipes.queue.triggers.Trigger;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.retry.RunOnce;
-import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
-import com.netflix.astyanax.serializers.StringSerializer;
-import com.netflix.astyanax.serializers.TimeUUIDSerializer;
-import com.netflix.astyanax.util.RangeBuilder;
-import com.netflix.astyanax.util.TimeUUIDUtils;
 
 /**
  * ShardedDistributedMessageQueue is a Cassandra backed client driven message queue.
@@ -126,21 +121,14 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     public static final Integer          DEFAULT_LOCK_TTL                = (int)TimeUnit.SECONDS.convert(2,   TimeUnit.MINUTES);
     public static final Integer          DEFAULT_METADATA_DELETE_TTL     = (int)TimeUnit.SECONDS.convert(2,  TimeUnit.SECONDS);
     public static final Boolean          DEFAULT_POISON_QUEUE_ENABLED    = false;
-    public static final String           DEFAULT_QUEUE_SUFFIX            = "_queue";
-    public static final String           DEFAULT_METADATA_SUFFIX         = "_metadata";
-    public static final String           DEFAULT_HISTORY_SUFFIX          = "_history";
     public static final long             SCHEMA_CHANGE_DELAY             = 3000;
     public static final String           FIELD_PARAMETERS                = "PARAMS";
     public static final ImmutableMap<String, Object> DEFAULT_COLUMN_FAMILY_SETTINGS = ImmutableMap.<String, Object>builder()
             .put("read_repair_chance",       1.0)
             .put("gc_grace_seconds",         5)     // TODO: Calculate gc_grace_seconds
             .put("compaction_strategy",      "SizeTieredCompactionStrategy")
+            .put("sstable_compression",     "")
             .build();
-
-    final static AnnotatedCompositeSerializer<MessageQueueEntry>     entrySerializer
-        = new AnnotatedCompositeSerializer<MessageQueueEntry>(MessageQueueEntry.class);
-    final static AnnotatedCompositeSerializer<MessageMetadataEntry>  metadataSerializer
-        = new AnnotatedCompositeSerializer<MessageMetadataEntry>(MessageMetadataEntry.class);
 
     /**
      *
@@ -261,11 +249,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     }
 
     // Immutable after configuration
-    final ShardLockManager                            lockManager;
-    final ColumnFamily<String, MessageQueueEntry>     queueColumnFamily;
-    final ColumnFamily<String, MessageMetadataEntry>  keyIndexColumnFamily;
-    final ColumnFamily<String, UUID>                  historyColumnFamily;
-
+    final ShardLockManager                lockManager;
     final String                          columnFamilyName;
     final Keyspace                        keyspace;
     final ConsistencyLevel                consistencyLevel;
@@ -278,30 +262,21 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     final Map<String, Object>             columnFamilySettings;
     final ShardReaderPolicy               shardReaderPolicy;
     final ModShardPolicy                  modShardPolicy;
-    final Function<String, Message>       invalidMessageHandler  = new Function<String, Message>() {
-                                                                @Override
-                                                                public Message apply(String input) {
-                                                                    LOG.warn("Invalid message: " + input);
-                                                                    return null;
-                                                                }
-                                                            };
-
+    final Function<String, Message>       invalidMessageHandler  = new LoggingInvalidMessageHandler();
     final MessageQueueStats               stats;
-    final AtomicLong                      counter             = new AtomicLong(new Random().nextInt(1000));
     final QueueShardPolicy                shardPolicy;
     final MutationBatchManager            batchManager;
+    final MessageQueueDao                 queueDao;
+    final MessageMetadataDao              metadataDao;
+    final MessageHistoryDao               historyDao;
 
     private ShardedDistributedMessageQueue(Builder builder) throws MessageQueueException {
         this.columnFamilyName     = builder.columnFamilyName;
-        this.queueColumnFamily    = ColumnFamily.newColumnFamily(builder.columnFamilyName + DEFAULT_QUEUE_SUFFIX,    StringSerializer.get(), entrySerializer);
-        this.keyIndexColumnFamily = ColumnFamily.newColumnFamily(builder.columnFamilyName + DEFAULT_METADATA_SUFFIX, StringSerializer.get(), metadataSerializer);
-        this.historyColumnFamily  = ColumnFamily.newColumnFamily(builder.columnFamilyName + DEFAULT_HISTORY_SUFFIX,  StringSerializer.get(), TimeUUIDSerializer.get());
 
         this.consistencyLevel     = builder.consistencyLevel;
         this.keyspace             = builder.keyspace;
         this.hooks                = builder.hooks;
         this.modShardPolicy       = builder.modShardPolicy;
-        this.lockManager          = builder.lockManager;
         this.lockTimeout          = builder.lockTimeout;
         this.lockTtl              = builder.lockTtl;
         this.bPoisonQueueEnabled  = builder.bPoisonQueueEnabled;
@@ -310,47 +285,18 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         this.metadataDeleteTTL    = builder.metadataDeleteTTL;
         this.stats                = builder.stats;
         this.shardReaderPolicy    = builder.shardReaderPolicyFactory.create(queueInfo);
-        this.batchManager      = new SingleMutationBatchManager(keyspace, consistencyLevel);
+        this.batchManager         = new SingleMutationBatchManager(keyspace, consistencyLevel);
         this.shardPolicy          = new TimePartitionQueueShardPolicy(modShardPolicy, queueInfo);
+        
+        if (builder.lockManager != null) 
+            this.lockManager      = builder.lockManager;
+        else 
+            this.lockManager      = new CassandraShardLockManager(keyspace, batchManager, consistencyLevel);
+        
+        queueDao    = new CassandraMessageQueueDao(keyspace, batchManager, consistencyLevel, queueInfo, shardReaderPolicy);
+        metadataDao = new CassandraMessageMetadataDao(keyspace, batchManager, consistencyLevel, queueInfo);
+        historyDao  = new CassandraMessageHistoryDao(keyspace, batchManager, consistencyLevel, queueInfo);
     }
-
-    /**
-     * Return the shard for this message
-     * @param message
-     * @return
-     */
-    String getShardKey(Message message) {
-        return getShardKey(message.getTrigger().getTriggerTime(), this.modShardPolicy.getMessageShard(message, queueInfo));
-    }
-
-    /**
-     * Return the shard for this timestamp
-     * @param message
-     * @return
-     */
-    private String getShardKey(long messageTime, int modShard) {
-        long timePartition;
-        if (queueInfo.getPartitionDuration() != null)
-            timePartition = (messageTime / queueInfo.getPartitionDuration()) % queueInfo.getPartitionCount();
-        else
-            timePartition = 0;
-        return getName() + ":" + timePartition + ":" + modShard;
-    }
-
-    String getCompositeKey(String name, String key) {
-        return name + COMPOSITE_KEY_DELIMITER + key;
-    }
-
-    static String[] splitCompositeKey(String key) throws MessageQueueException {
-        String[] parts = StringUtils.split(key, COMPOSITE_KEY_DELIMITER);
-
-        if (parts.length != 2) {
-            throw new MessageQueueException("Invalid key '" + key + "'.  Expected format <queue|shard>$<name>. ");
-        }
-
-        return parts;
-    }
-
 
     @Override
     public String getName() {
@@ -369,303 +315,61 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
     @Override
     public Map<String, Integer> getShardCounts() throws MessageQueueException {
-        try {
-            List<String> keys = Lists.newArrayList();
-            for (int i = 0; i < queueInfo.getPartitionCount(); i++) {
-                for (int j = 0; j < queueInfo.getShardCount(); j++) {
-                    keys.add(getName() + ":" + i + ":" + j);
-                }
-            }
-
-            Map<String, Integer> result = Maps.newTreeMap();
-            result.putAll(keyspace.prepareQuery(queueColumnFamily)
-                    .getKeySlice(keys)
-                    .getColumnCounts()
-                    .execute()
-                    .getResult());
-            return result;
-        } catch (ConnectionException e) {
-            throw new MessageQueueException("Failed to get counts", e);
-        }
+        return queueDao.getShardCounts();
     }
 
     @Override
     public void clearMessages() throws MessageQueueException {
-        LOG.info("Clearing messages from '" + getName() + "'");
-        MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
-
-        for (MessageQueueShard partition : shardReaderPolicy.listShards()) {
-            mb.withRow(queueColumnFamily, partition.getName()).delete();
-        }
-
-        try {
-            mb.execute();
-        } catch (ConnectionException e) {
-            throw new MessageQueueException("Failed to clear messages from queue " + getName(), e);
-        }
-    }
-
-    MutationBatch prepareMutationBatch() {
-        return keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
-    }
-    
-    @Override
-    public Message peekMessage(String messageId) throws MessageQueueException {
-        String[] parts = splitCompositeKey(messageId);
-
-        String shardKey = parts[0];
-        MessageQueueEntry entry = new MessageQueueEntry(parts[1]);
-
-        try {
-            Column<MessageQueueEntry> column = keyspace
-                    .prepareQuery(queueColumnFamily)
-                    .setConsistencyLevel(consistencyLevel)
-                    .getKey(shardKey)
-                    .getColumn(entry)
-                    .execute().getResult();
-            try {
-                return MessageQueueUtils.deserializeString(column.getStringValue(), Message.class);
-            } catch (Exception e) {
-                LOG.warn("Error parsing message", e);
-                // Error parsing the message so we pass it on to the invalid message handler.
-                try {
-                    return invalidMessageHandler.apply(column.getStringValue());
-                }
-                catch (Exception e2) {
-                    LOG.warn("Error handling invalid message message", e2);
-                    throw new MessageQueueException("Error parsing message " + messageId);
-                }
-            }
-        } catch (NotFoundException e) {
-            return null;
-        } catch (ConnectionException e) {
-            throw new MessageQueueException("Error getting message " + messageId, e);
-        }
+        // TODO: Clear the 'key' metadata
+        queueDao.clearMessages();
     }
 
     @Override
-    public List<Message> peekMessagesByKey(String key) throws MessageQueueException {
-        String groupRowKey = getCompositeKey(getName(), key);
-        List<Message> messages = Lists.newArrayList();
-        try {
-            ColumnList<MessageMetadataEntry> columns = keyspace.prepareQuery(keyIndexColumnFamily)
-                    .getRow(groupRowKey)
-                    .withColumnRange(metadataSerializer.buildRange()
-                    .greaterThanEquals((byte)MessageMetadataEntryType.MessageId.ordinal())
-                    .lessThanEquals((byte)MessageMetadataEntryType.MessageId.ordinal())
-                    .build()
-                    )
-                    .execute()
-                    .getResult();
+    public MessageContext peekMessage(String messageId) throws MessageQueueException {
+        return queueDao.readMessage(messageId);
+    }
 
-            for (Column<MessageMetadataEntry> entry : columns) {
-                if (entry.getTtl() != 0)
-                    continue;
-
-                Message message = peekMessage(entry.getName().getName());
-                if (message != null) {
-                    messages.add(peekMessage(entry.getName().getName()));
-                }
-                else {
-                    LOG.warn("No queue item for " + entry.getName());
-                }
-            }
-        } catch (NotFoundException e) {
-        } catch (ConnectionException e) {
-            throw new MessageQueueException("Error fetching row " + groupRowKey, e);
-        }
+    @Override
+    public List<MessageContext> peekMessagesByKey(String key) throws MessageQueueException {
+        List<MessageContext> messages = Lists.newArrayList();
+//        String messageKey = getCompositeKey(getName(), key);
+//        try {
+//            Collection<MessageMetadataEntry> results = this.metadataDao.getMessageIdsForKey(messageKey);
+//            
+//            for (MessageMetadataEntry entry : results) {
+//                MessageContext message = peekMessage(entry.getName());
+//                if (message != null) {
+//                    messages.add(message);
+//                }
+//                else {
+//                    LOG.warn("No queue item for " + entry.getName());
+//                }
+//            }
+//        } catch (Exception e) {
+//            throw new MessageQueueException(String.format("Error fetching row '%s'", messageKey), e);
+//        }
+        
         return messages;
     }
 
     @Override
-    public Message peekMessageByKey(String key) throws MessageQueueException {
-        String groupRowKey = getCompositeKey(getName(), key);
-        try {
-            ColumnList<MessageMetadataEntry> columns = keyspace.prepareQuery(keyIndexColumnFamily)
-                    .setConsistencyLevel(consistencyLevel)
-                    .getRow(groupRowKey)
-                    .withColumnRange(metadataSerializer.buildRange()
-                    .greaterThanEquals((byte)MessageMetadataEntryType.MessageId.ordinal())
-                    .lessThanEquals((byte)MessageMetadataEntryType.MessageId.ordinal())
-                    .build()
-                    )
-                    .execute()
-                    .getResult();
-
-            for (Column<MessageMetadataEntry> entry : columns) {
-                if (entry.getTtl() != 0)
-                    continue;
-                // Return the first one we get.  Hmmm... maybe we want to do some validation checks here
-                return peekMessage(entry.getName().getName());
-            }
-            return null;
-        } catch (NotFoundException e) {
-            return null;
-        } catch (ConnectionException e) {
-            throw new MessageQueueException("Error fetching row " + groupRowKey, e);
-        }
-    }
-
-    @Override
-    public boolean deleteMessageByKey(String key) throws MessageQueueException {
-        MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
-
-        String groupRowKey = getCompositeKey(getName(), key);
-        try {
-            ColumnList<MessageMetadataEntry> columns = keyspace.prepareQuery(keyIndexColumnFamily)
-                    .setConsistencyLevel(consistencyLevel)
-                    .getRow(groupRowKey)
-                    .withColumnRange(metadataSerializer.buildRange()
-                    .greaterThanEquals((byte)MessageMetadataEntryType.MessageId.ordinal())
-                    .lessThanEquals((byte)MessageMetadataEntryType.MessageId.ordinal())
-                    .build()
-                    )
-                    .execute()
-                    .getResult();
-
-            for (Column<MessageMetadataEntry> entry : columns) {
-                String[] parts = splitCompositeKey(entry.getName().getName());
-
-                String shardKey = parts[0];
-                MessageQueueEntry queueEntry = new MessageQueueEntry(parts[1]);
-
-                mb.withRow(queueColumnFamily, shardKey).deleteColumn(queueEntry);
-            }
-
-            mb.withRow(keyIndexColumnFamily, groupRowKey).delete();
-        } catch (NotFoundException e) {
-            return false;
-        } catch (ConnectionException e) {
-            throw new MessageQueueException("Error fetching row " + groupRowKey, e);
-        }
-
-        try {
-            mb.execute();
-        } catch (ConnectionException e) {
-            throw new MessageQueueException("Error deleting queue item " + groupRowKey, e);
-        }
-
-        return true;
-    }
-
-    @Override
     public void deleteMessage(String messageId) throws MessageQueueException {
-        String[] parts = splitCompositeKey(messageId);
-
-        String shardKey = parts[0];
-        MessageQueueEntry entry = new MessageQueueEntry(parts[1]);
-
-        try {
-            keyspace.prepareColumnMutation(queueColumnFamily, shardKey, entry)
-                    .setConsistencyLevel(consistencyLevel)
-                    .deleteColumn().execute();
-        }
-        catch (ConnectionException e) {
-            throw new MessageQueueException("Error deleting message " + messageId, e);
-        }
+        deleteMessages(ImmutableList.of(messageId));
     }
 
     @Override
     public void deleteMessages(Collection<String> messageIds) throws MessageQueueException {
-        MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
-
         for (String messageId : messageIds) {
-            String[] parts = splitCompositeKey(messageId);
-            String shardKey = parts[0];
-            MessageQueueEntry entry = new MessageQueueEntry(parts[1]);
-
-            mb.withRow(queueColumnFamily, shardKey)
-                    .deleteColumn(entry);
+            queueDao.deleteQueueEntry(new MessageQueueEntry(messageId));
         }
-
+        
         try {
-            mb.execute();
+            batchManager.commitSharedMutationBatch();
+        } catch (ConnectionException e) {
+            throw new MessageQueueException(String.format("Error deleting message ids '%s'", messageIds), e);
         }
-        catch (ConnectionException e) {
-            throw new MessageQueueException("Error deleting messages " + messageIds, e);
-        }
-    }
 
-    @Override
-    public MessageConsumer createConsumer() {
-        return new MessageConsumerImpl(this);
     }
-
-    @Override
-    public MessageProducer createProducer() {
-        return new MessageProducerImpl(shardPolicy, keyspace, batchManager, consistencyLevel, queueInfo);
-    }
-
-//    String fillMessageMutation(MutationBatch mb, Message message) throws MessageQueueException {
-//        // Get the execution time from the message or set to current time so it runs immediately
-//        long curTimeMicros;
-//        if (!message.hasTrigger()) {
-//            curTimeMicros = TimeUnit.MICROSECONDS.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS);
-//        }
-//        else {
-//            curTimeMicros = TimeUnit.MICROSECONDS.convert(message.getTrigger().getTriggerTime(),  TimeUnit.MILLISECONDS);
-//        }
-//        curTimeMicros += (counter.incrementAndGet() % 1000);
-//
-//        // Update the message for the new token
-//        message.setToken(TimeUUIDUtils.getMicrosTimeUUID(curTimeMicros));
-//
-//        // Set up the queue entry
-//        MessageQueueEntry entry = MessageQueueEntry.newMessageEntry(
-//                message.getPriority(),
-//                message.getToken(),
-//                MessageQueueEntryState.Waiting);
-//
-//        // Convert the message object to JSON
-//        Map<String, Object> parameters = message.getParameters();
-//        if (message.isCompact() && message.hasKey() && message.hasParameters()) {
-//            message.setParameters(null);
-//        }
-//        
-//        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-//        try {
-//            mapper.writeValue(baos, message);
-//            baos.flush();
-//        } catch (Exception e) {
-//            throw new MessageQueueException("Failed to serialize message data: " + message, e);
-//        }
-//        message.setParameters(parameters);
-//
-//        // Write the queue entry
-//        String shardKey = getShardKey(message);
-//        mb.withRow(queueColumnFamily, shardKey)
-//          .putColumn(entry, new String(baos.toByteArray()), queueInfo.getRetentionTimeout());
-//
-//        // Write the lookup from queue key to queue entry
-//        if (message.hasKey()) {
-//            ColumnListMutation<MessageMetadataEntry> metaRow = mb.withRow(keyIndexColumnFamily, getCompositeKey(getName(), message.getKey()));
-//            metaRow.putEmptyColumn(MessageMetadataEntry.newMessageId(getCompositeKey(shardKey, entry.getMessageId())), queueInfo.getRetentionTimeout());
-//            
-//            if (parameters != null) {
-//                ByteArrayOutputStream params_baos = new ByteArrayOutputStream();
-//                try {
-//                    mapper.writeValue(params_baos, message.getParameters());
-//                    params_baos.flush();
-//                } catch (Exception e) {
-//                    throw new MessageQueueException("Failed to serialize message data: " + message, e);
-//                }
-//                metaRow.putCompressedColumn(
-//                        MessageMetadataEntry.newField(FIELD_PARAMETERS), 
-//                        new String(params_baos.toByteArray()), 
-//                        queueInfo.getRetentionTimeout());
-//            }
-//        }
-//
-//        // Allow hook processing
-//        for (MessageQueueHooks hook : hooks) {
-//            hook.beforeSendMessage(message, mb);
-//        }
-//
-//        // Update state and retun the token
-//        stats.incSendMessageCount();
-//        return getCompositeKey(shardKey, entry.getMessageId());
-//        return null;
-//    }
 
     /**
      * Return history for a single key for the specified time range
@@ -673,27 +377,8 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
      * TODO:  honor the time range :)
      */
     @Override
-    public List<MessageHistory> getKeyHistory(String key, Long startTime, Long endTime, int count) throws MessageQueueException {
-        List<MessageHistory> list = Lists.newArrayList();
-        ColumnList<UUID> columns;
-        try {
-            columns = keyspace.prepareQuery(historyColumnFamily)
-                    .setConsistencyLevel(consistencyLevel)
-                    .getRow(key)
-                    .execute()
-                    .getResult();
-        } catch (ConnectionException e) {
-            throw new MessageQueueException("Failed to load history for " + key, e);
-        }
-
-        for (Column<UUID> column : columns) {
-            try {
-                list.add(MessageQueueUtils.deserializeString(column.getStringValue(), MessageHistory.class));
-            } catch (Exception e) {
-                LOG.info("Error deserializing history entry", e);
-            }
-        }
-        return list;
+    public Collection<MessageHistoryEntry> getKeyHistory(String key, Long startTime, Long endTime, int count) throws MessageQueueException {
+        return historyDao.readMessageHistory(key, startTime, endTime, count);
     }
 
     /**
@@ -705,11 +390,11 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
      * @return List of items
      */
     @Override
-    public List<Message> peekMessages(int itemsToPeek) throws MessageQueueException {
-        List<Message> messages = Lists.newArrayList();
+    public List<MessageContext> peekMessages(int itemsToPeek) throws MessageQueueException {
+        List<MessageContext> messages = Lists.newArrayList();
 
         for (MessageQueueShard shard : shardReaderPolicy.listShards()) {
-            messages.addAll(peekMessages(shard.getName(), itemsToPeek - messages.size()));
+            messages.addAll(queueDao.readMessages(shard.getName(), itemsToPeek - messages.size()));
 
             if (messages.size() >= itemsToPeek)
                 return messages;
@@ -718,39 +403,286 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         return messages;
     }
 
+    @Override
+    public Collection<MessageContext> readMessages(int itemsToPop) throws MessageQueueException, BusyLockException, InterruptedException {
+        return readMessages(itemsToPop, 0, null);
+    }
+
+    @Override
+    public Collection<MessageContext> readMessages(int itemsToPop, long timeout, TimeUnit units) throws MessageQueueException, BusyLockException, InterruptedException {
+        long timeoutTime = (timeout == 0) ? 0 : System.currentTimeMillis() + TimeUnit.MILLISECONDS.convert(timeout, units);
+        // Loop while trying to get messages.
+        // TODO: Make it possible to cancel this loop
+        // TODO: Read full itemsToPop instead of just stopping when we get the first successful set
+        Collection<MessageContext> messages = null;
+        while (true) {
+            MessageQueueShard partition = shardReaderPolicy.nextShard();
+            if (partition != null) {
+                try {
+                    messages = readAndReturnShard(partition, itemsToPop);
+                    if (messages != null && !messages.isEmpty()) {
+                        return messages;
+                    }
+                } finally {
+                    shardReaderPolicy.releaseShard(partition, messages == null ? 0 : messages.size());
+                }
+            }
+            if (timeoutTime != 0 && System.currentTimeMillis() > timeoutTime) {
+                return Lists.newLinkedList();
+            }
+            Thread.sleep(shardReaderPolicy.getPollInterval());
+        }
+    }
+
+    private Collection<MessageContext> readAndReturnShard(MessageQueueShard shard, int itemsToPop) throws MessageQueueException, BusyLockException, InterruptedException {
+        Collection<MessageContext> messages = null;
+        try {
+            messages = readMessagesFromShard(shard.getName(), itemsToPop);
+        } finally {
+            if (messages == null || messages.isEmpty()) {
+                stats.incEmptyPartitionCount();
+            }
+        }
+        return messages;
+    }
+
     /**
-     * Peek into messages contained in the shard.  This call does not take trigger time into account
-     * and will return messages that are not yet due to be executed
+     * Read up to itemsToPop messages from the specified shard.  This operation
+     * is done under a shard lock and will handle all message validation logic.
      * @param shardName
      * @param itemsToPop
      * @return
      * @throws MessageQueueException
+     * @throws BusyLockException
      */
-    private Collection<Message> peekMessages(String shardName, int itemsToPeek) throws MessageQueueException {
-//        return new SimpleMessageQueueShardReader(this, new MessageMetadataPersister(this)).peekMessages(shardName, itemsToPeek);
-        return null;
+    private Collection<MessageContext> readMessagesFromShard(
+            String shardName, 
+            int itemsToPop) throws MessageQueueException, BusyLockException {
+        
+        ShardLock lock = null;
+        try {
+            lock = lockManager.acquireLock(shardName);
+            return readMessagesInternal(shardName, itemsToPop, lock.getExtraMessagesToRead());
+        } catch (BusyLockException e) {
+            stats.incLockContentionCount();
+            throw e;
+        } catch (Exception e) {
+            LOG.error("Error reading shard " + shardName, e);
+            throw new MessageQueueException("Error", e);
+        } finally {
+            if (lock != null)
+                lockManager.releaseLock(lock);
+        }
     }
 
     /**
-     * Extract a message body from a column
-     * @param column
+     * Reader messages under an assumed shard lock.
+     * 
+     * @param shardName
+     * @param itemsToPop
+     * @param lockColumnCount
      * @return
+     * @throws BusyLockException
+     * @throws MessageQueueException
      */
-    Message extractMessageFromColumn(Column<MessageQueueEntry> column) {
-        // Next, parse the message metadata and add a timeout entry
-        Message message = null;
-        try {
-            message = MessageQueueUtils.deserializeString(column.getStringValue(), Message.class);
-        } catch (Exception e) {
-            LOG.warn("Error processing message ", e);
+    private Collection<MessageContext> readMessagesInternal(
+            String shardName,
+            int itemsToPop,
+            int lockColumnCount) throws BusyLockException, MessageQueueException {
+
+        Collection<MessageContext> contexts = this.queueDao.readMessages(
+                shardName, 
+                System.currentTimeMillis(), TimeUnit.MILLISECONDS, 
+                itemsToPop);
+        
+        // Iterate through all message and retrieve any additional information, pop them from the queue
+        // and update state
+        for (MessageContext context : contexts) {
             try {
-                message = invalidMessageHandler.apply(column.getStringValue());
+                // First, 'pop' the event from the queue
+                queueDao.deleteQueueEntry(context.getAckQueueEntry());
+                
+                Message           message = context.getMessage();
+                MessageQueueEntry entry   = context.getAckQueueEntry();
+                
+                if (message.hasKey() && (message.isCompact() || message.hasTrigger())) {
+                    // Read the message metadata
+                    // TODO:  We may want to make this a lazy operation or at least a bulk option.
+                    Collection<MessageMetadataEntry> metadata = metadataDao.getMetadataForKey(message.getKey());
+                
+                    MessageMetadataEntry mostRecentMessageId = null;
+                    long mostRecentTriggerTime = 0;
+                    
+                    for (MessageMetadataEntry metadataEntry : metadata) {
+                        switch (metadataEntry.getMetadataType()) {
+                        case Lock:
+                            break;
+                        case Unique:
+                            break;
+                        case Field:
+                            if ("body".equals(metadataEntry.getName())) {
+                            // TODO:
+                            }
+                            break;
+                        case MessageId:
+                            if (message.hasTrigger()) {
+                                MessageQueueEntry pendingMessageEntry = new MessageQueueEntry(metadataEntry.getName());
+                                if (metadataEntry.getTtl() == 0) {
+                                    long currMessageTriggerTime = pendingMessageEntry.getTimestamp(TimeUnit.MICROSECONDS);
+                                    if (mostRecentMessageId == null) {
+                                        // First message we found, so treat as the most recent
+                                        mostRecentMessageId = metadataEntry;
+                                        mostRecentTriggerTime = currMessageTriggerTime;
+                                    } else {
+                                        MessageMetadataEntry toDelete;
+                                        // This message's trigger time is after what we thought was the most recent.
+                                        // Discard the previous 'most' recent and accept this one instead
+                                        if (currMessageTriggerTime > mostRecentTriggerTime) {
+                                            LOG.warn("Need to discard : " + entry.getMessageId() + " => " + mostRecentMessageId);
+                                            toDelete = mostRecentMessageId.duplicate();
+                                            
+                                            mostRecentTriggerTime = currMessageTriggerTime;
+                                            mostRecentMessageId   = metadataEntry;
+                                        } else {
+                                            LOG.warn("Need to discard : " + entry.getMessageId() + " => " + metadataEntry);
+                                            toDelete = metadataEntry;
+                                        }
+                                        
+                                        toDelete.setTtl(metadataDeleteTTL);
+                                        toDelete.setValue(null);
+                                        metadataDao.deleteMetadata(toDelete);
+                                    }
+                                } 
+                            }
+                            break;
+                        }
+                    }
+                
+                    if (mostRecentMessageId != null) {
+                        if (!mostRecentMessageId.getName().endsWith(entry.getMessageId())) {
+                            throw new DuplicateMessageException(String.format("Duplicate trigger for '%s'", message.getKey()));
+                        }
+                    }
+                
+                    // Update the trigger and assign it to the 'next' message to be executed.
+                    // The next message may be auto enqueued here or once the message is acked.
+                    if (message.hasTrigger()) {
+                        final Message nextMessage;
+                        Trigger trigger = message.getTrigger().nextTrigger();
+                        if (trigger != null) {
+                            nextMessage = message.clone();
+                            nextMessage.setTrigger(trigger);
+                            context.setNextMessage(nextMessage);
+                            if (message.isAutoCommitTrigger() && entry.getState() == MessageQueueEntryState.Waiting) {
+                                MessageQueueEntry queueEntry = MessageQueueEntry.newMessageEntry(
+                                        shardPolicy.getShardKey(nextMessage),
+                                        nextMessage.getPriority(),
+                                        TimeUnit.MICROSECONDS.convert(nextMessage.getTrigger().getTriggerTime(), TimeUnit.MILLISECONDS),
+                                        MessageQueueEntryState.Waiting, 
+                                        MessageQueueUtils.serializeToString(nextMessage),
+                                        queueInfo.getRetentionTimeout());
+                                
+                                queueDao.writeMessage(new MessageContext(queueEntry, nextMessage));
+                            }
+                        }
+                    }
+                    
+                    // Message has a key so we remove this item from the messages by key index.
+                    // A timeout item will be added later
+                    if (message.hasKey() && mostRecentMessageId != null) {
+                        mostRecentMessageId.setTtl(metadataDeleteTTL);
+                        mostRecentMessageId.setValue(null);
+                        metadataDao.writeMetadata(mostRecentMessageId);
+                        
+                        LOG.debug(String.format("Removing from key '%s - %s'", mostRecentMessageId.getKey(), mostRecentMessageId.getName()));
+                        
+                        if (message.isKeepHistory()) {
+                            // TODO: Enqueue history
+                        }
+                    }
+                }
+                
+                // Message has a timeout so we add a timeout event.
+                if (message.getTimeout() > 0) {
+                    // TODO: Need to figure out the correct timeout id
+                    MessageQueueEntry timeoutEntry = MessageQueueEntry.newBusyEntry(shardPolicy.getShardKey(message), message, entry, queueInfo.getRetentionTimeout());
+                    
+                    // Add the timeout column to the key
+                    if (message.hasKey()) {
+                        metadataDao.writeMetadata(MessageMetadataEntry.newMessageId(message.getKey(), entry.getFullMessageId(), queueInfo.getRetentionTimeout()));
+                    }
+                    context.setAckMessageId(timeoutEntry);
+                } 
+                else {
+                    context.setAckMessageId(null);
+                }
             }
-            catch (Exception e2) {
-                LOG.warn("Error processing invalid message", e2);
+            catch (MessageQueueException e) {
+                LOG.error(String.format("Error processing message '%s'", context.getAckQueueEntry()), e);
+                context.setException(e);
+            }
+            catch (Exception e) {
+                LOG.error(String.format("Error processing message '%s'", context.getAckQueueEntry()), e);
+                context.setException(new MessageQueueException("Unknown error popping message", e));
+            }
+            
+            if (context.hasError()) {
+                // TODO: Add to poison queue
             }
         }
-        return message;
+        
+        try {
+            batchManager.commitSharedMutationBatch();
+        } catch (Exception e) {
+            throw new MessageQueueException("Error processing queue shard : " + shardName, e);
+        }
+        
+        return contexts;
+    }
+    
+    @Override
+    public void ackMessage(MessageContext context) throws MessageQueueException {
+        ackMessages(ImmutableList.of(context));
+    }
+
+    @Override
+    public void ackMessages(Collection<MessageContext> contexts) throws MessageQueueException {
+        try {
+            for (MessageContext context : contexts) {
+                if (context.getAckQueueEntry() != null) {
+                    // Delete the timeout queue entry
+                    queueDao.deleteQueueEntry(context.getAckQueueEntry());
+                    
+                    Message message = context.getMessage();
+                    
+                    if (context.getNextMessage() != null) {
+//                        queueDao.writeMessage(context);
+                    }
+                    
+                    if (message.hasKey()) {
+                        // Delete the timeout queue entry from the metadata
+                        metadataDao.deleteMetadata(MessageMetadataEntry.newMessageId(message.getKey(), context.getAckQueueEntry().getFullMessageId(), 0));
+                        
+                        if (message.isKeepHistory()) {
+                            
+                        }
+                    }
+                }
+            }
+        }
+        finally {
+            try {
+                batchManager.commitSharedMutationBatch();
+            } catch (ConnectionException e) {
+                LOG.error("Failed to ack messages", e);
+                throw new MessageQueueException("Failed to ack messages", e);
+            }
+        }
+    }
+
+    @Override
+    public void ackPoisonMessage(MessageContext context) throws MessageQueueException {
+        // TODO;
     }
 
     /**
@@ -759,52 +691,82 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
      * @throws MessageQueueException
      */
     public boolean hasMessages(String shardName) throws MessageQueueException {
-        UUID currentTime = TimeUUIDUtils.getUniqueTimeUUIDinMicros();
-
-        try {
-            ColumnList<MessageQueueEntry> result = keyspace.prepareQuery(queueColumnFamily)
-                    .setConsistencyLevel(consistencyLevel)
-                    .getKey(shardName)
-                    .withColumnRange(new RangeBuilder()
-                        .setLimit(1)   // Read extra messages because of the lock column
-                    .setStart(entrySerializer
-                                .makeEndpoint((byte)MessageQueueEntryType.Message.ordinal(), Equality.EQUAL)
-                                .toBytes()
-                                )
-                    .setEnd(entrySerializer
-                                .makeEndpoint((byte)MessageQueueEntryType.Message.ordinal(), Equality.EQUAL)
-                                .append((byte)0, Equality.EQUAL)
-                                .append(currentTime, Equality.LESS_THAN_EQUALS)
-                                .toBytes()
-                                )
-                    .build())
-                    .execute()
-                    .getResult();
-            return !result.isEmpty();
-        } catch (ConnectionException e) {
-            throw new MessageQueueException("Error checking shard for messages. " + shardName, e);
-        }
+        return !queueDao.readMessages(shardName, System.currentTimeMillis(), TimeUnit.MILLISECONDS, 1).isEmpty();
     }
 
     @Override
-    public Map<String, MessageQueueShardStats>         getShardStats() {
+    public MessageContext sendMessage(Message message) throws MessageQueueException {
+        MessageContext context = Iterables.getFirst(sendMessages(Lists.newArrayList(message)), null);
+        if (context.hasError())
+            throw context.getError();
+        return context;
+    }
+
+    @Override
+    public Collection<MessageContext> sendMessages(Collection<Message> messages) throws MessageQueueException {
+        // Generate Id's for the messages based on the sharding policy
+        List<MessageContext> contexts = Lists.newArrayListWithCapacity(messages.size());
+        for (Message message : messages) {
+            // Get the execution time from the message or set to current time so it runs immediately
+            if (!message.hasTrigger()) {
+                message.setTrigger(RunOnceTrigger.builder().build());
+            }
+            
+            MessageQueueEntry queueEntry = MessageQueueEntry.newMessageEntry(
+                    shardPolicy.getShardKey(message),
+                    message.getPriority(),
+                    TimeUnit.MICROSECONDS.convert(message.getTrigger().getTriggerTime(), TimeUnit.MILLISECONDS),
+                    MessageQueueEntryState.Waiting, 
+                    null, 
+                    queueInfo.getRetentionTimeout());
+            contexts.add(new MessageContext(queueEntry, message));
+        }
+        
+        // Persist the messages.  Order here is important since the metadataDao does the uniqueness constraint
+        try {
+            metadataDao.writeMessages(contexts);
+            queueDao.writeMessages(contexts);
+        }
+        finally {
+            try {
+                batchManager.commitSharedMutationBatch();
+            } catch (ConnectionException e) {
+                throw new MessageQueueException("Failed to commit batch for enqueue", e);
+            } finally {
+                batchManager.discard();
+            }
+        }
+        
+        return contexts;
+    }
+    
+    @Override
+    public boolean deleteMessageByKey(String key) throws MessageQueueException {
+        Collection<MessageMetadataEntry> ids = metadataDao.getMessageIdsForKey(key);
+        if (ids != null) {
+            for (MessageMetadataEntry entry : ids) {
+                queueDao.deleteQueueEntry(new MessageQueueEntry(entry.getName()));
+            }
+            metadataDao.deleteMessage(key);
+            historyDao.deleteHistory(key);
+            
+            try {
+                batchManager.commitSharedMutationBatch();
+            } catch (ConnectionException e) {
+                LOG.error(String.format("Failed to delete message '%s'", key), e);
+                throw new MessageQueueException(String.format("Failed to delete message '%s'", key), e);
+            }
+        }
+        
+        return true;
+    }
+
+    @Override
+    public Map<String, MessageQueueShardStats> getShardStats() {
         return shardReaderPolicy.getShardStats();
     }
     
     public ShardReaderPolicy getShardReaderPolicy() {
         return shardReaderPolicy;
     }
-
-    public ColumnFamily<String, MessageQueueEntry>     getQueueColumnFamily() {
-        return this.queueColumnFamily;
-    }
-
-    public ColumnFamily<String, MessageMetadataEntry>  getKeyIndexColumnFamily() {
-        return this.keyIndexColumnFamily;
-    }
-
-    public ColumnFamily<String, UUID>                  getHistoryColumnFamily() {
-        return this.historyColumnFamily;
-    }
-
 }

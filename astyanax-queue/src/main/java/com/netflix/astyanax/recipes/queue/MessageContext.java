@@ -3,6 +3,7 @@ package com.netflix.astyanax.recipes.queue;
 import org.apache.commons.lang.exception.ExceptionUtils;
 
 import com.netflix.astyanax.recipes.queue.entity.MessageQueueEntry;
+import com.netflix.astyanax.recipes.queue.exception.MessageQueueException;
 
 /**
  * Context of a message being handled by a dispatcher.
@@ -81,7 +82,7 @@ public class MessageContext {
         return this;
     }
     
-    public MessageQueueEntry getAckMessageId() {
+    public MessageQueueEntry getAckQueueEntry() {
         return ackMessageId;
     }
 

@@ -16,6 +16,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
 import com.netflix.astyanax.recipes.locks.BusyLockException;
+import com.netflix.astyanax.recipes.queue.exception.MessageQueueException;
 
 /**
  * The message queue dispatcher reads message from the message queue
@@ -158,7 +159,6 @@ public class MessageQueueDispatcher {
     private boolean         terminate     = false;
     private MessageQueue    messageQueue;
     private ExecutorService executor;
-    private MessageConsumer ackConsumer;
     private Function<MessageContext, Boolean>   callback;
     private MessageHandlerFactory handlerFactory;
     private LinkedBlockingQueue<MessageContext> toAck = Queues.newLinkedBlockingQueue();
@@ -195,8 +195,6 @@ public class MessageQueueDispatcher {
     }
     
     private void startAckThread() {
-        ackConsumer = messageQueue.createConsumer();
-        
         executor.submit(new Runnable() {
             @Override
             public void run() {
@@ -209,7 +207,7 @@ public class MessageQueueDispatcher {
                         toAck.drainTo(messages);
                         if (!messages.isEmpty()) {
                             try {
-                                ackConsumer.ackMessages(messages);
+                                messageQueue.ackMessages(messages);
                             } catch (MessageQueueException e) {
                                 toAck.addAll(messages);
                                 LOG.warn("Failed to ack consumer", e);
@@ -238,14 +236,11 @@ public class MessageQueueDispatcher {
                 String name = StringUtils.join(Lists.newArrayList(messageQueue.getName(), "Consumer", Integer.toString(id)), ":");
                 Thread.currentThread().setName(name);
                 
-                // Create the consumer context
-                final MessageConsumer consumer = messageQueue.createConsumer();
-                
                 while (!terminate) {
                     // Process events in a tight loop, until asked to terminate
                     Collection<MessageContext> messages = null;
                     try {
-                        messages = consumer.readMessages(batchSize);
+                        messages = messageQueue.readMessages(batchSize);
                         if (messages.isEmpty()) {
                             Thread.sleep(pollingInterval);
                         }

@@ -22,4 +22,10 @@ public interface Trigger {
      * @return Next execution time in milliseconds (TODO: confirm units)
      */
     long getTriggerTime();
+    
+    /**
+     * @return Return true if this is a trigger for a recurring message.  When true the message will 
+     *         perform additional dedup operation
+     */
+    boolean isRepeatingTrigger();
 }

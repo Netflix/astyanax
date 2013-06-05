@@ -3,6 +3,7 @@ package com.netflix.astyanax.recipes.queue;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.JsonParseException;
@@ -10,6 +11,8 @@ import org.codehaus.jackson.map.DeserializationConfig;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
+
+import com.netflix.astyanax.serializers.ByteBufferSerializer;
 
 public class MessageQueueUtils {
     static final ObjectMapper mapper = new ObjectMapper();
@@ -30,6 +33,12 @@ public class MessageQueueUtils {
     public static  <T> T deserializeString(String data, Class<T> clazz) throws JsonParseException, JsonMappingException, IOException {
         return (T) mapper.readValue(
                 new ByteArrayInputStream(data.getBytes()),
+                clazz);
+    }
+    
+    public static  <T> T deserializeByteBuffer(ByteBuffer data, Class<T> clazz) throws JsonParseException, JsonMappingException, IOException {
+        return (T) mapper.readValue(
+                new ByteArrayInputStream(ByteBufferSerializer.get().toBytes(data)),
                 clazz);
     }
 

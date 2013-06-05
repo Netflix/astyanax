@@ -7,7 +7,6 @@ import java.util.Map.Entry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatchManager;
@@ -16,30 +15,39 @@ import com.netflix.astyanax.entitystore.CompositeEntityManager;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.recipes.queue.KeyExistsException;
 import com.netflix.astyanax.recipes.queue.Message;
+import com.netflix.astyanax.recipes.queue.MessageMetadataDao;
 import com.netflix.astyanax.recipes.queue.MessageContext;
-import com.netflix.astyanax.recipes.queue.MessageQueueException;
+import com.netflix.astyanax.recipes.queue.MessageQueueConstants;
 import com.netflix.astyanax.recipes.queue.MessageQueueInfo;
 import com.netflix.astyanax.recipes.queue.MessageQueueUtils;
 import com.netflix.astyanax.recipes.queue.entity.MessageMetadataEntry;
 import com.netflix.astyanax.recipes.queue.entity.MessageMetadataEntryType;
+import com.netflix.astyanax.recipes.queue.exception.MessageQueueException;
 
 /**
+ * Keep track of message metadata in a separate column family from the queue.
+ * This decouples the storage of the queue mechanism from the message metadata thereby
+ * making it possible to use different technologies for each.
+ * 
+ * Type of information tracked.
+ * 1.  Uniqueness constraint
+ * 2.  MessageIDs in the queue - this is very important to dedup repeating messages
+ * 3.  Message body/parameters for large messages
  * 
  * @author elandau
  */
-public class MessageMetadataPersister extends AbstractMessagePersister {
-    private static final Logger LOG = LoggerFactory.getLogger(MessageMetadataPersister.class);
+public class CassandraMessageMetadataDao implements MessageMetadataDao {
+    private static final Logger LOG = LoggerFactory.getLogger(CassandraMessageMetadataDao.class);
     
     private final static int        DEFAULT_TTL_TIMEOUT     = 120;
-    private final static String     INFO_SUFFIX             = "_info";
     private final static String     BODY_FIELD              = "body";
             
-    private final MessageQueueInfo               queueInfo;
+    private final MessageQueueInfo                                     queueInfo;
     private final CompositeEntityManager<MessageMetadataEntry, String> entityManager;
     private final CompositeEntityManager<MessageMetadataEntry, String> sharedEntityManager;
-    private final Keyspace keyspace;
+    private final Keyspace                                             keyspace;
     
-    public MessageMetadataPersister(
+    public CassandraMessageMetadataDao(
             Keyspace              keyspace, 
             MutationBatchManager  batchManager, 
             ConsistencyLevel      consistencyLevel,
@@ -49,7 +57,7 @@ public class MessageMetadataPersister extends AbstractMessagePersister {
         
         entityManager = CompositeEntityManager.<MessageMetadataEntry, String>builder()
                 .withKeyspace(keyspace)
-                .withColumnFamily(queueInfo.getColumnFamilyBase() + INFO_SUFFIX)
+                .withColumnFamily(queueInfo.getColumnFamilyBase() + MessageQueueConstants.CF_INFO_SUFFIX)
                 .withConsistency(consistencyLevel)
                 .withAutoCommit(false)
                 .withEntityType(MessageMetadataEntry.class)
@@ -57,14 +65,19 @@ public class MessageMetadataPersister extends AbstractMessagePersister {
 
         sharedEntityManager = CompositeEntityManager.<MessageMetadataEntry, String>builder()
                 .withKeyspace(keyspace)
-                .withColumnFamily(queueInfo.getColumnFamilyBase() + INFO_SUFFIX)
+                .withColumnFamily(queueInfo.getColumnFamilyBase() + MessageQueueConstants.CF_INFO_SUFFIX)
                 .withConsistency(consistencyLevel)
                 .withMutationBatchManager(batchManager)
                 .withEntityType(MessageMetadataEntry.class)
                 .build();
-
     }
     
+    @Override
+    public void createStorage() {
+        // TODO Auto-generated method stub
+        
+    }
+
     @Override
     public void readMessages(Collection<MessageContext> messages) {
         Map<String, MessageContext> messagesToRead = Maps.newHashMap();
@@ -80,7 +93,7 @@ public class MessageMetadataPersister extends AbstractMessagePersister {
     }
 
     @Override
-    public void preSendMessages(Collection<MessageContext> messages) throws MessageQueueException {
+    public void writeMessages(Collection<MessageContext> messages) throws MessageQueueException {
         Map<String, MessageContext> uniqueKeys  = Maps.newHashMap();
         MessageMetadataEntry        lockColumn  = MessageMetadataEntry.newUnique(null, DEFAULT_TTL_TIMEOUT);
         
@@ -104,7 +117,7 @@ public class MessageMetadataPersister extends AbstractMessagePersister {
                                     queueInfo.getRetentionTimeout()));
                             sharedEntityManager.put(MessageMetadataEntry.newMessageId(
                                     messageKey, 
-                                    context.getAckMessageId().getFullMessageId(), 
+                                    context.getAckQueueEntry().getFullMessageId(), 
                                     queueInfo.getRetentionTimeout()));
                         } catch (Exception e) {
                             LOG.warn(e.getMessage(), e);
@@ -173,7 +186,7 @@ public class MessageMetadataPersister extends AbstractMessagePersister {
                                     queueInfo.getRetentionTimeout()));
                             sharedEntityManager.put(MessageMetadataEntry.newMessageId(
                                     context.getKey(), 
-                                    context.getValue().getAckMessageId().getFullMessageId(), 
+                                    context.getValue().getAckQueueEntry().getFullMessageId(), 
                                     queueInfo.getRetentionTimeout()));
     
                         } catch (Exception e) {
@@ -185,9 +198,48 @@ public class MessageMetadataPersister extends AbstractMessagePersister {
             }
         }
     }
+    
+    @Override
+    public Collection<MessageMetadataEntry> getMessageIdsForKey(String messageKey) throws MessageQueueException {
+        messageKey = getCanonicalMessageKey(messageKey);
+        try {
+            return this.entityManager.createNativeQuery()
+                    .whereId().equal(messageKey)
+                    .whereColumn("type").equal((byte)MessageMetadataEntryType.MessageId.ordinal())
+                    .getResultSet();
+        } catch (Exception e) {
+            throw new MessageQueueException(String.format("Error fetching message ids ", messageKey), e);
+        }
+    }
+    
+    @Override
+    public Collection<MessageMetadataEntry> getMetadataForKey(String messageKey) throws MessageQueueException {
+        messageKey = getCanonicalMessageKey(messageKey);
+        try {
+            return this.entityManager.createNativeQuery()
+                    .whereId().equal(messageKey)
+                    .getResultSet();
+        } catch (Exception e) {
+            throw new MessageQueueException(String.format("Error fetching message ids ", messageKey), e);
+        }
+    }
+    
+    private String getCanonicalMessageKey(String messageKey) {
+        return queueInfo.getQueueName() + "$" + messageKey;
+    }
 
     @Override
-    public String getPersisterName() {
-        return "uniqueness";
+    public void deleteMetadata(MessageMetadataEntry toDelete) {
+        sharedEntityManager.remove(toDelete);
+    }
+    
+    @Override
+    public void deleteMessage(String messageKey) {
+        sharedEntityManager.delete(messageKey);
+    }
+
+    @Override
+    public void writeMetadata(MessageMetadataEntry entry) {
+        sharedEntityManager.put(entry);
     }
 }

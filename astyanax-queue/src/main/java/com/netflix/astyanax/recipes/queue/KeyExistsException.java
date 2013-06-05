@@ -1,5 +1,7 @@
 package com.netflix.astyanax.recipes.queue;
 
+import com.netflix.astyanax.recipes.queue.exception.MessageQueueException;
+
 public class KeyExistsException extends MessageQueueException {
     private static final long serialVersionUID = 3917437309288808628L;
 

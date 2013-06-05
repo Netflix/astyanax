@@ -552,19 +552,9 @@ public class CompositeEntityManager<T, K> implements EntityManager<T, K> {
                 if (verbose)
                     LOG.info(String.format("%s : Query ids '%s' with predicates '%s'", columnFamily.getName(), ids, predicates));
                 
-                RowSliceQuery<K, ByteBuffer> rowQuery = keyspace.prepareQuery(columnFamily).setConsistencyLevel(readConsitency)
-                    .getRowSlice(ids);
+                RowSliceQuery<K, ByteBuffer> rowQuery = prepareQuery();
                 
                 try {
-                    if (predicates != null && !predicates.isEmpty()) {
-                        ByteBuffer[] endpoints = entityMapper.getQueryEndpoints(predicates);
-                        rowQuery = rowQuery.withColumnRange(
-                                new RangeBuilder()
-                                    .setStart(endpoints[0])
-                                    .setEnd(endpoints[1])
-                                    .setLimit(columnLimit)
-                                    .build());
-                    }
                     List<T> entities = convertRowsToEntities(rowQuery.execute().getResult());
                     
                     if (verbose)
@@ -588,6 +578,43 @@ public class CompositeEntityManager<T, K> implements EntityManager<T, K> {
                     children.add(entity);
                 }
                 return result;
+            }
+
+            @Override
+            public Map<K, Integer> getResultSetCounts() throws Exception {
+                Preconditions.checkArgument(!ids.isEmpty(), "Must specify at least one row key (ID) to fetch");
+                
+                if (verbose)
+                    LOG.info(String.format("%s : Query ids '%s' with predicates '%s'", columnFamily.getName(), ids, predicates));
+                
+                RowSliceQuery<K, ByteBuffer> rowQuery = prepareQuery();
+                
+                try {
+                    Map<K, Integer> counts = rowQuery.getColumnCounts().execute().getResult();
+                    
+                    if (verbose)
+                        LOG.info(String.format("%s : Query ids '%s' with predicates '%s' result='%s'", columnFamily.getName(), ids, predicates, counts));
+                    return counts;
+                } catch (Exception e) {
+                    throw new PersistenceException("Error executing query", e);
+                }
+            }
+            
+            private RowSliceQuery<K, ByteBuffer> prepareQuery() {
+                RowSliceQuery<K, ByteBuffer> rowQuery = keyspace.prepareQuery(columnFamily).setConsistencyLevel(readConsitency)
+                        .getRowSlice(ids);
+                    
+                if (predicates != null && !predicates.isEmpty()) {
+                    ByteBuffer[] endpoints = entityMapper.getQueryEndpoints(predicates);
+                    rowQuery = rowQuery.withColumnRange(
+                            new RangeBuilder()
+                                .setStart(endpoints[0])
+                                .setEnd(endpoints[1])
+                                .setLimit(columnLimit)
+                                .build());
+                }
+                
+                return rowQuery;
             }
         };
     }

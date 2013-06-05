@@ -32,4 +32,9 @@ public class RunOnceTrigger extends AbstractTrigger {
         // There is no next trigger.
         return null;
     }
+
+    @Override
+    public boolean isRepeatingTrigger() {
+        return false;
+    }
 }

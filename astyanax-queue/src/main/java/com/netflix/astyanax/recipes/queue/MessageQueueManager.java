@@ -2,6 +2,8 @@ package com.netflix.astyanax.recipes.queue;
 
 import java.util.List;
 
+import com.netflix.astyanax.recipes.queue.exception.MessageQueueException;
+
 public interface MessageQueueManager {
     /**
      * Create a new message queue

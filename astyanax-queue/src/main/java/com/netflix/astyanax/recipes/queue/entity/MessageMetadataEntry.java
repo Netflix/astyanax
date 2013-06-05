@@ -87,6 +87,10 @@ public class MessageMetadataEntry {
         return new MessageMetadataEntry(key, this.type, this.name, this.value, this.ttl);
     }
     
+    public MessageMetadataEntry duplicate() {
+        return duplicateForKey(key);
+    }
+    
     public int getTtl() {
         return ttl;
     }

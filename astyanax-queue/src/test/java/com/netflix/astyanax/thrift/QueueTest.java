@@ -2,7 +2,6 @@ package com.netflix.astyanax.thrift;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
@@ -36,17 +35,14 @@ import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.recipes.queue.CountingQueueStats;
 import com.netflix.astyanax.recipes.queue.KeyExistsException;
 import com.netflix.astyanax.recipes.queue.Message;
-import com.netflix.astyanax.recipes.queue.MessageConsumer;
 import com.netflix.astyanax.recipes.queue.MessageContext;
-import com.netflix.astyanax.recipes.queue.MessageProducer;
 import com.netflix.astyanax.recipes.queue.MessageQueueDispatcher;
-import com.netflix.astyanax.recipes.queue.MessageQueueException;
 import com.netflix.astyanax.recipes.queue.MessageQueueManager;
 import com.netflix.astyanax.recipes.queue.MessageQueueInfo;
-import com.netflix.astyanax.recipes.queue.PersistMessageResponse;
 import com.netflix.astyanax.recipes.queue.ShardLock;
 import com.netflix.astyanax.recipes.queue.ShardedDistributedMessageQueue;
 import com.netflix.astyanax.recipes.queue.SimpleMessageQueueManager;
+import com.netflix.astyanax.recipes.queue.exception.MessageQueueException;
 import com.netflix.astyanax.recipes.queue.triggers.RepeatingTrigger;
 import com.netflix.astyanax.recipes.queue.triggers.RunOnceTrigger;
 import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
@@ -181,9 +177,6 @@ public class QueueTest {
                 .withShardLockManager(slm)
                 .build();
 
-        MessageProducer producer = queue.createProducer();
-        MessageConsumer consumer = queue.createConsumer();
-
         // Enqueue a recurring message
         final String key = "RepeatingMessageWithTimeout";
         final Message message = new Message()
@@ -191,11 +184,11 @@ public class QueueTest {
                 .setTimeout(1, TimeUnit.SECONDS)
                 .setTrigger(new RepeatingTrigger.Builder().withInterval(1, TimeUnit.SECONDS).build());
 
-        producer.sendMessage(message);
+        queue.sendMessage(message);
 
         // Make sure it's unique by trying to submit again
         try {
-            producer.sendMessage(message);
+            queue.sendMessage(message);
             Assert.fail();
         } catch (KeyExistsException e) {
             LOG.info("Key already exists");
@@ -207,7 +200,7 @@ public class QueueTest {
 
         // Consume the message
         LOG.info("*** Reading first message ***");
-        final List<MessageContext> m1 = consumer.readMessages(10);
+        final Collection<MessageContext> m1 = queue.readMessages(10);
         printMessages("Consuming the ORIG message", m1);
         Assert.assertEquals(1, m1.size());
 
@@ -218,7 +211,7 @@ public class QueueTest {
 
         // Consume the timeout event
         LOG.info("*** Reading timeout message ***");
-        final List<MessageContext> m2 = consumer.readMessages(10);
+        final Collection<MessageContext> m2 = queue.readMessages(10);
         printMessages("Consuming the TIMEOUT message", m2);
         Assert.assertEquals(1, m2.size());
 
@@ -226,24 +219,24 @@ public class QueueTest {
 //        Assert.assertEquals(2, m2a.size());
 
         LOG.info("*** Acking both messages ***");
-        consumer.ackMessages(m1);
-        consumer.ackMessages(m2);
+        queue.ackMessages(m1);
+        queue.ackMessages(m2);
 
         printMessages("Pending messages after both acks " + key, queue.peekMessagesByKey(key));
 //        Assert.assertEquals(2, m2a.size());
 
         // Consume anything that is in the queue
-        final List<MessageContext> m3 = consumer.readMessages(10);
+        final Collection<MessageContext> m3 = queue.readMessages(10);
         printMessages("Consuming messages", m3);
         Assert.assertEquals(1, m3.size());
 
         printMessages("Pending messages after 2nd consume " + key, queue.peekMessagesByKey(key));
 
-        consumer.ackMessages(m3);
+        queue.ackMessages(m3);
 
         Thread.sleep(2000);
 
-        final List<MessageContext> m4 = consumer.readMessages(10);
+        final Collection<MessageContext> m4 = queue.readMessages(10);
         printMessages("Consuming messages", m4);
         Assert.assertEquals(1, m4.size());
 
@@ -251,17 +244,17 @@ public class QueueTest {
 //        Assert.assertEquals(1, queue.getMessageCount());
 
         for (int i = 0; i < 10; i++) {
-            final List<MessageContext> m5 = consumer.readMessages(10);
+            final Collection<MessageContext> m5 = queue.readMessages(10);
             Assert.assertEquals(1, m5.size());
 
             long systemtime = System.currentTimeMillis();
             MessageContext m = Iterables.getFirst(m5, null);
             LOG.info("MessageTime: " + (systemtime - m.getMessage().getTrigger().getTriggerTime()));
-            consumer.ackMessages(m5);
+            queue.ackMessages(m5);
         }
     }
 
-    private <T> void printMessages(String caption, List<T> messages) {
+    private <T> void printMessages(String caption, Collection<T> messages) {
         LOG.info(caption + "(" + messages.size() + ")");
         for (T message : messages) {
             LOG.info("   " + message);
@@ -287,19 +280,16 @@ public class QueueTest {
         String key = "MyEvent";
         String key2 = "MyEvent2";
 
-        MessageProducer producer = queue.createProducer();
-        MessageConsumer consumer = queue.createConsumer();
-
         {
             final Message m = new Message();
 
             // Add a message
             LOG.info(m.toString());
-            MessageContext context = producer.sendMessage(m);
+            MessageContext context = queue.sendMessage(m);
             LOG.info("MessageId: " + context);
         }
         
-        List<MessageContext> messages = consumer.readMessages(10);
+        Collection<MessageContext> messages = queue.readMessages(10);
         LOG.info(messages.toString());
         Assert.assertEquals(1, messages.size());
     }
@@ -321,9 +311,6 @@ public class QueueTest {
 //
 //        String key = "MyEvent";
 //        String key2 = "MyEvent2";
-//
-//        MessageProducer producer = queue.createProducer();
-//        MessageConsumer consumer = queue.createConsumer();
 //
 //        {
 //            final Message m = new Message().setKey(key);
@@ -392,13 +379,13 @@ public class QueueTest {
 //            queue.deleteMessageByKey(key2);
 //
 //            // Read the message
-//            final Collection<MessageContext> lm2 = consumer.readMessages(10, 10, TimeUnit.SECONDS);
+//            final Collection<MessageContext> lm2 = queue.readMessages(10, 10, TimeUnit.SECONDS);
 //            LOG.info("Read message: " + lm2);
 //            Assert.assertEquals(1, lm2.size());
 //            LOG.info(lm2.toString());
 //            Assert.assertEquals(1, queue.getMessageCount());
 //
-//            consumer.ackMessages(lm2);
+//            queue.ackMessages(lm2);
 //            Assert.assertEquals(0, queue.getMessageCount());
 //        }
 //
@@ -476,7 +463,7 @@ public class QueueTest {
 //
 //            producer.sendMessages(messages);
 //
-//            Collection<Message> all = consumer.peekMessages(Integer.MAX_VALUE);
+//            Collection<Message> all = queue.peekMessages(Integer.MAX_VALUE);
 //            Assert.assertEquals(10, all.size());
 //
 //            for (Message msg : all) {
@@ -522,7 +509,6 @@ public class QueueTest {
         Executors.newSingleThreadExecutor().execute(new Runnable() {
             @Override
             public void run() {
-                MessageProducer producer = queue.createProducer();
                 for (int i = 0; i < max_count / batchSize; i++) {
                     long tm = System.currentTimeMillis();
                     List<Message> messages = Lists.newArrayList();
@@ -537,7 +523,7 @@ public class QueueTest {
                                 .build()));
                     }
                     try {
-                        producer.sendMessages(messages);
+                        queue.sendMessages(messages);
                     } catch (MessageQueueException e) {
                         // TODO Auto-generated catch block
                         e.printStackTrace();
@@ -562,7 +548,6 @@ public class QueueTest {
 //            executor.submit(new Runnable() {
 //                @Override
 //                public void run() {
-//                    MessageProducer producer = scheduler.createProducer();
 //
 //                    List<Message> tasks = Lists.newArrayList();
 //                    while (true) {
@@ -580,7 +565,7 @@ public class QueueTest {
 //                                );
 //
 //                            if (tasks.size() == batchSize) {
-//                                producer.sendMessages(tasks);
+//                                queue.sendMessages(tasks);
 //                                tasks.clear();
 //                            }
 //                        } catch (Exception e) {
@@ -595,7 +580,7 @@ public class QueueTest {
 //
 //                    if (tasks.size() == batchSize) {
 //                        try {
-//                            producer.sendMessages(tasks);
+//                            queue.sendMessages(tasks);
 //                        } catch (MessageQueueException e) {
 //                            e.printStackTrace();
 //                        }
@@ -615,7 +600,7 @@ public class QueueTest {
 //                    long newCount = counter.get();
 //                    LOG.info("#### Processed : " + (newCount - prevCount.get()) + " of " + newCount + " (" + (insertCount.get() - newCount) + ")");
 //                        LOG.info("#### Pending   : " + scheduler.getTaskCount());
-//                        for (Entry<String, Integer> shard : producer.getShardCounts().entrySet()) {
+//                        for (Entry<String, Integer> shard : queue.getShardCounts().entrySet()) {
 //                            LOG.info("  " + shard.getKey() + " : " + shard.getValue());
 //                        }
                     LOG.info(stats.toString());
@@ -686,8 +671,6 @@ public class QueueTest {
                 .withShardLockManager(slm)
                 .build();
 
-        MessageProducer producer = queue.createProducer();
-
         // Add a batch of messages and peek
         List<Message> messages = Lists.newArrayList();
 
@@ -695,7 +678,7 @@ public class QueueTest {
             messages.add(new Message().addParameter("body", "" + i));
         }
 
-        producer.sendMessages(messages);
+        queue.sendMessages(messages);
         long queuedCount = queue.getMessageCount();
         final AtomicInteger count = new AtomicInteger();
 
@@ -723,7 +706,7 @@ public class QueueTest {
                 .withPollingInterval(15, TimeUnit.MILLISECONDS)
                 .build();
 
-        // Start the consumer
+        // Start the queue
         dispatcher.start();
 
         // Release the lock

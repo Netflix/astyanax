@@ -1,4 +1,4 @@
-package com.netflix.astyanax.recipes.queue;
+package com.netflix.astyanax.recipes.queue.exception;
 
 public class DuplicateMessageException extends Exception {
     private static final long serialVersionUID = 3917437309288808628L;

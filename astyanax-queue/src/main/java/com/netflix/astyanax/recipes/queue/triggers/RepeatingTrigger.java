@@ -109,4 +109,9 @@ public class RepeatingTrigger extends AbstractTrigger {
     	sb.append("]");
     	return sb.toString();
     }
+
+    @Override
+    public boolean isRepeatingTrigger() {
+        return true;
+    }
 }

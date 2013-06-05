@@ -130,4 +130,12 @@ public abstract class NativeQuery<T, K> {
      * @throws Exception
      */
     public abstract Map<K, Collection<T>> getResultSetById() throws Exception;
+
+    /**
+     * Get the column count for each id in the query without sending data back
+     * to the client.
+     * @return
+     * @throws Excerption
+     */
+    public abstract Map<K, Integer> getResultSetCounts() throws Exception;
 }

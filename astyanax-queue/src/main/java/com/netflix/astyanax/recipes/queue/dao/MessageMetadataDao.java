@@ -1,7 +1,8 @@
-package com.netflix.astyanax.recipes.queue;
+package com.netflix.astyanax.recipes.queue.dao;
 
 import java.util.Collection;
 
+import com.netflix.astyanax.recipes.queue.MessageContext;
 import com.netflix.astyanax.recipes.queue.entity.MessageMetadataEntry;
 import com.netflix.astyanax.recipes.queue.exception.MessageQueueException;
 

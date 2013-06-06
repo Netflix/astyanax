@@ -240,7 +240,7 @@ public class MessageQueueDispatcher {
                     // Process events in a tight loop, until asked to terminate
                     Collection<MessageContext> messages = null;
                     try {
-                        messages = messageQueue.readMessages(batchSize);
+                        messages = messageQueue.consumeMessages(batchSize);
                         if (messages.isEmpty()) {
                             Thread.sleep(pollingInterval);
                         }

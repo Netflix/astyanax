@@ -12,7 +12,6 @@ import java.util.Set;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
-import javax.persistence.OneToMany;
 import javax.persistence.PersistenceException;
 
 import org.apache.commons.lang.StringUtils;
@@ -33,9 +32,9 @@ import com.netflix.astyanax.model.Equality;
 import com.netflix.astyanax.query.ColumnPredicate;
 
 /**
- * The composite entity mapper expects an entity which has a single one to many
- * relationship with another entity representing the composite columns.  The child
- * entity will have an @Id field for each part of the composite followed by a single
+ * The composite entity mapper maps a Pojo to a composite column structure where
+ * the row key represents the Pojo ID, each @Column is a component of the composite
+ * and the final @Column is the column value.
  * @Column for the value.
  * 
  * @author elandau

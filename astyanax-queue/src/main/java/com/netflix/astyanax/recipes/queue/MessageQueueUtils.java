@@ -10,7 +10,7 @@ import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.DeserializationConfig;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.annotate.JsonSerialize;
+import org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion;
 
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
 
@@ -18,7 +18,9 @@ public class MessageQueueUtils {
     static final ObjectMapper mapper = new ObjectMapper();
 
     {
-        mapper.getSerializationConfig().setSerializationInclusion(JsonSerialize.Inclusion.NON_NULL);
+        mapper.setSerializationInclusion(Inclusion.NON_NULL);
+        mapper.setSerializationInclusion(Inclusion.NON_EMPTY);
+        
         mapper.configure(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         mapper.enableDefaultTyping();
     }

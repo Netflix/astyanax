@@ -1,12 +1,12 @@
-package com.netflix.astyanax.recipes.queue.persist;
+package com.netflix.astyanax.recipes.queue.dao.cassandra;
 
 import java.util.Collection;
 
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatchManager;
 import com.netflix.astyanax.model.ConsistencyLevel;
-import com.netflix.astyanax.recipes.queue.MessageHistoryDao;
 import com.netflix.astyanax.recipes.queue.MessageQueueInfo;
+import com.netflix.astyanax.recipes.queue.dao.MessageHistoryDao;
 import com.netflix.astyanax.recipes.queue.entity.MessageHistoryEntry;
 
 public class CassandraMessageHistoryDao implements MessageHistoryDao {

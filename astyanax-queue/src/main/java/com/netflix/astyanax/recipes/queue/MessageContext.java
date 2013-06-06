@@ -28,7 +28,7 @@ public class MessageContext {
     /**
      * MesasgeID used when acking
      */
-    private MessageQueueEntry ackMessageId;
+    private MessageQueueEntry ackEntry;
     
     /**
      * 
@@ -43,7 +43,7 @@ public class MessageContext {
     private MessageHistory status = new MessageHistory();
 
     public MessageContext(MessageQueueEntry messageId, Message message) {
-        this.ackMessageId = messageId;
+        this.ackEntry = messageId;
         this.message      = message;
     }
     
@@ -83,11 +83,11 @@ public class MessageContext {
     }
     
     public MessageQueueEntry getAckQueueEntry() {
-        return ackMessageId;
+        return ackEntry;
     }
 
-    public MessageContext setAckMessageId(MessageQueueEntry ackMessageId) {
-        this.ackMessageId = ackMessageId;
+    public MessageContext setAckQueueEntry(MessageQueueEntry ackMessageId) {
+        this.ackEntry = ackMessageId;
         return this;
     }
     
@@ -103,7 +103,7 @@ public class MessageContext {
     public String toString() {
     	StringBuilder sb = new StringBuilder();
     	sb.append("MessageContext [")
-    	  .append("ackMessageId=" + ackMessageId)
+    	  .append("ackMessageId=" + ackEntry)
     	  .append(", message=" + message)
     	  .append(", nextMessage=" + nextMessage)
     	  .append("]");

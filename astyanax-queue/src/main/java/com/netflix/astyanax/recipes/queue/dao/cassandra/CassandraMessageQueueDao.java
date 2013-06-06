@@ -1,4 +1,4 @@
-package com.netflix.astyanax.recipes.queue.persist;
+package com.netflix.astyanax.recipes.queue.dao.cassandra;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -8,8 +8,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatchManager;
 import com.netflix.astyanax.entitystore.CompositeEntityManager;
@@ -18,8 +17,8 @@ import com.netflix.astyanax.recipes.queue.Message;
 import com.netflix.astyanax.recipes.queue.MessageContext;
 import com.netflix.astyanax.recipes.queue.MessageQueueConstants;
 import com.netflix.astyanax.recipes.queue.MessageQueueInfo;
-import com.netflix.astyanax.recipes.queue.MessageQueueDao;
 import com.netflix.astyanax.recipes.queue.MessageQueueUtils;
+import com.netflix.astyanax.recipes.queue.dao.MessageQueueDao;
 import com.netflix.astyanax.recipes.queue.entity.MessageQueueEntry;
 import com.netflix.astyanax.recipes.queue.entity.MessageQueueEntryType;
 import com.netflix.astyanax.recipes.queue.exception.MessageQueueException;
@@ -40,7 +39,6 @@ public class CassandraMessageQueueDao implements MessageQueueDao {
     
     private final CompositeEntityManager<MessageQueueEntry, String> entityManager;
     private final ShardReaderPolicy                                 shardReaderPolicy;
-    private final MessageQueueInfo                                  queueInfo;
     
     public CassandraMessageQueueDao(
             Keyspace             keyspace, 
@@ -50,7 +48,6 @@ public class CassandraMessageQueueDao implements MessageQueueDao {
             ShardReaderPolicy    shardReaderPolicy) {
         
         this.shardReaderPolicy = shardReaderPolicy;
-        this.queueInfo         = queueInfo;
         
         this.entityManager     = CompositeEntityManager.<MessageQueueEntry, String>builder()
             .withKeyspace(keyspace)
@@ -81,12 +78,13 @@ public class CassandraMessageQueueDao implements MessageQueueDao {
     }
     
     @Override
-    public Collection<MessageContext> readMessages(String shardName, long upToThisTime, TimeUnit timeUnits, int itemsToPeek) throws MessageQueueException {
+    public Collection<MessageContext> readMessages(String shardName, int itemsToPeek, long upToThisTime, TimeUnit timeUnits) throws MessageQueueException {
         try {
+            LOG.info(String.format("Reading messages up to '%d'", upToThisTime));
             Collection<MessageQueueEntry> entries = entityManager.createNativeQuery()
                 .whereId()               .equal(shardName)
                 .whereColumn("type")     .equal((byte)MessageQueueEntryType.Message.ordinal())
-                .whereColumn("priority") .greaterThan(0)
+                .whereColumn("priority") .greaterThan((byte)0)
                 .whereColumn("timestamp").lessThan(TimeUUIDUtils.getMicrosTimeUUID(TimeUnit.MICROSECONDS.convert(upToThisTime, timeUnits)))
                 .limit(itemsToPeek)
                 .getResultSet();
@@ -149,6 +147,11 @@ public class CassandraMessageQueueDao implements MessageQueueDao {
     }
     
     @Override
+    public void writeQueueEntry(MessageQueueEntry entry) {
+        entityManager.put(entry);
+    }
+
+    @Override
     public void writeMessages(Collection<MessageContext> messages) throws MessageQueueException {
         for (MessageContext context : messages) {
             writeMessage(context);
@@ -194,11 +197,11 @@ public class CassandraMessageQueueDao implements MessageQueueDao {
     }
 
     private Collection<MessageContext> convertShardEntityToMessageList(Collection<MessageQueueEntry> entries) {
-        return Collections2.transform(entries, new Function<MessageQueueEntry, MessageContext>() {
-            public MessageContext apply(MessageQueueEntry entry) {
-                return convertEntryToContext(entry);
-            }
-        });
+        Collection<MessageContext> contexts = Lists.newArrayListWithCapacity(entries.size());
+        for (MessageQueueEntry entry: entries) {
+            contexts.add(convertEntryToContext(entry));
+        }
+        return contexts;
     }
 
     private MessageContext convertEntryToContext(MessageQueueEntry entry) {

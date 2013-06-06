@@ -380,6 +380,8 @@ public class CompositeEntityManager<T, K> implements EntityManager<T, K> {
         try {
             for (T entity : entities) {
                 lifecycleHandler.onPreRemove(entity);
+                if (verbose)
+                    LOG.info(String.format("%s : Deleting '%s'", columnFamily.getName(), entity));
                 entityMapper.fillMutationBatchForDelete(mb, columnFamily, entity);
             }
             mb.execute();
@@ -400,6 +402,8 @@ public class CompositeEntityManager<T, K> implements EntityManager<T, K> {
         try {
             for (T entity : entities) {
                 lifecycleHandler.onPrePersist(entity);
+                if (verbose)
+                    LOG.info(String.format("%s : Writing '%s'", columnFamily.getName(), entity));
                 entityMapper.fillMutationBatch(mb, columnFamily, entity);           
             }
             if (autoCommit)
@@ -549,16 +553,16 @@ public class CompositeEntityManager<T, K> implements EntityManager<T, K> {
             public Collection<T> getResultSet() throws PersistenceException {
                 Preconditions.checkArgument(!ids.isEmpty(), "Must specify at least one row key (ID) to fetch");
                 
-                if (verbose)
-                    LOG.info(String.format("%s : Query ids '%s' with predicates '%s'", columnFamily.getName(), ids, predicates));
+//                if (verbose)
+//                    LOG.info(String.format("%s : Query ids '%s' with predicates '%s'", columnFamily.getName(), ids, predicates));
                 
                 RowSliceQuery<K, ByteBuffer> rowQuery = prepareQuery();
                 
                 try {
                     List<T> entities = convertRowsToEntities(rowQuery.execute().getResult());
                     
-                    if (verbose)
-                        LOG.info(String.format("%s : Query ids '%s' with predicates '%s' result='%s'", columnFamily.getName(), ids, predicates, entities));
+//                    if (verbose)
+//                        LOG.info(String.format("%s : Query ids '%s' with predicates '%s' result='%s'", columnFamily.getName(), ids, predicates, entities));
                     return entities;
                 } catch (Exception e) {
                     throw new PersistenceException("Error executing query", e);
@@ -584,16 +588,16 @@ public class CompositeEntityManager<T, K> implements EntityManager<T, K> {
             public Map<K, Integer> getResultSetCounts() throws Exception {
                 Preconditions.checkArgument(!ids.isEmpty(), "Must specify at least one row key (ID) to fetch");
                 
-                if (verbose)
-                    LOG.info(String.format("%s : Query ids '%s' with predicates '%s'", columnFamily.getName(), ids, predicates));
+//                if (verbose)
+//                    LOG.info(String.format("%s : Query ids '%s' with predicates '%s'", columnFamily.getName(), ids, predicates));
                 
                 RowSliceQuery<K, ByteBuffer> rowQuery = prepareQuery();
                 
                 try {
                     Map<K, Integer> counts = rowQuery.getColumnCounts().execute().getResult();
                     
-                    if (verbose)
-                        LOG.info(String.format("%s : Query ids '%s' with predicates '%s' result='%s'", columnFamily.getName(), ids, predicates, counts));
+//                    if (verbose)
+//                        LOG.info(String.format("%s : Query ids '%s' with predicates '%s' result='%s'", columnFamily.getName(), ids, predicates, counts));
                     return counts;
                 } catch (Exception e) {
                     throw new PersistenceException("Error executing query", e);

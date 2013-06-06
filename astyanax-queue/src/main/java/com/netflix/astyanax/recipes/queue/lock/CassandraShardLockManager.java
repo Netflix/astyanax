@@ -24,8 +24,7 @@ import com.netflix.astyanax.recipes.queue.exception.MessageQueueException;
 public class CassandraShardLockManager implements ShardLockManager {
     private static final Logger LOG = LoggerFactory.getLogger(CassandraShardLockManager.class);
     
-    private MessageQueueInfo                                  queueInfo;
-    private CompositeEntityManager<MessageQueueEntry, String> entityManager;
+    private final CompositeEntityManager<MessageQueueEntry, String> entityManager;
 
     private int  lockTimeout    = 60;
     private int  lockTtl        = 120;
@@ -53,7 +52,8 @@ public class CassandraShardLockManager implements ShardLockManager {
     public CassandraShardLockManager(
             Keyspace             keyspace, 
             MutationBatchManager batchManager,
-            ConsistencyLevel     consistencyLevel) {
+            ConsistencyLevel     consistencyLevel,
+            MessageQueueInfo     queueInfo) {
         this.entityManager     = CompositeEntityManager.<MessageQueueEntry, String>builder()
                 .withKeyspace(keyspace)
                 .withColumnFamily(queueInfo.getColumnFamilyBase() + MessageQueueConstants.CF_QUEUE_SUFFIX)
@@ -93,11 +93,12 @@ public class CassandraShardLockManager implements ShardLockManager {
             int lockCount = 0;
             boolean lockAcquired = false;
             for (MessageQueueEntry entry : result) {
+                LOG.info(entry.toString());
                 // Stale lock so we can discard it
-                if (entry.getBodyAsLong() < curTimeMicros) {
-//                    stats.incExpiredLockCount();
-                    entityManager.remove(entry);
-                } else if (entry.getState() == MessageQueueEntryState.Acquired) {
+//                if (entry.getBodyAsLong() < curTimeMicros) {
+////                    stats.incExpiredLockCount();
+//                    entityManager.remove(entry);
+                if (entry.getState() == MessageQueueEntryState.Acquired) {
                     throw new BusyLockException("Not first lock");
                 } else {
                     lockCount++;

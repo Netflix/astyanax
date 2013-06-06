@@ -8,8 +8,10 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -20,6 +22,12 @@ import com.netflix.astyanax.SingleMutationBatchManager;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.recipes.locks.BusyLockException;
+import com.netflix.astyanax.recipes.queue.dao.MessageHistoryDao;
+import com.netflix.astyanax.recipes.queue.dao.MessageMetadataDao;
+import com.netflix.astyanax.recipes.queue.dao.MessageQueueDao;
+import com.netflix.astyanax.recipes.queue.dao.cassandra.CassandraMessageHistoryDao;
+import com.netflix.astyanax.recipes.queue.dao.cassandra.CassandraMessageMetadataDao;
+import com.netflix.astyanax.recipes.queue.dao.cassandra.CassandraMessageQueueDao;
 import com.netflix.astyanax.recipes.queue.entity.MessageHistoryEntry;
 import com.netflix.astyanax.recipes.queue.entity.MessageMetadataEntry;
 import com.netflix.astyanax.recipes.queue.entity.MessageQueueEntry;
@@ -27,16 +35,12 @@ import com.netflix.astyanax.recipes.queue.entity.MessageQueueEntryState;
 import com.netflix.astyanax.recipes.queue.exception.DuplicateMessageException;
 import com.netflix.astyanax.recipes.queue.exception.MessageQueueException;
 import com.netflix.astyanax.recipes.queue.lock.CassandraShardLockManager;
-import com.netflix.astyanax.recipes.queue.persist.CassandraMessageHistoryDao;
-import com.netflix.astyanax.recipes.queue.persist.CassandraMessageMetadataDao;
-import com.netflix.astyanax.recipes.queue.persist.CassandraMessageQueueDao;
 import com.netflix.astyanax.recipes.queue.shard.ModShardPolicy;
 import com.netflix.astyanax.recipes.queue.shard.QueueShardPolicy;
 import com.netflix.astyanax.recipes.queue.shard.ShardReaderPolicy;
 import com.netflix.astyanax.recipes.queue.shard.TimeModShardPolicy;
 import com.netflix.astyanax.recipes.queue.shard.TimePartitionQueueShardPolicy;
 import com.netflix.astyanax.recipes.queue.shard.TimePartitionedShardReaderPolicy;
-import com.netflix.astyanax.recipes.queue.triggers.RunOnceTrigger;
 import com.netflix.astyanax.recipes.queue.triggers.Trigger;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.retry.RunOnce;
@@ -124,7 +128,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     public static final long             SCHEMA_CHANGE_DELAY             = 3000;
     public static final String           FIELD_PARAMETERS                = "PARAMS";
     public static final ImmutableMap<String, Object> DEFAULT_COLUMN_FAMILY_SETTINGS = ImmutableMap.<String, Object>builder()
-            .put("read_repair_chance",       1.0)
+            .put("read_repair_chance",       0.1)
             .put("gc_grace_seconds",         5)     // TODO: Calculate gc_grace_seconds
             .put("compaction_strategy",      "SizeTieredCompactionStrategy")
             .put("sstable_compression",     "")
@@ -291,11 +295,11 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         if (builder.lockManager != null) 
             this.lockManager      = builder.lockManager;
         else 
-            this.lockManager      = new CassandraShardLockManager(keyspace, batchManager, consistencyLevel);
+            this.lockManager      = new CassandraShardLockManager(keyspace, batchManager, consistencyLevel, queueInfo);
         
-        queueDao    = new CassandraMessageQueueDao(keyspace, batchManager, consistencyLevel, queueInfo, shardReaderPolicy);
+        queueDao    = new CassandraMessageQueueDao   (keyspace, batchManager, consistencyLevel, queueInfo, shardReaderPolicy);
         metadataDao = new CassandraMessageMetadataDao(keyspace, batchManager, consistencyLevel, queueInfo);
-        historyDao  = new CassandraMessageHistoryDao(keyspace, batchManager, consistencyLevel, queueInfo);
+        historyDao  = new CassandraMessageHistoryDao (keyspace, batchManager, consistencyLevel, queueInfo);
     }
 
     @Override
@@ -330,24 +334,22 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     }
 
     @Override
-    public List<MessageContext> peekMessagesByKey(String key) throws MessageQueueException {
-        List<MessageContext> messages = Lists.newArrayList();
-//        String messageKey = getCompositeKey(getName(), key);
-//        try {
-//            Collection<MessageMetadataEntry> results = this.metadataDao.getMessageIdsForKey(messageKey);
-//            
-//            for (MessageMetadataEntry entry : results) {
-//                MessageContext message = peekMessage(entry.getName());
-//                if (message != null) {
-//                    messages.add(message);
-//                }
-//                else {
-//                    LOG.warn("No queue item for " + entry.getName());
-//                }
-//            }
-//        } catch (Exception e) {
-//            throw new MessageQueueException(String.format("Error fetching row '%s'", messageKey), e);
-//        }
+    public Collection<MessageContext> peekMessagesByKey(String key) throws MessageQueueException {
+        Collection<MessageContext> messages = Lists.newArrayList();
+        try {
+            Collection<MessageMetadataEntry> messageIds = this.metadataDao.getMessageIdsForKey(key);
+            for (MessageMetadataEntry entry : messageIds) {
+                MessageContext message = peekMessage(entry.getName());
+                if (message != null) {
+                    messages.add(message);
+                }
+                else {
+                    LOG.warn("No queue item for " + entry.getName());
+                }
+            }
+        } catch (Exception e) {
+            throw new MessageQueueException(String.format("Error fetching row '%s'", key), e);
+        }
         
         return messages;
     }
@@ -404,13 +406,13 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     }
 
     @Override
-    public Collection<MessageContext> readMessages(int itemsToPop) throws MessageQueueException, BusyLockException, InterruptedException {
-        return readMessages(itemsToPop, 0, null);
+    public Collection<MessageContext> consumeMessages(int itemsToPop) throws MessageQueueException, BusyLockException, InterruptedException {
+        return consumeMessages(itemsToPop, 0, TimeUnit.MILLISECONDS);
     }
 
     @Override
-    public Collection<MessageContext> readMessages(int itemsToPop, long timeout, TimeUnit units) throws MessageQueueException, BusyLockException, InterruptedException {
-        long timeoutTime = (timeout == 0) ? 0 : System.currentTimeMillis() + TimeUnit.MILLISECONDS.convert(timeout, units);
+    public Collection<MessageContext> consumeMessages(int itemsToPop, long timeout, TimeUnit units) throws MessageQueueException, BusyLockException, InterruptedException {
+        Stopwatch sw = new Stopwatch().start();
         // Loop while trying to get messages.
         // TODO: Make it possible to cancel this loop
         // TODO: Read full itemsToPop instead of just stopping when we get the first successful set
@@ -427,7 +429,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     shardReaderPolicy.releaseShard(partition, messages == null ? 0 : messages.size());
                 }
             }
-            if (timeoutTime != 0 && System.currentTimeMillis() > timeoutTime) {
+            if (timeout == 0 || sw.elapsed(units) > timeout) {
                 return Lists.newLinkedList();
             }
             Thread.sleep(shardReaderPolicy.getPollInterval());
@@ -462,7 +464,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         ShardLock lock = null;
         try {
             lock = lockManager.acquireLock(shardName);
-            return readMessagesInternal(shardName, itemsToPop, lock.getExtraMessagesToRead());
+            return consumeMessagesUnderLock(shardName, itemsToPop, lock.getExtraMessagesToRead());
         } catch (BusyLockException e) {
             stats.incLockContentionCount();
             throw e;
@@ -485,30 +487,30 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
      * @throws BusyLockException
      * @throws MessageQueueException
      */
-    private Collection<MessageContext> readMessagesInternal(
+    private Collection<MessageContext> consumeMessagesUnderLock(
             String shardName,
             int itemsToPop,
             int lockColumnCount) throws BusyLockException, MessageQueueException {
 
         Collection<MessageContext> contexts = this.queueDao.readMessages(
                 shardName, 
-                System.currentTimeMillis(), TimeUnit.MILLISECONDS, 
-                itemsToPop);
+                itemsToPop,
+                System.currentTimeMillis(), TimeUnit.MILLISECONDS);
         
         // Iterate through all message and retrieve any additional information, pop them from the queue
         // and update state
-        for (MessageContext context : contexts) {
+        for (final MessageContext context : contexts) {
             try {
                 // First, 'pop' the event from the queue
                 queueDao.deleteQueueEntry(context.getAckQueueEntry());
                 
-                Message           message = context.getMessage();
-                MessageQueueEntry entry   = context.getAckQueueEntry();
+                final Message           message = context.getMessage();
+                final MessageQueueEntry entry   = context.getAckQueueEntry();
                 
                 if (message.hasKey() && (message.isCompact() || message.hasTrigger())) {
                     // Read the message metadata
                     // TODO:  We may want to make this a lazy operation or at least a bulk option.
-                    Collection<MessageMetadataEntry> metadata = metadataDao.getMetadataForKey(message.getKey());
+                    final Collection<MessageMetadataEntry> metadata = metadataDao.getMetadataForKey(message.getKey());
                 
                     MessageMetadataEntry mostRecentMessageId = null;
                     long mostRecentTriggerTime = 0;
@@ -521,7 +523,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                             break;
                         case Field:
                             if ("body".equals(metadataEntry.getName())) {
-                            // TODO:
+                                // TODO:
                             }
                             break;
                         case MessageId:
@@ -577,7 +579,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                                 MessageQueueEntry queueEntry = MessageQueueEntry.newMessageEntry(
                                         shardPolicy.getShardKey(nextMessage),
                                         nextMessage.getPriority(),
-                                        TimeUnit.MICROSECONDS.convert(nextMessage.getTrigger().getTriggerTime(), TimeUnit.MILLISECONDS),
+                                        nextMessage.getTrigger().getTriggerTime(),
                                         MessageQueueEntryState.Waiting, 
                                         MessageQueueUtils.serializeToString(nextMessage),
                                         queueInfo.getRetentionTimeout());
@@ -604,17 +606,21 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 
                 // Message has a timeout so we add a timeout event.
                 if (message.getTimeout() > 0) {
-                    // TODO: Need to figure out the correct timeout id
-                    MessageQueueEntry timeoutEntry = MessageQueueEntry.newBusyEntry(shardPolicy.getShardKey(message), message, entry, queueInfo.getRetentionTimeout());
+                    MessageQueueEntry timeoutEntry = MessageQueueEntry.newBusyEntry(
+                            shardPolicy.getShardKey(message), 
+                            message, 
+                            entry, 
+                            queueInfo.getRetentionTimeout());
+                    queueDao.writeQueueEntry(timeoutEntry);
                     
                     // Add the timeout column to the key
                     if (message.hasKey()) {
-                        metadataDao.writeMetadata(MessageMetadataEntry.newMessageId(message.getKey(), entry.getFullMessageId(), queueInfo.getRetentionTimeout()));
+                        metadataDao.writeMetadata(MessageMetadataEntry.newMessageId(message.getKey(), timeoutEntry.getFullMessageId(), queueInfo.getRetentionTimeout()));
                     }
-                    context.setAckMessageId(timeoutEntry);
+                    context.setAckQueueEntry(timeoutEntry);
                 } 
                 else {
-                    context.setAckMessageId(null);
+                    context.setAckQueueEntry(null);
                 }
             }
             catch (MessageQueueException e) {
@@ -648,6 +654,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     @Override
     public void ackMessages(Collection<MessageContext> contexts) throws MessageQueueException {
         try {
+            LOG.info("Acking : " + contexts);
             for (MessageContext context : contexts) {
                 if (context.getAckQueueEntry() != null) {
                     // Delete the timeout queue entry
@@ -691,31 +698,28 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
      * @throws MessageQueueException
      */
     public boolean hasMessages(String shardName) throws MessageQueueException {
-        return !queueDao.readMessages(shardName, System.currentTimeMillis(), TimeUnit.MILLISECONDS, 1).isEmpty();
+        return !queueDao.readMessages(shardName, 1, System.currentTimeMillis(), TimeUnit.MILLISECONDS).isEmpty();
     }
 
     @Override
-    public MessageContext sendMessage(Message message) throws MessageQueueException {
-        MessageContext context = Iterables.getFirst(sendMessages(Lists.newArrayList(message)), null);
+    public MessageContext produceMessage(Message message) throws MessageQueueException {
+        MessageContext context = Iterables.getFirst(produceMessages(Lists.newArrayList(message)), null);
         if (context.hasError())
             throw context.getError();
         return context;
     }
 
     @Override
-    public Collection<MessageContext> sendMessages(Collection<Message> messages) throws MessageQueueException {
+    public Collection<MessageContext> produceMessages(Collection<Message> messages) throws MessageQueueException {
         // Generate Id's for the messages based on the sharding policy
         List<MessageContext> contexts = Lists.newArrayListWithCapacity(messages.size());
         for (Message message : messages) {
             // Get the execution time from the message or set to current time so it runs immediately
-            if (!message.hasTrigger()) {
-                message.setTrigger(RunOnceTrigger.builder().build());
-            }
-            
+            // The message body of the queue entry will be set by the queueDao writer
             MessageQueueEntry queueEntry = MessageQueueEntry.newMessageEntry(
                     shardPolicy.getShardKey(message),
                     message.getPriority(),
-                    TimeUnit.MICROSECONDS.convert(message.getTrigger().getTriggerTime(), TimeUnit.MILLISECONDS),
+                    message.getTriggerTime(), 
                     MessageQueueEntryState.Waiting, 
                     null, 
                     queueInfo.getRetentionTimeout());

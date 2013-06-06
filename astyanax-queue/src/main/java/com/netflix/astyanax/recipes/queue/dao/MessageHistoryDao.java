@@ -1,4 +1,4 @@
-package com.netflix.astyanax.recipes.queue;
+package com.netflix.astyanax.recipes.queue.dao;
 
 import java.util.Collection;
 

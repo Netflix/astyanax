@@ -1,9 +1,10 @@
-package com.netflix.astyanax.recipes.queue;
+package com.netflix.astyanax.recipes.queue.dao;
 
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import com.netflix.astyanax.recipes.queue.MessageContext;
 import com.netflix.astyanax.recipes.queue.entity.MessageQueueEntry;
 import com.netflix.astyanax.recipes.queue.exception.MessageQueueException;
 
@@ -37,7 +38,7 @@ public interface MessageQueueDao {
      * @return
      * @throws MessageQueueException
      */
-    public Collection<MessageContext> readMessages(String shardName, long upToThisTime, TimeUnit timeUnits, int itemsToPeek) throws MessageQueueException;
+    public Collection<MessageContext> readMessages(String shardName, int itemsToPeek, long upToThisTime, TimeUnit timeUnits) throws MessageQueueException;
     
     /**
      * Read a message by the message ID and return a constructed MessageContext.  The 
@@ -68,6 +69,12 @@ public interface MessageQueueDao {
      * @param ackMessageId
      */
     public void deleteQueueEntry(MessageQueueEntry ackMessageId);
+    
+    /**
+     * 
+     * @param ackMessageId
+     */
+    public void writeQueueEntry(MessageQueueEntry ackMessageId);
     
     /**
      * Acknowledge messages

@@ -3,7 +3,6 @@ package com.netflix.astyanax.recipes.queue.entity;
 import java.nio.ByteBuffer;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -28,7 +27,6 @@ import com.netflix.astyanax.util.TimeUUIDUtils;
 public class MessageQueueEntry {
     private static final String ID_DELIMITER    = ":";
     private static final String SHARD_DELIMITER = "$";
-    private static AtomicLong counter = new AtomicLong();
             
     @Id
     private String shardName;
@@ -97,10 +95,6 @@ public class MessageQueueEntry {
         state     = Byte.parseByte(parts[4]);
     }
     
-    private MessageQueueEntry(String shardName, MessageQueueEntryType type, byte priority, long timestamp, UUID random, MessageQueueEntryState state, int ttl) {
-        this(shardName, type, priority, timestamp, random, state, null, ttl);
-    }
-
     private MessageQueueEntry(String shardName, MessageQueueEntryType type, byte priority, long timestamp, UUID random, MessageQueueEntryState state, String body, int ttl) {
         super();
         
@@ -123,27 +117,49 @@ public class MessageQueueEntry {
     }
     
     public static MessageQueueEntry newLockEntry(String shardName, MessageQueueEntryState state, int ttl) {
-        return new MessageQueueEntry(shardName, MessageQueueEntryType.Lock, (byte)0, 0, null, state, ttl);
+        return new MessageQueueEntry(
+                shardName, 
+                MessageQueueEntryType.Lock, 
+                (byte)0, 
+                0, 
+                null, 
+                state,
+                null,
+                ttl);
     }
     
-    public static MessageQueueEntry newLockEntry(String shardName, long timestamp, MessageQueueEntryState state, int ttl) {
-        return new MessageQueueEntry(shardName, MessageQueueEntryType.Lock, (byte)0, timestamp, null, state, ttl);
-    }
-    
+    /**
+     * 
+     * @param shardName
+     * @param priority
+     * @param timestamp     Timestamp in MILISECONDS
+     * @param state
+     * @param body
+     * @param ttl
+     * @return
+     */
     public static MessageQueueEntry newMessageEntry(String shardName, byte priority, long timestamp, MessageQueueEntryState state, String body, Integer ttl) {
-        timestamp += (counter.incrementAndGet() % 1000);
-        return new MessageQueueEntry(shardName, MessageQueueEntryType.Message, priority, timestamp, null, state, body, ttl);
+        return new MessageQueueEntry(
+                shardName, 
+                MessageQueueEntryType.Message, 
+                priority, 
+                TimeUnit.MICROSECONDS.convert(timestamp, TimeUnit.MILLISECONDS), 
+                null, 
+                state, 
+                body, 
+                ttl);
     }
     
     public static MessageQueueEntry newBusyEntry(String shardName, Message message, MessageQueueEntry previous, int ttl) {
-        return new MessageQueueEntry(shardName,
-                                    MessageQueueEntryType.Message, 
-                                    (byte)message.getPriority(), 
-                                    message.getTrigger().getTriggerTime() + message.getTimeout() + (counter.incrementAndGet() % 1000),   // TODO: double check units
-                                    null, 
-                                    MessageQueueEntryState.Busy, 
-                                    previous.getBodyAsString(), 
-                                    ttl);
+        return new MessageQueueEntry(
+                shardName,
+                MessageQueueEntryType.Message, 
+                (byte)message.getPriority(), 
+                TimeUnit.MICROSECONDS.convert(message.getTriggerTime() + message.getTimeout(), TimeUnit.MILLISECONDS),   // TODO: double check units
+                null, 
+                MessageQueueEntryState.Busy, 
+                previous.getBodyAsString(), 
+                ttl);
     }
     
     public static MessageQueueEntry fromMetadata(MessageMetadataEntry meta) {
@@ -263,13 +279,27 @@ public class MessageQueueEntry {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("MessageQueueEntry [");
-        sb.append(  "type="      + MessageQueueEntryType.values()[type]);
-        sb.append(", priority="  + priority);
+        sb.append(  "shard="   ).append(shardName);
+        sb.append(", type="    ).append(MessageQueueEntryType.values()[type]);
+        sb.append(", priority=").append(priority);
         if (timestamp != null)
-            sb.append(", timestamp=" + timestamp);
-        sb.append(", random="    + random);
-        sb.append(", state="     + MessageQueueEntryState.values()[state]);
-        sb.append(", ttl="       + ttl);
+            sb.append(", timestamp=").append(timestamp)
+              .append("(").append(TimeUUIDUtils.getTimeFromUUID(this.timestamp)).append(")");
+        sb.append(", random="  ).append(random);
+        sb.append(", state="   ).append(MessageQueueEntryState.values()[state]);
+        sb.append(", ttl="     ).append(ttl);
+        if (this.body == null) {
+            sb.append(", body=null");
+        }
+        else {
+            switch (getType()) {
+            case Lock:
+                sb.append(", body=").append(this.getBodyAsLong());
+                break;
+            case Message:
+                sb.append(", msglength=").append(this.body.limit());
+            }
+        }
         sb.append("]");
         return sb.toString();
     }

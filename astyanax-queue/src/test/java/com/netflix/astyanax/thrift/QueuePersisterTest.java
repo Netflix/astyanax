@@ -3,6 +3,7 @@ package com.netflix.astyanax.thrift;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -27,25 +28,32 @@ import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.recipes.queue.CountingQueueStats;
 import com.netflix.astyanax.recipes.queue.Message;
+import com.netflix.astyanax.recipes.queue.MessageContext;
 import com.netflix.astyanax.recipes.queue.MessageQueueInfo;
 import com.netflix.astyanax.recipes.queue.MessageQueueManager;
+import com.netflix.astyanax.recipes.queue.MessageQueueUtils;
 import com.netflix.astyanax.recipes.queue.ShardedDistributedMessageQueue;
 import com.netflix.astyanax.recipes.queue.SimpleMessageQueueManager;
+import com.netflix.astyanax.recipes.queue.dao.MessageQueueDao;
+import com.netflix.astyanax.recipes.queue.dao.cassandra.CassandraMessageMetadataDao;
+import com.netflix.astyanax.recipes.queue.dao.cassandra.CassandraMessageQueueDao;
 import com.netflix.astyanax.recipes.queue.entity.MessageMetadataEntry;
 import com.netflix.astyanax.recipes.queue.entity.MessageMetadataEntryType;
+import com.netflix.astyanax.recipes.queue.entity.MessageQueueEntry;
+import com.netflix.astyanax.recipes.queue.entity.MessageQueueEntryState;
 import com.netflix.astyanax.recipes.queue.exception.MessageQueueException;
-import com.netflix.astyanax.recipes.queue.persist.CassandraMessageMetadataDao;
-import com.netflix.astyanax.recipes.queue.persist.CassandraMessageQueueDao;
 import com.netflix.astyanax.recipes.queue.shard.QueueShardPolicy;
+import com.netflix.astyanax.recipes.queue.shard.ShardReaderPolicy;
 import com.netflix.astyanax.recipes.queue.shard.SingleQueueShardPolicy;
 import com.netflix.astyanax.recipes.queue.shard.TimePartitionQueueShardPolicy;
+import com.netflix.astyanax.recipes.queue.shard.TimePartitionedShardReaderPolicy;
 import com.netflix.astyanax.recipes.queue.triggers.RunOnceTrigger;
 import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
 import com.netflix.astyanax.util.TimeUUIDUtils;
 
 public class QueuePersisterTest {
 
-    private static Logger LOG = LoggerFactory.getLogger(QueueTest.class);
+    private static Logger LOG = LoggerFactory.getLogger(QueuePersisterTest.class);
     private static Keyspace keyspace;
     private static AstyanaxContext<Keyspace> keyspaceContext;
     private static String TEST_CLUSTER_NAME = "Cluster1";
@@ -128,38 +136,42 @@ public class QueuePersisterTest {
     
     @Test
     public void testQueuePersister() throws Exception {
-//        MessageQueueInfo queueInfo = MessageQueueInfo.builder()
-//                .withQueueName("testQueuePersister")
-//                .build();
-//        
-//        SingleQueueShardPolicy shardPolicy  = new SingleQueueShardPolicy(queueInfo, "fixed");
-//        MutationBatchManager   batchManager = new SingleMutationBatchManager(keyspace, ConsistencyLevel.CL_ONE);
-//        MessageQueuePersister  persister    = new MessageQueuePersister(keyspace, batchManager, shardPolicy, queueInfo);
-//        
-//        persister.createStorage();
-//        
-//        Collection<Message> messages = ImmutableList.of(
-//                new Message()
-//                    .setKey("TestKey0")
-//                    .setTrigger(RunOnceTrigger.builder().build()),
-//                new Message()
-//                    .setKey("TestKey1")
-//                    .setTrigger(RunOnceTrigger.builder().build())
-//            );
-//        
-//        persister.writeMessages(messages);
-//        
-//        batchManager.commitSharedMutationBatch();
-//        
-//        Collection<Message> m;
-//        
-//        m = persister.readMessages(shardPolicy.getShardKey(null), 1);
-//        LOG.info(m.toString());
-//        Assert.assertEquals(1, m.size());
-//        
-//        m = persister.readMessages(shardPolicy.getShardKey(null), 100);
-//        LOG.info(m.toString());
-//        Assert.assertEquals(2, m.size());
+        MessageQueueInfo queueInfo = MessageQueueInfo.builder()
+                .withQueueName("testQueuePersister")
+                .build();
+        
+        SingleQueueShardPolicy shardPolicy  = new SingleQueueShardPolicy(queueInfo, "fixed");
+        MutationBatchManager   batchManager = new SingleMutationBatchManager(keyspace, ConsistencyLevel.CL_ONE);
+        MessageQueueDao        dao          = new CassandraMessageQueueDao(
+                keyspace, 
+                batchManager, 
+                ConsistencyLevel.CL_ONE, 
+                queueInfo, 
+                TimePartitionedShardReaderPolicy.Factory.builder().build().create(queueInfo));
+        
+        dao.createStorage();
+        
+        long ts = System.currentTimeMillis();
+        
+        final String shardName = "A";
+        
+        MessageQueueEntry entry = MessageQueueEntry.newMessageEntry(shardName, (byte)0, ts,  MessageQueueEntryState.Waiting, MessageQueueUtils.serializeToString(new Message()), 0);
+        dao.writeQueueEntry(entry);
+        
+        batchManager.commitSharedMutationBatch();
+        
+        Collection<MessageContext> messages;
+        messages = dao.readMessages(shardName, 10);
+        Assert.assertEquals(1,  messages.size());
+        LOG.info(messages.toString());
+        
+        messages = dao.readMessages(shardName, 10, ts - 1000, TimeUnit.MILLISECONDS);
+        Assert.assertEquals(0,  messages.size());
+        LOG.info(messages.toString());
+        
+        messages = dao.readMessages(shardName, 10, ts+1, TimeUnit.MILLISECONDS);
+        Assert.assertEquals(1,  messages.size());
+        LOG.info(messages.toString());
     }
     
     @Test

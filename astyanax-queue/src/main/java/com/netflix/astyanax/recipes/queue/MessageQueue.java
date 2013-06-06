@@ -129,7 +129,7 @@ public interface MessageQueue {
      * @throws BusyLockException
      * @throws InterruptedException
      */
-    public Collection<MessageContext> readMessages(int itemsToPop) throws MessageQueueException, BusyLockException, InterruptedException;
+    public Collection<MessageContext> consumeMessages(int itemsToPop) throws MessageQueueException, BusyLockException, InterruptedException;
 
     /**
      * Read messages from the queue with a given timeout
@@ -142,7 +142,7 @@ public interface MessageQueue {
      * @throws BusyLockException
      * @throws InterruptedException
      */
-    public Collection<MessageContext> readMessages(int itemsToPop, long timeout, TimeUnit units) throws MessageQueueException, BusyLockException,  InterruptedException;
+    public Collection<MessageContext> consumeMessages(int itemsToPop, long timeout, TimeUnit units) throws MessageQueueException, BusyLockException,  InterruptedException;
 
     /**
      * Release a job after completion
@@ -173,7 +173,7 @@ public interface MessageQueue {
      * 
      * @throws MessageQueueException
      */
-    MessageContext sendMessage(Message message) throws MessageQueueException;
+    MessageContext produceMessage(Message message) throws MessageQueueException;
 
     /**
      * Schedule a batch of jobs
@@ -182,5 +182,5 @@ public interface MessageQueue {
      * 
      * @throws MessageQueueException
      */
-    Collection<MessageContext> sendMessages(Collection<Message> messages) throws MessageQueueException;    
+    Collection<MessageContext> produceMessages(Collection<Message> messages) throws MessageQueueException;    
 }

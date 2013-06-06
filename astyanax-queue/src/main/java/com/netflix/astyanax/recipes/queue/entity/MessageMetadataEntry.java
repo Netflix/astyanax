@@ -148,7 +148,7 @@ public class MessageMetadataEntry {
 
     @Override
     public String toString() {
-        return "MessageMetadataEntry [key=" + key + ", type=" + type
+        return "MessageMetadataEntry [key=" + key + ", type=" + this.getMetadataType()
                 + ", name=" + name + ", value=" + value + ", ttl=" + ttl + "]";
     }
     

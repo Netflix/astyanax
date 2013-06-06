@@ -1,4 +1,4 @@
-package com.netflix.astyanax.recipes.queue.persist;
+package com.netflix.astyanax.recipes.queue.dao.cassandra;
 
 import java.util.Collection;
 import java.util.Map;
@@ -13,15 +13,15 @@ import com.netflix.astyanax.MutationBatchManager;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.entitystore.CompositeEntityManager;
 import com.netflix.astyanax.model.ConsistencyLevel;
-import com.netflix.astyanax.recipes.queue.KeyExistsException;
 import com.netflix.astyanax.recipes.queue.Message;
-import com.netflix.astyanax.recipes.queue.MessageMetadataDao;
 import com.netflix.astyanax.recipes.queue.MessageContext;
 import com.netflix.astyanax.recipes.queue.MessageQueueConstants;
 import com.netflix.astyanax.recipes.queue.MessageQueueInfo;
 import com.netflix.astyanax.recipes.queue.MessageQueueUtils;
+import com.netflix.astyanax.recipes.queue.dao.MessageMetadataDao;
 import com.netflix.astyanax.recipes.queue.entity.MessageMetadataEntry;
 import com.netflix.astyanax.recipes.queue.entity.MessageMetadataEntryType;
+import com.netflix.astyanax.recipes.queue.exception.KeyExistsException;
 import com.netflix.astyanax.recipes.queue.exception.MessageQueueException;
 
 /**

@@ -4,12 +4,14 @@ import java.util.EnumSet;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import org.codehaus.jackson.annotate.JsonIgnore;
+
 import com.google.common.collect.Maps;
 import com.netflix.astyanax.recipes.queue.triggers.Trigger;
 
 public class Message {
     
-    private static final int  DEFAULT_TIMEOUT_SECONDS = 120;
+    private static final int  DEFAULT_TIMEOUT_SECONDS = (int) TimeUnit.MILLISECONDS.convert(120, TimeUnit.SECONDS);
     private static final byte DEFAULT_PRIORITY        = 0;
     
     private static String PROPERTY_TASK_CLASS_NAME = "_taskclass";
@@ -63,6 +65,14 @@ public class Message {
         return this;
     }
     
+    @JsonIgnore
+    public long getTriggerTime() {
+        if (this.trigger == null)
+            return System.currentTimeMillis();
+        else
+            return this.trigger.getTriggerTime();
+    }
+    
     public boolean hasTrigger() {
         return trigger != null;
     }
@@ -106,13 +116,8 @@ public class Message {
         return this;
     }
 
-    public Message setTimeout(int timeout) {
-        this.timeout = timeout;
-        return this;
-    }
-    
     public Message setTimeout(long timeout, TimeUnit units) {
-        this.timeout = (int)TimeUnit.SECONDS.convert(timeout, units);
+        this.timeout = (int)TimeUnit.MILLISECONDS.convert(timeout, units);
         return this;
     }
 

@@ -46,7 +46,7 @@ public class CassandraChunkedStorageProvider implements ChunkedStorageProvider {
     private static final String DEFAULT_ROW_KEY_FORMAT = "%s$%d";
 
     public enum Columns {
-        DATA, OBJECTSIZE, CHUNKSIZE, CHUNKCOUNT, EXPIRES
+        DATA, OBJECTSIZE, CHUNKSIZE, CHUNKCOUNT, EXPIRES, ATTRIBUTES
     }
 
     private final ColumnFamily<String, String> cf;
@@ -120,16 +120,18 @@ public class CassandraChunkedStorageProvider implements ChunkedStorageProvider {
     }
 
     @Override
-    public void writeMetadata(String objectName, ObjectMetadata attr) throws Exception {
+    public void writeMetadata(String objectName, ObjectMetadata objMetaData) throws Exception {
         MutationBatch m = keyspace.prepareMutationBatch().withRetryPolicy(retryPolicy);
 
         ColumnListMutation<String> row = m.withRow(cf, objectName);
-        if (attr.getChunkSize() != null)
-            row.putColumn(getColumnName(Columns.CHUNKSIZE), attr.getChunkSize(), attr.getTtl());
-        if (attr.getChunkCount() != null)
-            row.putColumn(getColumnName(Columns.CHUNKCOUNT), attr.getChunkCount(), attr.getTtl());
-        if (attr.getObjectSize() != null)
-            row.putColumn(getColumnName(Columns.OBJECTSIZE), attr.getObjectSize(), attr.getTtl());
+        if (objMetaData.getChunkSize() != null)
+            row.putColumn(getColumnName(Columns.CHUNKSIZE), objMetaData.getChunkSize(), objMetaData.getTtl());
+        if (objMetaData.getChunkCount() != null)
+            row.putColumn(getColumnName(Columns.CHUNKCOUNT), objMetaData.getChunkCount(), objMetaData.getTtl());
+        if (objMetaData.getObjectSize() != null)
+            row.putColumn(getColumnName(Columns.OBJECTSIZE), objMetaData.getObjectSize(), objMetaData.getTtl());
+        if (objMetaData.getAttributes() != null)
+            row.putColumn(getColumnName(Columns.ATTRIBUTES), objMetaData.getAttributes(), objMetaData.getTtl());
         m.execute();
     }
 
@@ -143,7 +145,8 @@ public class CassandraChunkedStorageProvider implements ChunkedStorageProvider {
 
         return new ObjectMetadata().setObjectSize(columns.getLongValue(getColumnName(Columns.OBJECTSIZE), null))
                 .setChunkSize(columns.getIntegerValue(getColumnName(Columns.CHUNKSIZE), null))
-                .setChunkCount(columns.getIntegerValue(getColumnName(Columns.CHUNKCOUNT), null));
+                .setChunkCount(columns.getIntegerValue(getColumnName(Columns.CHUNKCOUNT), null))
+                .setAttributes(columns.getStringValue(getColumnName(Columns.ATTRIBUTES), null));
     }
 
     @Override

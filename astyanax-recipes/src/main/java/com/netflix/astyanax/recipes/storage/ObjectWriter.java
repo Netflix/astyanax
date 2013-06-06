@@ -46,6 +46,7 @@ public class ObjectWriter implements Callable<ObjectMetadata> {
     private final InputStream is;
     private int chunkSize;
     private Integer ttl = NO_TTL;
+    private String attributes;
     private int concurrencyLevel = DEFAULT_CONCURRENCY_LEVEL;
     private int maxWaitTimeInSeconds = MAX_WAIT_TIME_TO_FINISH;
     private ObjectWriteCallback callback = new NoOpObjectWriteCallback();
@@ -64,6 +65,16 @@ public class ObjectWriter implements Callable<ObjectMetadata> {
 
     public ObjectWriter withTtl(Integer ttl) {
         this.ttl = ttl;
+        return this;
+    }
+    
+    /**
+     * additional attributes (e.g. MD5 hash of the value) 
+     * that user want to save along with the meta data
+     * @param attributes serialized string (e.g. JSON string)
+     */
+    public ObjectWriter withAttributes(String attributes) {
+        this.attributes = attributes;
         return this;
     }
 
@@ -164,11 +175,15 @@ public class ObjectWriter implements Callable<ObjectMetadata> {
                 }
             }
 
-            ObjectMetadata attr = new ObjectMetadata().setChunkCount(nChunksWritten.get())
-                    .setObjectSize(nBytesWritten.get()).setChunkSize(chunkSize).setTtl(ttl);
-            provider.writeMetadata(objectName, attr);
+            ObjectMetadata objMetaData = new ObjectMetadata()
+                .setChunkCount(nChunksWritten.get())
+                .setObjectSize(nBytesWritten.get())
+                .setChunkSize(chunkSize)
+                .setTtl(ttl)
+                .setAttributes(attributes);
+            provider.writeMetadata(objectName, objMetaData);
             callback.onSuccess();
-            return attr;
+            return objMetaData;
         }
         catch (Exception e) {
             callback.onFailure(e);

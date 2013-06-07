@@ -416,10 +416,11 @@ public class QueueTest {
             // Add a message
             LOG.info(m.toString());
             MessageContext context = queue.produceMessage(m);
+            LOG.info(context.toString());
             Assert.fail("Should have failed uniqueness constraints");
         }
-        catch (Exception e) {
-            LOG.info(e.getMessage());
+        catch (KeyExistsException e) {
+            LOG.info("Key already exists: " + e.getMessage());
         }
         finally {
             Collection<MessageMetadataEntry> metas = queue.metadataDao.getMetadataForKey(key);
@@ -432,6 +433,8 @@ public class QueueTest {
         LOG.info(messages.toString());
         Assert.assertEquals(1, messages.size());
         Assert.assertEquals(1, countSuccessfulMessages(messages));
+        
+        queue.ackMessages(messages);
         
         LOG.info("ShardCounts: " + queue.getShardCounts());
         Assert.assertEquals(0, (int)Iterables.getFirst(queue.getShardCounts().entrySet(), null).getValue());

@@ -1,14 +1,16 @@
 package com.netflix.astyanax.recipes.queue;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import org.codehaus.jackson.JsonGenerationException;
+import org.codehaus.jackson.map.JsonMappingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
@@ -147,7 +149,6 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         private long                            lockTimeout         = DEFAULT_LOCK_TIMEOUT;
         private int                             lockTtl             = DEFAULT_LOCK_TTL;
         private int                             metadataDeleteTTL   = DEFAULT_METADATA_DELETE_TTL;
-        private Collection<MessageQueueHooks>   hooks               = Lists.newArrayList();
         private MessageQueueStats               stats              ;
         private Boolean                         bPoisonQueueEnabled = DEFAULT_POISON_QUEUE_ENABLED;
         private Map<String, Object>             columnFamilySettings = DEFAULT_COLUMN_FAMILY_SETTINGS;
@@ -185,16 +186,6 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
         public Builder withStats(MessageQueueStats stats) {
             this.stats = stats;
-            return this;
-        }
-
-        public Builder withHook(MessageQueueHooks hooks) {
-            this.hooks.add(hooks);
-            return this;
-        }
-
-        public Builder withHooks(Collection<MessageQueueHooks> hooks) {
-            this.hooks.addAll(hooks);
             return this;
         }
 
@@ -260,7 +251,6 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     final long                            lockTimeout;
     final int                             lockTtl;
     final int                             metadataDeleteTTL;
-    final Collection<MessageQueueHooks>   hooks;
     final MessageQueueInfo                queueInfo;
     final Boolean                         bPoisonQueueEnabled;
     final Map<String, Object>             columnFamilySettings;
@@ -279,7 +269,6 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
         this.consistencyLevel     = builder.consistencyLevel;
         this.keyspace             = builder.keyspace;
-        this.hooks                = builder.hooks;
         this.modShardPolicy       = builder.modShardPolicy;
         this.lockTimeout          = builder.lockTimeout;
         this.lockTtl              = builder.lockTtl;
@@ -497,109 +486,106 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 itemsToPop,
                 System.currentTimeMillis(), TimeUnit.MILLISECONDS);
         
+        LOG.info(contexts.toString());
+        
         // Iterate through all message and retrieve any additional information, pop them from the queue
         // and update state
         for (final MessageContext context : contexts) {
             try {
-                // First, 'pop' the event from the queue
-                queueDao.deleteQueueEntry(context.getAckQueueEntry());
-                
                 final Message           message = context.getMessage();
                 final MessageQueueEntry entry   = context.getAckQueueEntry();
                 
+                // First, 'pop' the event from the queue
+                queueDao.deleteQueueEntry(context.getAckQueueEntry());
+                
                 if (message.hasKey() && (message.isCompact() || message.hasTrigger())) {
-                    // Read the message metadata
-                    // TODO:  We may want to make this a lazy operation or at least a bulk option.
-                    final Collection<MessageMetadataEntry> metadata = metadataDao.getMetadataForKey(message.getKey());
-                
-                    MessageMetadataEntry mostRecentMessageId = null;
-                    long mostRecentTriggerTime = 0;
+                    metadataDao.deleteMetadata(MessageMetadataEntry.newMessageId(message.getKey(), entry.getFullMessageId(), queueInfo.getRetentionTimeout()));
                     
-                    for (MessageMetadataEntry metadataEntry : metadata) {
-                        switch (metadataEntry.getMetadataType()) {
-                        case Lock:
-                            break;
-                        case Unique:
-                            break;
-                        case Field:
-                            if ("body".equals(metadataEntry.getName())) {
-                                // TODO:
-                            }
-                            break;
-                        case MessageId:
-                            if (message.hasTrigger()) {
-                                MessageQueueEntry pendingMessageEntry = new MessageQueueEntry(metadataEntry.getName());
-                                if (metadataEntry.getTtl() == 0) {
-                                    long currMessageTriggerTime = pendingMessageEntry.getTimestamp(TimeUnit.MICROSECONDS);
-                                    if (mostRecentMessageId == null) {
-                                        // First message we found, so treat as the most recent
-                                        mostRecentMessageId = metadataEntry;
-                                        mostRecentTriggerTime = currMessageTriggerTime;
-                                    } else {
-                                        MessageMetadataEntry toDelete;
-                                        // This message's trigger time is after what we thought was the most recent.
-                                        // Discard the previous 'most' recent and accept this one instead
-                                        if (currMessageTriggerTime > mostRecentTriggerTime) {
-                                            LOG.warn("Need to discard : " + entry.getMessageId() + " => " + mostRecentMessageId);
-                                            toDelete = mostRecentMessageId.duplicate();
-                                            
-                                            mostRecentTriggerTime = currMessageTriggerTime;
-                                            mostRecentMessageId   = metadataEntry;
-                                        } else {
-                                            LOG.warn("Need to discard : " + entry.getMessageId() + " => " + metadataEntry);
-                                            toDelete = metadataEntry;
-                                        }
-                                        
-                                        toDelete.setTtl(metadataDeleteTTL);
-                                        toDelete.setValue(null);
-                                        metadataDao.deleteMetadata(toDelete);
-                                    }
-                                } 
-                            }
-                            break;
-                        }
-                    }
-                
-                    if (mostRecentMessageId != null) {
-                        if (!mostRecentMessageId.getName().endsWith(entry.getMessageId())) {
-                            throw new DuplicateMessageException(String.format("Duplicate trigger for '%s'", message.getKey()));
-                        }
-                    }
-                
-                    // Update the trigger and assign it to the 'next' message to be executed.
-                    // The next message may be auto enqueued here or once the message is acked.
-                    if (message.hasTrigger()) {
-                        final Message nextMessage;
-                        Trigger trigger = message.getTrigger().nextTrigger();
-                        if (trigger != null) {
-                            nextMessage = message.clone();
-                            nextMessage.setTrigger(trigger);
-                            context.setNextMessage(nextMessage);
-                            if (message.isAutoCommitTrigger() && entry.getState() == MessageQueueEntryState.Waiting) {
-                                MessageQueueEntry queueEntry = MessageQueueEntry.newMessageEntry(
-                                        shardPolicy.getShardKey(nextMessage),
-                                        nextMessage.getPriority(),
-                                        nextMessage.getTrigger().getTriggerTime(),
-                                        MessageQueueEntryState.Waiting, 
-                                        MessageQueueUtils.serializeToString(nextMessage),
-                                        queueInfo.getRetentionTimeout());
-                                
-                                queueDao.writeMessage(new MessageContext(queueEntry, nextMessage));
-                            }
-                        }
-                    }
+                    if (message.isCompact() || message.hasTrigger()) {
+                        // Read the message metadata
+                        // TODO:  We may want to make this a lazy operation or at least a bulk option.
+                        final Collection<MessageMetadataEntry> metadata = metadataDao.getMetadataForKey(message.getKey());
                     
-                    // Message has a key so we remove this item from the messages by key index.
-                    // A timeout item will be added later
-                    if (message.hasKey() && mostRecentMessageId != null) {
-                        mostRecentMessageId.setTtl(metadataDeleteTTL);
-                        mostRecentMessageId.setValue(null);
-                        metadataDao.writeMetadata(mostRecentMessageId);
+                        MessageMetadataEntry mostRecentMessageId = null;
+                        long mostRecentTriggerTime = 0;
                         
-                        LOG.debug(String.format("Removing from key '%s - %s'", mostRecentMessageId.getKey(), mostRecentMessageId.getName()));
+                        for (MessageMetadataEntry metadataEntry : metadata) {
+                            switch (metadataEntry.getMetadataType()) {
+                            case Lock:
+                                break;
+                            case Unique:
+                                break;
+                            case Field:
+                                if ("body".equals(metadataEntry.getName())) {
+                                    // TODO:
+                                }
+                                break;
+                            case MessageId:
+                                if (message.hasTrigger()) {
+                                    MessageQueueEntry pendingMessageEntry = new MessageQueueEntry(metadataEntry.getName());
+                                    if (metadataEntry.getTtl() == 0) {
+                                        long currMessageTriggerTime = pendingMessageEntry.getTimestamp(TimeUnit.MICROSECONDS);
+                                        if (mostRecentMessageId == null) {
+                                            // First message we found, so treat as the most recent
+                                            mostRecentMessageId = metadataEntry;
+                                            mostRecentTriggerTime = currMessageTriggerTime;
+                                        } else {
+                                            MessageMetadataEntry toDelete;
+                                            // This message's trigger time is after what we thought was the most recent.
+                                            // Discard the previous 'most' recent and accept this one instead
+                                            if (currMessageTriggerTime > mostRecentTriggerTime) {
+                                                LOG.warn("Need to discard : " + entry.getMessageId() + " => " + mostRecentMessageId);
+                                                toDelete = mostRecentMessageId.duplicate();
+                                                
+                                                mostRecentTriggerTime = currMessageTriggerTime;
+                                                mostRecentMessageId   = metadataEntry;
+                                            } else {
+                                                LOG.warn("Need to discard : " + entry.getMessageId() + " => " + metadataEntry);
+                                                toDelete = metadataEntry;
+                                            }
+                                            
+                                            toDelete.setTtl(metadataDeleteTTL);
+                                            toDelete.setValue(null);
+                                            metadataDao.deleteMetadata(toDelete);
+                                        }
+                                    } 
+                                }
+                                break;
+                            }
+                        }
+                    
+                        if (mostRecentMessageId != null) {
+                            if (!mostRecentMessageId.getName().endsWith(entry.getMessageId())) {
+                                throw new DuplicateMessageException(String.format("Duplicate trigger for '%s'", message.getKey()));
+                            }
+                        }
+                    
+                        // Update the trigger and assign it to the 'next' message to be executed.
+                        // The next message may be auto enqueued here or once the message is acked.
+                        if (message.hasTrigger()) {
+                            final Message nextMessage;
+                            Trigger trigger = message.getTrigger().nextTrigger();
+                            if (trigger != null) {
+                                nextMessage = message.clone();
+                                nextMessage.setTrigger(trigger);
+                                context.setNextMessage(nextMessage);
+                                if (message.isAutoCommitTrigger() && entry.getState() == MessageQueueEntryState.Waiting) {
+                                    MessageQueueEntry queueEntry = MessageQueueEntry.newMessageEntry(
+                                            shardPolicy.getShardKey(nextMessage),
+                                            nextMessage.getPriority(),
+                                            nextMessage.getTrigger().getTriggerTime(),
+                                            MessageQueueEntryState.Waiting, 
+                                            MessageQueueUtils.serializeToString(nextMessage),
+                                            queueInfo.getRetentionTimeout());
+                                    
+                                    queueDao.writeMessage(new MessageContext(queueEntry, nextMessage));
+                                    metadataDao.writeMetadata(MessageMetadataEntry.newMessageId(message.getKey(), queueEntry.getFullMessageId(), 0));
+                                }
+                            }
+                        }
                         
                         if (message.isKeepHistory()) {
-                            // TODO: Enqueue history
+                            historyDao.writeHistory(new MessageHistoryEntry(message.getKey(), MessageQueueUtils.serializeToString(context.getHistory())));
                         }
                     }
                 }
@@ -661,17 +647,46 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     queueDao.deleteQueueEntry(context.getAckQueueEntry());
                     
                     Message message = context.getMessage();
-                    
-                    if (context.getNextMessage() != null) {
-//                        queueDao.writeMessage(context);
-                    }
-                    
+
+                    // First do some cleanup
                     if (message.hasKey()) {
-                        // Delete the timeout queue entry from the metadata
-                        metadataDao.deleteMetadata(MessageMetadataEntry.newMessageId(message.getKey(), context.getAckQueueEntry().getFullMessageId(), 0));
+                        if (context.getNextMessage() == null) {
+                            if (context.getMessage().isAutoDeleteKey()) {
+                                metadataDao.deleteMessage(message.getKey());
+                            }
+                        }
+                        else {
+                            // Delete the timeout queue entry from the metadata
+                            metadataDao.deleteMetadata(MessageMetadataEntry.newMessageId(message.getKey(), context.getAckQueueEntry().getFullMessageId(), 0));
+                        }
                         
                         if (message.isKeepHistory()) {
-                            
+                            try {
+                                historyDao.writeHistory(new MessageHistoryEntry(message.getKey(), MessageQueueUtils.serializeToString(context.getHistory())));
+                            } catch (Exception e) {
+                                LOG.warn(String.format("Failed to write history for key '%s'", message.getKey()), e);
+                            }
+                        }
+                    }
+                    
+                    // Enqueue the next trigger
+                    if (context.getNextMessage() != null) {
+                        if (!message.isAutoCommitTrigger()) {
+                            MessageQueueEntry queueEntry;
+                            try {
+                                queueEntry = MessageQueueEntry.newMessageEntry(
+                                        shardPolicy.getShardKey(context.getNextMessage()),
+                                        context.getNextMessage().getPriority(),
+                                        context.getNextMessage().getTrigger().getTriggerTime(),
+                                        MessageQueueEntryState.Waiting, 
+                                        MessageQueueUtils.serializeToString(context.getNextMessage()),
+                                        queueInfo.getRetentionTimeout());
+                                queueDao.writeMessage(new MessageContext(queueEntry, context.getNextMessage()));
+                                metadataDao.writeMetadata(MessageMetadataEntry.newMessageId(message.getKey(), queueEntry.getFullMessageId(), 0));
+                            } catch (Exception e) {
+                                // TODO Auto-generated catch block
+                                e.printStackTrace();
+                            }
                         }
                     }
                 }

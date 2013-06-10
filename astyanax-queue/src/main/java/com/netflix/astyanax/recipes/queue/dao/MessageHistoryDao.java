@@ -3,6 +3,7 @@ package com.netflix.astyanax.recipes.queue.dao;
 import java.util.Collection;
 
 import com.netflix.astyanax.recipes.queue.entity.MessageHistoryEntry;
+import com.netflix.astyanax.recipes.queue.exception.MessageQueueException;
 
 public interface MessageHistoryDao {
     /**
@@ -30,7 +31,8 @@ public interface MessageHistoryDao {
      * @param endTime
      * @param count
      * @return
+     * @throws MessageQueueException 
      */
-    Collection<MessageHistoryEntry> readMessageHistory(String key, Long startTime, Long endTime, int count);
+    Collection<MessageHistoryEntry> readMessageHistory(String key, Long startTime, Long endTime, int count) throws MessageQueueException;
 
 }

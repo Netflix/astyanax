@@ -9,5 +9,5 @@ import com.google.common.base.Function;
  *
  */
 public interface MessageHandlerFactory {
-    Function<MessageContext, Boolean> createInstance(String className) throws Exception;
+    Function<ConsumerMessageContext, Boolean> createInstance(String className) throws Exception;
 }

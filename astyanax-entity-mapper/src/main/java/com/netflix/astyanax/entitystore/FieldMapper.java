@@ -7,6 +7,8 @@ import javax.persistence.Column;
 import javax.persistence.OrderBy;
 
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.serializers.PrefixedSerializer;
+import com.netflix.astyanax.serializers.ByteBufferSerializer;
 
 /**
  * Mapper from a field to a ByteBuffer
@@ -26,7 +28,17 @@ public class FieldMapper<T> {
     }
     
     public FieldMapper(final Field field) {
-        this.serializer       = (Serializer<T>) MappingUtils.getSerializerForField(field);
+        this(field, null);
+    }
+    
+    public FieldMapper(final Field field, ByteBuffer prefix) {
+        
+        if (prefix != null) {
+            this.serializer   = new PrefixedSerializer<ByteBuffer, T>(prefix, ByteBufferSerializer.get(), (Serializer<T>) MappingUtils.getSerializerForField(field));
+        }
+        else {
+            this.serializer       = (Serializer<T>) MappingUtils.getSerializerForField(field);
+        }
         this.field            = field;
         
         Column columnAnnotation = field.getAnnotation(Column.class);

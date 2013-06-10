@@ -80,7 +80,6 @@ public class CassandraMessageQueueDao implements MessageQueueDao {
     @Override
     public Collection<MessageContext> readMessages(String shardName, int itemsToPeek, long upToThisTime, TimeUnit timeUnits) throws MessageQueueException {
         try {
-            LOG.info(String.format("Reading messages up to '%d'", upToThisTime));
             Collection<MessageQueueEntry> entries = entityManager.createNativeQuery()
                 .whereId()               .equal(shardName)
                 .whereColumn("type")     .equal((byte)MessageQueueEntryType.Message.ordinal())
@@ -101,11 +100,11 @@ public class CassandraMessageQueueDao implements MessageQueueDao {
         try {
             entry = entityManager.createNativeQuery()
                 .whereId()               .equal(entry.getShardName())
-                .whereColumn("type")     .equal(entry.getType())
-                .whereColumn("priority") .equal(entry.getPriority())
+                .whereColumn("type")     .equal((byte)entry.getType().ordinal())
+                .whereColumn("priority") .equal((byte)entry.getPriority())
                 .whereColumn("timestamp").equal(entry.getTimestamp())
                 .whereColumn("random")   .equal(entry.getRandom())
-                .whereColumn("state")    .equal(entry.getState())
+                .whereColumn("state")    .equal((byte)entry.getState().ordinal())
                 .getSingleResult();
             return convertEntryToContext(entry);
         } catch (Exception e) {
@@ -205,11 +204,13 @@ public class CassandraMessageQueueDao implements MessageQueueDao {
     }
 
     private MessageContext convertEntryToContext(MessageQueueEntry entry) {
-        MessageContext context = new MessageContext(entry, null);
+        MessageContext context;
         try {
-            context.setMessage(entry.getBodyAsMessage());
+            context = new MessageContext(entry, entry.getBodyAsMessage());
         } catch (Exception e) {
-            context.setException(new MessageQueueException("Error parsing message", e));
+            LOG.info("Message : " + entry.getBodyAsString());
+            
+            context = new MessageContext(entry, null).setException(new MessageQueueException("Error parsing message", e));
             // TODO: Delete the message
             LOG.error(e.getMessage(), e);
         }

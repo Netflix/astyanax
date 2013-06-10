@@ -21,6 +21,7 @@ public class Message {
         CompactMessage,
         Unique,
         AutoCommitTrigger,
+        AutoDeleteKey
     }
     
     /**
@@ -172,6 +173,11 @@ public class Message {
         return this;
     }
     
+    public Message setAutoDeleteKey(boolean autoDelete) {
+        options.add(Options.AutoDeleteKey);
+        return this;
+    }
+    
     public Message setCompact(boolean isCompact) {
         options.add(Options.CompactMessage);
         return this;
@@ -179,6 +185,10 @@ public class Message {
     
     public boolean isCompact() {
         return options.contains(Options.CompactMessage);
+    }
+    
+    public boolean isAutoDeleteKey() {
+        return options.contains(Options.AutoDeleteKey);
     }
     
     public boolean hasParameters() {

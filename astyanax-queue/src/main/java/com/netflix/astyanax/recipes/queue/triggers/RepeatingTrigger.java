@@ -106,6 +106,7 @@ public class RepeatingTrigger extends AbstractTrigger {
     		sb.append(", repeatCount=" + repeatCount);
     	if (endTime > 0) 
     		sb.append(", endTime=" + endTime);
+    	sb.append(" count=").append(this.getExecutionCount());
     	sb.append("]");
     	return sb.toString();
     }

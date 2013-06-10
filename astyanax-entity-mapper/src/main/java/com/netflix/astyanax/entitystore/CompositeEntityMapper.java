@@ -47,17 +47,17 @@ public class CompositeEntityMapper<T, K> {
     /**
      * Entity class
      */
-    private final Class<T>              clazz;
+    private final Class<T>          clazz;
     
     /**
      * Default ttl
      */
-    private final Integer               ttl;
+    private final Integer           ttl;
     
     /**
      * TTL supplier method
      */
-    private final Method                ttlMethod;
+    private final Method            ttlMethod;
     
     /**
      * ID Field (same as row key)
@@ -88,16 +88,16 @@ public class CompositeEntityMapper<T, K> {
      * Largest buffer size
      */
     private int                     bufferSize = 64;
-    
 
     /**
      * 
      * @param clazz
+     * @param prefix 
      * @throws IllegalArgumentException 
      *      if clazz is NOT annotated with @Entity
      *      if column name contains illegal char (like dot)
      */
-    public CompositeEntityMapper(Class<T> clazz, Integer ttl) {
+    public CompositeEntityMapper(Class<T> clazz, Integer ttl, ByteBuffer prefix) {
         this.clazz = clazz;
         
         // clazz should be annotated with @Entity
@@ -142,7 +142,7 @@ public class CompositeEntityMapper<T, K> {
             if(idAnnotation != null) {
                 Preconditions.checkArgument(tempIdMapper == null, "there are multiple fields with @Id annotation");
                 field.setAccessible(true);
-                tempIdMapper = new FieldMapper(field);
+                tempIdMapper = new FieldMapper(field, prefix);
             }
             
             // Composite part or the value
@@ -388,7 +388,12 @@ public class CompositeEntityMapper<T, K> {
         // Iterate through components in order while applying predicate to 'start' and 'end'
         for (FieldMapper<?> mapper : components) {
             for (ColumnPredicate p : lookup.get(mapper.getName())) {
-                applyPredicate(mapper, start, end, p);
+                try {
+                    applyPredicate(mapper, start, end, p);
+                }
+                catch (Exception e) {
+                    throw new RuntimeException(String.format("Failed to serialize predicate '%s'", p.toString()), e);
+                }
             }
         }
         

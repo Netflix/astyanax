@@ -3,8 +3,13 @@ package com.netflix.astyanax.recipes.queue.entity;
 import java.util.UUID;
 
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.Id;
 
+import com.netflix.astyanax.entitystore.TTL;
+import com.netflix.astyanax.util.TimeUUIDUtils;
+
+@Entity
 public class MessageHistoryEntry {
     @Id
     private String messageKey;
@@ -13,18 +18,15 @@ public class MessageHistoryEntry {
     private UUID timestamp;
     
     @Column
-    private MessageHistory history;
-    
-    @Column
     private String body;
 
-    public MessageHistoryEntry(String messageKey, UUID timestamp,
-            MessageHistory history, String body) {
+    @TTL
+    private int ttl;
+    
+    public MessageHistoryEntry(String messageKey, String body) {
         super();
         this.messageKey = messageKey;
-        this.timestamp = timestamp;
-        this.history = history;
-        this.body = body;
+        this.timestamp  = TimeUUIDUtils.getUniqueTimeUUIDinMicros();
     }
 
     public String getMessageKey() {
@@ -43,14 +45,6 @@ public class MessageHistoryEntry {
         this.timestamp = timestamp;
     }
 
-    public MessageHistory getHistory() {
-        return history;
-    }
-
-    public void setHistory(MessageHistory history) {
-        this.history = history;
-    }
-
     public String getBody() {
         return body;
     }
@@ -62,6 +56,14 @@ public class MessageHistoryEntry {
     @Override
     public String toString() {
         return "MessageHistoryEntry [messageKey=" + messageKey + ", timestamp="
-                + timestamp + ", history=" + history + ", body=" + body + "]";
+                + timestamp + ", body=" + body + "]";
+    }
+
+    public int getTtl() {
+        return ttl;
+    }
+
+    public void setTtl(int ttl) {
+        this.ttl = ttl;
     }
 }

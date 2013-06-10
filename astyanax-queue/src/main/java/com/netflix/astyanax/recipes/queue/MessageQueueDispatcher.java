@@ -127,7 +127,7 @@ public class MessageQueueDispatcher {
          * @return true to ack the message, false to not ack and cause the message to timeout
          *          Throw an exception to force the message to be added to the poison queue
          */
-        public Builder withCallback(Function<MessageContext, Boolean> callback) {
+        public Builder withCallback(Function<ConsumerMessageContext, Boolean> callback) {
             dispatcher.callback = callback;
             return this;
         }
@@ -152,6 +152,7 @@ public class MessageQueueDispatcher {
     private int             processorThreadCount   = DEFAULT_THREAD_COUNT;
     private int             batchSize     = DEFAULT_BATCH_SIZE;
     private int             consumerCount = DEFAULT_CONSUMER_COUNT;
+    @SuppressWarnings("unused")
     private int             ackSize       = DEFAULT_ACK_SIZE;
     private long            ackInterval   = DEFAULT_ACK_INTERVAL;
     private int             backlogSize   = DEFAULT_BACKLOG_SIZE;
@@ -159,7 +160,7 @@ public class MessageQueueDispatcher {
     private boolean         terminate     = false;
     private MessageQueue    messageQueue;
     private ExecutorService executor;
-    private Function<MessageContext, Boolean>   callback;
+    private Function<ConsumerMessageContext, Boolean>   callback;
     private MessageHandlerFactory handlerFactory;
     private LinkedBlockingQueue<MessageContext> toAck = Queues.newLinkedBlockingQueue();
     private LinkedBlockingQueue<MessageContext> toProcess = Queues.newLinkedBlockingQueue(500);
@@ -291,8 +292,7 @@ public class MessageQueueDispatcher {
                         try {
                             // Message has a specific handler class
                             if (message.getTaskClass() != null) {
-                                @SuppressWarnings("unchecked")
-                                Function<MessageContext, Boolean> task = handlerFactory.createInstance(message.getTaskClass());
+                                Function<ConsumerMessageContext, Boolean> task = handlerFactory.createInstance(message.getTaskClass());
                                 if (task.apply(context)) {
                                     toAck.add(context);
                                 }

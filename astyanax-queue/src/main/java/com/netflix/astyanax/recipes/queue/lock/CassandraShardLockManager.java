@@ -21,13 +21,23 @@ import com.netflix.astyanax.recipes.queue.entity.MessageQueueEntryState;
 import com.netflix.astyanax.recipes.queue.entity.MessageQueueEntryType;
 import com.netflix.astyanax.recipes.queue.exception.MessageQueueException;
 
+/**
+ * Implement a lock using unique column names and a sequence of events.
+ * 
+ * 1.  Write a UUID column with state=lock attempt.  Value=lock timeout
+ * 2.  Read back all columns
+ *      a.  If column timeout > now, discard
+ *      b.  If column 
+ * @author elandau
+ *
+ */
 public class CassandraShardLockManager implements ShardLockManager {
     private static final Logger LOG = LoggerFactory.getLogger(CassandraShardLockManager.class);
     
     private final CompositeEntityManager<MessageQueueEntry, String> entityManager;
 
-    private int  lockTimeout    = 60;
-    private int  lockTtl        = 120;
+    private long  lockTimeout    = TimeUnit.MILLISECONDS.convert(60,  TimeUnit.SECONDS);
+    private int   lockTtl        = 120;
     
     public static class CassandraShardLock implements ShardLock {
         final MessageQueueEntry entry;
@@ -80,49 +90,55 @@ public class CassandraShardLockManager implements ShardLockManager {
         // Try locking first
         try {
             // 1. Write the lock column
-            lockColumn = MessageQueueEntry.newLockEntry(shardName, MessageQueueEntryState.None, lockTimeout);
-            long curTimeMicros = lockColumn.getTimestamp(TimeUnit.MICROSECONDS);
+            lockColumn = MessageQueueEntry.newLockEntry(shardName, MessageQueueEntryState.None, lockTtl);
+            long curTimeMillis = lockColumn.getTimestamp(TimeUnit.MICROSECONDS);
+            lockColumn.setBodyFromLong(curTimeMillis + lockTimeout);
             entityManager.put(lockColumn);
             entityManager.commit();
             
-            // 2. Read back lock columns and entries
-            Collection<MessageQueueEntry> result = getLockColumns(shardName);
-            
+            // No matter how the lock succeeds we always want to delete the temp lock column
             entityManager.remove(lockColumn);
             
-            int lockCount = 0;
+            // 2. Read back lock columns and entries
+            Collection<MessageQueueEntry> locks = getLockColumns(shardName);
+            
             boolean lockAcquired = false;
-            for (MessageQueueEntry entry : result) {
-                LOG.info(entry.toString());
+            for (MessageQueueEntry entry : locks) {
+                // Our lock is the first in the list ordered by time so assume, for now, that we won the race
+                if (entry.equals(lockColumn)) {
+                    lockAcquired = true;
+                }
                 // Stale lock so we can discard it
-//                if (entry.getBodyAsLong() < curTimeMicros) {
-////                    stats.incExpiredLockCount();
-//                    entityManager.remove(entry);
-                if (entry.getState() == MessageQueueEntryState.Acquired) {
-                    throw new BusyLockException("Not first lock");
-                } else {
-                    lockCount++;
-                    if (lockCount == 1 && entry.getTimestamp().equals(lockColumn.getTimestamp())) {
-                        lockAcquired = true;
-                    }
+                else if (entry.getBodyAsLong() > curTimeMillis) {
                 }
-                if (!lockAcquired) {
+                // Someone else already acquired the lock.
+                else if (entry.getState() == MessageQueueEntryState.Acquired) {
+                    throw new BusyLockException("Not first lock");
+                } 
+                // Someone else has an early lock time
+                else if (!lockAcquired) {
                     throw new BusyLockException("Not first lock");
                 }
-                
-                // Write the acquired lock column
-                lockColumn.setBodyFromLong(curTimeMicros + this.lockTimeout);
-                lockColumn.setTtl(this.lockTtl);
-                
-                entityManager.put(lockColumn);
             }
-            shardLock = new CassandraShardLock(lockColumn, result.size());
+            
+            // 3.  'Commit' the lock by changing the state to acquired
+            lockColumn.setState(MessageQueueEntryState.Acquired);
+            entityManager.put(lockColumn);
+            
+            // 4.  Double check that we got the lock
+            locks = getLockColumns(shardName);
+            for (MessageQueueEntry entry : locks) {
+                // There is a lock collision
+                if (entry.getState() == MessageQueueEntryState.Acquired && !entry.equals(lockColumn)) {
+                    entityManager.remove(lockColumn);
+                    throw new BusyLockException("Lock collision");
+                } 
+            }
+
+            shardLock = new CassandraShardLock(lockColumn, locks.size());
             return shardLock;
         } catch (BusyLockException e) {
             throw e;
-        } catch (ConnectionException e) {
-            LOG.error("Error reading shard " + shardName, e);
-            throw new MessageQueueException("Error", e);
         } catch (Exception e) {
             LOG.error("Error reading shard " + shardName, e);
             throw new MessageQueueException("Error", e);

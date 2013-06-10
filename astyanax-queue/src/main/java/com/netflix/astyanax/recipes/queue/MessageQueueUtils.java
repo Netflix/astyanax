@@ -44,7 +44,7 @@ public class MessageQueueUtils {
                 clazz);
     }
 
-    @SuppressWarnings({ "unused", "unchecked" })
+    @SuppressWarnings({ "unchecked" })
     public static  <T> T deserializeString(String data, String className) throws JsonParseException, JsonMappingException, IOException, ClassNotFoundException {
         return (T) mapper.readValue(
                 new ByteArrayInputStream(data.getBytes()),

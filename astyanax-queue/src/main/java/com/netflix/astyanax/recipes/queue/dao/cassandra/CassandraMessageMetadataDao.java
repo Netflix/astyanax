@@ -61,6 +61,7 @@ public class CassandraMessageMetadataDao implements MessageMetadataDao {
                 .withConsistency(consistencyLevel)
                 .withAutoCommit(false)
                 .withEntityType(MessageMetadataEntry.class)
+                .withKeyPrefix(queueInfo.getQueueName() + "$")
                 .build();
 
         sharedEntityManager = CompositeEntityManager.<MessageMetadataEntry, String>builder()
@@ -69,13 +70,13 @@ public class CassandraMessageMetadataDao implements MessageMetadataDao {
                 .withConsistency(consistencyLevel)
                 .withMutationBatchManager(batchManager)
                 .withEntityType(MessageMetadataEntry.class)
+                .withKeyPrefix(queueInfo.getQueueName() + "$")
                 .build();
     }
     
     @Override
     public void createStorage() {
-        // TODO Auto-generated method stub
-        
+        entityManager.createStorage(null);
     }
 
     @Override
@@ -102,26 +103,25 @@ public class CassandraMessageMetadataDao implements MessageMetadataDao {
             if (!context.hasError()) {
                 Message message = context.getMessage();
                 if (message.hasKey()) {
-                    String messageKey = queueInfo.getQueueName() + "$" + message.getKey();
                     if (message.hasUniqueKey()) {
-                        uniqueKeys.put(messageKey, context);
-                        entityManager.put(lockColumn.duplicateForKey(messageKey));
+                        uniqueKeys.put(message.getKey(), context);
+                        entityManager.put(lockColumn.duplicateForKey(message.getKey()));
                     }
                     else {
                         try {
-                            sharedEntityManager.put(lockColumn.duplicateForKey(messageKey));
+                            sharedEntityManager.put(lockColumn.duplicateForKey(message.getKey()));
                             sharedEntityManager.put(MessageMetadataEntry.newField(
-                                    messageKey, 
+                                    message.getKey(), 
                                     BODY_FIELD, 
                                     MessageQueueUtils.serializeToString(context.getMessage()), 
                                     queueInfo.getRetentionTimeout()));
                             sharedEntityManager.put(MessageMetadataEntry.newMessageId(
-                                    messageKey, 
+                                    message.getKey(), 
                                     context.getAckQueueEntry().getFullMessageId(), 
                                     queueInfo.getRetentionTimeout()));
                         } catch (Exception e) {
                             LOG.warn(e.getMessage(), e);
-                            context.setException(new MessageQueueException(String.format("Failed to persist message metadta for '%s'", messageKey), e));
+                            context.setException(new MessageQueueException(String.format("Failed to persist message metadta for '%s'", message.getKey()), e));
                         }
                     }
                 }
@@ -201,7 +201,6 @@ public class CassandraMessageMetadataDao implements MessageMetadataDao {
     
     @Override
     public Collection<MessageMetadataEntry> getMessageIdsForKey(String messageKey) throws MessageQueueException {
-        messageKey = getCanonicalMessageKey(messageKey);
         try {
             return this.entityManager.createNativeQuery()
                     .whereId().equal(messageKey)
@@ -214,7 +213,6 @@ public class CassandraMessageMetadataDao implements MessageMetadataDao {
     
     @Override
     public Collection<MessageMetadataEntry> getMetadataForKey(String messageKey) throws MessageQueueException {
-        messageKey = getCanonicalMessageKey(messageKey);
         try {
             return this.entityManager.createNativeQuery()
                     .whereId().equal(messageKey)
@@ -224,10 +222,6 @@ public class CassandraMessageMetadataDao implements MessageMetadataDao {
         }
     }
     
-    private String getCanonicalMessageKey(String messageKey) {
-        return queueInfo.getQueueName() + "$" + messageKey;
-    }
-
     @Override
     public void deleteMetadata(MessageMetadataEntry toDelete) {
         sharedEntityManager.remove(toDelete);

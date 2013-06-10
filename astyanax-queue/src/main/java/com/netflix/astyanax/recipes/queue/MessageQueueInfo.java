@@ -19,7 +19,7 @@ public class MessageQueueInfo  {
     public static final int           DEFAULT_SHARD_COUNT        = 1;
     public static final Long          DEFAULT_BUCKET_DURATION    = null; 
     public static final int           DEFAULT_BUCKET_COUNT       = 1;
-    public static final Integer       DEFAULT_HISTORY_TTL        = null;
+    public static final int           DEFAULT_HISTORY_TTL        = 0;
     public static final String        DEFAULT_COLUMN_FAMILY_NAME = null;
     
     public static class Builder {
@@ -92,7 +92,7 @@ public class MessageQueueInfo  {
     private int       shardCount        = DEFAULT_SHARD_COUNT;
     
     @Column(name="HISTORY_TTL")
-    private Integer   historyTtl        = DEFAULT_HISTORY_TTL;
+    private int       historyTtl        = DEFAULT_HISTORY_TTL;
     
 //    @Column(name="UNIQUE", unique=true)
 //    private String    unique;
@@ -141,7 +141,7 @@ public class MessageQueueInfo  {
     public void setShardCount(int shardCount) {
         this.shardCount = shardCount;
     }
-    public Integer getHistoryTtl() {
+    public int getHistoryTtl() {
         return historyTtl;
     }
     public void setHistoryTtl(Integer historyTtl) {

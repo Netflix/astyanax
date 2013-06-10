@@ -34,6 +34,7 @@ import com.netflix.astyanax.query.RowSliceQuery;
 import com.netflix.astyanax.recipes.reader.AllRowsReader;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
+import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.util.RangeBuilder;
 
 /**
@@ -72,8 +73,9 @@ public class CompositeEntityManager<T, K> implements EntityManager<T, K> {
         private String                      columnFamilyName    = null;
         private boolean                     autoCommit          = true;
         private MutationBatchManager        batchManager        = null;
-        private boolean                     verbose             = true;
-
+        private boolean                     verbose             = false;
+        private ByteBuffer                  prefix              = null;
+        
         /**
          * mandatory
          * @param clazz entity class type
@@ -180,6 +182,11 @@ public class CompositeEntityManager<T, K> implements EntityManager<T, K> {
             this.autoCommit   = false;
             return this;
         }
+        
+        public Builder<T, K> withKeyPrefix(String prefix) {
+            this.prefix = StringSerializer.get().toByteBuffer(prefix);
+            return this;
+        }
 
         @SuppressWarnings("unchecked")
         public CompositeEntityManager<T, K> build() {
@@ -189,7 +196,7 @@ public class CompositeEntityManager<T, K> implements EntityManager<T, K> {
             
             // TODO: check @Id type compatibility
             // TODO: do we need to require @Entity annotation
-            this.entityMapper     = new CompositeEntityMapper<T,K>(clazz, ttl);
+            this.entityMapper     = new CompositeEntityMapper<T,K>(clazz, ttl, prefix);
             this.lifecycleHandler = new LifecycleEvents<T>(clazz);
 
             if (columnFamily == null) {

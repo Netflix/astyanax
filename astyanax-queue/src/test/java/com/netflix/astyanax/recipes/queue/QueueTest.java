@@ -341,11 +341,10 @@ public class QueueTest {
     }
     
     @Test
-    @Ignore
     public void testRepeatingMessageWithTimeout() throws Exception {
         final CountingQueueStats stats = new CountingQueueStats();
 
-        final String queueName = "testRepeatingMessage";
+        final String queueName = "testRepeatingMessageWithTimeout";
         
         manager.createMessageQueue(MessageQueueInfo.builder().withQueueName(queueName).build());
         
@@ -361,14 +360,17 @@ public class QueueTest {
         final String key = "RepeatingMessageWithTimeout";
         final Message message = new Message()
                 .setUniqueKey(key)
-//                .setTimeout(1, TimeUnit.SECONDS)
+                .setTimeout(1, TimeUnit.SECONDS)
                 .setTrigger(new RepeatingTrigger.Builder()
-                    .withInterval(1, TimeUnit.SECONDS)
+                    .withInterval(3, TimeUnit.SECONDS)
                     .withRepeatCount(5)
                     .build());
 
         queue.produceMessage(message);
 
+        printMessages("Pending messages after insert ORIG message " + key, queue.peekMessagesByKey(key));
+        printMessages("Pending metadata after insert ORIG message " + key, queue.metadataDao.getMessageIdsForKey(key));
+        
         // Make sure it's unique by trying to submit again
         try {
             queue.produceMessage(message);
@@ -378,9 +380,10 @@ public class QueueTest {
         }
 
         // Confirm that the message is there
+        printMessages("Pending messages after dup insert ORIG message " + key, queue.peekMessagesByKey(key));
+        printMessages("Pending metadata after dup insert ORIG message " + key, queue.metadataDao.getMessageIdsForKey(key));
         Assert.assertEquals(1, queue.getMessageCount());
-        printMessages("Pending messages after insert ORIG message", queue.peekMessagesByKey(key));
-        printMessages("Pending messages after insert ORIG message " + key, queue.metadataDao.getMessageIdsForKey(key));
+        Assert.assertEquals(1, queue.metadataDao.getMessageIdsForKey(key).size());
 
         // Consume the message
         LOG.info("*** Reading first message ***");
@@ -389,14 +392,8 @@ public class QueueTest {
         Assert.assertEquals(1, m1.size());
 
         printMessages("Pending messages after consume ORIG " + key, queue.peekMessagesByKey(key));
-        printMessages("Pending messages after consume ORIG " + key, queue.metadataDao.getMessageIdsForKey(key));
+        printMessages("Pending metadata after consume ORIG " + key, queue.metadataDao.getMessageIdsForKey(key));
 
-        // Ack the message
-        queue.ackMessages(m1);
-        
-        printMessages("Pending messages after ack ORIG " + key, queue.peekMessagesByKey(key));
-        printMessages("Pending messages after ack ORIG " + key, queue.metadataDao.getMessageIdsForKey(key));
-        
         // Exceed the timeout
         Thread.sleep(2000);
 
@@ -407,43 +404,40 @@ public class QueueTest {
         Assert.assertEquals(1, m2.size());
 
         printMessages("Pending messages after consume TIMEOUT " + key, queue.peekMessagesByKey(key));
-//        Assert.assertEquals(2, m2a.size());
 
         LOG.info("*** Acking both messages ***");
         queue.ackMessages(m1);
         queue.ackMessages(m2);
 
         printMessages("Pending messages after both acks " + key, queue.peekMessagesByKey(key));
-//        Assert.assertEquals(2, m2a.size());
+        printMessages("Pending metadata after both acks " + key, queue.metadataDao.getMessageIdsForKey(key));
 
-        // Consume anything that is in the queue
-        final Collection<MessageContext> m3 = queue.consumeMessages(10);
-        printMessages("Consuming messages", m3);
-        Assert.assertEquals(1, m3.size());
+        Thread.sleep(3000);
+        
+        for (int i = 0; i < 4; i++) {
+            LOG.info("*** Consuming Next Message " + i + "***");
+            
+            final Collection<MessageContext> m3 = queue.consumeMessages(10);
+            
+            printMessages("Pending messages after consume " + i, queue.peekMessagesByKey(key));
+            printMessages("Pending metadata after consume " + i, queue.metadataDao.getMessageIdsForKey(key));
+            
+            Assert.assertEquals(1, m3.size());
 
-        printMessages("Pending messages after 2nd consume " + key, queue.peekMessagesByKey(key));
-
-        queue.ackMessages(m3);
-
-        Thread.sleep(2000);
-
-        final Collection<MessageContext> m4 = queue.consumeMessages(10);
-        printMessages("Consuming messages", m4);
-        Assert.assertEquals(1, m4.size());
-
-        // There should be only one message
-//        Assert.assertEquals(1, queue.getMessageCount());
-
-        for (int i = 0; i < 10; i++) {
-            final Collection<MessageContext> m5 = queue.consumeMessages(10);
-            Assert.assertEquals(1, m5.size());
-
-            long systemtime = System.currentTimeMillis();
-            MessageContext m = Iterables.getFirst(m5, null);
-            LOG.info("MessageTime: " + (systemtime - m.getMessage().getTrigger().getTriggerTime()));
-            queue.ackMessages(m5);
+            MessageContext m = Iterables.getFirst(m3, null);
+            queue.ackMessages(m3);
+            
+            printMessages("Pending messages after acks    " + i, queue.peekMessagesByKey(key));
+            printMessages("Pending metadata after acks    " + i, queue.metadataDao.getMessageIdsForKey(key));
+            
+            Thread.sleep(3000);
         }
+        
+        Assert.assertEquals(0, queue.getMessageCount());
+        Assert.assertEquals(0, queue.metadataDao.getMessageIdsForKey(key).size());
+
     }
+    
     @Test
     public void testSimpleMessageWithUniqueKey() throws Exception {
         final CountingQueueStats stats = new CountingQueueStats();

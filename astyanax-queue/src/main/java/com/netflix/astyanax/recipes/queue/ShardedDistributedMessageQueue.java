@@ -2,6 +2,7 @@ package com.netflix.astyanax.recipes.queue;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -486,11 +487,11 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 itemsToPop,
                 System.currentTimeMillis(), TimeUnit.MILLISECONDS);
         
-        LOG.info(contexts.toString());
-        
-        // Iterate through all message and retrieve any additional information, pop them from the queue
+        // Iterate through all messages and retrieve any additional information, pop them from the queue
         // and update state
-        for (final MessageContext context : contexts) {
+        Iterator<MessageContext> iter = contexts.iterator();
+        while (iter.hasNext()) {
+            final MessageContext context = iter.next();
             try {
                 final Message           message = context.getMessage();
                 final MessageQueueEntry entry   = context.getAckQueueEntry();
@@ -534,15 +535,15 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                                             // This message's trigger time is after what we thought was the most recent.
                                             // Discard the previous 'most' recent and accept this one instead
                                             if (currMessageTriggerTime > mostRecentTriggerTime) {
-                                                LOG.warn("Need to discard : " + entry.getMessageId() + " => " + mostRecentMessageId);
                                                 toDelete = mostRecentMessageId.duplicate();
                                                 
                                                 mostRecentTriggerTime = currMessageTriggerTime;
                                                 mostRecentMessageId   = metadataEntry;
                                             } else {
-                                                LOG.warn("Need to discard : " + entry.getMessageId() + " => " + metadataEntry);
                                                 toDelete = metadataEntry;
                                             }
+                                            
+                                            LOG.warn("Discarding duplicate trigger : " + entry.getMessageId() + " => " + toDelete);
                                             
                                             toDelete.setTtl(metadataDeleteTTL);
                                             toDelete.setValue(null);
@@ -556,30 +557,30 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     
                         if (mostRecentMessageId != null) {
                             if (!mostRecentMessageId.getName().endsWith(entry.getMessageId())) {
-                                throw new DuplicateMessageException(String.format("Duplicate trigger for '%s'", message.getKey()));
+                                iter.remove();
+                                continue;
                             }
                         }
                     
                         // Update the trigger and assign it to the 'next' message to be executed.
                         // The next message may be auto enqueued here or once the message is acked.
                         if (message.hasTrigger()) {
-                            final Message nextMessage;
                             Trigger trigger = message.getTrigger().nextTrigger();
                             if (trigger != null) {
-                                nextMessage = message.clone();
-                                nextMessage.setTrigger(trigger);
+                                final Message nextMessage = new Message(message, message.getTrigger().nextTrigger());
                                 context.setNextMessage(nextMessage);
-                                if (message.isAutoCommitTrigger() && entry.getState() == MessageQueueEntryState.Waiting) {
+//                                context.setNextTrigger(trigger);
+                                if (nextMessage.isAutoCommitTrigger() && entry.getState() == MessageQueueEntryState.Waiting) {
                                     MessageQueueEntry queueEntry = MessageQueueEntry.newMessageEntry(
                                             shardPolicy.getShardKey(nextMessage),
                                             nextMessage.getPriority(),
-                                            nextMessage.getTrigger().getTriggerTime(),
+                                            trigger.getTriggerTime(),
                                             MessageQueueEntryState.Waiting, 
-                                            MessageQueueUtils.serializeToString(nextMessage),
+                                            null,
                                             queueInfo.getRetentionTimeout());
                                     
                                     queueDao.writeMessage(new MessageContext(queueEntry, nextMessage));
-                                    metadataDao.writeMetadata(MessageMetadataEntry.newMessageId(message.getKey(), queueEntry.getFullMessageId(), 0));
+                                    metadataDao.writeMetadata(MessageMetadataEntry.newMessageId(nextMessage.getKey(), queueEntry.getFullMessageId(), 0));
                                 }
                             }
                         }
@@ -640,7 +641,6 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     @Override
     public void ackMessages(Collection<MessageContext> contexts) throws MessageQueueException {
         try {
-            LOG.info("Acking : " + contexts);
             for (MessageContext context : contexts) {
                 if (context.getAckQueueEntry() != null) {
                     // Delete the timeout queue entry
@@ -650,10 +650,8 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
                     // First do some cleanup
                     if (message.hasKey()) {
-                        if (context.getNextMessage() == null) {
-                            if (context.getMessage().isAutoDeleteKey()) {
-                                metadataDao.deleteMessage(message.getKey());
-                            }
+                        if (context.getNextMessage() == null && context.getMessage().isAutoDeleteKey()) {
+                            metadataDao.deleteMessage(message.getKey());
                         }
                         else {
                             // Delete the timeout queue entry from the metadata
@@ -679,7 +677,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                                         context.getNextMessage().getPriority(),
                                         context.getNextMessage().getTrigger().getTriggerTime(),
                                         MessageQueueEntryState.Waiting, 
-                                        MessageQueueUtils.serializeToString(context.getNextMessage()),
+                                        null,
                                         queueInfo.getRetentionTimeout());
                                 queueDao.writeMessage(new MessageContext(queueEntry, context.getNextMessage()));
                                 metadataDao.writeMetadata(MessageMetadataEntry.newMessageId(message.getKey(), queueEntry.getFullMessageId(), 0));
@@ -689,6 +687,9 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                             }
                         }
                     }
+                }
+                else {
+                    LOG.error("No ack entry");
                 }
             }
         }

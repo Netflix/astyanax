@@ -1,4 +1,4 @@
-package com.netflix.astyanax.thrift;
+package com.netflix.astyanax.recipes.queue;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -48,6 +48,7 @@ import com.netflix.astyanax.recipes.queue.shard.SingleQueueShardPolicy;
 import com.netflix.astyanax.recipes.queue.shard.TimePartitionQueueShardPolicy;
 import com.netflix.astyanax.recipes.queue.shard.TimePartitionedShardReaderPolicy;
 import com.netflix.astyanax.recipes.queue.triggers.RunOnceTrigger;
+import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
 import com.netflix.astyanax.util.TimeUUIDUtils;
 

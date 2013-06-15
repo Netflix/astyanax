@@ -1,4 +1,4 @@
-package com.netflix.astyanax.thrift;
+package com.netflix.astyanax.recipes.queue;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

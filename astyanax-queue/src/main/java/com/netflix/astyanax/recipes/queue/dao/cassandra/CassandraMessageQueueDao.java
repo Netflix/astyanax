@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatchManager;
@@ -106,6 +107,8 @@ public class CassandraMessageQueueDao implements MessageQueueDao {
                 .whereColumn("random")   .equal(entry.getRandom())
                 .whereColumn("state")    .equal((byte)entry.getState().ordinal())
                 .getSingleResult();
+            if (entry == null)
+                return null;
             return convertEntryToContext(entry);
         } catch (Exception e) {
             throw new MessageQueueException(String.format("Failed to laod message '%s'", messageId), e);
@@ -204,6 +207,7 @@ public class CassandraMessageQueueDao implements MessageQueueDao {
     }
 
     private MessageContext convertEntryToContext(MessageQueueEntry entry) {
+        Preconditions.checkNotNull(entry);
         MessageContext context;
         try {
             context = new MessageContext(entry, entry.getBodyAsMessage());

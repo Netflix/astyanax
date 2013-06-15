@@ -2,10 +2,10 @@ package com.netflix.astyanax.recipes.queue;
 
 import org.apache.commons.lang.exception.ExceptionUtils;
 
-import com.google.common.base.Preconditions;
 import com.netflix.astyanax.recipes.queue.entity.MessageHistory;
 import com.netflix.astyanax.recipes.queue.entity.MessageQueueEntry;
 import com.netflix.astyanax.recipes.queue.exception.MessageQueueException;
+import com.netflix.astyanax.recipes.queue.triggers.Trigger;
 
 /**
  * Context of a message being handled by a dispatcher.
@@ -26,6 +26,11 @@ public class MessageContext implements ConsumerMessageContext {
      * TODO:
      */
     protected Message nextMessage;
+    
+    /**
+     * Next trigger to be executed for a repeating event
+     */
+    protected Trigger nextTrigger;
     
     /**
      * MesasgeID used when acking
@@ -94,12 +99,6 @@ public class MessageContext implements ConsumerMessageContext {
         return this;
     }
     
-//    public MessageContext setMessage(Message message) {
-//        Preconditions.checkState(this.message == null, "Once a Message is set on the context it cannot be modified");
-//        this.message = message;
-//        return this;
-//    }
-    
     /**
      * Return true if the was an error processing the message.  The error may be set at any state
      * of consuming the message and is used mostly for bulk operations to ignore subsequent 
@@ -117,8 +116,12 @@ public class MessageContext implements ConsumerMessageContext {
     	sb.append("MessageContext [")
     	  .append(   "ack="       ).append(ackEntry)
     	  .append(", message="    ).append(message)
-    	  .append(", nextMessage=").append(nextMessage)
-    	  .append("]");
+    	  .append(", nextMessage=").append(nextMessage);
+    	  
+    	if (error != null) {
+    	    sb.append(", error=").append(error.getMessage());
+    	}
+    	sb.append("]");
     	
     	return sb.toString();
     }

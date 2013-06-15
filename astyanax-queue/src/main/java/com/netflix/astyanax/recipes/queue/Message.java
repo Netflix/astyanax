@@ -1,6 +1,5 @@
 package com.netflix.astyanax.recipes.queue;
 
-import java.util.EnumSet;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -15,14 +14,6 @@ public class Message {
     private static final byte DEFAULT_PRIORITY        = 0;
     
     private static String PROPERTY_TASK_CLASS_NAME = "_taskclass";
-    
-    public enum Options {
-        KeepHistory,
-        CompactMessage,
-        Unique,
-        AutoCommitTrigger,
-        AutoDeleteKey
-    }
     
     /**
      * Execution time for the task in milliseconds
@@ -52,11 +43,32 @@ public class Message {
     /**
      * Boolean options.  See Options enum above
      */
-    private EnumSet<Options> options = EnumSet.noneOf(Options.class);
+    private boolean keepHistory = false;
+    
+    private boolean isCompactMessage = false;
+    
+    private boolean isUniqueKey = false;
+    
+    private boolean isAutoCommitTrigger = false;
+    
+    private boolean isAutoDeleteKey = false;
     
     public Message() {
     }
     
+    public Message(Message message, Trigger trigger) {
+        this.key                 = message.key;
+        this.keepHistory         = message.keepHistory;
+        this.isCompactMessage    = message.isCompactMessage;
+        this.isUniqueKey         = message.isUniqueKey;
+        this.isAutoCommitTrigger = message.isAutoCommitTrigger;
+        this.isAutoDeleteKey     = message.isAutoDeleteKey;
+        this.parameters          = message.parameters;
+        this.priority            = message.priority;
+        this.trigger             = trigger;
+        this.timeout             = message.timeout;
+    }
+
     public Trigger getTrigger() {
         return trigger;
     }
@@ -133,7 +145,7 @@ public class Message {
     
     public Message setUniqueKey(String key) {
         this.key = key;
-        this.options.add(Options.Unique);
+        this.isUniqueKey = true;
         return this;
     }
     
@@ -142,7 +154,7 @@ public class Message {
     }
 
     public boolean hasUniqueKey() {
-        return this.key != null && options.contains(Options.Unique);
+        return this.key != null && isUniqueKey;
     }
 
     public String getTaskClass() {
@@ -165,53 +177,42 @@ public class Message {
     }
     
     public boolean isKeepHistory() {
-        return options.contains(Options.KeepHistory);
+        return this.keepHistory;
     }
 
     public Message setKeepHistory(boolean isKeepHistory) {
-        options.add(Options.KeepHistory);
+        keepHistory = isKeepHistory;
         return this;
     }
     
     public Message setAutoDeleteKey(boolean autoDelete) {
-        options.add(Options.AutoDeleteKey);
+        this.isAutoDeleteKey = autoDelete;
         return this;
     }
     
     public Message setCompact(boolean isCompact) {
-        options.add(Options.CompactMessage);
+        this.isCompactMessage = isCompact;
         return this;
     }
     
     public boolean isCompact() {
-        return options.contains(Options.CompactMessage);
+        return this.isCompactMessage;
     }
     
     public boolean isAutoDeleteKey() {
-        return options.contains(Options.AutoDeleteKey);
+        return this.isAutoDeleteKey;
     }
     
     public boolean hasParameters() {
         return this.parameters != null && !this.parameters.isEmpty();
     }
-    
-    public Message clone() {
-        Message message     = new Message();
-        message.trigger     = trigger;
-        message.parameters  = parameters;
-        message.priority    = priority;
-        message.timeout     = timeout;
-        message.key         = key;
-        message.options     = options;
-        return message;
-    }
 
     public boolean isAutoCommitTrigger() {
-        return this.options.contains(Options.AutoCommitTrigger);
+        return this.isAutoCommitTrigger;
     }
 
     public Message setAutoCommitTrigger(boolean isAutoCommitTrigger) {
-        this.options.add(Options.AutoCommitTrigger);
+        this.isAutoCommitTrigger = isAutoCommitTrigger;
         return this;
     }
 
@@ -227,7 +228,6 @@ public class Message {
         sb.append(", timeout=" + timeout);
         if (key != null)
             sb.append(", key=" + key);
-        sb.append(", options=" + options);
         
         sb.append("]");
         return sb.toString();

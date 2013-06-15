@@ -171,6 +171,16 @@ public class CompositeEntityManager<T, K> implements EntityManager<T, K> {
         }
         
         /**
+         * If set to true log every action 
+         * @param verbose
+         * @return
+         */
+        public Builder<T, K> withVerboseTracing(boolean verbose) {
+            this.verbose = verbose;
+            return this;
+        }
+        
+        /**
          * Specify a mutation manager to use.  The mutation manager makes it possible to share
          * the same mutation across multiple calls to multiple entity managers and only
          * commit when all the mutations has been created.

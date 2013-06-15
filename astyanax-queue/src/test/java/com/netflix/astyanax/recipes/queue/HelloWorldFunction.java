@@ -1,4 +1,4 @@
-package com.netflix.astyanax.thrift;
+package com.netflix.astyanax.recipes.queue;
 
 
 import com.google.common.base.Function;

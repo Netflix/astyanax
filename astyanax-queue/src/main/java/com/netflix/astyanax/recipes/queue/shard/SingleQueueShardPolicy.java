@@ -20,5 +20,9 @@ public class SingleQueueShardPolicy implements QueueShardPolicy {
     public String getShardKey(Message message) {
         return shardName;
     }
-    
+
+    @Override
+    public void discardShard(String shardName) {
+        throw new IllegalStateException("SingleQueueShardPolicy cannot be discarded");
+    }
 }

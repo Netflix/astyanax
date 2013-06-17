@@ -17,6 +17,13 @@ public interface QueueShardPolicy {
      * @param message
      * @return Return the full shard name for the message.
      */
-    String getShardKey(Message message);
+    public String getShardKey(Message message);
 
+    /**
+     * Notification from the queue shard reader that the last messages of a finalized
+     * shard was read 
+     * 
+     * @param shardName
+     */
+    public void discardShard(String shardName);
 }

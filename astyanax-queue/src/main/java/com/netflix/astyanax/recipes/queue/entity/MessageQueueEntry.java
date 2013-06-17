@@ -128,6 +128,18 @@ public class MessageQueueEntry {
                 ttl);
     }
     
+    public static MessageQueueEntry newFinalizedEntry(String shardName, int ttl) {
+        return new MessageQueueEntry(
+                shardName, 
+                MessageQueueEntryType.Finalized, 
+                (byte)0, 
+                0, 
+                null, 
+                MessageQueueEntryState.None,
+                null,
+                ttl);
+    }
+    
     /**
      * 
      * @param shardName
@@ -298,6 +310,7 @@ public class MessageQueueEntry {
                 break;
             case Message:
                 sb.append(", msglength=").append(this.body.limit());
+                break;
             }
         }
         sb.append("]");

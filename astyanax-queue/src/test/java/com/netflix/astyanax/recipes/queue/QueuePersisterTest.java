@@ -18,7 +18,7 @@ import com.google.common.collect.ImmutableMap;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatchManager;
-import com.netflix.astyanax.SingleMutationBatchManager;
+import com.netflix.astyanax.ThreadLocalMutationBatchManager;
 import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
@@ -142,13 +142,14 @@ public class QueuePersisterTest {
                 .build();
         
         SingleQueueShardPolicy shardPolicy  = new SingleQueueShardPolicy(queueInfo, "fixed");
-        MutationBatchManager   batchManager = new SingleMutationBatchManager(keyspace, ConsistencyLevel.CL_ONE);
+        MutationBatchManager   batchManager = new ThreadLocalMutationBatchManager(keyspace, ConsistencyLevel.CL_ONE);
         MessageQueueDao        dao          = new CassandraMessageQueueDao(
                 keyspace, 
                 batchManager, 
                 ConsistencyLevel.CL_ONE, 
                 queueInfo, 
-                TimePartitionedShardReaderPolicy.Factory.builder().build().create(queueInfo));
+                TimePartitionedShardReaderPolicy.Factory.builder().build().create(queueInfo), 
+                shardPolicy);
         
         dao.createStorage();
         

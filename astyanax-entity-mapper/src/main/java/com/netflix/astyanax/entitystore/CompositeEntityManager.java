@@ -20,7 +20,7 @@ import com.google.common.collect.Maps;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.MutationBatchManager;
-import com.netflix.astyanax.SingleMutationBatchManager;
+import com.netflix.astyanax.ThreadLocalMutationBatchManager;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
@@ -219,7 +219,7 @@ public class CompositeEntityManager<T, K> implements EntityManager<T, K> {
             }
             
             if (batchManager == null) {
-                batchManager = new SingleMutationBatchManager(this.keyspace, this.writeConsistency, this.retryPolicy);
+                batchManager = new ThreadLocalMutationBatchManager(this.keyspace, this.writeConsistency, this.retryPolicy);
             }
             // build object
             return new CompositeEntityManager<T, K>(this);

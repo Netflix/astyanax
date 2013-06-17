@@ -30,4 +30,9 @@ public class TimePartitionQueueShardPolicy implements QueueShardPolicy {
         return queueInfo.getQueueName() + ":" + timePartition + ":" + modShard;
     }
 
+    @Override
+    public void discardShard(String shardName) {
+        throw new IllegalStateException("TimePartitionQueueShard cannot be discarded");
+    }
+
 }

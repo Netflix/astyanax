@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatchManager;
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.entitystore.CompositeEntityManager;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.recipes.locks.BusyLockException;

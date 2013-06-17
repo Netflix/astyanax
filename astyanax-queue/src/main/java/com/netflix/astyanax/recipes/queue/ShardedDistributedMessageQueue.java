@@ -1,14 +1,11 @@
 package com.netflix.astyanax.recipes.queue;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.map.JsonMappingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +18,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatchManager;
-import com.netflix.astyanax.SingleMutationBatchManager;
+import com.netflix.astyanax.ThreadLocalMutationBatchManager;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.recipes.locks.BusyLockException;
@@ -35,7 +32,6 @@ import com.netflix.astyanax.recipes.queue.entity.MessageHistoryEntry;
 import com.netflix.astyanax.recipes.queue.entity.MessageMetadataEntry;
 import com.netflix.astyanax.recipes.queue.entity.MessageQueueEntry;
 import com.netflix.astyanax.recipes.queue.entity.MessageQueueEntryState;
-import com.netflix.astyanax.recipes.queue.exception.DuplicateMessageException;
 import com.netflix.astyanax.recipes.queue.exception.MessageQueueException;
 import com.netflix.astyanax.recipes.queue.lock.CassandraShardLockManager;
 import com.netflix.astyanax.recipes.queue.shard.ModShardPolicy;
@@ -279,7 +275,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         this.metadataDeleteTTL    = builder.metadataDeleteTTL;
         this.stats                = builder.stats;
         this.shardReaderPolicy    = builder.shardReaderPolicyFactory.create(queueInfo);
-        this.batchManager         = new SingleMutationBatchManager(keyspace, consistencyLevel);
+        this.batchManager         = new ThreadLocalMutationBatchManager(keyspace, consistencyLevel);
         this.shardPolicy          = new TimePartitionQueueShardPolicy(modShardPolicy, queueInfo);
         
         if (builder.lockManager != null) 
@@ -287,7 +283,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         else 
             this.lockManager      = new CassandraShardLockManager(keyspace, batchManager, consistencyLevel, queueInfo);
         
-        queueDao    = new CassandraMessageQueueDao   (keyspace, batchManager, consistencyLevel, queueInfo, shardReaderPolicy);
+        queueDao    = new CassandraMessageQueueDao   (keyspace, batchManager, consistencyLevel, queueInfo, shardReaderPolicy, shardPolicy);
         metadataDao = new CassandraMessageMetadataDao(keyspace, batchManager, consistencyLevel, queueInfo);
         historyDao  = new CassandraMessageHistoryDao (keyspace, batchManager, consistencyLevel, queueInfo);
     }

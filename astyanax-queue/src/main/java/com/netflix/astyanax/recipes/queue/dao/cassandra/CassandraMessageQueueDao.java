@@ -23,6 +23,7 @@ import com.netflix.astyanax.recipes.queue.dao.MessageQueueDao;
 import com.netflix.astyanax.recipes.queue.entity.MessageQueueEntry;
 import com.netflix.astyanax.recipes.queue.entity.MessageQueueEntryType;
 import com.netflix.astyanax.recipes.queue.exception.MessageQueueException;
+import com.netflix.astyanax.recipes.queue.shard.QueueShardPolicy;
 import com.netflix.astyanax.recipes.queue.shard.ShardReaderPolicy;
 import com.netflix.astyanax.util.TimeUUIDUtils;
 
@@ -40,21 +41,25 @@ public class CassandraMessageQueueDao implements MessageQueueDao {
     
     private final CompositeEntityManager<MessageQueueEntry, String> entityManager;
     private final ShardReaderPolicy                                 shardReaderPolicy;
+    private final QueueShardPolicy                                  queueShardPolicy;
     
     public CassandraMessageQueueDao(
             Keyspace             keyspace, 
             MutationBatchManager batchManager,
             ConsistencyLevel     consistencyLevel,
             MessageQueueInfo     queueInfo,
-            ShardReaderPolicy    shardReaderPolicy) {
+            ShardReaderPolicy    shardReaderPolicy, 
+            QueueShardPolicy     queueShardPolicy) {
         
         this.shardReaderPolicy = shardReaderPolicy;
+        this.queueShardPolicy  = queueShardPolicy;
         
         this.entityManager     = CompositeEntityManager.<MessageQueueEntry, String>builder()
             .withKeyspace(keyspace)
             .withColumnFamily(queueInfo.getColumnFamilyBase() + MessageQueueConstants.CF_QUEUE_SUFFIX)
             .withMutationBatchManager(batchManager)
             .withEntityType(MessageQueueEntry.class)
+            .withConsistency(consistencyLevel)
             .build();
     }
     
@@ -192,7 +197,7 @@ public class CassandraMessageQueueDao implements MessageQueueDao {
         
         try {
             // TODO:  This will NOT delete the message metadata
-            this.entityManager.delete(shardNames);
+            entityManager.delete(shardNames);
         } catch (Exception e) {
             throw new MessageQueueException("Failed to get counts", e);
         }
@@ -201,7 +206,12 @@ public class CassandraMessageQueueDao implements MessageQueueDao {
     private Collection<MessageContext> convertShardEntityToMessageList(Collection<MessageQueueEntry> entries) {
         Collection<MessageContext> contexts = Lists.newArrayListWithCapacity(entries.size());
         for (MessageQueueEntry entry: entries) {
-            contexts.add(convertEntryToContext(entry));
+            if (entry.getType() == MessageQueueEntryType.Finalized) {
+                queueShardPolicy.discardShard(entry.getShardName());
+            }
+            else {
+                contexts.add(convertEntryToContext(entry));
+            }
         }
         return contexts;
     }
@@ -212,8 +222,6 @@ public class CassandraMessageQueueDao implements MessageQueueDao {
         try {
             context = new MessageContext(entry, entry.getBodyAsMessage());
         } catch (Exception e) {
-            LOG.info("Message : " + entry.getBodyAsString());
-            
             context = new MessageContext(entry, null).setException(new MessageQueueException("Error parsing message", e));
             // TODO: Delete the message
             LOG.error(e.getMessage(), e);

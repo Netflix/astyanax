@@ -229,7 +229,6 @@ public class ThriftClusterImpl implements Cluster {
         final CfDef def;
         try {
             def = ThriftUtils.getThriftObjectFromProperties(CfDef.class, props);
-            System.out.println(def);
         } catch (Exception e) {
             throw new BadRequestException("Error converting properties to CfDef", e);
         }

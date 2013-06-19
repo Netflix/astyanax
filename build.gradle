@@ -93,10 +93,7 @@ project(':astyanax-cassandra') {
     apply plugin: 'osgi'
     apply plugin: 'java'
     dependencies {
-        compile("org.apache.cassandra:cassandra-all:$cassandraVersion") {
-            exclude group: 'org.slf4j', module: 'slf4j-log4j12'
-            exclude group: 'log4j', module: 'log4j'
-        }
+        compile "org.apache.cassandra:cassandra-all:$cassandraVersion"
         compile "org.apache.servicemix.bundles:org.apache.servicemix.bundles.commons-csv:$commonsCsvVersion"
         compile "org.jboss.netty:netty:$nettyVersion"   
         compile  project(':astyanax-core')

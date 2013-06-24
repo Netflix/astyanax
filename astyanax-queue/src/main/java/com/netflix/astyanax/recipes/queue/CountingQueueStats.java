@@ -1,6 +1,5 @@
 package com.netflix.astyanax.recipes.queue;
 
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class CountingQueueStats implements MessageQueueStats {

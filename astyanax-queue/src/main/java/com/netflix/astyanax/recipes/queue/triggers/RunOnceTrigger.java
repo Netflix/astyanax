@@ -20,6 +20,10 @@ public class RunOnceTrigger extends AbstractTrigger {
             return trigger;
         }
     }
+    
+    public static Builder builder() {
+        return new Builder();
+    }
 
     private Long delay;   // In millseconds
     
@@ -27,5 +31,10 @@ public class RunOnceTrigger extends AbstractTrigger {
     public Trigger nextTrigger() {
         // There is no next trigger.
         return null;
+    }
+
+    @Override
+    public boolean isRepeatingTrigger() {
+        return false;
     }
 }

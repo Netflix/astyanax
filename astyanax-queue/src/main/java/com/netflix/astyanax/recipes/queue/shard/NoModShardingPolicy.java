@@ -1,7 +1,7 @@
 package com.netflix.astyanax.recipes.queue.shard;
 
 import com.netflix.astyanax.recipes.queue.Message;
-import com.netflix.astyanax.recipes.queue.MessageQueueMetadata;
+import com.netflix.astyanax.recipes.queue.MessageQueueInfo;
 
 public class NoModShardingPolicy implements ModShardPolicy {
     private static NoModShardingPolicy instance = new NoModShardingPolicy();
@@ -11,7 +11,7 @@ public class NoModShardingPolicy implements ModShardPolicy {
     }
     
     @Override
-    public int getMessageShard(Message message, MessageQueueMetadata settings) {
+    public int getMessageShard(Message message, MessageQueueInfo settings) {
         return 0;
     }
 }

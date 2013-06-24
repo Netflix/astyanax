@@ -41,6 +41,17 @@ public class RepeatingTrigger extends AbstractTrigger {
     private Long repeatCount       ;   // Repeat count
     private long endTime        = 0;
     
+    public RepeatingTrigger() {
+        
+    }
+    
+    public RepeatingTrigger(RepeatingTrigger trigger) {
+        this.delay       = trigger.delay;
+        this.interval    = trigger.interval;
+        this.repeatCount = trigger.repeatCount;
+        this.endTime     = trigger.endTime;
+    }
+    
     @Override
     public Trigger nextTrigger() {
         if (repeatCount != null && getExecutionCount()+1 >= repeatCount) {
@@ -52,10 +63,7 @@ public class RepeatingTrigger extends AbstractTrigger {
         if (endTime != 0 && (nextTime > endTime || currentTime > endTime))
             return null;
         
-        RepeatingTrigger next = new RepeatingTrigger();
-        next.delay        = delay;
-        next.interval     = interval;
-        next.repeatCount  = repeatCount;
+        RepeatingTrigger next = new RepeatingTrigger(this);
         next.setExecutionCount(getExecutionCount() + 1);
         
         // TODO: Handle missed or delayed execution
@@ -106,7 +114,13 @@ public class RepeatingTrigger extends AbstractTrigger {
     		sb.append(", repeatCount=" + repeatCount);
     	if (endTime > 0) 
     		sb.append(", endTime=" + endTime);
+    	sb.append(" count=").append(this.getExecutionCount());
     	sb.append("]");
     	return sb.toString();
+    }
+
+    @Override
+    public boolean isRepeatingTrigger() {
+        return true;
     }
 }

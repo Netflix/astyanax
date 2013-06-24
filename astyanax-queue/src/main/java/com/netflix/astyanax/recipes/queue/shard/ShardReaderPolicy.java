@@ -3,7 +3,7 @@ package com.netflix.astyanax.recipes.queue.shard;
 import java.util.Collection;
 import java.util.Map;
 
-import com.netflix.astyanax.recipes.queue.MessageQueueMetadata;
+import com.netflix.astyanax.recipes.queue.MessageQueueInfo;
 import com.netflix.astyanax.recipes.queue.MessageQueueShard;
 import com.netflix.astyanax.recipes.queue.MessageQueueShardStats;
 
@@ -15,9 +15,9 @@ import com.netflix.astyanax.recipes.queue.MessageQueueShardStats;
  */
 public interface ShardReaderPolicy {
     public static interface Factory {
-        public ShardReaderPolicy create(MessageQueueMetadata metadata);
+        public ShardReaderPolicy create(MessageQueueInfo metadata);
     }
-    
+
     /**
      * Acquire the next shard to be processed.  Must call releaseShard when done reading
      * from the shard
@@ -36,6 +36,11 @@ public interface ShardReaderPolicy {
      * @return List all the shards
      */
     public Collection<MessageQueueShard> listShards();
+    
+    /**
+     * @return List of all shard names
+     */
+    public Collection<String> listShardNames();
     
     /**
      * @return Return map of all shard stats

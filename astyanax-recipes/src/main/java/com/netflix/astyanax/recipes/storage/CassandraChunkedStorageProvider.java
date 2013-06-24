@@ -143,7 +143,8 @@ public class CassandraChunkedStorageProvider implements ChunkedStorageProvider {
             throw new NotFoundException(objectName);
         }
 
-        return new ObjectMetadata().setObjectSize(columns.getLongValue(getColumnName(Columns.OBJECTSIZE), null))
+        return new ObjectMetadata()
+                .setObjectSize(columns.getLongValue(getColumnName(Columns.OBJECTSIZE), null))
                 .setChunkSize(columns.getIntegerValue(getColumnName(Columns.CHUNKSIZE), null))
                 .setChunkCount(columns.getIntegerValue(getColumnName(Columns.CHUNKCOUNT), null))
                 .setAttributes(columns.getStringValue(getColumnName(Columns.ATTRIBUTES), null));

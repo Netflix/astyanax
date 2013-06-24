@@ -1,8 +1,12 @@
 package com.netflix.astyanax.recipes.queue;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import com.netflix.astyanax.recipes.locks.BusyLockException;
+import com.netflix.astyanax.recipes.queue.entity.MessageHistoryEntry;
+import com.netflix.astyanax.recipes.queue.exception.MessageQueueException;
 
 /**
  * Base interface for a distributed message queue.
@@ -29,39 +33,13 @@ public interface MessageQueue {
      * This is an expensive operation and should be used sparingly.
      * @return  Number of messages, including messages currently being processed
      */
-    long getMessageCount() throws MessageQueueException;
+    public long getMessageCount() throws MessageQueueException;
     
     /**
      * Clear all messages in the queue
      * @throws MessageQueueException
      */
-    void clearMessages() throws MessageQueueException;
-    
-    /**
-     * Create the underlying storage
-     * @throws MessageQueueExcewption
-     */
-    void createStorage() throws MessageQueueException;
-    
-    /**
-     * Destroy the storage associated with this column family
-     * @throws MessageQueueException
-     */
-    void dropStorage() throws MessageQueueException;
-    
-    /**
-     * Create any metadata in the storage necessary for the queue
-     * @throws MessageQueueException
-     */
-    void createQueue() throws MessageQueueException;
-
-    /**
-     * Deletes all the rows for this queue.  This will not 
-     * delete any 'key' columns'
-     * 
-     * @throws MessageQueueException
-     */
-    void deleteQueue() throws MessageQueueException;
+    public void clearMessages() throws MessageQueueException;
     
     /**
      * Read a specific message from the queue.  The message isn't modified or removed from the queue.
@@ -70,7 +48,7 @@ public interface MessageQueue {
      * @return
      * @throws MessageQueueException
      */
-    Message peekMessage(String messageId) throws MessageQueueException;
+    public MessageContext peekMessage(String messageId) throws MessageQueueException;
 
     /**
      * Peek into messages from the queue.  The queue state is not altered by this operation.
@@ -78,18 +56,8 @@ public interface MessageQueue {
      * @return
      * @throws MessageQueueException
      */
-    List<Message> peekMessages(int itemsToPeek) throws MessageQueueException;
+    public Collection<MessageContext> peekMessages(int itemsToPeek) throws MessageQueueException;
 
-    /**
-     * Read a specific message from the queue.  The message isn't modified or removed from the queue.
-     * This operation will require a lookup of key to messageId
-     * 
-     * @param message Message id returned from MessageProducer.sendMessage
-     * @return
-     * @throws MessageQueueException
-     */
-    Message peekMessageByKey(String key) throws MessageQueueException;
-    
     /**
      * Return list of pending associated with the key.  
      * 
@@ -97,7 +65,7 @@ public interface MessageQueue {
      * @return
      * @throws MessageQueueException
      */
-    List<Message> peekMessagesByKey(String key) throws MessageQueueException;
+    public Collection<MessageContext> peekMessagesByKey(String key) throws MessageQueueException;
     
     /**
      * Read history for the specified key
@@ -105,14 +73,14 @@ public interface MessageQueue {
      * @return
      * @throws MessageQueueException
      */
-    List<MessageHistory> getKeyHistory(String key, Long startTime, Long endTime, int count) throws MessageQueueException;
+    public Collection<MessageHistoryEntry> getKeyHistory(String key, Long startTime, Long endTime, int count) throws MessageQueueException;
     
     /**
      * Delete a specific message from the queue.  
      * @param message
      * @throws MessageQueueException
      */
-    void deleteMessage(String messageId) throws MessageQueueException;
+    public void deleteMessage(String messageId) throws MessageQueueException;
     
     /**
      * Delete a message using the specified key.  This operation will require a lookup of key to messageId
@@ -121,14 +89,14 @@ public interface MessageQueue {
      * @return true if any items were deleted
      * @throws MessageQueueException
      */
-    boolean deleteMessageByKey(String key) throws MessageQueueException;
+    public boolean deleteMessageByKey(String key) throws MessageQueueException;
     
     /**
      * Delete a set of messages
      * @param messageIds
      * @throws MessageQueueException
      */
-    void deleteMessages(Collection<String> messageIds) throws MessageQueueException;
+    public void deleteMessages(Collection<String> messageIds) throws MessageQueueException;
     
     /**
      * Get the counts for each shard in the queue.  This is an estimate.
@@ -136,7 +104,7 @@ public interface MessageQueue {
      * @return
      * @throws MessageQueueException
      */
-    Map<String, Integer> getShardCounts() throws MessageQueueException;
+    public Map<String, Integer> getShardCounts() throws MessageQueueException;
     
     /**
      * Return a map of shards and their stats for THIS instance of the queue.
@@ -145,26 +113,74 @@ public interface MessageQueue {
      * call getShardCounts();
      * @return
      */
-    Map<String, MessageQueueShardStats> getShardStats();
+    public Map<String, MessageQueueShardStats> getShardStats();
 
-    /**
-     * Create a consumer of the message queue.  The consumer will have it's own context
-     * 
-     * @return
-     * @throws MessageQueueException
-     */
-    MessageConsumer createConsumer();
-
-    /**
-     * Create a producer of messages for this queue.
-     * @return
-     * @throws MessageQueueException
-     */
-    MessageProducer createProducer();
-    
     /**
      * Return the queue's unique name
      * @return
      */
-    String getName();
+    public String getName();
+
+    /**
+     * Pop messages from the queue
+     * @param itemsToPop
+     * @return
+     * @throws MessageQueueException
+     * @throws BusyLockException
+     * @throws InterruptedException
+     */
+    public Collection<MessageContext> consumeMessages(int itemsToPop) throws MessageQueueException, BusyLockException, InterruptedException;
+
+    /**
+     * Read messages from the queue with a given timeout
+     * 
+     * @param itemsToPop
+     * @param timeout
+     * @param units
+     * @return
+     * @throws MessageQueueException
+     * @throws BusyLockException
+     * @throws InterruptedException
+     */
+    public Collection<MessageContext> consumeMessages(int itemsToPop, long timeout, TimeUnit units) throws MessageQueueException, BusyLockException,  InterruptedException;
+
+    /**
+     * Release a job after completion
+     * @param item
+     * @throws Exception 
+     */
+    void ackMessage(MessageContext message) throws MessageQueueException;
+
+    /**
+     * Release a set of jobs
+     * @param items
+     */
+    void ackMessages(Collection<MessageContext> messages) throws MessageQueueException;
+
+    /**
+     * Acknowledge the message as a poison message.  This will put the message into
+     * a poison queue so it is persisted but does not interfere with the active queue.
+     * 
+     * @param message
+     */
+    void ackPoisonMessage(MessageContext message) throws MessageQueueException;
+
+    /**
+     * Schedule a job for execution
+     * 
+     * @param message
+     * @return UUID assigned to this message 
+     * 
+     * @throws MessageQueueException
+     */
+    MessageContext produceMessage(Message message) throws MessageQueueException;
+
+    /**
+     * Schedule a batch of jobs
+     * @param messages
+     * @return Map of messages to their assigned UUIDs
+     * 
+     * @throws MessageQueueException
+     */
+    Collection<MessageContext> produceMessages(Collection<Message> messages) throws MessageQueueException;    
 }

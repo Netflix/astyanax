@@ -47,18 +47,6 @@ subprojects {
     }
 }
 
-project(':astyanax') {
-    dependencies {
-        compile  project(':astyanax-core')
-        compile  project(':astyanax-cassandra')
-        compile  project(':astyanax-thrift')
-        compile  project(':astyanax-queue')
-        compile  project(':astyanax-recipes')
-        compile  project(':astyanax-entity-mapper')
-        compile  project(':astyanax-examples')
-    }
-}
-
 project(':astyanax-core') {
     apply plugin: 'osgi'
     apply plugin: 'java'
@@ -86,6 +74,18 @@ project(':astyanax-queue') {
         compile  project(':astyanax-cassandra')
         compile  project(':astyanax-thrift')
         compile  project(':astyanax-recipes')
+        compile  project(':astyanax-entity-mapper')
+        compile  "javax.persistence:persistence-api:$jpaVersion"
+    }
+}
+
+project(':astyanax-queue-zk') {
+    apply plugin: 'java'
+    dependencies {
+        compile  project(':astyanax-queue')
+        compile "com.netflix.curator:curator-client:$curatorVersion"   
+        compile "com.netflix.curator:curator-framework:$curatorVersion"   
+        compile "com.netflix.curator:curator-recipes:$curatorVersion"   
     }
 }
 

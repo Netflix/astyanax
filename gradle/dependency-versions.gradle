@@ -17,4 +17,5 @@ ext {
  jpaVersion = "1.0"
  nettyVersion = "3.2.4.Final"
  commonsIOVersion = "2.1"
+ curatorVersion = "1.3.3"
 }

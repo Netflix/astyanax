@@ -16,6 +16,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
 import com.netflix.astyanax.recipes.locks.BusyLockException;
+import com.netflix.astyanax.recipes.queue.exception.MessageQueueException;
 
 /**
  * The message queue dispatcher reads message from the message queue
@@ -126,7 +127,7 @@ public class MessageQueueDispatcher {
          * @return true to ack the message, false to not ack and cause the message to timeout
          *          Throw an exception to force the message to be added to the poison queue
          */
-        public Builder withCallback(Function<MessageContext, Boolean> callback) {
+        public Builder withCallback(Function<ConsumerMessageContext, Boolean> callback) {
             dispatcher.callback = callback;
             return this;
         }
@@ -151,6 +152,7 @@ public class MessageQueueDispatcher {
     private int             processorThreadCount   = DEFAULT_THREAD_COUNT;
     private int             batchSize     = DEFAULT_BATCH_SIZE;
     private int             consumerCount = DEFAULT_CONSUMER_COUNT;
+    @SuppressWarnings("unused")
     private int             ackSize       = DEFAULT_ACK_SIZE;
     private long            ackInterval   = DEFAULT_ACK_INTERVAL;
     private int             backlogSize   = DEFAULT_BACKLOG_SIZE;
@@ -158,8 +160,7 @@ public class MessageQueueDispatcher {
     private boolean         terminate     = false;
     private MessageQueue    messageQueue;
     private ExecutorService executor;
-    private MessageConsumer ackConsumer;
-    private Function<MessageContext, Boolean>   callback;
+    private Function<ConsumerMessageContext, Boolean>   callback;
     private MessageHandlerFactory handlerFactory;
     private LinkedBlockingQueue<MessageContext> toAck = Queues.newLinkedBlockingQueue();
     private LinkedBlockingQueue<MessageContext> toProcess = Queues.newLinkedBlockingQueue(500);
@@ -195,8 +196,6 @@ public class MessageQueueDispatcher {
     }
     
     private void startAckThread() {
-        ackConsumer = messageQueue.createConsumer();
-        
         executor.submit(new Runnable() {
             @Override
             public void run() {
@@ -209,7 +208,7 @@ public class MessageQueueDispatcher {
                         toAck.drainTo(messages);
                         if (!messages.isEmpty()) {
                             try {
-                                ackConsumer.ackMessages(messages);
+                                messageQueue.ackMessages(messages);
                             } catch (MessageQueueException e) {
                                 toAck.addAll(messages);
                                 LOG.warn("Failed to ack consumer", e);
@@ -238,14 +237,11 @@ public class MessageQueueDispatcher {
                 String name = StringUtils.join(Lists.newArrayList(messageQueue.getName(), "Consumer", Integer.toString(id)), ":");
                 Thread.currentThread().setName(name);
                 
-                // Create the consumer context
-                final MessageConsumer consumer = messageQueue.createConsumer();
-                
                 while (!terminate) {
                     // Process events in a tight loop, until asked to terminate
                     Collection<MessageContext> messages = null;
                     try {
-                        messages = consumer.readMessages(batchSize);
+                        messages = messageQueue.consumeMessages(batchSize);
                         if (messages.isEmpty()) {
                             Thread.sleep(pollingInterval);
                         }
@@ -296,8 +292,7 @@ public class MessageQueueDispatcher {
                         try {
                             // Message has a specific handler class
                             if (message.getTaskClass() != null) {
-                                @SuppressWarnings("unchecked")
-                                Function<MessageContext, Boolean> task = handlerFactory.createInstance(message.getTaskClass());
+                                Function<ConsumerMessageContext, Boolean> task = handlerFactory.createInstance(message.getTaskClass());
                                 if (task.apply(context)) {
                                     toAck.add(context);
                                 }
@@ -312,7 +307,13 @@ public class MessageQueueDispatcher {
                             }
                         }
                         catch (Throwable t) {
-                            context.setException(t);
+                            MessageQueueException e;
+                            if (t instanceof MessageQueueException) 
+                                e = (MessageQueueException)t;
+                            else
+                                e = new MessageQueueException("Failed to execute message", t);
+                            
+                            context.setException(e);
                             toAck.add(context);
                             LOG.error("Error processing message " + message.getKey(), t);
 //                            try {

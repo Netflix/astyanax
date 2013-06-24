@@ -1,7 +1,9 @@
 package com.netflix.astyanax.recipes.queue.shard;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import com.netflix.astyanax.recipes.queue.Message;
-import com.netflix.astyanax.recipes.queue.MessageQueueMetadata;
+import com.netflix.astyanax.recipes.queue.MessageQueueInfo;
 
 /**
  * Sharding based on time.  This policy assumes that the 
@@ -13,13 +15,14 @@ import com.netflix.astyanax.recipes.queue.MessageQueueMetadata;
  */
 public class TimeModShardPolicy implements ModShardPolicy {
     private static TimeModShardPolicy instance = new TimeModShardPolicy();
+    private static AtomicLong counter = new AtomicLong();
 
     public static ModShardPolicy getInstance() {
         return instance;
     }
     
     @Override
-    public int getMessageShard(Message message, MessageQueueMetadata settings) {
-        return (int) (message.getTokenTime() % settings.getShardCount());
+    public int getMessageShard(Message message, MessageQueueInfo queueInfo) {
+        return (int) ((counter.incrementAndGet()) % queueInfo.getShardCount());
     }
 }

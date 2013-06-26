@@ -1,0 +1,43 @@
+apply plugin: 'java'
+
+repositories {
+    mavenCentral()
+}
+
+def cassandraAllLibName = 'cassandra-all'
+def apiClassesFile = projectDir.path +'/api-classes.lst'
+
+task assembleLib() {
+    doFirst {
+        def cassandraAll
+        configurations.compile.each { File file ->
+            if ( file.name.startsWith(cassandraAllLibName) )
+                cassandraAll = file
+        }
+        if(cassandraAll == null) {
+            throw new ResourceException("Cassandra library file can't be found: "+cassandraAllLibName)
+        }
+
+        FileTree zip = zipTree(cassandraAll.path)
+        def myClasses = [] as Set<String>
+        new File(apiClassesFile).eachLine { l ->
+            myClasses.add(l.replaceAll("\\.", "/") + ".class")
+        }
+        copy {
+            from(zip) {
+                include { FileTreeElement f ->
+                    if(myClasses.contains(f.relativePath.toString()))
+                        return f
+                    return null
+                }
+            }
+            into sourceSets.main.output.classesDir
+        }
+    }
+}
+
+jar.dependsOn assembleLib
+
+dependencies {
+    compile "org.apache.cassandra:cassandra-all:$cassandraVersion"
+}

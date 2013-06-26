@@ -93,7 +93,7 @@ project(':astyanax-cassandra') {
     apply plugin: 'osgi'
     apply plugin: 'java'
     dependencies {
-        compile "org.apache.cassandra:cassandra-all:$cassandraVersion"
+        compile project(':astyanax-cassandra-api')
         compile "org.apache.servicemix.bundles:org.apache.servicemix.bundles.commons-csv:$commonsCsvVersion"
         compile "org.jboss.netty:netty:$nettyVersion"   
         compile  project(':astyanax-core')
@@ -119,6 +119,10 @@ project(':astyanax-entity-mapper') {
         testCompile project(':astyanax-thrift')
         testCompile "junit:junit:$junitVersion"
     }
+}
+
+project(':astyanax-cassandra-api') {
+    apply plugin: 'java'
 }
 
 project(':astyanax-examples') {

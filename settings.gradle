@@ -1,2 +1,3 @@
 rootProject.name='astyanax'
-include 'astyanax-core', 'astyanax-queue', 'astyanax-thrift', 'astyanax-recipes', 'astyanax-cassandra', 'astyanax-entity-mapper', 'astyanax-examples', 'astyanax'
+include 'astyanax-core', 'astyanax-queue', 'astyanax-thrift', 'astyanax-recipes', 'astyanax-cassandra',
+        'astyanax-entity-mapper', 'astyanax-examples', 'astyanax', 'astyanax-cassandra-api'

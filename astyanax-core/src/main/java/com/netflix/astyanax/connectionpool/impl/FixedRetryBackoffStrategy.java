@@ -15,8 +15,16 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.impl;
 
+import com.netflix.astyanax.connectionpool.HostConnectionPool;
 import com.netflix.astyanax.connectionpool.RetryBackoffStrategy;
 
+/**
+ * Impl for {@link RetryBackoffStrategy} that is used to reconnect a {@link HostConnectionPool} when a host is marked as down. 
+ * 
+ * @author elandau 
+ * @see {@link SimpleHostConnectionPool#markAsDown(com.netflix.astyanax.connectionpool.exceptions.ConnectionException)} for details on how this class
+ * could be referenced (if needed)
+ */
 public class FixedRetryBackoffStrategy implements RetryBackoffStrategy {
     private final int interval;
     private final int suspendTime;

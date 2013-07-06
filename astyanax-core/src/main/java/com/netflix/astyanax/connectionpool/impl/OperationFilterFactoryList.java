@@ -6,6 +6,11 @@ import com.google.common.collect.Lists;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.OperationFilterFactory;
 
+/**
+ * Uses the decorator pattern to maintain a list of {@link OperationFilterFactory} for the specified {@link Operation}
+ * @author elandau
+ *
+ */
 public class OperationFilterFactoryList implements OperationFilterFactory {
 
     private final List<OperationFilterFactory> filters = Lists.newArrayList();

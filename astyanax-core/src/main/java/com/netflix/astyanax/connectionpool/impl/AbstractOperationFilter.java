@@ -7,6 +7,16 @@ import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 
+/**
+ * 
+ * Class that wraps an {@link Operation} to provide extra functionality. It can be used by extending class to wrap operation executions
+ * and then decorate the execute functionality with their own logic 
+ * 
+ * @author elandau
+ *
+ * @param <CL>
+ * @param <R>
+ */
 public class AbstractOperationFilter<CL, R> implements Operation<CL, R>{
 
     private Operation<CL, R> next;

@@ -10,6 +10,24 @@ import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.NoAvailableHostsException;
 
+/**
+ * Class that extends {@link AbstractExecuteWithFailoverImpl} to provide functionality for borrowing a {@link Connection} from a list of {@link HostConnectionPool}(s)
+ * in a round robin fashion. <br/> <br/>
+ * 
+ * It maintains state of the current and next pool to be used by a revolving index over the list of pools, hence round robin.
+ * It also maintains state of how many retries have been done for this instance and consults the 
+ * {@link ConnectionPoolConfiguration#getMaxFailoverCount()} threshold.
+ *  
+ * @author elandau
+ *
+ * @param <CL>
+ * @param <R>
+ * 
+ * @see {@link AbstractExecuteWithFailoverImpl} for details on how failover is repeatedly called for ensuring that an {@link Operation} can be executed with resiliency.
+ * @see {@link RoundRobinConnectionPoolImpl} for the impl that references this class. 
+ * @see {@link AbstractHostPartitionConnectionPool} for more context on how failover functionality is used within the context of an operation execution 
+ * 
+ */
 public class RoundRobinExecuteWithFailover<CL, R> extends AbstractExecuteWithFailoverImpl<CL, R> {
     private int index;
     protected HostConnectionPool<CL> pool;

@@ -23,7 +23,14 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Connection pool implementation using simple round robin.
+ * Connection pool implementation using simple round robin. <br/> <br/>
+ * It maintains a rotating index over a collection of {@link HostConnectionPool}(s) maintained using a {@link Topology} that reflects the given 
+ * partitioned set of pools. Note that the impl uses the <b>pinned host</b> on the operation if it finds one. If there is none, then it uses 
+ * all the host connection pools in the topology.
+ * 
+ * @see {@link RoundRobinExecuteWithFailover} for more details on how failover works with round robin connections.
+ * @see {@link Topology} for details on where the collection of {@link HostConnectionPool}(s) are maintained. 
+ * @see {@link AbstractHostPartitionConnectionPool} for the base impl of {@link ConnectionPool}
  * 
  * @author elandau
  * 

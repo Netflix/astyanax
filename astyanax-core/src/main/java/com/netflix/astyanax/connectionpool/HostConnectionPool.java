@@ -16,10 +16,34 @@
 package com.netflix.astyanax.connectionpool;
 
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.connectionpool.impl.SimpleHostConnectionPool;
 
 /**
- * Pool of connections for a single host
+ * Interface for a pool of {@link Connection}(s) for a single {@link Host}
  * 
+ * The interface prescribes certain key features required by clients of this class, such as 
+ *      <ol>
+ *      <li> Basic connection pool life cycle management such as prime connections (init) and shutdown </li> <br/>
+ *      
+ *      <li> Basic {@link Connection} life cycle management such as borrow / return / close / markAsDown </li> <br/>
+ *      
+ *      <li> Tracking the {@link Host} associated with the connection pool. </li> <br/>
+ *      
+ *      <li> Visibility into the status of the connection pool and it's connections.
+ *         <ol>
+ *         <li>  Tracking status of pool -  isConnecting / isActive  / isShutdown  </li>
+ *         <li>  Tracking basic counters for connections - active / pending / blocked / idle / busy / closed etc </li>
+ *         <li>  Tracking latency scores for connections to this host.  </li>
+ *         <li>  Tracking failures for connections to this host. </li>
+ *         </ol> 
+ *     </ol>
+ *     
+ * This class is intended to be used within a collection of {@link HostConnectionPool} tracked by a
+ * {@link ConnectionPool} for all the {@link Host}(s) within a cassandra cluster. 
+ * 
+ * @see {@link SimpleHostConnectionPool} for sample implementations of this class. 
+ * @see {@link ConnectionPool} for references to this class. 
+ *  
  * @author elandau
  * 
  * @param <CL>

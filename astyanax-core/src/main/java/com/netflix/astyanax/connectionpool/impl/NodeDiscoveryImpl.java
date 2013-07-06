@@ -32,11 +32,13 @@ import com.netflix.astyanax.connectionpool.NodeDiscovery;
 
 /**
  * Re-discover the ring on a fixed interval to identify new nodes or changes to
- * the ring tokens.
+ * the ring tokens. <br/> <br/>
  * 
+ * The class is started by the AstyanaxContext and uses a thread within an executor to repeatedly update the list of hosts required by a {@link ConnectionPool} using 
+ * {@link ConnectionPool#setHosts(java.util.Collection)}. Note that the host source / supplier is passed in as an argument. 
  * @author elandau
  * 
- * @param <CL>
+ * @param <CL> 
  */
 public class NodeDiscoveryImpl implements NodeDiscovery {
     private final ConnectionPool<?> connectionPool;

@@ -38,6 +38,12 @@ import com.netflix.astyanax.shallows.EmptyBadHostDetectorImpl;
 import com.netflix.astyanax.shallows.EmptyLatencyScoreStrategyImpl;
 import com.netflix.astyanax.shallows.EmptyOperationFilterFactory;
 
+/**
+ * 
+ * Basic impl for {@link ConnectionPoolConfiguration} that uses a bunch of defaults for al the connection pool config. 
+ * 
+ * @author elandau
+ */
 public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfiguration {
     /**
      * Default values

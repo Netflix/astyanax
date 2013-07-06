@@ -15,6 +15,15 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.impl;
 
+import com.netflix.astyanax.connectionpool.ConnectionPool;
+
+/**
+ * This is referenced from the AstyanaxContext.Builder class for instantiating the right {@link ConnectionPool}
+ * @author elandau
+ * 
+ * @see {@link RoundRobinConnectionPoolImpl} {@link BagOfConnectionsConnectionPoolImpl} {@link TokenAwareConnectionPoolImpl} for different pool impls 
+ * that correspond to this enum.
+ */
 public enum ConnectionPoolType {
     TOKEN_AWARE, ROUND_ROBIN, BAG
 }

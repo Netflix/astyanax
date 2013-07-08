@@ -14,6 +14,14 @@ import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.JmxConnectionPoolMonitor;
 import com.netflix.astyanax.connectionpool.JmxConnectionPoolMonitorMBean;
 
+/**
+ * Simple jmx bean manager. 
+ * 
+ * @see {@link JmxConnectionPoolMonitorMBean} {@link JmxConnectionPoolMonitor} 
+
+ * @author elandau
+ *
+ */
 public class ConnectionPoolMBeanManager {
     private static Logger LOG = LoggerFactory.getLogger(ConnectionPoolMBeanManager.class);
 

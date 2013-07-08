@@ -12,6 +12,18 @@ import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.NoAvailableHostsException;
 
+/**
+ * Finds the {@link HostConnectionPool} with the max idle connections when borrowing a connection from the pool. 
+ * This execute with failover impl is used within the {@link TokenAwareConnectionPoolImpl} class depending on the configured 
+ * {@link HostSelectorStrategy}
+ *  
+ * @author elandau
+ *
+ * @param <CL>
+ * @param <R>
+ * 
+ * @see {@link TokenAwareConnectionPoolImpl#executeWithFailover(Operation, com.netflix.astyanax.retry.RetryPolicy)} for details on where this class is referenced
+ */
 public class LeastOutstandingExecuteWithFailover<CL, R> extends AbstractExecuteWithFailoverImpl<CL, R> {
     protected HostConnectionPool<CL> pool;
     private int retryCountdown;

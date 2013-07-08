@@ -46,11 +46,37 @@ import com.netflix.astyanax.retry.RetryPolicy;
 
 /**
  * Base for all connection pools that keep a separate pool of connections for
- * each host.
+ * each host. <br/> <br/>
+ * 
+ * <p>
+ * <b> Set of host connection pools </b>  <br/>
+ * The class maintains the set of all {@link HostConnectionPool}s for all hosts in the token ring using a non blocking hashmap and a {@link Topology} 
+ * The hashmap tracks the basic set of hosts and their corresponding connection pools. The topology is used to track the internal state of the token ring
+ * for the cassandra cluster. <br/>
+ * The class uses these 2 structures to determine whether there has been a change to the system when a host joins or leaves the ring, 
+ * or even if an existing host just receives an update for the token ring partition that it owns. Hence the class can actively rebuild all the partitions
+ * associated with each as and when there is a change.  <br/>
+ * 
+ * See {@link #addHost(Host, boolean)} {@link #removeHost(Host, boolean)} {@link #setHosts(Collection)} for host changes and the corresponding trigger to {@link #rebuildPartitions()}
+ * when this happens.  <br/>
+ * 
+ * Note that when the connection pool is started it fetches the list of seed hosts from config (if any) and then inits it's data structures using these seed hosts. <br/>
+ * It also employs a listener to the latency score updates so  that it can rebuild partitions as and when it receives updates 
+ * </p>
+ * 
+ * <p>
+ * <b> Execute with failover </b> <br/>
+ * 
+ * The class also provides a basic implementation of {@link #executeWithFailover(Operation, RetryPolicy)} by repeatedly consulting the {@link RetryPolicy}. Note that extending classes 
+ * must provide impl for the actual execute with failover. e.g  the {@link RoundRobinConnectionPoolImpl} fails over to the next {@link HostConnectionPool} in the list. 
+ * </p>
  * 
  * @author elandau
  * 
  * @param <CL>  
+ * 
+ * @see {@link RoundRobinConnectionPoolImpl}  {@link BagOfConnectionsConnectionPoolImpl} {@link TokenAwareConnectionPoolImpl} for details on impls that extend this class
+ * @see {@link TokenPartitionedTopology} for how the internal topology structure is maintained across the set of hosts
  */
 public abstract class AbstractHostPartitionConnectionPool<CL> implements ConnectionPool<CL>,
         SimpleHostConnectionPool.Listener<CL> {
@@ -61,6 +87,11 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
     protected final Topology<CL>                                     topology;
     protected final Partitioner                                      partitioner;
 
+    /**
+     * @param config
+     * @param factory
+     * @param monitor
+     */
     public AbstractHostPartitionConnectionPool(ConnectionPoolConfiguration config, ConnectionFactory<CL> factory,
             ConnectionPoolMonitor monitor) {
         this.config     = config;
@@ -71,6 +102,9 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
         this.partitioner = config.getPartitioner();
     }
 
+    /**
+     * Starts the conn pool and resources associated with it
+     */
     @Override
     public void start() {
         ConnectionPoolMBeanManager.getInstance().registerMonitor(config.getName(), this);
@@ -93,6 +127,9 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
         });
     }
 
+    /**
+     * Clean up resources associated with the conn pool
+     */
     @Override
     public void shutdown() {
         ConnectionPoolMBeanManager.getInstance().unregisterMonitor(config.getName(), this);
@@ -110,11 +147,19 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
         return new SimpleHostConnectionPool<CL>(host, factory, monitor, config, this);
     }
 
+    /**
+     * Host is marked as down
+     * @param pool
+     */
     @Override
     public void onHostDown(HostConnectionPool<CL> pool) {
         topology.suspendPool(pool);
     }
 
+    /**
+     * Host is marked as up
+     * @param pool
+     */
     @Override
     public void onHostUp(HostConnectionPool<CL> pool) {
         topology.resumePool(pool);
@@ -127,6 +172,11 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
         }
     };
 
+    /**
+     * Add host to the system. May need to rebuild the partition map of the system
+     * @param host
+     * @param refresh
+     */
     @Override
     public final synchronized boolean addHost(Host host, boolean refresh) {
         // Already exists
@@ -175,6 +225,10 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
         }
     }
 
+    
+    /**
+     * @return boolean
+     */
     @Override
     public boolean isHostUp(Host host) {
         HostConnectionPool<CL> pool = hosts.get(host);
@@ -184,21 +238,36 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
         return false;
     }
 
+    /**
+     * @return boolean
+     */
     @Override
     public boolean hasHost(Host host) {
         return hosts.containsKey(host);
     }
 
+    /**
+     * list of all active pools
+     * @return {@link List<HostConnectionPool>}
+     */
     @Override
     public List<HostConnectionPool<CL>> getActivePools() {
         return ImmutableList.copyOf(topology.getAllPools().getPools());
     }
 
+    /**
+     * @return {@link List<HostConnectionPool>}
+     */
     @Override
     public List<HostConnectionPool<CL>> getPools() {
         return ImmutableList.copyOf(hosts.values());
     }
 
+    /**
+     * Remove host from the system. Shuts down pool associated with the host and rebuilds partition map
+     * @param host
+     * @param refresh
+     */
     @Override
     public synchronized boolean removeHost(Host host, boolean refresh) {
         HostConnectionPool<CL> pool = hosts.remove(host);
@@ -214,11 +283,18 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
         }
     }
 
+    /**
+     * @param host
+     * @return {@link HostConnectionPool}
+     */
     @Override
     public HostConnectionPool<CL> getHostPool(Host host) {
         return hosts.get(host);
     }
 
+    /**
+     * @param ring
+     */
     @Override
     public synchronized void setHosts(Collection<Host> ring) {
         
@@ -246,6 +322,12 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
         }
     }
     
+    /**
+     * Executes the operation using failover and retry strategy
+     * @param op
+     * @param retry
+     * @return {@link OperationResult}
+     */
     @Override
     public <R> OperationResult<R> executeWithFailover(Operation<CL, R> op, RetryPolicy retry)
             throws ConnectionException {
@@ -287,10 +369,16 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
         topology.refresh();
     }
     
+    /**
+     * @return {@link Topology}
+     */
     public Topology<CL> getTopology() {
         return topology;
     }
     
+    /**
+     * @return {@link Partitioner}
+     */
     public Partitioner getPartitioner() {
         return this.partitioner;
     }

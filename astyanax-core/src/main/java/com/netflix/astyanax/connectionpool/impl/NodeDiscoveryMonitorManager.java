@@ -11,6 +11,11 @@ import com.netflix.astyanax.connectionpool.NodeDiscovery;
 import com.netflix.astyanax.connectionpool.NodeDiscoveryMonitor;
 import com.netflix.astyanax.connectionpool.NodeDiscoveryMonitorMBean;
 
+/**
+ * Jmx bean monitor manager for {@link NodeDiscoveryMonitor}
+ * @author elandau
+ *
+ */
 public class NodeDiscoveryMonitorManager {
     private MBeanServer mbs;
 

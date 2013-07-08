@@ -20,6 +20,14 @@ import java.util.concurrent.TimeUnit;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.OperationResult;
 
+/**
+ * Impl for {@link OperationResult} 
+ * Tracks operation attempts, operation pinned host and latency associated with the operation. 
+ * 
+ * @author elandau
+ *
+ * @param <R>
+ */
 public class OperationResultImpl<R> implements OperationResult<R> {
 
     private final Host host;

@@ -15,6 +15,13 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.impl;
 
+/**
+ * See {@link TokenAwareConnectionPoolImpl#executeWithFailover(com.netflix.astyanax.connectionpool.Operation, com.netflix.astyanax.retry.RetryPolicy)}
+ * for details on how the strategy is consulted when executing an operation with a specific operation failover strategy.
+ *  
+ * @author elandau
+ *
+ */
 public enum HostSelectorStrategy {
     ROUND_ROBIN, LEAST_OUTSTANDING
 }

@@ -104,13 +104,13 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
         Collections.sort(this.components);
     }
 
-	private List<Field> getFields(Class clazz, boolean recursuvely) {
+	private List<Field> getFields(Class clazz, boolean recursively) {
 		List<Field> allFields = new ArrayList<Field>();
 		if (clazz.getDeclaredFields() != null && clazz.getDeclaredFields().length > 0) {
 			allFields.addAll(Arrays.asList(clazz.getDeclaredFields()));
-			if (recursuvely && clazz.getSuperclass() != null) {
-				allFields.addAll(getFields(clazz.getSuperclass(), true));
-			}
+		}
+		if (recursively && clazz.getSuperclass() != null && !clazz.getSuperClass().equals(Object.class)) {
+			allFields.addAll(getFields(clazz.getSuperclass(), true));
 		}
 		return allFields;
 	}

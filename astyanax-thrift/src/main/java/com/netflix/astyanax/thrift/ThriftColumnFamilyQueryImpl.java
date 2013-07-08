@@ -221,6 +221,14 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                                             predicate.getSlice_range().setStart(last.getColumn().getName());
                                         } else if (last.isSetCounter_column()) {
                                             predicate.getSlice_range().setStart(last.getCounter_column().getName());
+                                        } else if (last.isSetSuper_column()) {
+                                            // TODO: Super columns
+                                            // should be deprecated
+                                            predicate.getSlice_range().setStart(last.getSuper_column().getName());
+                                        } else if (last.isSetCounter_super_column()) {
+                                            // TODO: Super columns
+                                            // should be deprecated
+                                            predicate.getSlice_range().setStart(last.getCounter_super_column().getName());
                                         }
                                     }
                                 }

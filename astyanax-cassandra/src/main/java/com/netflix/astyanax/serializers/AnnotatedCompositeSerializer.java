@@ -109,7 +109,7 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
 		if (clazz.getDeclaredFields() != null && clazz.getDeclaredFields().length > 0) {
 			allFields.addAll(Arrays.asList(clazz.getDeclaredFields()));
 		}
-		if (recursively && clazz.getSuperclass() != null && !clazz.getSuperClass().equals(Object.class)) {
+		if (recursively && clazz.getSuperclass() != null && !clazz.getSuperclass().equals(Object.class)) {
 			allFields.addAll(getFields(clazz.getSuperclass(), true));
 		}
 		return allFields;

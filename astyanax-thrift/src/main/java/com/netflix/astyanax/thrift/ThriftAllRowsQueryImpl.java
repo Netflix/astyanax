@@ -94,7 +94,6 @@ public class ThriftAllRowsQueryImpl<K, C> implements AllRowsQuery<K, C> {
                         }, query.retry).getResult();
             }
             catch (ConnectionException e) {
-                e.printStackTrace();
                 // Let exception callback handle this exception. If it
                 // returns false then
                 // we return an empty result which the iterator's

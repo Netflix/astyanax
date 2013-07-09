@@ -2,6 +2,7 @@ package com.netflix.astyanax.entitystore;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.model.Equality;
@@ -21,7 +22,7 @@ public abstract class NativeQuery<T, K> {
     protected List<K>                 ids = Lists.newArrayList();
     protected Collection<Object>      columnNames;
     protected List<ColumnPredicate>   predicates;
-    protected Integer                 columnLimit = null;
+    protected int                     columnLimit = Integer.MAX_VALUE;
     
     /**
      * Refine query for row key
@@ -119,4 +120,22 @@ public abstract class NativeQuery<T, K> {
      * @throws Exception
      */
     public abstract Collection<T> getResultSet() throws Exception;
+    
+    /**
+     * Get the result set as a mapping of the id field to a collection of entities. This
+     * is useful for a multi-get scenario where it is desirable to group all the 'entities'
+     * within a row.
+     * 
+     * @return
+     * @throws Exception
+     */
+    public abstract Map<K, Collection<T>> getResultSetById() throws Exception;
+
+    /**
+     * Get the column count for each id in the query without sending data back
+     * to the client.
+     * @return
+     * @throws Excerption
+     */
+    public abstract Map<K, Integer> getResultSetCounts() throws Exception;
 }

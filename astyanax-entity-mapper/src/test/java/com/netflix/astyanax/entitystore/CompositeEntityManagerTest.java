@@ -42,73 +42,27 @@ public class CompositeEntityManagerTest {
     @Entity
     public static class TestEntity {
         public TestEntity() {
-            
         }
         
-        public TestEntity(String rowKey, List<TestEntityChild> children) {
-            super();
-            this.rowKey   = rowKey;
-            this.children = children;
-        }
-
-        @Id     
-        private String rowKey;      // This will be the row key
-        
-        @OneToMany
-        private List<TestEntityChild> children;
-
-        public TestEntity addChild(TestEntityChild entity) {
-            if (children == null)
-                children = Lists.newArrayList();
-            children.add(entity);
-            return this;
-        }
-        
-        public String getRowKey() {
-            return rowKey;
-        }
-
-        public TestEntity setRowKey(String rowKey) {
-            this.rowKey = rowKey;
-            return this;
-        }
-
-        public List<TestEntityChild> getChildren() {
-            return children;
-        }
-
-        public TestEntity setChildren(List<TestEntityChild> children) {
-            this.children = children;
-            return this;
-        }
-
-        @Override
-        public String toString() {
-            return "TestEntity [rowKey=" + rowKey + ", children=" + children
-                    + "]";
-        }
-        
-    }
-    
-    @Entity
-    public static class TestEntityChild {
-        public TestEntityChild() {
-        }
-        
-        public TestEntityChild(String part1, Long part2, Long value) {
+        public TestEntity(String rowKey, String part1, Long part2, Long value) {
             super();
             this.part1 = part1;
             this.part2 = part2;
             this.value = value;
+            this.rowKey = rowKey;
         }
-
+        
+        @Id     String rowKey;      // This will be the row key
         @Column String part1;       // This will be the first part of the composite
         @Column Long   part2;       // This will be the second part of the composite
         @Column Long   value;       // This will be the value of the composite
         
         @Override
         public String toString() {
-            return "TestEntityChild [part1=" + part1 + ", part2=" + part2
+            return "TestEntityChild ["
+                    +   "key="   + rowKey 
+                    + ", part1=" + part1 
+                    + ", part2=" + part2
                     + ", value=" + value + "]";
         }
     }
@@ -178,21 +132,26 @@ public class CompositeEntityManagerTest {
         
         manager = CompositeEntityManager.<TestEntity, String>builder()
                     .withKeyspace(keyspace)
-                    .withColumnFamily("TestEntity")
+                    .withColumnFamily("testentity")
                     .withEntityType(TestEntity.class)
+                    .withVerboseTracing(true)
                     .build();
         
         manager.createStorage(null);
 
-        List<TestEntityChild> children = Lists.newArrayList();
+        List<TestEntity> children = Lists.newArrayList();
         
         for (long i = 0; i < 10; i++) {
-            children.add(new TestEntityChild("a", i, i*i));
-            children.add(new TestEntityChild("b", i, i*i));
+            children.add(new TestEntity("A", "a", i, i*i));
+            children.add(new TestEntity("A", "b", i, i*i));
+            children.add(new TestEntity("B", "a", i, i*i));
+            children.add(new TestEntity("B", "b", i, i*i));
         }
         
-        manager.put(new TestEntity("A", children));
-        manager.put(new TestEntity("B", children));
+        manager.put(children);
+        
+        // Read back all rows and log
+        logResultSet(manager.getAll(), "ALL: ");
     }
 
     @Test
@@ -201,24 +160,21 @@ public class CompositeEntityManagerTest {
         Collection<TestEntity> entitiesNative;
 
         // Simple row query
-        TestEntity entity = manager.get("A");
-        LOG.info("Result : " + entity);
-
         entitiesNative = manager.createNativeQuery()
                 .whereId().in("A")
                 .getResultSet();
-        Assert.assertEquals(entitiesNative.size(), 1);
+        Assert.assertEquals(20, entitiesNative.size());
         LOG.info("NATIVE: " + entitiesNative);
         
         // Multi row query
         cqlEntities = manager.find("SELECT * from TestEntity WHERE KEY IN ('A', 'B')");
-        Assert.assertEquals(2,  cqlEntities.size());
+        Assert.assertEquals(40,  cqlEntities.size());
         
         entitiesNative = manager.createNativeQuery()
                 .whereId().in("A", "B")
                 .getResultSet();
         LOG.info("NATIVE: " + entitiesNative);
-        Assert.assertEquals(entitiesNative.size(), 2);
+        Assert.assertEquals(40, entitiesNative.size());
         
         // Simple prefix
         entitiesNative = manager.createNativeQuery()
@@ -226,20 +182,18 @@ public class CompositeEntityManagerTest {
                 .whereColumn("part1").equal("a")
                 .getResultSet();
         LOG.info("NATIVE: " + entitiesNative);
-        Assert.assertEquals(entitiesNative.size(), 1);
+        Assert.assertEquals(10, entitiesNative.size());
         
         cqlEntities = manager.find("SELECT * from TestEntity WHERE KEY = 'A' AND column1='b' AND column2>=5 AND column2<8");
-        Assert.assertEquals(1,  cqlEntities.size());
-        Assert.assertEquals(3,  Iterables.getFirst(cqlEntities, null).children.size());
+        Assert.assertEquals(3,  cqlEntities.size());
         LOG.info(cqlEntities.toString());
         
-        manager.remove(new TestEntity().setRowKey("A").addChild(new TestEntityChild("b", 5L, null)));
+        manager.remove(new TestEntity("A", "b", 5L, null));
         cqlEntities = manager.find("SELECT * from TestEntity WHERE KEY = 'A' AND column1='b' AND column2>=5 AND column2<8");
-        Assert.assertEquals(1,  cqlEntities.size());
-        Assert.assertEquals(2,  Iterables.getFirst(cqlEntities, null).children.size());
+        Assert.assertEquals(2,  cqlEntities.size());
         LOG.info(cqlEntities.toString());
         
-        manager.remove(new TestEntity().setRowKey("A"));
+        manager.delete("A");
         cqlEntities = manager.find("SELECT * from TestEntity WHERE KEY = 'A' AND column1='b' AND column2>=5 AND column2<8");
         Assert.assertEquals(0,  cqlEntities.size());
     }
@@ -256,8 +210,25 @@ public class CompositeEntityManagerTest {
                 .getResultSet();
 
         LOG.info("NATIVE: " + entitiesNative.toString());
-        Assert.assertEquals(entitiesNative.size(), 1);
+        Assert.assertEquals(3, entitiesNative.size());
     }
+    
+//  ... Not sure this use case makes sense since cassandra will end up returning
+//  columns with part2 greater than 8 but less than b
+//    @Test
+//    public void testQueryComplexRange() throws Exception {
+//        Collection<TestEntity> entitiesNative;
+//
+//        entitiesNative = manager.createNativeQuery()
+//                .whereId().in("B")
+//                .whereColumn("part1").lessThan("b")
+//                .whereColumn("part2").lessThan(8L)
+//                .getResultSet();
+//
+//        LOG.info("NATIVE: " + entitiesNative.toString());
+//        logResultSet(manager.getAll(), "COMPLEX RANGE: ");
+//        Assert.assertEquals(2, entitiesNative.size());
+//    }
     
     @Test
     public void testBadFieldName() throws Exception {
@@ -270,7 +241,15 @@ public class CompositeEntityManagerTest {
             Assert.fail();
         }
         catch (Exception e) {
-            e.printStackTrace();
+            LOG.info(e.getMessage(), e);
+        }
+    }
+    
+    private static void logResultSet(List<TestEntity> result, String prefix) {
+        // Read back all rows and log
+        List<TestEntity> all = manager.getAll();
+        for (TestEntity entity : all) {
+            LOG.info(prefix + entity.toString());
         }
     }
 }

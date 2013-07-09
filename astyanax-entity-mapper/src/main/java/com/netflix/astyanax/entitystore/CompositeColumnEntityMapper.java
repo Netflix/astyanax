@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Set;
 
 import javax.persistence.Column;
-import javax.persistence.Id;
 import javax.persistence.PersistenceException;
 
 import org.apache.commons.lang.StringUtils;
@@ -329,11 +328,17 @@ public class CompositeColumnEntityMapper {
             break;
         case GREATER_THAN:
         case GREATER_THAN_EQUALS:
-            start.add(bb, predicate.getOp());
+            if (mapper.isAscending())
+                start.add(bb, predicate.getOp());
+            else 
+                end.add(bb, predicate.getOp());
             break;
         case LESS_THAN:
         case LESS_THAN_EQUALS:
-            end.add(bb, predicate.getOp());
+            if (mapper.isAscending())
+                end.add(bb, predicate.getOp());
+            else 
+                start.add(bb, predicate.getOp());
             break;
         }
     }

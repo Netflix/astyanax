@@ -29,6 +29,7 @@ import org.apache.cassandra.thrift.ColumnDef;
 import org.apache.cassandra.thrift.SliceRange;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
+import org.apache.thrift.TEnum;
 import org.apache.thrift.TFieldIdEnum;
 import org.apache.thrift.meta_data.FieldMetaData;
 import org.slf4j.Logger;
@@ -213,9 +214,7 @@ public class ThriftUtils {
                 case ENUM   : {
                     org.apache.thrift.meta_data.EnumMetaData meta = (org.apache.thrift.meta_data.EnumMetaData)f.getValue().valueMetaData;
                     Object e = meta.enumClass;
-                    if (e instanceof Enum) {
-                        entity.setFieldValue(f.getKey(), Enum.valueOf((Class<Enum>) e, (String)value));
-                    }
+                    entity.setFieldValue(f.getKey(), Enum.valueOf((Class<Enum>) e, (String)value));
                     break;
                 }
                 case MAP    : {

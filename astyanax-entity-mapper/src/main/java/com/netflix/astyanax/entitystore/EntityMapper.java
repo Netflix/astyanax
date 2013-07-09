@@ -38,6 +38,7 @@ class EntityMapper<T, K> {
 	private final Method ttlMethod;
 	private final Field idField;
 	private final Map<String, ColumnMapper> columnList;
+	private final ColumnMapper uniqueColumn;
 	private final String entityName;
 	
 	/**
@@ -87,6 +88,7 @@ class EntityMapper<T, K> {
 		columnList = Maps.newHashMapWithExpectedSize(declaredFields.length);
 		Set<String> usedColumnNames = Sets.newHashSet();
 		Field tmpIdField = null;
+		ColumnMapper tempUniqueMapper = null;
 		for (Field field : declaredFields) {
 			Id idAnnotation = field.getAnnotation(Id.class);
 			if(idAnnotation != null) {
@@ -104,7 +106,13 @@ class EntityMapper<T, K> {
                 } else if (Set.class.isAssignableFrom(field.getType())) {
                     columnMapper = new SetColumnMapper(field);
                 } else if(compositeAnnotation == null) {
-	                columnMapper = new LeafColumnMapper(field);
+                    if (columnAnnotation.unique()) {
+                        Preconditions.checkArgument(tempUniqueMapper == null, "can't have multiple unique columns '" + field.getName() + "'");
+                        tempUniqueMapper = new LeafColumnMapper(field);
+                    }
+                    else {
+                        columnMapper = new LeafColumnMapper(field);
+                    }
 				} else {
 	                columnMapper = new CompositeColumnMapper(field);
 				}
@@ -117,6 +125,7 @@ class EntityMapper<T, K> {
 		Preconditions.checkNotNull(tmpIdField, "there are no field with @Id annotation");
 		//Preconditions.checkArgument(tmpIdField.getClass().equals(K.getClass()), String.format("@Id field type (%s) doesn't match generic type K (%s)", tmpIdField.getClass(), K.getClass()));
 		idField = tmpIdField;
+		uniqueColumn = tempUniqueMapper;
 	}
 
     void fillMutationBatch(MutationBatch mb, ColumnFamily<K, String> columnFamily, T entity) {

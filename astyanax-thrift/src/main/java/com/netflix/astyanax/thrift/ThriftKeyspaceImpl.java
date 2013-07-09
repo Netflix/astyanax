@@ -871,7 +871,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
         KeyspaceDefinition ksDef = this.describeKeyspace();
         ColumnFamilyDefinition cfDef = ksDef.getColumnFamily(columnFamily);
         if (cfDef == null)
-            throw new NotFoundException(String.format("Column family '%s' in keyspace '%s' not found", getKeyspaceName(), columnFamily));
+            throw new NotFoundException(String.format("Column family '%s' in keyspace '%s' not found", columnFamily, getKeyspaceName()));
         
         Properties props = new Properties();
         ThriftColumnFamilyDefinitionImpl thriftCfDef = (ThriftColumnFamilyDefinitionImpl)cfDef;

@@ -54,8 +54,10 @@ public class CassandraChunkedStorageProvider implements ChunkedStorageProvider {
     private final Map<Columns, String> names = Maps.newHashMap();
 
     private RetryPolicy retryPolicy = DEFAULT_RETRY_POLICY;
-    private ConsistencyLevel consistencyLevel = DEFAULT_CONSISTENCY_LEVEL;
     private String rowKeyFormat = DEFAULT_ROW_KEY_FORMAT;
+    
+    private ConsistencyLevel readConsistencyLevel = ConsistencyLevel.CL_ONE;  // for backwards compatibility.
+    private ConsistencyLevel writeConsistencyLevel = DEFAULT_CONSISTENCY_LEVEL;
 
     public CassandraChunkedStorageProvider(Keyspace keyspace, String cfName) {
         this.keyspace = keyspace;
@@ -85,7 +87,7 @@ public class CassandraChunkedStorageProvider implements ChunkedStorageProvider {
 
     @Override
     public int writeChunk(String objectName, int chunkId, ByteBuffer data, Integer ttl) throws Exception {
-        MutationBatch m = keyspace.prepareMutationBatch().withRetryPolicy(retryPolicy);
+        MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(writeConsistencyLevel).withRetryPolicy(retryPolicy);
 
         m.withRow(cf, getRowKey(objectName, chunkId)).putColumn(getColumnName(Columns.DATA), data, ttl)
                 .putColumn(getColumnName(Columns.CHUNKSIZE), data.limit(), ttl);
@@ -101,7 +103,7 @@ public class CassandraChunkedStorageProvider implements ChunkedStorageProvider {
 
     @Override
     public ByteBuffer readChunk(String objectName, int chunkId) throws Exception {
-        return keyspace.prepareQuery(cf).setConsistencyLevel(ConsistencyLevel.CL_ONE).withRetryPolicy(retryPolicy)
+        return keyspace.prepareQuery(cf).setConsistencyLevel(readConsistencyLevel).withRetryPolicy(retryPolicy)
                 .getKey(getRowKey(objectName, chunkId)).getColumn(getColumnName(Columns.DATA)).execute().getResult()
                 .getByteBufferValue();
     }
@@ -110,15 +112,46 @@ public class CassandraChunkedStorageProvider implements ChunkedStorageProvider {
         return new String(rowKeyFormat).replace("%s", objectName).replace("%d", Integer.toString(chunkId));
     }
 
-    public CassandraChunkedStorageProvider setConsistencyLevel(ConsistencyLevel consistencyLevel) {
-        this.consistencyLevel = consistencyLevel;
+
+    public CassandraChunkedStorageProvider setReadConsistencyLevel(ConsistencyLevel consistencyLevel) {
+      this.readConsistencyLevel = consistencyLevel;
+      return this;
+    }
+
+    public ConsistencyLevel getReadConsistencyLevel() {
+      return this.readConsistencyLevel;
+    }
+    
+    public CassandraChunkedStorageProvider setWriteConsistencyLevel(ConsistencyLevel consistencyLevel) {
+        this.writeConsistencyLevel = consistencyLevel;
         return this;
     }
 
-    public ConsistencyLevel getConsistencyLevel() {
-        return this.consistencyLevel;
+    public ConsistencyLevel getWriteConsistencyLevel() {
+        return this.writeConsistencyLevel;
     }
 
+    /**
+     * @deprecated use {@link #setReadConsistencyLevel(ConsistencyLevel) or #setWriteConsistencyLevel(ConsistencyLevel)}
+     * @param consistencyLevel
+     * @return
+     */
+    @Deprecated
+    public CassandraChunkedStorageProvider setConsistencyLevel(ConsistencyLevel consistencyLevel) {
+      this.writeConsistencyLevel = consistencyLevel;
+      this.readConsistencyLevel = consistencyLevel;
+      return this;
+    }
+
+    /**
+     * @deprecated ise {@link #getReadConsistencyLevel()} or {@link #getWriteConsistencyLevel()}
+     * @return
+     */
+    @Deprecated
+    public ConsistencyLevel getConsistencyLevel() {
+      return this.writeConsistencyLevel;
+    }
+    
     @Override
     public void writeMetadata(String objectName, ObjectMetadata objMetaData) throws Exception {
         MutationBatch m = keyspace.prepareMutationBatch().withRetryPolicy(retryPolicy);

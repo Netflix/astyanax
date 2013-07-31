@@ -15,7 +15,6 @@
  ******************************************************************************/
 package com.netflix.astyanax.test;
 
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -64,10 +63,14 @@ public class TestKeyspace implements Keyspace {
 
     @Override
     public MutationBatch prepareMutationBatch() {
-        
         return null;
     }
 
+    @Override
+    public MutationBatch prepareAtomicMutationBatch() {
+        return null;
+    }
+    
     @Override
     public <K, C> ColumnFamilyQuery<K, C> prepareQuery(ColumnFamily<K, C> cf) {
         

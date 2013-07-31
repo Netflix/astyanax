@@ -141,6 +141,13 @@ public interface Keyspace {
     MutationBatch prepareMutationBatch();
 
     /**
+     * Similar to {@link prepareMutationBatch} but here the mutations batches are applied atomically. 
+     * See http://www.datastax.com/dev/blog/atomic-batches-in-cassandra-1-2 for details on atomic batches.
+     * @throws ConnectionException
+     */
+    MutationBatch prepareAtomicMutationBatch();
+    
+    /**
      * Starting point for constructing a query. From the column family the
      * client can perform all 4 types of queries: get column, get key slice, get
      * key range and and index query.

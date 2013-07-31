@@ -1,6 +1,7 @@
 package com.netflix.astyanax;
 
 public enum CassandraOperationType {
+    ATOMIC_BATCH_MUTATE (CassandraOperationCategory.WRITE), 
     BATCH_MUTATE        (CassandraOperationCategory.WRITE), 
     GET_ROW             (CassandraOperationCategory.READ), 
     GET_ROWS_RANGE      (CassandraOperationCategory.READ), 

@@ -221,6 +221,21 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
         }
         
         /**
+         * Use the specific executor for executing the tasks. Note that this should be used with care 
+         * when specifying the withConcurrencyLevel. 
+         * e.g  if you have a concurrencyLevel of 10 with a fixed threadpool of size 1 then this effectively 
+         * negates the point of the concurrencyLevel
+         * 
+         * @param executor
+         * @return
+         */
+        public Builder<K, C> withExecutor(ExecutorService executor) {
+            Preconditions.checkArgument(executor != null, "Supplied executor must not be null");
+            this.executor = executor;
+            return this;
+        }
+        
+        /**
          * Execute the operation on a specific token range, instead of the entire range.
          * Use this only is combination with setConcurrencyLevel being called otherwise
          * it currently will not have any effect on the query.  When using forTokenRange

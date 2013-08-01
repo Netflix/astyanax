@@ -772,7 +772,6 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
                                 precheckSchemaAgreement(client);
-                                System.out.println(ksDef);
                                 return new SchemaChangeResponseImpl().setSchemaId(client.system_add_keyspace(ksDef));
                             }
                         }, RunOnce.get());

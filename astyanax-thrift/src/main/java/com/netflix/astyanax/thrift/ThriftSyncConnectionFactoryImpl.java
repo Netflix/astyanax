@@ -192,7 +192,7 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
                 if(!transport.isOpen())
                     transport.open();
 
-                cassandraClient = new Cassandra.Client(new TBinaryProtocol(transport));
+                cassandraClient = new Cassandra.Client(new TBinaryProtocol.Factory().getProtocol(transport));
                 monitor.incConnectionCreated(getHost());
 
                 AuthenticationCredentials credentials = cpConfig.getAuthenticationCredentials();

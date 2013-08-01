@@ -110,6 +110,15 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
     @Override
     public MutationBatch prepareMutationBatch() {
+        return prepareMutationBatch(false);
+    }
+    
+    @Override
+    public MutationBatch prepareAtomicMutationBatch() {
+        return prepareMutationBatch(true);
+    }
+    
+    protected MutationBatch prepareMutationBatch(final boolean atomicBatchUpdate) {
         return new AbstractThriftMutationBatchImpl(config.getClock(), config.getDefaultWriteConsistencyLevel(), config.getRetryPolicy().duplicate()) {
             @Override
             public OperationResult<Void> execute() throws ConnectionException {
@@ -122,12 +131,20 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                 try {
                     OperationResult<Void> result = executeOperation(
                             new AbstractKeyspaceOperationImpl<Void>(
-                                    tracerFactory.newTracer(CassandraOperationType.BATCH_MUTATE), getPinnedHost(),
-                                    getKeyspaceName()) {
+                                    tracerFactory.newTracer(atomicBatchUpdate ? CassandraOperationType.ATOMIC_BATCH_MUTATE : CassandraOperationType.BATCH_MUTATE), 
+                                                            getPinnedHost(),
+                                                            getKeyspaceName()) {
                                 @Override
                                 public Void internalExecute(Client client, ConnectionContext context) throws Exception {
-                                    client.batch_mutate(getMutationMap(),
-                                            ThriftConverter.ToThriftConsistencyLevel(getConsistencyLevel()));
+                                    // Mutation can be atomic or non-atomic. 
+                                    // see http://www.datastax.com/dev/blog/atomic-batches-in-cassandra-1-2 for details on atomic batches
+                                    if (atomicBatchUpdate) {
+                                        client.atomic_batch_mutate(getMutationMap(),
+                                                ThriftConverter.ToThriftConsistencyLevel(getConsistencyLevel()));
+                                    } else {
+                                        client.batch_mutate(getMutationMap(),
+                                                ThriftConverter.ToThriftConsistencyLevel(getConsistencyLevel()));
+                                    }
                                     discardMutations();
                                     return null;
                                 }

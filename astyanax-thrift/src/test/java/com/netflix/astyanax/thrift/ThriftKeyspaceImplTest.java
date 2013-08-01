@@ -74,6 +74,7 @@ import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.model.Equality;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
+import com.netflix.astyanax.query.AllRowsQuery;
 import com.netflix.astyanax.query.ColumnQuery;
 import com.netflix.astyanax.query.IndexQuery;
 import com.netflix.astyanax.query.PreparedIndexExpression;
@@ -164,6 +165,12 @@ public class ThriftKeyspaceImplTest {
                     "NotDefined", 
                     StringSerializer.get(),
                     StringSerializer.get());
+
+    public static ColumnFamily<Long, Long> ATOMIC_UPDATES = ColumnFamily
+            .newColumnFamily(
+                    "AtomicUpdates", 
+                    LongSerializer.get(),
+                    LongSerializer.get());
 
     public static AnnotatedCompositeSerializer<MockCompositeType> M_SERIALIZER = new AnnotatedCompositeSerializer<MockCompositeType>(
             MockCompositeType.class);
@@ -286,6 +293,8 @@ public class ThriftKeyspaceImplTest {
         keyspace.createColumnFamily(CF_STANDARD2,  null);
         keyspace.createColumnFamily(CF_LONGCOLUMN, null);
         keyspace.createColumnFamily(CF_DELETE,     null);
+        keyspace.createColumnFamily(ATOMIC_UPDATES,null);
+        
         keyspace.createColumnFamily(CF_COUNTER1, ImmutableMap.<String, Object>builder()
                 .put("default_validation_class", "CounterColumnType")
                 .build());
@@ -1214,6 +1223,56 @@ public class ThriftKeyspaceImplTest {
         ColumnList<String> result = keyspace.prepareQuery(CF_USERS).getRow(key).execute().getResult();
         
         Assert.assertEquals(1, result.size());
+    }
+    
+    @Test
+    public void testAtomicBatchMutation() throws Exception {
+        MutationBatch mb = keyspace.prepareAtomicMutationBatch();
+        
+        mb.withRow(ATOMIC_UPDATES, 1L)
+            .putColumn(11L, 11L)
+            .putColumn(12L, 12L);
+        mb.withRow(ATOMIC_UPDATES, 2L)
+            .putColumn(21L, 21L)
+            .putColumn(22L, 22L);
+        
+        mb.execute();
+        
+        Rows<Long, Long> result = 
+                keyspace.prepareQuery(ATOMIC_UPDATES).getAllRows().execute().getResult();
+        
+        int size = 0;
+
+        for (Row<Long, Long> row : result) {
+            LOG.info("ROW: " + row.getKey() + " " + row.getColumns().size());
+            size++;
+            Assert.assertEquals(2, row.getColumns().size());
+        }
+        Assert.assertEquals(2, size);
+        
+        size = 0;
+        mb = keyspace.prepareAtomicMutationBatch();
+        
+        mb.withRow(ATOMIC_UPDATES, 3L)
+            .putColumn(11L, 11L)
+            .putColumn(12L, 12L);
+        mb.withRow(ATOMIC_UPDATES, 1L).delete();
+        mb.withRow(ATOMIC_UPDATES, 2L).delete();
+        
+        mb.execute();
+
+        result = keyspace.prepareQuery(ATOMIC_UPDATES).getAllRows().execute().getResult();
+
+        for (Row<Long, Long> row : result) {
+            LOG.info("ROW: " + row.getKey() + " " + row.getColumns().size());
+            size++;
+            Assert.assertEquals(2, row.getColumns().size());
+        }
+        Assert.assertEquals(1, size);
+        
+       mb = keyspace.prepareAtomicMutationBatch();
+       mb.withRow(ATOMIC_UPDATES, 3L).delete();
+       mb.execute();
     }
     
     @Test

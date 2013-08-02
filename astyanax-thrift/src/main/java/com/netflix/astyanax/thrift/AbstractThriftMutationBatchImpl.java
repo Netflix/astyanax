@@ -62,6 +62,7 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
     private Host                pinnedHost;
     private RetryPolicy         retry;
     private WriteAheadLog       wal;
+    private boolean             useAtomicBatch = false;
 
     private Map<ByteBuffer, Map<String, List<Mutation>>> mutationMap = Maps.newLinkedHashMap();
     private Map<KeyAndColumnFamily, ColumnListMutation<?>> rowLookup = Maps.newHashMap();
@@ -354,7 +355,17 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
         this.wal = manager;
         return this;
     }
+    
+    @Override
+    public MutationBatch withAtomicBatch(boolean condition) {
+        useAtomicBatch = condition;
+        return this;
+    }
 
+    public boolean useAtomicBatch() {
+        return useAtomicBatch;
+    }
+    
     public Host getPinnedHost() {
         return this.pinnedHost;
     }

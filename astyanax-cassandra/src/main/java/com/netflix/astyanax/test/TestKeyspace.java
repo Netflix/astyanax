@@ -67,11 +67,6 @@ public class TestKeyspace implements Keyspace {
     }
 
     @Override
-    public MutationBatch prepareAtomicMutationBatch() {
-        return null;
-    }
-    
-    @Override
     public <K, C> ColumnFamilyQuery<K, C> prepareQuery(ColumnFamily<K, C> cf) {
         
         return null;

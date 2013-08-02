@@ -1227,7 +1227,7 @@ public class ThriftKeyspaceImplTest {
     
     @Test
     public void testAtomicBatchMutation() throws Exception {
-        MutationBatch mb = keyspace.prepareAtomicMutationBatch();
+        MutationBatch mb = keyspace.prepareMutationBatch().withAtomicBatch(true);
         
         mb.withRow(ATOMIC_UPDATES, 1L)
             .putColumn(11L, 11L)
@@ -1251,7 +1251,7 @@ public class ThriftKeyspaceImplTest {
         Assert.assertEquals(2, size);
         
         size = 0;
-        mb = keyspace.prepareAtomicMutationBatch();
+        mb = keyspace.prepareMutationBatch().withAtomicBatch(true);
         
         mb.withRow(ATOMIC_UPDATES, 3L)
             .putColumn(11L, 11L)
@@ -1270,7 +1270,7 @@ public class ThriftKeyspaceImplTest {
         }
         Assert.assertEquals(1, size);
         
-       mb = keyspace.prepareAtomicMutationBatch();
+       mb = keyspace.prepareMutationBatch().withAtomicBatch(true);
        mb.withRow(ATOMIC_UPDATES, 3L).delete();
        mb.execute();
     }

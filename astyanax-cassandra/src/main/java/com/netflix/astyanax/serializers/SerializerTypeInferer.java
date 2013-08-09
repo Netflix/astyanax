@@ -56,6 +56,9 @@ public class SerializerTypeInferer {
         else if (value instanceof Boolean) {
             serializer = BooleanSerializer.get();
         }
+        else if (value instanceof Character) {
+            serializer = CharSerializer.get();
+        }
         else if (value instanceof byte[]) {
             serializer = BytesArraySerializer.get();
         }
@@ -100,6 +103,9 @@ public class SerializerTypeInferer {
         }
         else if (valueClass.equals(Double.class) || valueClass.equals(double.class)) {
             serializer = DoubleSerializer.get();
+        }
+        else if (valueClass.equals(Character.class) || valueClass.equals(char.class)) {
+            serializer = CharSerializer.get();
         }
         else if (valueClass.equals(BigInteger.class)) {
             serializer = BigIntegerSerializer.get();

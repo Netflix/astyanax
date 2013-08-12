@@ -29,6 +29,9 @@ public class SerializerTypeInferer {
         else if (value instanceof String) {
             serializer = StringSerializer.get();
         }
+        else if (value instanceof Character) {
+            serializer = CharSerializer.get();
+        }
         else if (value instanceof Long) {
             serializer = LongSerializer.get();
         }
@@ -82,6 +85,9 @@ public class SerializerTypeInferer {
         }
         else if (valueClass.equals(String.class)) {
             serializer = StringSerializer.get();
+        }
+        else if (valueClass.equals(Character.class) || valueClass.equals(char.class)) {
+            serializer = CharSerializer.get();
         }
         else if (valueClass.equals(Long.class) || valueClass.equals(long.class)) {
             serializer = LongSerializer.get();

@@ -38,6 +38,8 @@ public class ColumnFamily<K, C> implements Comparable<ColumnFamily<K,C>>{
     private final Serializer<?> defaultValueSerializer;
     private final ColumnType type;
 
+    private String keyAlias = "key";
+    
     /**
      * @param columnFamilyName
      * @param keySerializer
@@ -102,7 +104,15 @@ public class ColumnFamily<K, C> implements Comparable<ColumnFamily<K,C>>{
     public ColumnType getType() {
         return type;
     }
+    
+    public void setKeyAlias(String alias) {
+    	keyAlias = alias; 
+    }
 
+    public String getKeyAlias() {
+    	return keyAlias;
+    }
+    
     public PreparedIndexExpression<K, C> newIndexClause() {
         return new PreparedIndexExpressionImpl<K, C>(this.columnSerializer);
     }

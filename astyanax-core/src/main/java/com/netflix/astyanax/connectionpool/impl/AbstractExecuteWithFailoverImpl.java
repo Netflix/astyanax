@@ -81,7 +81,7 @@ public abstract class AbstractExecuteWithFailoverImpl<CL, R> implements ExecuteW
 		else 
 			return Host.NO_HOST;
 	}
-	
+
 	/**
 	 * @return {@link HostConnectionPool}
 	 */
@@ -139,12 +139,17 @@ public abstract class AbstractExecuteWithFailoverImpl<CL, R> implements ExecuteW
         }
     }
 
-	protected void releaseConnection() {
+    protected ConnectionPoolMonitor getMonitor() {
+        return monitor;
+    }
+
+    protected void releaseConnection() {
         if (connection != null) {
-	    	connection.getHostConnectionPool().returnConnection(connection);
-	        connection = null;
-	    }
-	}
+            connection.getHostConnectionPool().returnConnection(connection);
+            monitor.incConnectionReturned(connection.getHost());
+            connection = null;
+        }
+    }
     
     private void informException(ConnectionException connectionException) throws ConnectionException {
         connectionException

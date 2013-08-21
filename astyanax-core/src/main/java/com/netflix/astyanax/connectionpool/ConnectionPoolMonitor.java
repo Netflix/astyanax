@@ -47,7 +47,7 @@ public interface ConnectionPoolMonitor {
      * Succeeded in executing an operation
      * 
      * @param host
-     * @param latency
+     * @param latency, in nanoseconds
      */
     void incOperationSuccess(Host host, long latency);
 
@@ -86,7 +86,7 @@ public interface ConnectionPoolMonitor {
      * @param host
      *            Host from which the connection was borrowed
      * @param delay
-     *            Time spent in the connection pool borrowing the connection
+     *            Time spent (in milliseconds) in the connection pool borrowing the connection
      */
     void incConnectionBorrowed(Host host, long delay);
 

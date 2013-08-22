@@ -3,7 +3,10 @@ package com.netflix.astyanax.cql;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.cassandra.db.marshal.UTF8Type;
 
@@ -11,21 +14,25 @@ import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.cql.reads.CqlRangeBuilder;
 import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
+import com.netflix.astyanax.ddl.ColumnDefinition;
+import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
+import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.model.Rows;
-import com.netflix.astyanax.query.RowSliceColumnCountQuery;
 import com.netflix.astyanax.serializers.StringSerializer;
+import com.yammer.metrics.core.MetricsRegistry;
+import com.yammer.metrics.reporting.ConsoleReporter;
 
 @SuppressWarnings("unused")
 public class TestDriver {
@@ -46,11 +53,18 @@ public class TestDriver {
 			//createTable(cluster);
 			//truncateTable(cluster);
 			//insertIntoTable(cluster);
-			
+
+			MetricsRegistry registry = cluster.cluster.getMetrics().getRegistry();
+			ConsoleReporter.enable(registry, 5, TimeUnit.SECONDS);
+
 			// reads
-			//readMultipleColumnsFromTable(cluster);
+			while (true) {
+				Thread.sleep(2000);
+				readMultipleColumnsFromTable(cluster);
+			}
 			//readRowCount(cluster);
-			executeCqlDirectlyPreparedStatment(cluster);
+			//describeClusterAndKeyspace(cluster);
+			
 			
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -59,6 +73,27 @@ public class TestDriver {
 				cluster.shutdown();
 			}
 		}
+	}
+	
+	private static void describeClusterAndKeyspace(CqlClusterImpl cluster) throws Exception {
+		
+	        System.out.println("Describe cluster: " + cluster.describeClusterName());
+	        
+	        KeyspaceDefinition ksDef = cluster.describeKeyspace("puneet");
+	        System.out.println("Name: " + ksDef.getName());
+	        System.out.println("getStrategyClass: " + ksDef.getStrategyClass());
+	        System.out.println("getStrategyOptions: " + ksDef.getStrategyOptions().toString());
+	        
+	        ColumnFamilyDefinition cfDef = ksDef.getColumnFamily("person");
+	        System.out.println("CfDef Name " + cfDef.getName());
+	        System.out.println("CfDef  getProperties " + cfDef.getProperties().toString());
+	        List<ColumnDefinition> cfDefs = cfDef.getColumnDefinitionList();
+	        
+	        for (ColumnDefinition colDef : cfDefs) {
+	            System.out.println("Cfdef : " + colDef.getName());
+	            System.out.println("Cfdef getOptions : " + colDef.getOptions());
+	            
+	        }
 	}
 	
 	private static void executeCqlDirectlyPreparedStatment(CqlClusterImpl cluster) throws Exception {
@@ -379,17 +414,30 @@ public class TestDriver {
 		colNames.add("common_name"); 
 		colNames.add("population"); 
 		
-		OperationResult<ColumnList<String>> result = ks.prepareQuery(cf)
-														.getRow("baboon1")
-														.withColumnSlice(colNames)
-														.execute();
+		final ListenableFuture<OperationResult<ColumnList<String>>> asyncResult = ks.prepareQuery(cf)
+		.getRow("baboon1")
+		.withColumnSlice(colNames)
+		.executeAsync();
+
 		
-		ColumnList<String> colList = result.getResult();
-		
-		System.out.println("Col list size: " + colList.size());
-		System.out.println("average_size: " + colList.getColumnByName("average_size").getIntegerValue());
-		System.out.println("common_name: " + colList.getColumnByName("common_name").getStringValue());
-		System.out.println("population: " + colList.getColumnByName("population").getIntegerValue());
+		asyncResult.addListener(new Runnable() {
+
+			@Override
+			public void run() {
+				System.out.println("Inside async");
+				ColumnList<String> colList;
+				try {
+					colList = asyncResult.get().getResult();
+					System.out.println("Col list size: " + colList.size());
+					System.out.println("average_size: " + colList.getColumnByName("average_size").getIntegerValue());
+					System.out.println("common_name: " + colList.getColumnByName("common_name").getStringValue());
+					System.out.println("population: " + colList.getColumnByName("population").getIntegerValue());
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+			
+		}, Executors.newFixedThreadPool(1));
 	}
 	
 	private static void readSingleColumnFromTable(CqlClusterImpl cluster) throws Exception {

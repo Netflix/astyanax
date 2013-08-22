@@ -1,5 +1,7 @@
 package com.netflix.astyanax.cql.schema;
 
+import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
+
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -19,7 +21,10 @@ import org.codehaus.jettison.json.JSONObject;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.Query;
+import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
+import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.common.collect.Maps;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.ddl.ColumnDefinition;
@@ -27,6 +32,7 @@ import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.FieldMetadata;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
 import com.netflix.astyanax.model.ColumnFamily;
+
 
 public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 
@@ -43,6 +49,8 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	private ByteBuffer keyAlias; 
 	
 	private boolean alterTable = false;
+	
+	private boolean initedViaResultSet = false; 
 	
 	public CqlColumnFamilyDefinitionImpl(Cluster cluster) {
 		this.cluster = cluster;
@@ -95,8 +103,14 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		this.makeColumnDefinition().setName("value").setValidationClass(dataValidationClass);
 	}
     
-	public CqlColumnFamilyDefinitionImpl(Row row) {
+	public CqlColumnFamilyDefinitionImpl(Cluster cluster, Row row) {
 	
+		this.cluster = cluster;
+		initedViaResultSet = true; 
+		
+		this.setName(row.getString("columnfamily_name"));
+		this.keyspaceName = row.getString("keyspace_name");
+		
 		properties.put("keyspace_name", row.getString("keyspace_name")); 
 		properties.put("columnfamily_name", row.getString("columnfamily_name")); 
 		properties.put("bloom_filter_fp_chance", row.getDouble("bloom_filter_fp_chance")); 
@@ -124,6 +138,7 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		properties.put("subcomparator", row.getString("subcomparator")); 
 		properties.put("type", row.getString("type")); 
 		properties.put("value_alias", row.getString("value_alias")); 
+		
 	}
 
 	public CqlColumnFamilyDefinitionImpl alterTable() {
@@ -461,6 +476,17 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 
 	@Override
 	public List<ColumnDefinition> getColumnDefinitionList() {
+		if (colDefList.isEmpty() && initedViaResultSet) {
+			
+			Query query = QueryBuilder.select().from("system", "schema_columns")
+			.where(eq("keyspace_name", keyspaceName))
+			.and(eq("columnfamily_name", cfName));
+			
+			ResultSet rs = cluster.connect().execute(query);
+			for (Row row : rs.all()) {
+				colDefList.add(new CqlColumnDefinitionImpl(row));
+			}
+		}
 		return colDefList;
 	}
 
@@ -520,7 +546,13 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 
 	@Override
 	public Properties getProperties() throws Exception {
-		throw new NotImplementedException();
+		Properties props = new Properties();
+		for (String key : properties.keySet()) {
+			if (properties.get(key) != null) {
+				props.put(key, properties.get(key));
+			}
+		}
+		return props;
 	}
 
 	@Override

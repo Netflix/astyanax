@@ -13,6 +13,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.ResultSetFuture;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
 import com.datastax.driver.core.querybuilder.Select.Selection;
@@ -21,6 +22,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.CqlOperationResultImpl;
+import com.netflix.astyanax.cql.util.AsyncOperationResult;
 import com.netflix.astyanax.cql.util.ChainedContext;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.ColumnFamily;
@@ -39,16 +41,81 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 		this.context = ctx;
 	}
 	
-
 	@Override
 	public OperationResult<Rows<K, C>> execute() throws ConnectionException {
 		
 		context.rewindForRead();
 		Cluster cluster = context.getNext(Cluster.class);
 		
+		return parseResponse(cluster.connect().execute(getQuery()));
+	}
+
+	@Override
+	public ListenableFuture<OperationResult<Rows<K, C>>> executeAsync() throws ConnectionException {
+		context.rewindForRead();
+		Cluster cluster = context.getNext(Cluster.class);
+
+		ResultSetFuture rsFuture = cluster.connect().executeAsync(getQuery());
+		
+		return new AsyncOperationResult<Rows<K, C>>(rsFuture) {
+			@Override
+			public OperationResult<Rows<K, C>> getOperationResult(ResultSet rs) {
+				return parseResponse(rs);
+			}
+		};
+	}
+	
+	@Override
+	public RowSliceQuery<K, C> withColumnSlice(C... columns) {
+		return withColumnSlice(Arrays.asList(columns));
+	}
+
+	@Override
+	public RowSliceQuery<K, C> withColumnSlice(Collection<C> columns) {
+		this.columnSlice = new CqlColumnSlice<C>(columns);
+		return this;
+	}
+
+	@Override
+	public RowSliceQuery<K, C> withColumnSlice(ColumnSlice<C> columns) {
+		this.columnSlice = new CqlColumnSlice<C>(columns);
+		return this;
+	}
+
+	@Override
+	public RowSliceQuery<K, C> withColumnRange(C startColumn, C endColumn, boolean reversed, int count) {
+		this.columnSlice = new CqlColumnSlice<C>(new CqlRangeBuilder<C>()
+				.setColumn("column1")
+				.setStart(startColumn)
+				.setEnd(endColumn)
+				.setReversed(reversed)
+				.setLimit(count)
+				.build());
+		return this;
+	}
+
+	@Override
+	public RowSliceQuery<K, C> withColumnRange(ByteBuffer startColumn, ByteBuffer endColumn, boolean reversed, int count) {
+		// Cannot infer the actual column type C here. Use another class impl instead
+		throw new NotImplementedException();
+	}
+
+	@Override
+	public RowSliceQuery<K, C> withColumnRange(ByteBufferRange range) {
+		if (!(range instanceof CqlRangeImpl)) {
+			throw new NotImplementedException();
+		} else {
+			this.columnSlice = new CqlColumnSlice<C>((CqlRangeImpl) range);
+		}
+		return this;
+	}
+
+	@Override
+	public RowSliceColumnCountQuery<K> getColumnCounts() {
+		context.rewindForRead();
+		Cluster cluster = context.getNext(Cluster.class);
 		Query query = getQuery();
-		ResultSet rs = cluster.connect().execute(query);
-		return new CqlOperationResultImpl<Rows<K, C>>(rs, new CqlRowListImpl<K, C>(rs.all()));
+		return new CqlRowSliceColumnCountQueryImpl<K>(cluster, query);
 	}
 	
 	private Query getQuery() {
@@ -158,62 +225,7 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 		}
 	}
 
-	@Override
-	public ListenableFuture<OperationResult<Rows<K, C>>> executeAsync() throws ConnectionException {
-		throw new NotImplementedException();
+	private OperationResult<Rows<K, C>> parseResponse(ResultSet rs) {
+		return new CqlOperationResultImpl<Rows<K, C>>(rs, new CqlRowListImpl<K, C>(rs.all()));
 	}
-
-	@Override
-	public RowSliceQuery<K, C> withColumnSlice(C... columns) {
-		return withColumnSlice(Arrays.asList(columns));
-	}
-
-	@Override
-	public RowSliceQuery<K, C> withColumnSlice(Collection<C> columns) {
-		this.columnSlice = new CqlColumnSlice<C>(columns);
-		return this;
-	}
-
-	@Override
-	public RowSliceQuery<K, C> withColumnSlice(ColumnSlice<C> columns) {
-		this.columnSlice = new CqlColumnSlice<C>(columns);
-		return this;
-	}
-
-	@Override
-	public RowSliceQuery<K, C> withColumnRange(C startColumn, C endColumn, boolean reversed, int count) {
-		this.columnSlice = new CqlColumnSlice<C>(new CqlRangeBuilder<C>()
-				.setColumn("column1")
-				.setStart(startColumn)
-				.setEnd(endColumn)
-				.setReversed(reversed)
-				.setLimit(count)
-				.build());
-		return this;
-	}
-
-	@Override
-	public RowSliceQuery<K, C> withColumnRange(ByteBuffer startColumn, ByteBuffer endColumn, boolean reversed, int count) {
-		// Cannot infer the actual column type C here. Use another class impl instead
-		throw new NotImplementedException();
-	}
-
-	@Override
-	public RowSliceQuery<K, C> withColumnRange(ByteBufferRange range) {
-		if (!(range instanceof CqlRangeImpl)) {
-			throw new NotImplementedException();
-		} else {
-			this.columnSlice = new CqlColumnSlice<C>((CqlRangeImpl) range);
-		}
-		return this;
-	}
-
-	@Override
-	public RowSliceColumnCountQuery<K> getColumnCounts() {
-		context.rewindForRead();
-		Cluster cluster = context.getNext(Cluster.class);
-		Query query = getQuery();
-		return new CqlRowSliceColumnCountQueryImpl<K>(cluster, query);
-	}
-
 }

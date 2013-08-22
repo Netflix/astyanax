@@ -14,6 +14,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.ResultSetFuture;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select.Selection;
@@ -23,6 +24,7 @@ import com.netflix.astyanax.RowCopier;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.CqlOperationResultImpl;
+import com.netflix.astyanax.cql.util.AsyncOperationResult;
 import com.netflix.astyanax.cql.util.ChainedContext;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.ColumnFamily;
@@ -46,70 +48,24 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 	public OperationResult<ColumnList<C>> execute() throws ConnectionException {
 		
 		context.rewindForRead();
-		
 		Cluster cluster = context.getNext(Cluster.class);
-		String keyspace = context.getNext(String.class);
-		ColumnFamily<?, ?> cf = context.getNext(ColumnFamily.class);
-		Object rowKey = context.getNext(Object.class); 
-		
-		Query query = null;
-		
-		Collection<C> columns = columnSlice.getColumns();
-		
-		if (columns != null) {
-			
-			Selection selection = QueryBuilder.select();
-			
-			for (C column : columns) {
-				selection.column(String.valueOf(column));
-			}
-
-			query = selection.from(keyspace, cf.getName())
-					.where(eq(cf.getKeyAlias(), rowKey));
-			
-		} else {
-			
-			Where stmt = QueryBuilder.select().all()
-					.from(keyspace, cf.getName())
-					.where(eq(cf.getKeyAlias(), rowKey));
-			
-			if (columnSlice.getStartColumn() != null) {
-				stmt.and(gte(columnSlice.getColumnName(), columnSlice.getStartColumn()));
-			}
-			if (columnSlice.getEndColumn() != null) {
-				stmt.and(lte(columnSlice.getColumnName(), columnSlice.getEndColumn()));
-			}
-
-			if (columnSlice.getReversed()) {
-				stmt.desc(columnSlice.getColumnName());
-			}
-			
-			if (columnSlice.getLimit() != -1) {
-				stmt.limit(columnSlice.getLimit());
-			}
-
-			query = stmt;
-		}
-		
-		
-		ResultSet rs = cluster.connect().execute(query);
-		
-		List<Row> rows = rs.all(); 
-		
-		if (columnSlice.getColumns() != null) {
-			if (rows.size() > 1) {
-				throw new RuntimeException("Multiple rows for query - use RowSliceQuery instead");
-			} else {
-				return new CqlOperationResultImpl<ColumnList<C>>(rs, new CqlColumnListImpl<C>(rows.get(0)));
-			}
-		} else {
-			return new CqlOperationResultImpl<ColumnList<C>>(rs, new CqlColumnListImpl<C>(rows));
-		}
+		return parseResponse(cluster.connect().execute(getQuery()));
 	}
-
+	
 	@Override
 	public ListenableFuture<OperationResult<ColumnList<C>>> executeAsync() throws ConnectionException {
-		throw new NotImplementedException();
+
+		context.rewindForRead();
+		
+		Cluster cluster = context.getNext(Cluster.class);
+		ResultSetFuture rsFuture = cluster.connect().executeAsync(getQuery());
+		
+		return new AsyncOperationResult<ColumnList<C>>(rsFuture) {
+			@Override
+			public OperationResult<ColumnList<C>> getOperationResult(ResultSet rs) {
+				return parseResponse(rs);
+			}
+		};
 	}
 
 	@Override
@@ -181,6 +137,66 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 	@Override
 	public ColumnCountQuery getCount() {
 		return new CqlColumnCountQueryImpl(this.context.clone());
+	}
+
+	private Query getQuery() {
+		String keyspace = context.getNext(String.class);
+		ColumnFamily<?, ?> cf = context.getNext(ColumnFamily.class);
+		Object rowKey = context.getNext(Object.class); 
+		
+		Query query = null;
+		
+		Collection<C> columns = columnSlice.getColumns();
+		
+		if (columns != null) {
+			
+			Selection selection = QueryBuilder.select();
+			
+			for (C column : columns) {
+				selection.column(String.valueOf(column));
+			}
+
+			query = selection.from(keyspace, cf.getName())
+					.where(eq(cf.getKeyAlias(), rowKey));
+			
+		} else {
+			
+			Where stmt = QueryBuilder.select().all()
+					.from(keyspace, cf.getName())
+					.where(eq(cf.getKeyAlias(), rowKey));
+			
+			if (columnSlice.getStartColumn() != null) {
+				stmt.and(gte(columnSlice.getColumnName(), columnSlice.getStartColumn()));
+			}
+			if (columnSlice.getEndColumn() != null) {
+				stmt.and(lte(columnSlice.getColumnName(), columnSlice.getEndColumn()));
+			}
+
+			if (columnSlice.getReversed()) {
+				stmt.desc(columnSlice.getColumnName());
+			}
+			
+			if (columnSlice.getLimit() != -1) {
+				stmt.limit(columnSlice.getLimit());
+			}
+
+			query = stmt;
+		}
+		return query;
+	}
+
+	private OperationResult<ColumnList<C>> parseResponse(ResultSet rs) {
+		List<Row> rows = rs.all(); 
+		
+		if (columnSlice.getColumns() != null) {
+			if (rows.size() > 1) {
+				throw new RuntimeException("Multiple rows for query - use RowSliceQuery instead");
+			} else {
+				return new CqlOperationResultImpl<ColumnList<C>>(rs, new CqlColumnListImpl<C>(rows.get(0)));
+			}
+		} else {
+			return new CqlOperationResultImpl<ColumnList<C>>(rs, new CqlColumnListImpl<C>(rows));
+		}
 	}
 
 }

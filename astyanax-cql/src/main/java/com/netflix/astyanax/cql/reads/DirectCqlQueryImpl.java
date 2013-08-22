@@ -10,12 +10,14 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.ResultSetFuture;
 import com.datastax.driver.core.Session;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.CqlOperationResultImpl;
+import com.netflix.astyanax.cql.util.AsyncOperationResult;
 import com.netflix.astyanax.cql.util.ChainedContext;
 import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.query.CqlQuery;
@@ -26,7 +28,6 @@ public class DirectCqlQueryImpl<K, C> implements CqlQuery<K, C> {
 	private Cluster cluster;
 	private String basicCqlQuery; 
 	
-	
 	public DirectCqlQueryImpl(ChainedContext context, String basicCqlQuery) {
 		context.rewindForRead();
 		this.cluster = context.getNext(Cluster.class);
@@ -35,20 +36,22 @@ public class DirectCqlQueryImpl<K, C> implements CqlQuery<K, C> {
 	
 	@Override
 	public OperationResult<CqlResult<K, C>> execute() throws ConnectionException {
-		ResultSet rs = cluster.connect().execute(basicCqlQuery);
-		return processResult(rs);
+		return processResult(cluster.connect().execute(basicCqlQuery));
 	}
 
 	@Override
 	public ListenableFuture<OperationResult<CqlResult<K, C>>> executeAsync() throws ConnectionException {
-		throw new NotImplementedException();
+	
+		ResultSetFuture rsFuture = cluster.connect().executeAsync(basicCqlQuery);
+		
+		return new AsyncOperationResult<CqlResult<K, C>>(rsFuture) {
+			@Override
+			public OperationResult<CqlResult<K, C>> getOperationResult(ResultSet rs) {
+				return processResult(rs);
+			}
+		};
 	}
 	
-	private CqlOperationResultImpl<CqlResult<K, C>> processResult(ResultSet rs) throws ConnectionException {
-		boolean isCountQuery = basicCqlQuery.contains(" count(");
-		return new CqlOperationResultImpl<CqlResult<K,C>>(rs, new DirectCqlResult<K, C>(isCountQuery, rs));
-	}
-
 	@Override
 	public CqlQuery<K, C> useCompression() {
 		throw new NotImplementedException();
@@ -72,7 +75,15 @@ public class DirectCqlQueryImpl<K, C> implements CqlQuery<K, C> {
 
 			@Override
 			public ListenableFuture<OperationResult<CqlResult<K, C>>> executeAsync() throws ConnectionException {
-				throw new NotImplementedException();
+				
+				ResultSetFuture rsFuture = session.executeAsync(boundStatement.bind(bindList.toArray()));
+
+				return new AsyncOperationResult<CqlResult<K, C>>(rsFuture) {
+					@Override
+					public OperationResult<CqlResult<K, C>> getOperationResult(ResultSet rs) {
+						return processResult(rs);
+					}
+				};
 			}
 
 			@Override
@@ -138,5 +149,10 @@ public class DirectCqlQueryImpl<K, C> implements CqlQuery<K, C> {
 				return this;
 			}
 		};
+	}
+
+	private CqlOperationResultImpl<CqlResult<K, C>> processResult(ResultSet rs) {
+		boolean isCountQuery = basicCqlQuery.contains(" count(");
+		return new CqlOperationResultImpl<CqlResult<K,C>>(rs, new DirectCqlResult<K, C>(isCountQuery, rs));
 	}
 }

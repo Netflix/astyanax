@@ -12,6 +12,8 @@ import java.util.Map.Entry;
 import java.util.Properties;
 
 import org.apache.commons.lang.StringUtils;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
 
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
@@ -55,10 +57,7 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 		
 		this.keyspaceName = row.getString("keyspace_name");
 		this.setStrategyClass(row.getString("strategy_class"));
-		
-		throw new NotImplementedException();
-		//parseStrategyOptions(row);
-		//refreshProperties();
+		this.setStrategyOptionsMap(parseStrategyOptions(row.getString("strategy_options")));
 	}
 	
 	public CqlKeyspaceDefinitionImpl alterKeyspace() {
@@ -130,7 +129,7 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 								  .where(eq("keyspace_name", keyspaceName))
 								  .and(eq("columnfamily_name", columnFamily));
 		
-		return new CqlColumnFamilyDefinitionImpl(cluster.connect().execute(query).one());
+		return new CqlColumnFamilyDefinitionImpl(cluster, cluster.connect().execute(query).one());
 	}
 
 	@Override
@@ -274,26 +273,27 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 	}
 
 	
-//	
-//	private void parseStrategyOptions(Row row) {
-//		
-//		String jStr = row.getString("strategy_options");
-//		if (jStr == null || jStr.isEmpty()) {
-//			return;
-//		}
-//		
-//		try {
-//			JSONObject json = new JSONObject(jStr);
-//			Iterator<String> iter = json.keys();
-//			while (iter.hasNext()) {
-//				String key = iter.next();
-//				Object obj = json.get(key);
-//				strategyOptions.put(key, obj.toString());
-//			}
-//		} catch (JSONException e) {
-//			throw new RuntimeException(e);
-//		}
-//	}
+	
+	private Map<String, Object> parseStrategyOptions(String jsonString) {
+		
+		if (jsonString == null || jsonString.isEmpty()) {
+			return null;
+		}
+		
+		Map<String, Object> map = new HashMap<String, Object>();
+		try {
+			JSONObject json = new JSONObject(jsonString);
+			Iterator<String> iter = json.keys();
+			while (iter.hasNext()) {
+				String key = iter.next();
+				Object obj = json.get(key);
+				map.put(key, obj);
+			}
+			return map;
+		} catch (JSONException e) {
+			throw new RuntimeException(e);
+		}
+	}
 	
 
 

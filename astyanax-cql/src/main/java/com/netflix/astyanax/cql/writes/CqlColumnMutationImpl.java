@@ -10,6 +10,7 @@ import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.ResultSetFuture;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.ColumnMutation;
@@ -18,6 +19,7 @@ import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.CqlOperationResultImpl;
+import com.netflix.astyanax.cql.util.AsyncOperationResult;
 import com.netflix.astyanax.cql.util.ConsistencyLevelTransform;
 import com.netflix.astyanax.cql.util.Context.ColumnFamilyCtx;
 import com.netflix.astyanax.model.ColumnFamily;
@@ -154,7 +156,6 @@ public class CqlColumnMutationImpl implements ColumnMutation {
 		return exec(null, ttl);
 	}
 
-	
 	private Execution<Void> exec(Object value, int ttl) {
 		
 		this.columnValue = value;
@@ -171,12 +172,20 @@ public class CqlColumnMutationImpl implements ColumnMutation {
 
 			@Override
 			public ListenableFuture<OperationResult<Void>> executeAsync() throws ConnectionException {
-				throw new NotImplementedException();
+				
+				ResultSetFuture rsFuture = cluster.connect().executeAsync(getStatement());
+				
+				return new AsyncOperationResult<Void>(rsFuture) {
+					@Override
+					public OperationResult<Void> getOperationResult(ResultSet rs) {
+						return new CqlOperationResultImpl<Void>(rs, null);
+					}
+				};
 			}
 		};
 	}
 	
-	public BoundStatement getStatement() {
+	private BoundStatement getStatement() {
 		
 		Preconditions.checkArgument(rowKey != null, "Row key must be provided");
 		Preconditions.checkArgument(keyspace != null, "Keyspace must be provided");

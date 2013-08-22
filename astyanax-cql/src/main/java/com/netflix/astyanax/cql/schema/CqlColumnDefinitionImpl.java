@@ -2,24 +2,35 @@ package com.netflix.astyanax.cql.schema;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.cassandra.db.marshal.UTF8Type;
 
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import com.datastax.driver.core.Row;
 import com.netflix.astyanax.cql.util.CqlTypeMapping;
 import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.FieldMetadata;
 
 public class CqlColumnDefinitionImpl implements ColumnDefinition {
 
-	private String validationClass;
-	private String name; 
+	Map<String, String> options = new HashMap<String, String>();
 
+	public CqlColumnDefinitionImpl() {
+		
+	}
+	
+	public CqlColumnDefinitionImpl(Row row) {
+		this.setName(row.getString("column_name"));
+		this.setIndex(row.getString("index_name"), row.getString("index_type"));
+		this.setValidationClass(row.getString("validator"));
+	}
+	
 	@Override
 	public ColumnDefinition setName(String name) {
-		this.name = name; 
+		options.put("column_name", name);
 		return this;
 	}
 
@@ -35,13 +46,15 @@ public class CqlColumnDefinitionImpl implements ColumnDefinition {
 
 	@Override
 	public ColumnDefinition setValidationClass(String value) {
-		validationClass = value;
+		options.put("validator", value);
 		return this;
 	}
 
 	@Override
 	public ColumnDefinition setIndex(String name, String type) {
-		throw new NotImplementedException();
+		options.put("index_name", name);
+		options.put("index_type", type);
+		return this;
 	}
 
 	@Override
@@ -61,52 +74,59 @@ public class CqlColumnDefinitionImpl implements ColumnDefinition {
 
 	@Override
 	public String getName() {
-		return name;
+		return options.get("column_name");
 	}
 
 	@Override
 	public ByteBuffer getRawName() {
-		return UTF8Type.instance.decompose(name);
+		return UTF8Type.instance.decompose(getName());
 	}
 
 	@Override
 	public String getValidationClass() {
-		return validationClass;
+		return options.get("validator");
 	}
 
 	@Override
 	public String getIndexName() {
-		throw new NotImplementedException();
+		return options.get("index_name");
 	}
 
 	@Override
 	public String getIndexType() {
-		throw new NotImplementedException();
+		return options.get("index_type");
 	}
 
 	@Override
 	public boolean hasIndex() {
-		throw new NotImplementedException();
+		return getIndexName() != null;
 	}
 
 	@Override
 	public Map<String, String> getOptions() {
-		throw new NotImplementedException();
+		return options;
 	}
 
 	@Override
 	public String getOption(String name, String defaultValue) {
-		throw new NotImplementedException();
+		String value = options.get(name);
+		if (value == null) {
+			return defaultValue;
+		} else {
+			return value;
+		}
 	}
 
 	@Override
 	public ColumnDefinition setOptions(Map<String, String> index_options) {
-		throw new NotImplementedException();
+		this.options.putAll(index_options);
+		return this;
 	}
 
 	@Override
 	public String setOption(String name, String value) {
-		throw new NotImplementedException();
+		this.options.put(name, value);
+		return options.get(name);
 	}
 
 	@Override

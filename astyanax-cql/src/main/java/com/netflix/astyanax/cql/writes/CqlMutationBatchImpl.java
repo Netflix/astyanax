@@ -12,6 +12,8 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.ResultSetFuture;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -22,6 +24,8 @@ import com.netflix.astyanax.WriteAheadLog;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.cql.CqlOperationResultImpl;
+import com.netflix.astyanax.cql.util.AsyncOperationResult;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
@@ -344,23 +348,36 @@ public class CqlMutationBatchImpl implements MutationBatch {
 	@Override
 	public OperationResult<Void> execute() throws ConnectionException {
 		
-		for (CqlColumnFamilyMutationImpl<?,?> mutation : rowLookup.values()) {
-			System.out.println(mutation.getName());
-			
-			BoundStatement stmt = mutation.getPreparedStatement();
-			
-			System.out.println("Executing query");
-			cluster.connect().execute(stmt);
-			
+		if (rowLookup.values().size() > 1) {
+			throw new NotImplementedException();
 		}
-		return null;
+
+		CqlColumnFamilyMutationImpl<?,?> mutation = rowLookup.values().iterator().next();
+		ResultSet rs = cluster.connect().execute(mutation.getPreparedStatement());
+		return new CqlOperationResultImpl<Void>(rs, null);
+
+//		for (CqlColumnFamilyMutationImpl<?,?> mutation : rowLookup.values()) {
+//			BoundStatement stmt = mutation.getPreparedStatement();
+//			ResultSet rs = cluster.connect().execute(stmt);
+//			// TODO: we really need to support batching here
+//		}
 	}
 
 	@Override
-	public ListenableFuture<OperationResult<Void>> executeAsync()
-			throws ConnectionException {
-		// TODO Auto-generated method stub
-		return null;
+	public ListenableFuture<OperationResult<Void>> executeAsync() throws ConnectionException {
+
+		if (rowLookup.values().size() > 1) {
+			throw new NotImplementedException();
+		}
+		
+		CqlColumnFamilyMutationImpl<?,?> mutation = rowLookup.values().iterator().next();
+		ResultSetFuture rsFuture = cluster.connect().executeAsync(mutation.getPreparedStatement());
+		return new AsyncOperationResult<Void>(rsFuture) {
+			@Override
+			public OperationResult<Void> getOperationResult(ResultSet rs) {
+				return new CqlOperationResultImpl<Void>(rs, null);
+			}
+		};
 	}
 
 	public String getKeyspace() {
@@ -370,5 +387,4 @@ public class CqlMutationBatchImpl implements MutationBatch {
 	public Cluster getCluster() {
 		return cluster;
 	}
-
 }

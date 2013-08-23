@@ -13,10 +13,12 @@ import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.util.AsyncOperationResult;
 import com.netflix.astyanax.cql.util.ChainedContext;
+import com.netflix.astyanax.model.ColumnFamily;
 
 public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 	
 	private final Cluster cluster; 
+	private final ColumnFamily<?, ?> cf;
 	private final ChainedContext context; 
 	private final KeyspaceTracerFactory tracerFactory;
 	
@@ -25,13 +27,26 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 		
 		this.context.rewindForRead();
 		this.cluster = context.getNext(Cluster.class);
+		
+		// note that this may be null
+		@SuppressWarnings("unused")
+		String keyspace = context.getNext(String.class);
+		cf = context.getNext(ColumnFamily.class);
+		
 		this.tracerFactory = context.getTracerFactory();
 	}
 
 	@Override
 	public OperationResult<R> execute() throws ConnectionException {
 		
-		CassandraOperationTracer tracer = tracerFactory.newTracer(getOperationType());
+		CassandraOperationTracer tracer = null;
+		
+		if (cf != null) {
+			tracer = tracerFactory.newTracer(getOperationType(), cf);
+		} else {
+			tracer = tracerFactory.newTracer(getOperationType());
+		}
+		
 		tracer.start();
 		ResultSet resultSet = cluster.connect().execute(getQuery());
 		R result = parseResultSet(resultSet);
@@ -55,9 +70,22 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 		};
 	}
 	
+	/**
+	 * Specify what operation type this is. Used for emitting the right tracers
+	 * @return CassandraOperationType
+	 */
 	public abstract CassandraOperationType getOperationType();
 	
+	/**
+	 * Get the Query for this operation
+	 * @return Query
+	 */
 	public abstract Query getQuery();
 
+	/**
+	 * Parse the result set to get the required response
+	 * @param resultSet
+	 * @return
+	 */
 	public abstract R parseResultSet(ResultSet resultSet);
 }

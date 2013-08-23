@@ -13,12 +13,16 @@ import com.datastax.driver.core.Session;
 import com.google.common.base.Preconditions;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.cql.util.ChainedContext;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnPath;
+import com.netflix.astyanax.model.ConsistencyLevel;
 
 @SuppressWarnings("deprecation")
 public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutationImpl<C> {
 
+	private ChainedContext context; 
+	
 	private List<CqlColumnMutationImpl> mutationList = new ArrayList<CqlColumnMutationImpl>();
 	private ColumnFamily<K, C> columnFamily; 
 	private K rowKey;
@@ -29,13 +33,18 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 	// Tracks the mutations on this ColumnFamily.
 	private MutationState currentState = new InitialState();
 
-	public CqlColumnFamilyMutationImpl(CqlMutationBatchImpl batchMutationImpl, ColumnFamily<K, C> cf, K rKey, long timestamp) {
+	public CqlColumnFamilyMutationImpl(ChainedContext context, ConsistencyLevel level, long timestamp) {
 		super(timestamp);
-		this.columnFamily = cf;
-		this.rowKey = rKey;
-		this.keyspace = batchMutationImpl.getKeyspace();
-		this.cluster = batchMutationImpl.getCluster();
-		this.consistencyLevel = batchMutationImpl.getConsistencyLevel();
+		
+		this.context = context;
+		context.rewindForRead(); 
+		
+		cluster = context.getNext(Cluster.class);
+		keyspace = context.getNext(String.class);
+		columnFamily = context.getNext(ColumnFamily.class);
+		rowKey = (K) context.getNext(Object.class);
+
+		this.consistencyLevel = level;
 	}
 
 	public String getName() {
@@ -56,7 +65,7 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 		}
 		checkAndSetTTL(ttl);
 		
-		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(columnName.toString());
+		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(context.clone().add(columnName.toString()));
 		mutation.putValue(value, valueSerializer, ttl);
 		
 		mutationList.add(mutation);
@@ -80,7 +89,7 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 			checkState(new UpdateColumnState());
 		}
 
-		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(columnName.toString());
+		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(context.clone().add(columnName.toString()));
 		mutation.putEmptyColumn(ttl);
 		mutationList.add(mutation);
 		
@@ -92,7 +101,7 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 		
 		checkState(new UpdateColumnState());
 
-		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(columnName.toString());
+		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(context.clone().add(columnName.toString()));
 		mutation.incrementCounterColumn(amount);
 		mutationList.add(mutation);
 		
@@ -104,7 +113,7 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 		
 		checkState(new UpdateColumnState());
 		
-		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(columnName.toString());
+		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(context.clone().add(columnName.toString()));
 		mutation.deleteColumn();
 		mutationList.add(mutation);
 		
@@ -294,7 +303,6 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 
 			
 			String query = sb1.toString();
-			System.out.println("Delete query: " + query);
 			
 			Session session = cluster.connect();
 			PreparedStatement statement = session.prepare(query);

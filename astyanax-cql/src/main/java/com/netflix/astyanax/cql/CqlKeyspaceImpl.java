@@ -11,6 +11,7 @@ import com.datastax.driver.core.ResultSet;
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.ColumnMutation;
 import com.netflix.astyanax.Keyspace;
+import com.netflix.astyanax.KeyspaceTracerFactory;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.SerializerPackage;
 import com.netflix.astyanax.clock.MicrosecondsAsyncClock;
@@ -25,7 +26,6 @@ import com.netflix.astyanax.cql.reads.CqlColumnFamilyQueryImpl;
 import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
 import com.netflix.astyanax.cql.schema.CqlKeyspaceDefinitionImpl;
 import com.netflix.astyanax.cql.util.ChainedContext;
-import com.netflix.astyanax.cql.util.Context.ColumnFamilyCtx;
 import com.netflix.astyanax.cql.writes.CqlColumnMutationImpl;
 import com.netflix.astyanax.cql.writes.CqlMutationBatchImpl;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
@@ -44,13 +44,9 @@ public class CqlKeyspaceImpl implements Keyspace {
 	private String keyspaceName;
 	private AstyanaxConfiguration astyanaxConfig;
 	private Cluster cluster;
+	private KeyspaceTracerFactory tracerFactory; 
 	
 	private ChainedContext context; 
-	
-	public CqlKeyspaceImpl(String name, Cluster cluster) {
-		this.keyspaceName = name;
-		this.cluster = cluster;
-	}
 	
 	public CqlKeyspaceImpl(ChainedContext ctx) {
 		this.context = ctx;
@@ -58,6 +54,7 @@ public class CqlKeyspaceImpl implements Keyspace {
 		
 		this.cluster = context.getNext(Cluster.class);
 		this.keyspaceName = context.getNext(String.class);
+		this.tracerFactory = context.getTracerFactory();
 	}
 
 	@Override
@@ -102,7 +99,7 @@ public class CqlKeyspaceImpl implements Keyspace {
 
 	@Override
 	public KeyspaceDefinition describeKeyspace() throws ConnectionException {
-		return new CqlClusterImpl(cluster).describeKeyspace(keyspaceName);
+		return new CqlClusterImpl(cluster, tracerFactory).describeKeyspace(keyspaceName);
 	}
 
 	@Override
@@ -134,12 +131,12 @@ public class CqlKeyspaceImpl implements Keyspace {
 
 	@Override
 	public MutationBatch prepareMutationBatch() {
-		return new CqlMutationBatchImpl(cluster, keyspaceName, microsClock, null, null);
+		return new CqlMutationBatchImpl(context.clone(), microsClock, null, null);
 	}
 
 	@Override
 	public <K, C> ColumnMutation prepareColumnMutation(ColumnFamily<K, C> columnFamily, K rowKey, C column) {
-		return new CqlColumnMutationImpl(new ColumnFamilyCtx(cluster, keyspaceName, columnFamily), String.valueOf(column), rowKey);
+		return new CqlColumnMutationImpl(context.clone().add(columnFamily).add(rowKey).add(column));
 	}
 
 	@Override

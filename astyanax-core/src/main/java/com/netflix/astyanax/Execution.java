@@ -15,12 +15,9 @@
  ******************************************************************************/
 package com.netflix.astyanax;
 
-import java.util.concurrent.Callable;
-
+import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-
-import com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * Interface for an operation that can be executed on the cluster.

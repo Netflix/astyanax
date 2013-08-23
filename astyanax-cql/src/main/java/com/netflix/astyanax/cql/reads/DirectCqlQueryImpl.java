@@ -9,15 +9,15 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.ResultSetFuture;
-import com.datastax.driver.core.Session;
+import com.datastax.driver.core.SimpleStatement;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.cql.CqlOperationResultImpl;
-import com.netflix.astyanax.cql.util.AsyncOperationResult;
+import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.util.ChainedContext;
 import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.query.CqlQuery;
@@ -27,29 +27,23 @@ public class DirectCqlQueryImpl<K, C> implements CqlQuery<K, C> {
 
 	private Cluster cluster;
 	private String basicCqlQuery; 
+	private ChainedContext context;
 	
 	public DirectCqlQueryImpl(ChainedContext context, String basicCqlQuery) {
-		context.rewindForRead();
+		this.context = context;
+		this.context.rewindForRead();
 		this.cluster = context.getNext(Cluster.class);
 		this.basicCqlQuery = basicCqlQuery;
 	}
 	
 	@Override
 	public OperationResult<CqlResult<K, C>> execute() throws ConnectionException {
-		return processResult(cluster.connect().execute(basicCqlQuery));
+		return new InternalExecutionImpl(new SimpleStatement(basicCqlQuery)).execute();
 	}
 
 	@Override
 	public ListenableFuture<OperationResult<CqlResult<K, C>>> executeAsync() throws ConnectionException {
-	
-		ResultSetFuture rsFuture = cluster.connect().executeAsync(basicCqlQuery);
-		
-		return new AsyncOperationResult<CqlResult<K, C>>(rsFuture) {
-			@Override
-			public OperationResult<CqlResult<K, C>> getOperationResult(ResultSet rs) {
-				return processResult(rs);
-			}
-		};
+		return new InternalExecutionImpl(new SimpleStatement(basicCqlQuery)).executeAsync();
 	}
 	
 	@Override
@@ -60,7 +54,6 @@ public class DirectCqlQueryImpl<K, C> implements CqlQuery<K, C> {
 	@Override
 	public PreparedCqlQuery<K, C> asPreparedStatement() {
 		
-		final Session session = cluster.connect();
 		final BoundStatement boundStatement = new BoundStatement(cluster.connect().prepare(basicCqlQuery));
 		final List<Object> bindList = new ArrayList<Object>();
 		
@@ -68,22 +61,15 @@ public class DirectCqlQueryImpl<K, C> implements CqlQuery<K, C> {
 
 			@Override
 			public OperationResult<CqlResult<K, C>> execute() throws ConnectionException {
-				
-				ResultSet rs = session.execute(boundStatement.bind(bindList.toArray()));
-				return processResult(rs);
+				boundStatement.bind(bindList.toArray());
+				return new InternalExecutionImpl(boundStatement).execute();
 			}
 
 			@Override
 			public ListenableFuture<OperationResult<CqlResult<K, C>>> executeAsync() throws ConnectionException {
 				
-				ResultSetFuture rsFuture = session.executeAsync(boundStatement.bind(bindList.toArray()));
-
-				return new AsyncOperationResult<CqlResult<K, C>>(rsFuture) {
-					@Override
-					public OperationResult<CqlResult<K, C>> getOperationResult(ResultSet rs) {
-						return processResult(rs);
-					}
-				};
+				boundStatement.bind(bindList.toArray());
+				return new InternalExecutionImpl(boundStatement).executeAsync();
 			}
 
 			@Override
@@ -150,9 +136,30 @@ public class DirectCqlQueryImpl<K, C> implements CqlQuery<K, C> {
 			}
 		};
 	}
+	
+	private class InternalExecutionImpl extends CqlAbstractExecutionImpl<CqlResult<K, C>> {
 
-	private CqlOperationResultImpl<CqlResult<K, C>> processResult(ResultSet rs) {
-		boolean isCountQuery = basicCqlQuery.contains(" count(");
-		return new CqlOperationResultImpl<CqlResult<K,C>>(rs, new DirectCqlResult<K, C>(isCountQuery, rs));
+		private final Query query;
+		
+		public InternalExecutionImpl(Query query) {
+			super(context);
+			this.query = query;
+		}
+
+		@Override
+		public CassandraOperationType getOperationType() {
+			return CassandraOperationType.CQL;
+		}
+
+		@Override
+		public Query getQuery() {
+			return query;
+		}
+
+		@Override
+		public CqlResult<K, C> parseResultSet(ResultSet resultSet) {
+			boolean isCountQuery = basicCqlQuery.contains(" count(");
+			return new DirectCqlResult<K, C>(isCountQuery, resultSet);
+		}
 	}
 }

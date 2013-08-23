@@ -112,10 +112,8 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 
 	@Override
 	public RowSliceColumnCountQuery<K> getColumnCounts() {
-		context.rewindForRead();
-		Cluster cluster = context.getNext(Cluster.class);
 		Query query = getQuery();
-		return new CqlRowSliceColumnCountQueryImpl<K>(cluster, query);
+		return new CqlRowSliceColumnCountQueryImpl<K>(context, query);
 	}
 	
 	private Query getQuery() {

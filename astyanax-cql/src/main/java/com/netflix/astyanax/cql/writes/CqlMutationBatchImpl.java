@@ -10,7 +10,6 @@ import org.apache.cassandra.thrift.Mutation;
 
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
-import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.ResultSetFuture;
@@ -26,6 +25,7 @@ import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.CqlOperationResultImpl;
 import com.netflix.astyanax.cql.util.AsyncOperationResult;
+import com.netflix.astyanax.cql.util.ChainedContext;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
@@ -36,11 +36,13 @@ import com.netflix.astyanax.retry.RetryPolicy;
  * 
  * Map of Keys -> Map of ColumnFamily -> MutationList
  * 
- * @author elandau
+ * @author poberai
  * 
  */
 public class CqlMutationBatchImpl implements MutationBatch {
     private static final long UNSET_TIMESTAMP = -1;
+    
+    private ChainedContext context; 
     
     protected long              timestamp;
     private ConsistencyLevel    consistencyLevel;
@@ -108,13 +110,17 @@ public class CqlMutationBatchImpl implements MutationBatch {
         }
     }
     
-    public CqlMutationBatchImpl(Cluster cluster, String keyspace, Clock clock, ConsistencyLevel consistencyLevel, RetryPolicy retry) {
+    public CqlMutationBatchImpl(ChainedContext context, Clock clock, ConsistencyLevel consistencyLevel, RetryPolicy retry) {
+    	
+    	this.context = context;
+    	context.rewindForRead(); 
+    	this.cluster = context.getNext(Cluster.class);
+    	this.keyspace = context.getNext(String.class);
+    	
         this.clock            = clock;
         this.timestamp        = UNSET_TIMESTAMP;
         this.consistencyLevel = consistencyLevel;
         this.retry            = retry;
-        this.keyspace         = keyspace;
-        this.cluster          = cluster;
     }
 
     @Override
@@ -126,8 +132,6 @@ public class CqlMutationBatchImpl implements MutationBatch {
         if (timestamp == UNSET_TIMESTAMP)
             timestamp = clock.getCurrentTime();
 
-   
-        
         KeyAndColumnFamily kacf = new KeyAndColumnFamily(columnFamily.getName(), rowKey);
         CqlColumnFamilyMutationImpl<K, C> clm = (CqlColumnFamilyMutationImpl<K, C>) rowLookup.get(kacf);
         if (clm == null) {
@@ -146,7 +150,9 @@ public class CqlMutationBatchImpl implements MutationBatch {
 //                innerMutationMap.put(columnFamily.getName(), innerMutationList);
 //            }
             
-            clm = new CqlColumnFamilyMutationImpl<K, C>(this, columnFamily, rowKey, timestamp);
+            clm = new CqlColumnFamilyMutationImpl<K, C>(context.clone()
+            											.add(columnFamily)
+            											.add(rowKey), this.consistencyLevel, timestamp);
             rowLookup.put(kacf, clm);
         }
         return clm;

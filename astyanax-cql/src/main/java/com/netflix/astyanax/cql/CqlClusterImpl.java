@@ -15,7 +15,10 @@ import com.datastax.driver.core.Query;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.netflix.astyanax.AstyanaxConfiguration;
+import com.netflix.astyanax.CassandraOperationTracer;
+import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.Keyspace;
+import com.netflix.astyanax.KeyspaceTracerFactory;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
@@ -25,20 +28,20 @@ import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
+import com.netflix.astyanax.model.ColumnFamily;
 
 public class CqlClusterImpl implements com.netflix.astyanax.Cluster {
 
 	public Cluster cluster;
-	
 	private ChainedContext context; 
 	
 	public CqlClusterImpl() {
-		this(Cluster.builder().addContactPoint("localhost").build());
+		this(Cluster.builder().addContactPoint("localhost").build(), DefaultNoOpTracerFactory);
 	}
 	
-	public CqlClusterImpl(Cluster cluster) {
+	public CqlClusterImpl(Cluster cluster, KeyspaceTracerFactory tracerFactory) {
 		this.cluster = cluster;
-		this.context = new ChainedContext().add(cluster);
+		this.context = new ChainedContext(tracerFactory).add(cluster);
 	}
 	
 	@Override
@@ -272,4 +275,29 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster {
 	public OperationResult<SchemaChangeResult> updateColumnFamily(ColumnFamilyDefinition def) throws ConnectionException {
 		return ((CqlColumnFamilyDefinitionImpl)def).alterTable().execute();
 	}
+	
+	private static KeyspaceTracerFactory DefaultNoOpTracerFactory = new  KeyspaceTracerFactory() {
+
+		@Override
+		public CassandraOperationTracer newTracer(CassandraOperationType type) { 
+			return DefaultNoOpCassandraOpTracer; 
+		}
+
+		@Override
+		public CassandraOperationTracer newTracer(CassandraOperationType type, ColumnFamily<?, ?> columnFamily) { 
+			return DefaultNoOpCassandraOpTracer; 
+		}
+	};
+	
+	private static CassandraOperationTracer DefaultNoOpCassandraOpTracer = new CassandraOperationTracer() {
+
+		@Override
+		public CassandraOperationTracer start() { return this; }
+
+		@Override
+		public void success() {}
+
+		@Override
+		public void failure(ConnectionException e) {}
+	};
 }

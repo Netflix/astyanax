@@ -10,8 +10,8 @@ import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
+import com.netflix.astyanax.cql.CqlFamilyFactory;
 import com.netflix.astyanax.cql.util.ChainedContext;
-import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.query.ColumnCountQuery;
 
 public class CqlColumnCountQueryImpl implements ColumnCountQuery {
@@ -34,8 +34,11 @@ public class CqlColumnCountQueryImpl implements ColumnCountQuery {
 
 	private class InternalColumnCountExecutionImpl extends CqlAbstractExecutionImpl<Integer> {
 
+		private final Object rowKey;
+		
 		public InternalColumnCountExecutionImpl() {
 			super(context);
+			rowKey = context.getNext(Object.class);
 		}
 
 		@Override
@@ -45,21 +48,26 @@ public class CqlColumnCountQueryImpl implements ColumnCountQuery {
 
 		@Override
 		public Query getQuery() {
-			String keyspace = context.getNext(String.class);
-			ColumnFamily<?, ?> cf = context.getNext(ColumnFamily.class);
-			Object rowKey = context.getNext(Object.class); 
 			
-			Query query = QueryBuilder.select().countAll()
-					  .from(keyspace, cf.getName())
-					  .where(eq(cf.getKeyAlias(), rowKey));
-			
-			return query;
+			if (CqlFamilyFactory.OldStyleThriftMode()) {
+				return QueryBuilder.select("column1")
+						.from(keyspace, cf.getName())
+						.where(eq(cf.getKeyAlias(), rowKey));
+			} else {
+				return QueryBuilder.select().countAll()
+						.from(keyspace, cf.getName())
+						.where(eq(cf.getKeyAlias(), rowKey));
+			}
 		}
 
 		@Override
 		public Integer parseResultSet(ResultSet resultSet) {
-			Long count = resultSet.one().getLong(0);
-			return count.intValue();
+			if (CqlFamilyFactory.OldStyleThriftMode()) {
+				return resultSet.all().size();
+			} else {
+				Long count = resultSet.one().getLong(0);
+				return count.intValue();
+			}
 		}
 	}
 }

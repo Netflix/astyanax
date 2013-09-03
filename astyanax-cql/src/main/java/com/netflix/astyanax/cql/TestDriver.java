@@ -6,7 +6,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.cassandra.db.marshal.UTF8Type;
 
@@ -17,6 +16,7 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.OperationResult;
@@ -25,14 +25,13 @@ import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
 import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
+import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.serializers.StringSerializer;
-import com.yammer.metrics.core.MetricsRegistry;
-import com.yammer.metrics.reporting.ConsoleReporter;
 
 @SuppressWarnings("unused")
 public class TestDriver {
@@ -44,24 +43,54 @@ public class TestDriver {
 		
 		CqlClusterImpl cluster = null;
 		try {
+//			
+//			AstyanaxContext<com.netflix.astyanax.Cluster> context = new AstyanaxContext.Builder()
+//				.forCluster("Test Cluster")
+//				.withAstyanaxConfiguration(new AstyanaxConfigurationImpl())
+//				
+//				.buildCluster(CqlFamilyFactory.getInstance());
+//			
+//			context.start();
+//			
+//			cluster = (CqlClusterImpl) context.getClient();
 
+			
+			Cluster cluster2 = Cluster.builder().addContactPoint("localhost").build();
+			
+			String query = "begin batch insert into astyanaxunittests.test1 (key, column1) values (?, ?); insert into astyanaxunittests.test1 (key, column1) values (1, 8); insert into astyanaxunittests.test1 (key, column1) values (?, ?);  apply batch"; 
+			
+			//cluster2.connect().execute(query);
+			
+			PreparedStatement statement = cluster2.connect().prepare(query);
+			BoundStatement boundStatement = new BoundStatement(statement);
+			
+			boundStatement.bind(1,7, 1, 10);
+			//boundStatement.bind(columnValue, rowKey);
+
+			cluster2.connect().execute(boundStatement);
+			
+			cluster2.shutdown();
+			
+			
+			//PreparedStatement pstmt = new PreparedSta/
+			
 			//executeSampleBoundStatement22();
 			
-			cluster = new CqlClusterImpl();
+			//cluster = new CqlClusterImpl();
 			
 			//createKeyspace(cluster);
 			//createTable(cluster);
 			//truncateTable(cluster);
 			//insertIntoTable(cluster);
 
-			MetricsRegistry registry = cluster.cluster.getMetrics().getRegistry();
-			ConsoleReporter.enable(registry, 5, TimeUnit.SECONDS);
+//			MetricsRegistry registry = cluster.cluster.getMetrics().getRegistry();
+//			ConsoleReporter.enable(registry, 5, TimeUnit.SECONDS);
 
-			// reads
-			while (true) {
-				Thread.sleep(2000);
-				readMultipleColumnsFromTable(cluster);
-			}
+//			// reads
+//			while (true) {
+//				Thread.sleep(2000);
+//				readMultipleColumnsFromTable(cluster);
+//			}
 			//readRowCount(cluster);
 			//describeClusterAndKeyspace(cluster);
 			
@@ -92,7 +121,6 @@ public class TestDriver {
 	        for (ColumnDefinition colDef : cfDefs) {
 	            System.out.println("Cfdef : " + colDef.getName());
 	            System.out.println("Cfdef getOptions : " + colDef.getOptions());
-	            
 	        }
 	}
 	

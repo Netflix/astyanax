@@ -3,6 +3,7 @@ package com.netflix.astyanax.cql;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -14,11 +15,15 @@ import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Query;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.CassandraOperationTracer;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.KeyspaceTracerFactory;
+import com.netflix.astyanax.connectionpool.CqlConnectionPoolProxy.SeedHostListener;
+import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
@@ -30,18 +35,23 @@ import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
 import com.netflix.astyanax.model.ColumnFamily;
 
-public class CqlClusterImpl implements com.netflix.astyanax.Cluster {
+public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostListener {
 
-	public Cluster cluster;
-	private ChainedContext context; 
+	public volatile Cluster cluster = null;
+	private volatile ChainedContext context;
+	private final AstyanaxConfiguration astyanaxConfig; 
+	private final KeyspaceTracerFactory tracerFactory; 
 	
-	public CqlClusterImpl() {
-		this(Cluster.builder().addContactPoint("localhost").build(), DefaultNoOpTracerFactory);
+	public CqlClusterImpl(AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory) {
+		this.astyanaxConfig = asConfig;
+		this.tracerFactory = tracerFactory;
 	}
-	
-	public CqlClusterImpl(Cluster cluster, KeyspaceTracerFactory tracerFactory) {
+
+	public CqlClusterImpl(Cluster cluster, AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory) {
 		this.cluster = cluster;
-		this.context = new ChainedContext(tracerFactory).add(cluster);
+		this.context = new ChainedContext(tracerFactory).add(cluster); 
+		this.astyanaxConfig = asConfig;
+		this.tracerFactory = tracerFactory;
 	}
 	
 	@Override
@@ -116,7 +126,10 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster {
 		try {
 			List<KeyspaceDefinition> ksDefs = describeKeyspaces();
 			for(KeyspaceDefinition ksDef : ksDefs) {
-				properties.putAll(ksDef.getProperties());
+				Properties ksProps = ksDef.getProperties();
+				for (Object key : ksProps.keySet()) {
+					properties.put(ksDef.getName() + "." + key, ksProps.get(key));
+				}
 			}
 		} catch (Exception e) {
 			throw new RuntimeException(e);
@@ -128,7 +141,7 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster {
 	public Properties getKeyspaceProperties(String keyspace) throws ConnectionException {
 		
 		try {
-			return describeKeyspace(keyspace).getProperties();
+			return describeKeyspace(keyspace.toLowerCase()).getProperties();
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
@@ -153,7 +166,7 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster {
 	@Override
 	public KeyspaceDefinition describeKeyspace(String ksName) throws ConnectionException {
 
-		Query query = QueryBuilder.select().from("system", "schema_keyspaces").where(eq("keyspace_name", ksName));
+		Query query = QueryBuilder.select().from("system", "schema_keyspaces").where(eq("keyspace_name", ksName.toLowerCase()));
 
 		try {
 			return (new CqlKeyspaceDefinitionImpl(cluster, cluster.connect().execute(query).one()));
@@ -164,13 +177,13 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster {
 
 	@Override
 	public Keyspace getKeyspace(String keyspace) throws ConnectionException {
-		return new CqlKeyspaceImpl(context.clone().add(keyspace));
+		return new CqlKeyspaceImpl(cluster, keyspace, astyanaxConfig, tracerFactory);
 	}
 
 	@Override
 	public OperationResult<SchemaChangeResult> dropKeyspace(String keyspaceName) throws ConnectionException {
 		return new CqlOperationResultImpl<SchemaChangeResult>(
-				cluster.connect().execute("DROP KEYSPACE " + keyspaceName), null);
+				cluster.connect().execute("DROP KEYSPACE " + keyspaceName.toLowerCase()), null);
 	}
 
 	@Override
@@ -241,22 +254,22 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster {
 
 	@Override
 	public OperationResult<SchemaChangeResult> createColumnFamily(Map<String, Object> options) throws ConnectionException {
-		return new CqlColumnFamilyDefinitionImpl(cluster, options).execute();
+		return new CqlColumnFamilyDefinitionImpl(cluster, null, options).execute();
 	}
 
 	@Override
 	public OperationResult<SchemaChangeResult> createColumnFamily(Properties props) throws ConnectionException {
-		return new CqlColumnFamilyDefinitionImpl(cluster, props).execute();
+		return new CqlColumnFamilyDefinitionImpl(cluster, null, props).execute();
 	}
 
 	@Override
 	public OperationResult<SchemaChangeResult> updateColumnFamily(Map<String, Object> options) throws ConnectionException {
-		return new CqlColumnFamilyDefinitionImpl(cluster, options).alterTable().execute();
+		return new CqlColumnFamilyDefinitionImpl(cluster, null, options).alterTable().execute();
 	}
 
 	@Override
 	public OperationResult<SchemaChangeResult> updateColumnFamily(Properties props) throws ConnectionException {
-		return new CqlColumnFamilyDefinitionImpl(cluster, props).alterTable().execute();
+		return new CqlColumnFamilyDefinitionImpl(cluster, null, props).alterTable().execute();
 	}
 
 	@Override
@@ -300,4 +313,25 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster {
 		@Override
 		public void failure(ConnectionException e) {}
 	};
+
+	@Override
+	public void setHosts(Collection<Host> hosts) {
+		
+		List<Host> hostList = Lists.newArrayList(hosts);
+		
+		List<String> contactPoints = Lists.transform(hostList, new Function<Host, String>() {
+			@Override
+			public String apply(Host input) {
+				if (input != null) {
+					return input.getHostName(); 
+				}
+				return null;
+			}
+		});
+		
+		this.cluster = Cluster.builder().addContactPoints(contactPoints.toArray(new String[0])).build();
+		this.context = new ChainedContext(tracerFactory).add(cluster); 
+	}
+	
+	
 }

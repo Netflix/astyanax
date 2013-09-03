@@ -1,5 +1,6 @@
 package com.netflix.astyanax.cql;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -8,6 +9,8 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.ResultSet;
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.ColumnMutation;
 import com.netflix.astyanax.Keyspace;
@@ -16,6 +19,8 @@ import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.SerializerPackage;
 import com.netflix.astyanax.clock.MicrosecondsAsyncClock;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
+import com.netflix.astyanax.connectionpool.CqlConnectionPoolProxy.SeedHostListener;
+import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.TokenRange;
@@ -37,24 +42,28 @@ import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.serializers.UnknownComparatorException;
 
-public class CqlKeyspaceImpl implements Keyspace {
+public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 
 	private MicrosecondsAsyncClock microsClock = new MicrosecondsAsyncClock();
 	
-	private String keyspaceName;
-	private AstyanaxConfiguration astyanaxConfig;
-	private Cluster cluster;
-	private KeyspaceTracerFactory tracerFactory; 
-	
-	private ChainedContext context; 
-	
-	public CqlKeyspaceImpl(ChainedContext ctx) {
-		this.context = ctx;
-		this.context.rewindForRead();
-		
-		this.cluster = context.getNext(Cluster.class);
-		this.keyspaceName = context.getNext(String.class);
-		this.tracerFactory = context.getTracerFactory();
+	private volatile Cluster cluster;
+	private volatile ChainedContext context; 
+	private final String keyspaceName;
+	private final AstyanaxConfiguration astyanaxConfig;
+	private final KeyspaceTracerFactory tracerFactory; 
+
+	public CqlKeyspaceImpl(String ksName, AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory) {
+		this.keyspaceName = ksName.toLowerCase();
+		this.astyanaxConfig = asConfig;
+		this.tracerFactory = tracerFactory;
+	}
+
+	public CqlKeyspaceImpl(Cluster cluster, String ksName, AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory) {
+		this.cluster = cluster;
+		this.context = new ChainedContext(tracerFactory).add(cluster).add(ksName); 
+		this.keyspaceName = ksName.toLowerCase();
+		this.astyanaxConfig = asConfig;
+		this.tracerFactory = tracerFactory;
 	}
 
 	@Override
@@ -99,7 +108,7 @@ public class CqlKeyspaceImpl implements Keyspace {
 
 	@Override
 	public KeyspaceDefinition describeKeyspace() throws ConnectionException {
-		return new CqlClusterImpl(cluster, tracerFactory).describeKeyspace(keyspaceName);
+		return new CqlClusterImpl(cluster, astyanaxConfig, tracerFactory).describeKeyspace(keyspaceName);
 	}
 
 	@Override
@@ -190,32 +199,32 @@ public class CqlKeyspaceImpl implements Keyspace {
 
 	@Override
 	public <K, C> OperationResult<SchemaChangeResult> createColumnFamily(ColumnFamily<K, C> columnFamily, Map<String, Object> options) throws ConnectionException {
-		return new CqlColumnFamilyDefinitionImpl(cluster, columnFamily, options).execute();
+		return new CqlColumnFamilyDefinitionImpl(cluster, keyspaceName, columnFamily, options).execute();
 	}
 
 	@Override
 	public OperationResult<SchemaChangeResult> createColumnFamily(Properties props) throws ConnectionException {
-		return new CqlColumnFamilyDefinitionImpl(cluster, props).execute();
+		return new CqlColumnFamilyDefinitionImpl(cluster, keyspaceName, props).execute();
 	}
 
 	@Override
 	public OperationResult<SchemaChangeResult> createColumnFamily(Map<String, Object> options) throws ConnectionException {
-		return new CqlColumnFamilyDefinitionImpl(cluster, options).execute();
+		return new CqlColumnFamilyDefinitionImpl(cluster, keyspaceName, options).execute();
 	}
 
 	@Override
 	public <K, C> OperationResult<SchemaChangeResult> updateColumnFamily(ColumnFamily<K, C> columnFamily, Map<String, Object> options) throws ConnectionException {
-		return new CqlColumnFamilyDefinitionImpl(cluster, columnFamily, options).alterTable().execute();
+		return new CqlColumnFamilyDefinitionImpl(cluster, keyspaceName, columnFamily, options).alterTable().execute();
 	}
 
 	@Override
 	public OperationResult<SchemaChangeResult> updateColumnFamily(Properties props) throws ConnectionException {
-		return new CqlColumnFamilyDefinitionImpl(cluster, props).alterTable().execute();
+		return new CqlColumnFamilyDefinitionImpl(cluster, keyspaceName, props).alterTable().execute();
 	}
 
 	@Override
 	public OperationResult<SchemaChangeResult> updateColumnFamily(Map<String, Object> options) throws ConnectionException {
-		return new CqlColumnFamilyDefinitionImpl(cluster, options).alterTable().execute();
+		return new CqlColumnFamilyDefinitionImpl(cluster, keyspaceName, options).alterTable().execute();
 	}
 
 	@Override
@@ -253,6 +262,25 @@ public class CqlKeyspaceImpl implements Keyspace {
 	@Override
 	public OperationResult<Void> testOperation(Operation<?, ?> operation, RetryPolicy retry) throws ConnectionException {
 		throw new NotImplementedException();
+	}
+
+	@Override
+	public void setHosts(Collection<Host> hosts) {
+		
+		List<Host> hostList = Lists.newArrayList(hosts);
+		
+		List<String> contactPoints = Lists.transform(hostList, new Function<Host, String>() {
+			@Override
+			public String apply(Host input) {
+				if (input != null) {
+					return input.getHostName(); 
+				}
+				return null;
+			}
+		});
+
+		this.cluster = Cluster.builder().addContactPoints(contactPoints.toArray(new String[0])).build();
+		this.context = new ChainedContext(tracerFactory).add(cluster).add(keyspaceName); 
 	}
 
 }

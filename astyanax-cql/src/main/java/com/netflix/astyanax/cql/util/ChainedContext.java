@@ -33,19 +33,36 @@ public class ChainedContext {
 	@SuppressWarnings("unchecked")
 	public <T> T getNext(Class<T> clazz) {
 		if (index >= contextList.size()) {
-			return null;
+			throw new RuntimeException("Context overflow - context was not set up properly");
 		}
 		return (T)contextList.get(index++);
 	}
 	
+	public <T> T getNextNullable(Class<T> clazz) {
+		if (index >= contextList.size()) {
+			return null;
+		}
+		return (T)contextList.get(index++);
+	}
+
 	public ChainedContext clone() {
 		ChainedContext ctx = new ChainedContext(this.tracerFactory);
 		ctx.contextList.addAll(this.contextList);
-		ctx.index = ctx.contextList.size();
+		ctx.index = contextList.size();
 		return ctx;
 	}
 	
 	public KeyspaceTracerFactory getTracerFactory() {
 		return this.tracerFactory;
+	}
+	
+	public String toString() {
+		StringBuilder sb = new StringBuilder("ChainedContext [");
+		for (Object o : contextList) {
+			sb.append(" " + o.getClass().getSimpleName());
+		}
+		
+		sb.append(" ] index currently at pos: " + index);
+		return sb.toString();
 	}
 }

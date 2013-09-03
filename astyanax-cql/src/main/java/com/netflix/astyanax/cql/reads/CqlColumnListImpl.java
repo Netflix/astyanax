@@ -11,10 +11,13 @@ import java.util.UUID;
 
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import com.datastax.driver.core.ColumnDefinitions;
 import com.datastax.driver.core.ColumnDefinitions.Definition;
 import com.datastax.driver.core.Row;
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.cql.util.CqlTypeMapping;
 import com.netflix.astyanax.model.Column;
+import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 
 @SuppressWarnings("unchecked")
@@ -23,31 +26,36 @@ public class CqlColumnListImpl<C> implements ColumnList<C> {
 	private List<Column<C>> columnList = new ArrayList<Column<C>>();
 	private LinkedHashMap<C, Column<C>> map = new LinkedHashMap<C, Column<C>>();
 	
+	/**
+	 * This constructor is meant to be called when we are using CQL3 as is, i.e no backward compatibility with thrift
+	 * @param row
+	 */
 	public CqlColumnListImpl(Row row) {
-		this(row, 0);
-	}
-
-	public CqlColumnListImpl(Row row, int startIndex) {
 		
 		List<Definition> cfDefinitions = row.getColumnDefinitions().asList();
 		
-		for (int index=startIndex; index< cfDefinitions.size(); index++) {
+		for (int index=0; index< cfDefinitions.size(); index++) {
 			Definition def = cfDefinitions.get(index); 
-			CqlColumnImpl<C> cqlCol = new CqlColumnImpl<C>(def.getName(), row, index);
+			CqlColumnImpl<C> cqlCol = new CqlColumnImpl<C>((C) def.getName(), row, index);
 			columnList.add(cqlCol);
 			map.put((C) def.getName(), cqlCol);
 		}
 	}
 
-	public CqlColumnListImpl(Collection<Row> rows) {
+	/**
+	 * This constructor is meant to be used when we are using the CQL3 table but still in the legacy thrift mode
+	 * @param rows
+	 */
+	public CqlColumnListImpl(List<Row> rows, ColumnFamily<?,?> cf) {
 		
 		for (Row row : rows) {
+
 			List<Definition> cfDefinitions = row.getColumnDefinitions().asList();
-			// pick the last column. this has the value when there is a multi row result
-			Definition def = cfDefinitions.get(cfDefinitions.size()-1); 
-			CqlColumnImpl<C> cqlCol = new CqlColumnImpl<C>(def.getName(), row, cfDefinitions.size()-1);
+			
+			Object columnName = CqlTypeMapping.getDynamicColumnName(row, cf.getColumnSerializer());
+			CqlColumnImpl<C> cqlCol = new CqlColumnImpl<C>((C) columnName, row, cfDefinitions.size()-1);
 			columnList.add(cqlCol);
-			map.put((C) def.getName(), cqlCol);
+			map.put((C) columnName, cqlCol);
 		}
 	}
 
@@ -184,7 +192,7 @@ public class CqlColumnListImpl<C> implements ColumnList<C> {
 
 	@Override
 	public boolean isEmpty() {
-		throw new NotImplementedException();
+		return columnList.size() == 0;
 	}
 
 	@Override

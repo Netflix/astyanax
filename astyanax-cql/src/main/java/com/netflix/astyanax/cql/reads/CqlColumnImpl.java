@@ -6,11 +6,21 @@ import java.util.UUID;
 
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import com.datastax.driver.core.ColumnDefinitions.Definition;
+import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.Row;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnList;
+import com.netflix.astyanax.serializers.BooleanSerializer;
+import com.netflix.astyanax.serializers.DateSerializer;
+import com.netflix.astyanax.serializers.DoubleSerializer;
+import com.netflix.astyanax.serializers.FloatSerializer;
+import com.netflix.astyanax.serializers.IntegerSerializer;
+import com.netflix.astyanax.serializers.LongSerializer;
+import com.netflix.astyanax.serializers.ShortSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
+import com.netflix.astyanax.serializers.UUIDSerializer;
 
 public class CqlColumnImpl<C> implements Column<C> {
 
@@ -18,12 +28,20 @@ public class CqlColumnImpl<C> implements Column<C> {
 	private C columnName; 
 	private int index;
 	
-	public CqlColumnImpl(String colName, Row row, int index) {
-		this.columnName = (C) colName;
-		this.row = row;
-		this.index = index;
+	private boolean isBlob = false;
+	
+	public CqlColumnImpl() {
 	}
 	
+	public CqlColumnImpl(C colName, Row row, int index) {
+		this.columnName = colName;
+		this.row = row;
+		this.index = index;
+
+		Definition colDefinition  = row.getColumnDefinitions().asList().get(index);
+		isBlob = colDefinition.getType() == DataType.blob();
+	}
+
 	@Override
 	public C getName() {
 		return columnName;
@@ -46,7 +64,7 @@ public class CqlColumnImpl<C> implements Column<C> {
 
 	@Override
 	public String getStringValue() {
-		return row.getString(index);
+		return (isBlob) ? StringSerializer.get().fromByteBuffer(row.getBytes(index)) : row.getString(index);
 	}
 
 	@Override
@@ -61,28 +79,29 @@ public class CqlColumnImpl<C> implements Column<C> {
 
 	@Override
 	public short getShortValue() {
-		Integer i = new Integer(row.getInt(index));
+		System.out.println("isBlob: " + row.getBytes(index));
+		Integer i = (isBlob) ? ShortSerializer.get().fromByteBuffer(row.getBytes(index)) : row.getInt(index);
 		return i.shortValue();
 	}
 
 	@Override
 	public int getIntegerValue() {
-		return row.getInt(index);
+		return (isBlob) ? IntegerSerializer.get().fromByteBuffer(row.getBytes(index)) : row.getInt(index);
 	}
 
 	@Override
 	public float getFloatValue() {
-		return row.getFloat(index);
+		return (isBlob) ? FloatSerializer.get().fromByteBuffer(row.getBytes(index)) : row.getFloat(index);
 	}
 
 	@Override
 	public double getDoubleValue() {
-		return row.getDouble(index);
+		return (isBlob) ? DoubleSerializer.get().fromByteBuffer(row.getBytes(index)) : row.getDouble(index);
 	}
 
 	@Override
 	public long getLongValue() {
-		return row.getLong(index);
+		return (isBlob) ? LongSerializer.get().fromByteBuffer(row.getBytes(index)) : row.getLong(index);
 	}
 
 	@Override
@@ -92,7 +111,7 @@ public class CqlColumnImpl<C> implements Column<C> {
 
 	@Override
 	public boolean getBooleanValue() {
-		return row.getBool(index);
+		return (isBlob) ? BooleanSerializer.get().fromByteBuffer(row.getBytes(index)) : row.getBool(index);
 	}
 
 	@Override
@@ -102,12 +121,12 @@ public class CqlColumnImpl<C> implements Column<C> {
 
 	@Override
 	public Date getDateValue() {
-		return row.getDate(index);
+		return (isBlob) ? DateSerializer.get().fromByteBuffer(row.getBytes(index)) : row.getDate(index);
 	}
 
 	@Override
 	public UUID getUUIDValue() {
-		return row.getUUID(index);
+		return (isBlob) ? UUIDSerializer.get().fromByteBuffer(row.getBytes(index)) : row.getUUID(index);
 	}
 
 	@Override
@@ -129,6 +148,6 @@ public class CqlColumnImpl<C> implements Column<C> {
 
 	@Override
 	public boolean hasValue() {
-		return !(row.isNull(index));
+		return (row != null) && !(row.isNull(index));
 	}
 }

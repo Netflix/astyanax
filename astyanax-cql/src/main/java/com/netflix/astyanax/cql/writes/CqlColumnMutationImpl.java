@@ -4,6 +4,9 @@ import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import com.datastax.driver.core.BoundStatement;
@@ -22,18 +25,22 @@ import com.netflix.astyanax.cql.util.ConsistencyLevelTransform;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
+import com.netflix.astyanax.serializers.ByteBufferSerializer;
 
 public class CqlColumnMutationImpl implements ColumnMutation {
 
+	private static final Logger LOG = LoggerFactory.getLogger(CqlColumnMutationImpl.class);
+	
 	private ChainedContext context;
 
-	private Cluster cluster = context.getNext(Cluster.class);
-	private String keyspace = context.getNext(String.class);
-	private ColumnFamily<?,?> cf = context.getNext(ColumnFamily.class);
-	private Object rowKey = context.getNext(Object.class);
-	protected String columnName;
+	protected final Cluster cluster;
+	protected final String keyspace;
+	protected final ColumnFamily<?,?> cf;
+	protected final Object rowKey;
+	protected final Object columnName;
 	protected Object columnValue;
 	protected boolean counterColumn = false;
+	protected boolean deleteColumn = false;
 	
 	private ConsistencyLevel consistencyLevel;
 	private Long timestamp;
@@ -48,7 +55,7 @@ public class CqlColumnMutationImpl implements ColumnMutation {
 		keyspace = context.getNext(String.class);
 		cf = context.getNext(ColumnFamily.class);
 		rowKey = context.getNext(Object.class);
-		columnName = context.getNext(String.class);
+		columnName = context.getNext(Object.class);
 	}
 
 	@Override
@@ -130,6 +137,11 @@ public class CqlColumnMutationImpl implements ColumnMutation {
 
 	@Override
 	public <T> Execution<Void> putValue(T value, Serializer<T> serializer, Integer ttl) {
+		
+		if (cf.getDefaultValueSerializer().getComparatorType() == ByteBufferSerializer.get().getComparatorType()) {
+			ByteBuffer valueBytes = serializer.toByteBuffer(value);
+			return exec(valueBytes, ttl, CassandraOperationType.COLUMN_MUTATE);
+		}
 		return exec(value, ttl, CassandraOperationType.COLUMN_MUTATE);
 	}
 
@@ -146,15 +158,17 @@ public class CqlColumnMutationImpl implements ColumnMutation {
 
 	@Override
 	public Execution<Void> deleteColumn() {
+		deleteColumn = true;
 		return exec(null, ttl, CassandraOperationType.COLUMN_DELETE);
 	}
 
 	@Override
 	public Execution<Void> deleteCounterColumn() {
+		deleteColumn = true;
 		return exec(null, ttl, CassandraOperationType.COLUMN_DELETE);
 	}
 
-	private Execution<Void> exec(Object value, final int ttl, final CassandraOperationType opType) {
+	private Execution<Void> exec(Object value, final Integer ttl, final CassandraOperationType opType) {
 
 		this.columnValue = value;
 		this.ttl = ttl;
@@ -168,9 +182,6 @@ public class CqlColumnMutationImpl implements ColumnMutation {
 
 			@Override
 			public Query getQuery() {
-
-				context.rewindForRead();
-
 
 				Preconditions.checkArgument(rowKey != null, "Row key must be provided");
 				Preconditions.checkArgument(keyspace != null, "Keyspace must be provided");
@@ -190,7 +201,10 @@ public class CqlColumnMutationImpl implements ColumnMutation {
 				sb.append(" WHERE key = ?");
 
 				String query = sb.toString();
-				System.out.println("UPDATE query: " + query);
+				
+				if (LOG.isDebugEnabled()) {
+					LOG.debug("UPDATE query: " + query);
+				}
 
 				PreparedStatement statement = cluster.connect().prepare(query);
 				BoundStatement boundStatement = new BoundStatement(statement);
@@ -234,29 +248,22 @@ public class CqlColumnMutationImpl implements ColumnMutation {
 			sb.append(" USING ");
 		}
 		
-		boolean first = true;
-		
 		if (ttl != null) {
 			sb.append(" TTL " + ttl);
-			first = false;
 		}
 		
 		if (timestamp != null) {
-			if (!first) {
+			if (ttl != null) {
 				sb.append(" AND");
 			}
 			sb.append(" TIMESTAMP " + timestamp);
-			first = false;
 		}
 		
 		if (consistencyLevel != null) {
-			if (!first) {
+			if (ttl != null || timestamp != null) {
 				sb.append(" AND");
 			}
 			sb.append(" CONSISTENCY " + ConsistencyLevelTransform.getConsistencyLevel(consistencyLevel).name());
-			first = false;
 		}
 	}
-
-
 }

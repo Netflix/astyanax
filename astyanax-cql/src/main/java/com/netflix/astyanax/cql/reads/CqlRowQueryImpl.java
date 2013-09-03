@@ -1,8 +1,10 @@
 package com.netflix.astyanax.cql.reads;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.in;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.gte;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.lte;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.desc;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -17,12 +19,14 @@ import com.datastax.driver.core.Row;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select.Selection;
 import com.datastax.driver.core.querybuilder.Select.Where;
+import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.RowCopier;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
+import com.netflix.astyanax.cql.CqlFamilyFactory;
 import com.netflix.astyanax.cql.util.ChainedContext;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.ColumnFamily;
@@ -35,7 +39,7 @@ import com.netflix.astyanax.query.RowQuery;
 public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 	private ChainedContext context; 
-	private CqlColumnSlice<C> columnSlice;
+	private CqlColumnSlice<C> columnSlice = new CqlColumnSlice<C>();
 
 	public CqlRowQueryImpl(ChainedContext ctx) {
 		this.context = ctx;
@@ -124,33 +128,106 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 	private class InternalRowQueryExecutionImpl extends CqlAbstractExecutionImpl<ColumnList<C>> {
 
+		private final Object rowKey; 
+		
 		public InternalRowQueryExecutionImpl() {
 			super(context);
+			this.rowKey = context.getNext(Object.class); 
 		}
 
 		@Override
 		public Query getQuery() {
 
-			String keyspace = context.getNext(String.class);
-			ColumnFamily<?, ?> cf = context.getNext(ColumnFamily.class);
-			Object rowKey = context.getNext(Object.class); 
+			if (CqlFamilyFactory.OldStyleThriftMode()) {
+				
+				if (columnSlice.isSelectAllQuery()) {
+					return new OldStyle().getSelectEntireRowQuery();
+				} else if (columnSlice.isColumnSelectQuery()) {
+					return new OldStyle().getSelectColumnsQuery();
+				} else {
+					return new OldStyle().getSelectColumnRangeQuery();
+				}
+				
+			} else {
+				
+				if (columnSlice.isSelectAllQuery()) {
+					return new NewStyle().getSelectEntireRowQuery();
+				} else if (columnSlice.isColumnSelectQuery()) {
+					return new NewStyle().getSelectColumnsQuery();
+				} else {
+					return new NewStyle().getSelectColumnRangeQuery();
+				}
+			}
+		}
 
-			Query query = null;
+		@Override
+		public ColumnList<C> parseResultSet(ResultSet rs) {
 
-			Collection<C> columns = columnSlice.getColumns();
+			List<Row> rows = rs.all(); 
 
-			if (columns != null) {
+			if (CqlFamilyFactory.OldStyleThriftMode()) {
+				return new CqlColumnListImpl<C>(rows, cf);
+			} else {
+				Preconditions.checkArgument(rows.size() <= 1, "Multiple rows returned for row query");
+				return new CqlColumnListImpl<C>(rows.get(0));
+			}
+		}
 
+		@Override
+		public CassandraOperationType getOperationType() {
+			return CassandraOperationType.GET_ROW;
+		}
+		
+		
+		
+		/** OLD STYLE QUERIES */ 
+		
+		private class OldStyle {
+			
+			Query getSelectEntireRowQuery() {
+				return QueryBuilder.select().all()
+						.from(keyspace, cf.getName())
+						.where(eq("key", rowKey));
+			}
+			
+			Query getSelectColumnsQuery() {
+				
+				Collection<C> cols = columnSlice.getColumns(); 
+				Object[] columns = cols.toArray(new Object[cols.size()]); 
+				
+				return QueryBuilder.select().all()
+						.from(keyspace, cf.getName())
+						.where(eq("key", rowKey))
+						.and(in("column1", columns));
+			}
+			
+			Query getSelectColumnRangeQuery() {
+				throw new NotImplementedException();
+			}
+		}
+		
+		/** NEW STYLE QUERIES */
+		private class NewStyle {
+			
+			Query getSelectEntireRowQuery() {
+				return QueryBuilder.select().all()
+						.from(keyspace, cf.getName())
+						.where(eq(cf.getKeyAlias(), rowKey));
+			}
+			
+			Query getSelectColumnsQuery() {
+				
+				Collection<C> columns = columnSlice.getColumns(); 
 				Selection selection = QueryBuilder.select();
 
 				for (C column : columns) {
 					selection.column(String.valueOf(column));
 				}
-
-				query = selection.from(keyspace, cf.getName())
+				return selection.from(keyspace, cf.getName())
 						.where(eq(cf.getKeyAlias(), rowKey));
-
-			} else {
+			}
+			
+			Query getSelectColumnRangeQuery() {
 
 				Where stmt = QueryBuilder.select().all()
 						.from(keyspace, cf.getName())
@@ -159,42 +236,22 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 				if (columnSlice.getStartColumn() != null) {
 					stmt.and(gte(columnSlice.getColumnName(), columnSlice.getStartColumn()));
 				}
+				
 				if (columnSlice.getEndColumn() != null) {
 					stmt.and(lte(columnSlice.getColumnName(), columnSlice.getEndColumn()));
 				}
 
 				if (columnSlice.getReversed()) {
-					stmt.desc(columnSlice.getColumnName());
+					stmt.orderBy(desc(columnSlice.getColumnName()));
 				}
 
 				if (columnSlice.getLimit() != -1) {
 					stmt.limit(columnSlice.getLimit());
 				}
-
-				query = stmt;
-			}
-			return query;
-		}
-
-		@Override
-		public ColumnList<C> parseResultSet(ResultSet rs) {
-
-			List<Row> rows = rs.all(); 
-
-			if (columnSlice.getColumns() != null) {
-				if (rows.size() > 1) {
-					throw new RuntimeException("Multiple rows for query - use RowSliceQuery instead");
-				} else {
-					return new CqlColumnListImpl<C>(rows.get(0));
-				}
-			} else {
-				return new CqlColumnListImpl<C>(rows);
+				
+				return stmt;
 			}
 		}
-
-		@Override
-		public CassandraOperationType getOperationType() {
-			return CassandraOperationType.GET_ROW;
-		}
+		
 	}
 }

@@ -71,7 +71,7 @@ public class ColumnFamily<K, C> implements Comparable<ColumnFamily<K,C>>{
     public String getName() {
         return columnFamilyName;
     }
-
+    
     /**
      * Serializer for first level column names. This serializer does not apply
      * to sub column names.
@@ -141,5 +141,9 @@ public class ColumnFamily<K, C> implements Comparable<ColumnFamily<K,C>>{
     @Override
     public int hashCode() {
         return this.getName().hashCode();
+    }
+    
+    public boolean inThriftMode() {
+    	return true;
     }
 }

@@ -50,6 +50,7 @@ public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
     private String              cqlVersion                  = null;
     private String              targetCassandraVersion      = "1.1";
     private Map<String, Partitioner> partitioners           = Maps.newHashMap();
+    private boolean             inOldStyleThriftMode        = true;
 
     public AstyanaxConfigurationImpl() {
         partitioners.put(org.apache.cassandra.dht.RandomPartitioner.class.getCanonicalName(), BigInteger127Partitioner.get());

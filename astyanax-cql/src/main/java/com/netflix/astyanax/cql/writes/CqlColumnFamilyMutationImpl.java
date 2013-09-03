@@ -1,20 +1,15 @@
 package com.netflix.astyanax.cql.writes;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.Session;
 import com.google.common.base.Preconditions;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.cql.CqlFamilyFactory;
 import com.netflix.astyanax.cql.util.ChainedContext;
-import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnPath;
 import com.netflix.astyanax.model.ConsistencyLevel;
 
@@ -24,10 +19,12 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 	private ChainedContext context; 
 	
 	private List<CqlColumnMutationImpl> mutationList = new ArrayList<CqlColumnMutationImpl>();
-	private ColumnFamily<K, C> columnFamily; 
-	private K rowKey;
-	private String keyspace;
-	private Cluster cluster; 
+	private boolean deleteRow = false; 
+	
+//	private ColumnFamily<K, C> columnFamily; 
+//	private K rowKey;
+//	private String keyspace;
+//	private Cluster cluster; 
 	private com.netflix.astyanax.model.ConsistencyLevel consistencyLevel;
 
 	// Tracks the mutations on this ColumnFamily.
@@ -39,22 +36,27 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 		this.context = context;
 		context.rewindForRead(); 
 		
-		cluster = context.getNext(Cluster.class);
-		keyspace = context.getNext(String.class);
-		columnFamily = context.getNext(ColumnFamily.class);
-		rowKey = (K) context.getNext(Object.class);
+//		cluster = context.getNext(Cluster.class);
+//		keyspace = context.getNext(String.class);
+//		columnFamily = context.getNext(ColumnFamily.class);
+//		rowKey = (K) context.getNext(Object.class);
 
 		this.consistencyLevel = level;
+		
+		if (CqlFamilyFactory.OldStyleThriftMode()) {
+			currentState = new OldStyleThriftState();
+		}
 	}
 
-	public String getName() {
-		return columnFamily.getName();
-	}
+//	public String getColumnFamilyName() {
+//		return columnFamily.getName();
+//	}
 	
 	
 	@Override
 	public <V> ColumnListMutation<C> putColumn(C columnName, V value, Serializer<V> valueSerializer, Integer ttl) {
 		
+		System.out.println("Columnname : " + columnName + " " + valueSerializer.getComparatorType() + " " + valueSerializer.getClass().getName());
 		Preconditions.checkArgument(columnName != null, "Column Name must not be null");
 		
 		if (currentState instanceof CqlColumnFamilyMutationImpl.InitialState || 
@@ -65,7 +67,7 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 		}
 		checkAndSetTTL(ttl);
 		
-		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(context.clone().add(columnName.toString()));
+		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(context.clone().add(columnName));
 		mutation.putValue(value, valueSerializer, ttl);
 		
 		mutationList.add(mutation);
@@ -89,7 +91,7 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 			checkState(new UpdateColumnState());
 		}
 
-		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(context.clone().add(columnName.toString()));
+		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(context.clone().add(columnName));
 		mutation.putEmptyColumn(ttl);
 		mutationList.add(mutation);
 		
@@ -101,7 +103,7 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 		
 		checkState(new UpdateColumnState());
 
-		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(context.clone().add(columnName.toString()));
+		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(context.clone().add(columnName));
 		mutation.incrementCounterColumn(amount);
 		mutationList.add(mutation);
 		
@@ -113,7 +115,7 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 		
 		checkState(new UpdateColumnState());
 		
-		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(context.clone().add(columnName.toString()));
+		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(context.clone().add(columnName));
 		mutation.deleteColumn();
 		mutationList.add(mutation);
 		
@@ -122,18 +124,18 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 
 	@Override
 	public ColumnListMutation<C> delete() {
+		deleteRow = true;
 		checkState(new DeleteRowState());
 		return this;
 	}
 	
-	public BoundStatement getPreparedStatement() {
-		return currentState.getStatement(this);
+	public BatchedStatements getBatch() {
+		return currentState.getStatement();
 	}
 
 	private interface MutationState { 
 		public MutationState next(MutationState state);
-		
-		public BoundStatement getStatement(CqlColumnFamilyMutationImpl<?, ?> mutationImpl);
+		public BatchedStatements getStatement();
 	}
 	
 	private class InitialState implements MutationState {
@@ -144,11 +146,27 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 		}
 
 		@Override
-		public BoundStatement getStatement(CqlColumnFamilyMutationImpl<?, ?> mutationImpl) {
+		public BatchedStatements getStatement() {
 			throw new RuntimeException("Mutation list is empty");
 		}
 	}
 	
+	private class OldStyleThriftState implements MutationState {
+
+		@Override
+		public MutationState next(MutationState state) {
+			if (state instanceof CqlColumnFamilyMutationImpl.DeleteRowState) {
+				return state;
+			}
+			return this;  // once in this state - stay in same state
+		}
+
+		@Override
+		public BatchedStatements getStatement() {
+			return new OldStyleCFMutationQuery(context.clone(), mutationList, deleteRow, timestamp, defaultTTL, consistencyLevel).getQuery();
+		}
+	}
+
 	private class UpdateColumnState implements MutationState {
 
 		@Override
@@ -160,65 +178,10 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 		}
 
 		@Override
-		public BoundStatement getStatement(CqlColumnFamilyMutationImpl<?, ?> mutationImpl) {
-			
-			Preconditions.checkArgument(mutationList.size() > 0, "Empty mutation list");
-			Preconditions.checkArgument(rowKey != null, "Row key must be provided");
-			
-			StringBuilder sb1 = new StringBuilder("UPDATE ");
-			sb1.append( mutationImpl.keyspace + "." + mutationImpl.getName());
-			
-			appendWriteOptions(sb1);
-			
-			sb1.append(" SET ");
-
-			List<Object> bindList = new ArrayList<Object>();
-			
-			Iterator<CqlColumnMutationImpl> iter = mutationImpl.mutationList.iterator();
-			while (iter.hasNext()) {
-				CqlColumnMutationImpl m = iter.next();
-				
-				if (m.counterColumn) {
-					long increment = ((Long)m.columnValue).longValue();
-					if (increment < 0) {
-						sb1.append(" SET ").append(m.columnName).append(" = ").append(m.columnName).append(" - ?");
-						m.columnValue = Math.abs(increment);
-					} else {
-						sb1.append(" SET ").append(m.columnName).append(" = ").append(m.columnName).append(" + ?");
-					} 
-				} else {
-					sb1.append(m.columnName + " = ?");
-				}
-				
-				bindList.add(m.columnValue);
-				if (iter.hasNext()) {
-					sb1.append(", ");
-				}
-			}
-			
-			sb1.append(" WHERE key = ?");
-
-			bindList.add(mutationImpl.rowKey);
-			
-			// sb1 + sb2
-			String query = sb1.toString();
-			
-			System.out.println("UPDATE query: " + query);
-			
-			Session session = mutationImpl.cluster.connect();
-			PreparedStatement statement = session.prepare(query);
-
-			BoundStatement boundStatement = new BoundStatement(statement);
-			boundStatement.bind(bindList.toArray());
-			
-			return boundStatement;
+		public BatchedStatements getStatement() {
+			return new CqlStyleUpdateQuery(context.clone(), mutationList, timestamp, defaultTTL, consistencyLevel).getQuery();
 		}
 	}
-
-	private void appendWriteOptions(StringBuilder sb) {
-		CqlColumnMutationImpl.appendWriteOptions(sb, super.timestamp, super.defaultTTL, consistencyLevel);
-	}
-
 
 	private class NewRowState implements MutationState {
 
@@ -235,51 +198,8 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 		}
 
 		@Override
-		public BoundStatement getStatement(CqlColumnFamilyMutationImpl<?, ?> mutationImpl) {
-			StringBuilder sb1 = new StringBuilder("INSERT INTO ");
-			sb1.append( mutationImpl.keyspace + "." + mutationImpl.getName());
-			
-			sb1.append(" (key, ");
-
-			StringBuilder sb2 = new StringBuilder(" VALUES (?, ");
-
-			List<Object> bindList = new ArrayList<Object>();
-			bindList.add(mutationImpl.rowKey);
-			
-			Iterator<CqlColumnMutationImpl> iter = mutationImpl.mutationList.iterator();
-			while (iter.hasNext()) {
-				CqlColumnMutationImpl m = iter.next();
-				sb1.append(m.columnName);
-				sb2.append("?");
-				bindList.add(m.columnValue);
-				if (iter.hasNext()) {
-					sb1.append(", ");
-					sb2.append(", ");
-				}
-			}
-			
-			sb1.append(")");
-			sb2.append(")");
-			
-			appendWriteOptions(sb2);
-
-			// sb1 + sb2
-			String query = sb1.append(sb2.toString()).toString();
-			
-			System.out.println("Insert query: " + query);
-			
-			Session session = mutationImpl.cluster.connect();
-			PreparedStatement statement = session.prepare(query);
-
-			BoundStatement boundStatement = new BoundStatement(statement);
-			boundStatement.bind(bindList.toArray());
-			
-			for (Object o : bindList) {
-				System.out.print(String.valueOf(o) + " " );
-			}
-			System.out.println();
-			
-			return boundStatement;
+		public BatchedStatements getStatement() {
+			return new CqlStyleInsertQuery(context.clone(), mutationList, timestamp, defaultTTL, consistencyLevel).getQuery();
 		}
 	}
 	
@@ -290,26 +210,10 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 		}
 
 		@Override
-		public BoundStatement getStatement(CqlColumnFamilyMutationImpl<?, ?> mutationImpl) {
+		public BatchedStatements getStatement() {
 			
-			Preconditions.checkArgument(mutationImpl.mutationList.size() == 0, "Mutation list must be empty when deleting row");
-
-			StringBuilder sb1 = new StringBuilder("DELETE FROM ");
-			sb1.append( keyspace + "." + getName());
-			
-			appendWriteOptions(sb1);
-
-			sb1.append(" WHERE key = ?");
-
-			
-			String query = sb1.toString();
-			
-			Session session = cluster.connect();
-			PreparedStatement statement = session.prepare(query);
-
-			BoundStatement boundStatement = new BoundStatement(statement);
-			boundStatement.bind(rowKey);
-			return boundStatement;
+			Preconditions.checkArgument(mutationList == null || mutationList.size() == 0, "Mutation list must be empty when deleting row");
+			return new CqlStyleDeleteRowQuery(context.clone(), mutationList, timestamp, defaultTTL, consistencyLevel).getQuery();
 		}
 	}
 	
@@ -333,5 +237,4 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 		checkAndSetTTL(ttl);
         return this;
     }
-
 }

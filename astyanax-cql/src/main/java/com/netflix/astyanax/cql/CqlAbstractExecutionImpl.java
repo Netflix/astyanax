@@ -1,5 +1,8 @@
 package com.netflix.astyanax.cql;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
@@ -17,21 +20,22 @@ import com.netflix.astyanax.model.ColumnFamily;
 
 public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 	
-	private final Cluster cluster; 
-	private final ColumnFamily<?, ?> cf;
-	private final ChainedContext context; 
-	private final KeyspaceTracerFactory tracerFactory;
+	private static final Logger LOG = LoggerFactory.getLogger(CqlAbstractExecutionImpl.class);
 	
-	public CqlAbstractExecutionImpl(ChainedContext context) {
-		this.context = context.clone();
+	protected final Cluster cluster; 
+	protected final String keyspace;
+	protected final ColumnFamily<?, ?> cf;
+	private final ChainedContext context; 
+	protected final KeyspaceTracerFactory tracerFactory;
+	
+	public CqlAbstractExecutionImpl(ChainedContext ctx) {
+		this.context = ctx;
 		
 		this.context.rewindForRead();
-		this.cluster = context.getNext(Cluster.class);
+		this.cluster = this.context.getNext(Cluster.class);
 		
-		// note that this may be null
-		@SuppressWarnings("unused")
-		String keyspace = context.getNext(String.class);
-		cf = context.getNext(ColumnFamily.class);
+		this.keyspace = context.getNext(String.class);
+		this.cf = context.getNext(ColumnFamily.class);
 		
 		this.tracerFactory = context.getTracerFactory();
 	}
@@ -48,7 +52,13 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 		}
 		
 		tracer.start();
-		ResultSet resultSet = cluster.connect().execute(getQuery());
+		Query query = getQuery();
+		
+		if (LOG.isDebugEnabled()) {
+			LOG.debug("Query: " + query);
+		}
+		
+		ResultSet resultSet = cluster.connect().execute(query);
 		R result = parseResultSet(resultSet);
 		OperationResult<R> opResult = new CqlOperationResultImpl<R>(resultSet, result);
 		tracer.success();
@@ -59,7 +69,14 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 	public ListenableFuture<OperationResult<R>> executeAsync() throws ConnectionException {
 		final CassandraOperationTracer tracer = tracerFactory.newTracer(getOperationType());
 		tracer.start();
-		ResultSetFuture rsFuture = cluster.connect().executeAsync(getQuery());
+		
+		Query query = getQuery();
+		
+		if (LOG.isDebugEnabled()) {
+			LOG.debug("Query: " + query);
+		}
+
+		ResultSetFuture rsFuture = cluster.connect().executeAsync(query);
 		return new AsyncOperationResult<R>(rsFuture) {
 			@Override
 			public OperationResult<R> getOperationResult(ResultSet resultSet) {

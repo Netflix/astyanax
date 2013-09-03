@@ -10,6 +10,10 @@ public class CqlColumnSlice<C> extends ColumnSlice<C> {
 	private CqlRangeImpl cqlRange;
 	private Collection<C> cqlColumns;
 	
+	public CqlColumnSlice() {
+		super(null, null);
+	}
+
 	public CqlColumnSlice(C startColumn, C endColumn) {
 		super(null, null);
 	}
@@ -81,22 +85,22 @@ public class CqlColumnSlice<C> extends ColumnSlice<C> {
 
 	@Override
 	public C getStartColumn() {
-		return (C) cqlRange.getCqlStart();
+		return (cqlRange != null) ? (C) cqlRange.getCqlStart() : null;
 	}
 
 	@Override
 	public C getEndColumn() {
-		return (C) cqlRange.getCqlEnd();
+		return (cqlRange != null) ? (C) cqlRange.getCqlEnd() : null;
 	}
 
 	@Override
 	public boolean getReversed() {
-		return cqlRange.isReversed();
+		return (cqlRange != null ) ? cqlRange.isReversed() : false;
 	}
 
 	@Override
 	public int getLimit() {
-		return cqlRange.getLimit();
+		return (cqlRange != null ) ? cqlRange.getLimit() : -1;
 	}
 	
 	public boolean isColumnSelectQuery() {

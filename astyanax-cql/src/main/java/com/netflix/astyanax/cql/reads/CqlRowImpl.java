@@ -14,7 +14,7 @@ public class CqlRowImpl<K, C> implements Row<K, C> {
 	
 	public CqlRowImpl(com.datastax.driver.core.Row resultRow) {
 		this.resultRow = resultRow;
-		this.cqlColumnList = new CqlColumnListImpl<C>(resultRow, 1);
+		this.cqlColumnList = new CqlColumnListImpl<C>(resultRow);
 	}
 	
 	@Override

@@ -11,13 +11,14 @@ import com.netflix.astyanax.connectionpool.ConnectionFactory;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
 import com.netflix.astyanax.connectionpool.ConnectionPoolMonitor;
+import com.netflix.astyanax.connectionpool.CqlConnectionPoolProxy;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.NodeDiscovery;
 import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
-import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
-import com.netflix.astyanax.connectionpool.impl.NodeDiscoveryImpl;
 import com.netflix.astyanax.connectionpool.impl.BagOfConnectionsConnectionPoolImpl;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
+import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
+import com.netflix.astyanax.connectionpool.impl.NodeDiscoveryImpl;
 import com.netflix.astyanax.connectionpool.impl.RoundRobinConnectionPoolImpl;
 import com.netflix.astyanax.connectionpool.impl.TokenAwareConnectionPoolImpl;
 import com.netflix.astyanax.impl.FilteringHostSupplier;
@@ -106,7 +107,12 @@ public class AstyanaxContext<T> {
 
         protected <T> ConnectionPool<T> createConnectionPool(ConnectionFactory<T> connectionFactory) {
             ConnectionPool<T> connectionPool = null;
+            
             switch (asConfig.getConnectionPoolType()) {
+            case JAVA_DRIVER: 
+            	connectionPool = new CqlConnectionPoolProxy<T>(cpConfig, connectionFactory, monitor);
+            	break;
+            	
             case TOKEN_AWARE:
                 connectionPool = new TokenAwareConnectionPoolImpl<T>(cpConfig, connectionFactory, monitor);
                 break;

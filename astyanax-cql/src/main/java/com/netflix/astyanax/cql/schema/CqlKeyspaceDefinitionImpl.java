@@ -14,6 +14,8 @@ import java.util.Properties;
 import org.apache.commons.lang.StringUtils;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
@@ -24,6 +26,7 @@ import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.netflix.astyanax.connectionpool.OperationResult;
+import com.netflix.astyanax.cql.CqlOperationResultImpl;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.FieldMetadata;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
@@ -32,6 +35,8 @@ import com.netflix.astyanax.ddl.SchemaChangeResult;
 
 public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 
+	private static final Logger Log = LoggerFactory.getLogger(CqlKeyspaceDefinitionImpl.class);
+	
 	private final Cluster cluster; 
 	private String keyspaceName; 
 	private boolean alterKeyspace; 
@@ -54,8 +59,7 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 	public CqlKeyspaceDefinitionImpl(Cluster cluster, Row row) {
 		
 		this.cluster = cluster; 
-		
-		this.keyspaceName = row.getString("keyspace_name");
+		this.setName(row.getString("keyspace_name"));
 		this.setStrategyClass(row.getString("strategy_class"));
 		this.setStrategyOptionsMap(parseStrategyOptions(row.getString("strategy_options")));
 	}
@@ -68,7 +72,8 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 
 	@Override
 	public CqlKeyspaceDefinitionImpl setName(String name) {
-		this.keyspaceName = name; 
+		this.keyspaceName = name.toLowerCase(); 
+		this.options.put("name", keyspaceName);
 		return this;
 	}
 
@@ -164,7 +169,7 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 
 	@Override
 	public Properties getProperties() throws Exception {
-		throw new NotImplementedException();
+		return mapToProperties(options);
 	}
 
 	@Override
@@ -177,9 +182,10 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 		
 		String query = getQuery();
 
-		System.out.println("Query : " + query);
-		return null;
-		//return new CqlOperationResultImpl<SchemaChangeResult>(cluster.connect().execute(query), null);
+		if (Log.isDebugEnabled()) {
+			Log.debug("Query : " + query);
+		}
+		return new CqlOperationResultImpl<SchemaChangeResult>(cluster.connect().execute(query), null);
 	}
 
 	
@@ -229,7 +235,7 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 		Object strategyOptions = input.get("strategy_options");
 		
 		if (strategyOptions == null) {
-			Preconditions.checkArgument(options.get("replication") != null, "Invalid CREATE KEYSPACE properties");
+			Preconditions.checkArgument(input.get("replication") != null, "Invalid CREATE KEYSPACE properties");
 			options = new HashMap<String, Object>();
 			options.putAll(input);
 			
@@ -272,7 +278,26 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 		return root;
 	}
 
+
+	private static Properties mapToProperties(Map<String, Object> map) {
+		
+		Properties props = new Properties();
+		addProperties(props, null, map);
+		return props;
+	}
 	
+	private static void addProperties(Properties props, String prefix, Map<String, Object> subMap) {
+		
+		for (Entry<String, Object> entry : subMap.entrySet()) {
+			
+			String key = (prefix != null) ? prefix + "." + entry.getKey() : entry.getKey();
+			if (entry.getValue() instanceof Map) {
+				addProperties(props, key, (Map<String, Object>) entry.getValue());
+			} else {
+				props.put(key, entry.getValue());
+			}
+		}
+	}
 	
 	private Map<String, Object> parseStrategyOptions(String jsonString) {
 		

@@ -1,6 +1,7 @@
 package com.netflix.astyanax.cql.reads;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
@@ -11,6 +12,7 @@ import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
+import com.netflix.astyanax.cql.CqlFamilyFactory;
 import com.netflix.astyanax.cql.util.ChainedContext;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
@@ -36,6 +38,9 @@ public class CqlColumnQueryImpl<C> implements ColumnQuery<C> {
 
 	private class InternalColumnQueryExecutionImpl extends CqlAbstractExecutionImpl<Column<C>> {
 
+		private final Object rowKey = context.getNext(Object.class); 
+		private final Object column = context.getNext(Object.class); 
+
 		public InternalColumnQueryExecutionImpl() {
 			super(context);
 		}
@@ -47,22 +52,44 @@ public class CqlColumnQueryImpl<C> implements ColumnQuery<C> {
 
 		@Override
 		public Query getQuery() {
-			String keyspace = context.getNext(String.class);
-			ColumnFamily<?, ?> cf = context.getNext(ColumnFamily.class);
-			Object rowKey = context.getNext(Object.class); 
-			Object column = context.getNext(Object.class); 
 			
-			Query query = QueryBuilder.select(String.valueOf(column))
-					  .from(keyspace, cf.getName())
-					  .where(eq("key", rowKey));
+			
+			Query query = null; 
+			if (CqlFamilyFactory.OldStyleThriftMode()) {
+				
+				 query = QueryBuilder.select("column1", "value")
+						  .from(keyspace, cf.getName())
+						  .where(eq("key", rowKey))
+						  .and(eq("column1", column));
+				
+			} else {
+				query = QueryBuilder.select(String.valueOf(column))
+						.from(keyspace, cf.getName())
+						.where(eq(cf.getKeyAlias(), rowKey));
+			}
 			return query;
 		}
 
 		@Override
 		public Column<C> parseResultSet(ResultSet rs) {
+			
 			Row row = rs.one();
-			String columnName = rs.getColumnDefinitions().asList().get(0).getName();
-			return new CqlColumnImpl<C>(columnName, row, 0);
+			if (row == null) {
+				return new CqlColumnImpl();
+			}
+			
+			String columnName = null;
+			int columnIndex = -1;
+			
+			if (CqlFamilyFactory.OldStyleThriftMode()) {
+				columnName = row.getString("column1");
+				columnIndex = 1;
+			} else {
+				columnName = String.valueOf(column);
+				columnIndex = 0;
+			}
+			
+			return new CqlColumnImpl<C>((C) columnName, row, columnIndex);
 		}
 	}
 }

@@ -10,6 +10,7 @@ import org.apache.cassandra.thrift.Mutation;
 
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.ResultSetFuture;
@@ -354,19 +355,9 @@ public class CqlMutationBatchImpl implements MutationBatch {
 	@Override
 	public OperationResult<Void> execute() throws ConnectionException {
 		
-		if (rowLookup.values().size() > 1) {
-			throw new NotImplementedException();
-		}
-
-		CqlColumnFamilyMutationImpl<?,?> mutation = rowLookup.values().iterator().next();
-		ResultSet rs = cluster.connect().execute(mutation.getPreparedStatement());
+		BoundStatement statement = getTotalStatement();
+		ResultSet rs = cluster.connect().execute(statement);
 		return new CqlOperationResultImpl<Void>(rs, null);
-
-//		for (CqlColumnFamilyMutationImpl<?,?> mutation : rowLookup.values()) {
-//			BoundStatement stmt = mutation.getPreparedStatement();
-//			ResultSet rs = cluster.connect().execute(stmt);
-//			// TODO: we really need to support batching here
-//		}
 	}
 
 	@Override
@@ -376,14 +367,24 @@ public class CqlMutationBatchImpl implements MutationBatch {
 			throw new NotImplementedException();
 		}
 		
-		CqlColumnFamilyMutationImpl<?,?> mutation = rowLookup.values().iterator().next();
-		ResultSetFuture rsFuture = cluster.connect().executeAsync(mutation.getPreparedStatement());
+		BoundStatement statement = getTotalStatement();
+		ResultSetFuture rsFuture = cluster.connect().executeAsync(statement);
 		return new AsyncOperationResult<Void>(rsFuture) {
 			@Override
 			public OperationResult<Void> getOperationResult(ResultSet rs) {
 				return new CqlOperationResultImpl<Void>(rs, null);
 			}
 		};
+	}
+	
+	private BoundStatement getTotalStatement() {
+		BatchedStatements statements = new BatchedStatements();
+		
+		for (CqlColumnFamilyMutationImpl<?, ?> cfMutation : rowLookup.values()) {
+			statements.addBatch(cfMutation.getBatch());
+		}
+		
+		return statements.getBoundStatement(cluster, useAtomicBatch);
 	}
 
 	public String getKeyspace() {

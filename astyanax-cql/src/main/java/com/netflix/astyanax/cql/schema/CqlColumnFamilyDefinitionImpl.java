@@ -25,8 +25,11 @@ import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.netflix.astyanax.connectionpool.OperationResult;
+import com.netflix.astyanax.cql.CqlFamilyFactory;
+import com.netflix.astyanax.cql.CqlOperationResultImpl;
 import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.FieldMetadata;
@@ -54,20 +57,46 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	
 	public CqlColumnFamilyDefinitionImpl(Cluster cluster) {
 		this.cluster = cluster;
+		checkEmptyOptions();
 	}
 	
-	public CqlColumnFamilyDefinitionImpl(Cluster cluster, Properties props) {
-		this(cluster, propertiesToMap(props));
+	public CqlColumnFamilyDefinitionImpl(Cluster cluster, String keyspace, Properties props) {
+		this(cluster, keyspace, propertiesToMap(props));
 	}
 
-	public CqlColumnFamilyDefinitionImpl(Cluster cluster, Map<String, Object> options) {
+	public CqlColumnFamilyDefinitionImpl(Cluster cluster, String keyspace, Map<String, Object> options) {
 		this(cluster);
+		
+		if (options == null) {
+			options = new HashMap<String, Object>();
+		}
+		
+		if (!options.containsKey("keyspace")) {
+			options.put("keyspace", keyspace);
+		}
+		
 		init(options);
 	}
 	
+	private void checkEmptyOptions() {
+		if (properties.size() == 0) {
+			// add a comment by default
+			properties.put("comment", "default");
+		}
+	}
 
-	public CqlColumnFamilyDefinitionImpl(Cluster cluster, ColumnFamily<?, ?> columnFamily, Map<String, Object> options) {
+	public CqlColumnFamilyDefinitionImpl(Cluster cluster, String keyspace, ColumnFamily<?, ?> columnFamily, Map<String, Object> options) {
 		this(cluster);
+		
+		Preconditions.checkArgument(columnFamily != null, "ColumnFamily cannot be null");
+
+		if (options == null) {
+			options = new HashMap<String, Object>();
+		}
+		
+		if (!options.containsKey("keyspace")) {
+			options.put("keyspace", keyspace);
+		}
 		
 		if (!options.containsKey("name")) {
 			options.put("name", columnFamily.getName());
@@ -94,13 +123,28 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		this.properties.putAll(options);
 
 		String keyClass = (String) properties.remove("key_validation_class");
-		this.setKeyValidationClass(keyClass);
+		keyClass = (keyClass == null) ?	keyClass = "blob" : keyClass;
 		
 		String comparatorClass = (String) properties.remove("comparator_type");
-		this.makeColumnDefinition().setName("column1").setValidationClass(comparatorClass);
-
+		comparatorClass = (comparatorClass == null) ?	comparatorClass = "blob" : comparatorClass;
+		
 		String dataValidationClass = (String) properties.remove("default_validation_class");
-		this.makeColumnDefinition().setName("value").setValidationClass(dataValidationClass);
+		dataValidationClass = (dataValidationClass == null) ?	dataValidationClass = "blob" : dataValidationClass;
+
+		if (CqlFamilyFactory.OldStyleThriftMode()) {
+			
+			ColumnDefinition key = new CqlColumnDefinitionImpl().setName("key").setValidationClass(keyClass);
+			primaryKeyList.add(key);
+			ColumnDefinition column1 = new CqlColumnDefinitionImpl().setName("column1").setValidationClass(comparatorClass);
+			primaryKeyList.add(column1);
+
+			this.makeColumnDefinition().setName("value").setValidationClass(dataValidationClass);
+
+		} else {
+			
+			throw new NotImplementedException();
+		}
+
 	}
     
 	public CqlColumnFamilyDefinitionImpl(Cluster cluster, Row row) {
@@ -409,10 +453,10 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	
 	private void setKeyAlias(String keyAlias) {
 		// TODO: won't work for composite columns, fix this!
-		CqlColumnDefinitionImpl primaryKeyCol; 
+		ColumnDefinition primaryKeyCol; 
 
 		if (primaryKeyList.size() > 0) {
-			primaryKeyCol = (CqlColumnDefinitionImpl) primaryKeyList.get(0); 
+			primaryKeyCol = primaryKeyList.get(0); 
 		} else {
 			primaryKeyCol = new CqlColumnDefinitionImpl();
 			primaryKeyList.add(primaryKeyCol);
@@ -448,20 +492,14 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 
 	@Override
 	public ColumnFamilyDefinition setKeyValidationClass(String keyValidationClass) {
-
-		// TOOD: won't work for composite columns, fix this!
-		CqlColumnDefinitionImpl primaryKeyCol; 
-
-		if (primaryKeyList.size() > 0) {
-			primaryKeyCol = (CqlColumnDefinitionImpl) primaryKeyList.get(0); 
-		} else {
-			primaryKeyCol = new CqlColumnDefinitionImpl();
-			primaryKeyList.add(primaryKeyCol);
-		}
-		
-		primaryKeyCol.setValidationClass(keyValidationClass);
-		
+		// nothing to do here.
+		properties.put("key_validation_class", keyValidationClass);
 		return this;
+	}
+	
+	private void addToPartitionKey(String columnName, String validationClass) {
+		ColumnDefinition partitionKeyCol = new CqlColumnDefinitionImpl().setName(columnName);
+		primaryKeyList.add(partitionKeyCol);
 	}
 
 	@Override
@@ -565,18 +603,11 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	public OperationResult<SchemaChangeResult> execute() {
 		
 		String query = (alterTable) ? getUpdateQuery() : getCreateQuery();
-		
 		System.out.println("Query: " + query);
 		
-//		Session session = cluster.connect();
-//		PreparedStatement statement = session.prepare(query);
-//		
-//		BoundStatement boundStatement = new BoundStatement(statement);
-//		ResultSet rs = session.execute(boundStatement.bind(bindList.toArray()));
-//
-//		return new CqlOperationResultImpl<SchemaChangeResult>(rs, null);
-		
-		return null;
+		ResultSet rs =  cluster.connect().execute(query);
+
+		return new CqlOperationResultImpl<SchemaChangeResult>(rs, null);
 	}
 	
 	private String getCreateQuery() {
@@ -612,8 +643,17 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 				String pKey = propIter.next();
 				Object pValue = properties.get(pKey);
 				
-				sb.append(pKey).append(" = ").append(pValue);
+				if (pValue == null) {
+					continue;
+				}
 				
+				if (pValue instanceof String) {
+					sb.append(pKey).append(" = '").append(pValue).append("'");
+				} else {
+					sb.append(pKey).append(" = ").append(pValue);
+				}
+				
+								
 				if (propIter.hasNext()) {
 					sb.append(" AND ");
 				}
@@ -621,8 +661,6 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		}
 		
 		String query = sb.toString();
-		
-		System.out.println("Query: " + query);
 
 		return query;
 	}
@@ -673,6 +711,9 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	
 	private static Map<String, Object> propertiesToMap(Properties props) {
 		Map<String, Object> root = Maps.newTreeMap();
+		if (props == null) {
+			return root;
+		}
 		for (Entry<Object, Object> prop : props.entrySet()) {
 			String[] parts = StringUtils.split((String)prop.getKey(), ".");
 			Map<String, Object> node = root;

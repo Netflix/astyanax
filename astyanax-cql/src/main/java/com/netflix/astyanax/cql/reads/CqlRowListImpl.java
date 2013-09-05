@@ -9,6 +9,9 @@ import java.util.Map;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.cql.util.CqlTypeMapping;
+import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 
@@ -17,11 +20,34 @@ public class CqlRowListImpl<K, C> implements Rows<K, C> {
 	private List<Row<K,C>>   rows;
 	private Map<K, Row<K,C>> lookup;
 
-	public CqlRowListImpl(List<com.datastax.driver.core.Row> resultRows) {
+	public CqlRowListImpl(List<com.datastax.driver.core.Row> resultRows, ColumnFamily<?,?> cf, boolean oldStyle) {
 		
 		this.rows   = new ArrayList<Row<K, C>>(resultRows.size());
-		for (com.datastax.driver.core.Row resultRow : resultRows) {
-			this.rows.add(new CqlRowImpl<K, C>(resultRow));
+		if (oldStyle) {
+			Serializer<?> keySerializer = cf.getKeySerializer();
+			K prevKey = null; 
+			List<com.datastax.driver.core.Row> tempList = new ArrayList<com.datastax.driver.core.Row>();
+			for (com.datastax.driver.core.Row row : resultRows) {
+				K rowKey = (K) CqlTypeMapping.getDynamicColumnName(row, keySerializer, "key");
+				if (prevKey == null || prevKey.equals(rowKey)) {
+					tempList.add(row);
+				} else {
+					
+					// we found a set of contiguous rows that match with the same row key
+					this.rows.add(new CqlRowImpl<K, C>(tempList, cf));
+					tempList = new ArrayList<com.datastax.driver.core.Row>();
+					tempList.add(row);
+				}
+				prevKey = rowKey;
+			}
+			// flush the final list
+			if (tempList.size() > 0) {
+				this.rows.add(new CqlRowImpl<K, C>(tempList, cf));
+			}
+		} else {
+			for (com.datastax.driver.core.Row resultRow : resultRows) {
+				this.rows.add(new CqlRowImpl<K, C>(resultRow, cf));
+			}
 		}
 	}
 

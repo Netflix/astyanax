@@ -1,5 +1,6 @@
 package com.netflix.astyanax.cql.test;
 
+import org.apache.log4j.PropertyConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,10 +14,14 @@ public class KeyspaceTests {
 
 	private static final Logger LOG = LoggerFactory.getLogger(KeyspaceTests.class);
 	
-	protected final AstyanaxContext<Keyspace> context;
-	protected final Keyspace keyspace;
-	protected final Driver driver; 
+	public static AstyanaxContext<Keyspace> context;
+	public static Keyspace keyspace;
+	public static Driver driver; 
     
+	public KeyspaceTests() {
+		
+	}
+	
     public KeyspaceTests(AstyanaxContext<Keyspace> context, Keyspace keyspace, Driver driver) {
     	this.context = context;
     	this.keyspace = keyspace;
@@ -34,6 +39,14 @@ public class KeyspaceTests {
         	}
         }
         LOG.info("<<<<<<");
+    }
+    
+    public static void initContext() throws Exception {
+    	PropertyConfigurator.configure("./src/main/java/test-log4j.properties");
+
+    	context = ClusterConfiguration.getKeyspace(Driver.JAVA_DRIVER);
+    	context.start();
+        keyspace = context.getClient();
     }
     
 }

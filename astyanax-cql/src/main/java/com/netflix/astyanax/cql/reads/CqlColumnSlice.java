@@ -124,4 +124,18 @@ public class CqlColumnSlice<C> extends ColumnSlice<C> {
 	public boolean isSelectAllQuery() {
 		return (!isColumnSelectQuery() && !isRangeQuery());
 	}
+	
+	public static enum QueryType {
+		SELECT_ALL, COLUMN_COLLECTION, COLUMN_RANGE;
+	}
+	
+	public QueryType getQueryType() {
+		if (isSelectAllQuery()) {
+			return QueryType.SELECT_ALL;
+		} else if (isRangeQuery()) {
+			return QueryType.COLUMN_RANGE;
+		} else {
+			return QueryType.COLUMN_COLLECTION;
+		}
+	}
 }

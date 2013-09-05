@@ -11,7 +11,6 @@ import java.util.UUID;
 
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
-import com.datastax.driver.core.ColumnDefinitions;
 import com.datastax.driver.core.ColumnDefinitions.Definition;
 import com.datastax.driver.core.Row;
 import com.netflix.astyanax.Serializer;
@@ -46,7 +45,7 @@ public class CqlColumnListImpl<C> implements ColumnList<C> {
 	 * This constructor is meant to be used when we are using the CQL3 table but still in the legacy thrift mode
 	 * @param rows
 	 */
-	public CqlColumnListImpl(List<Row> rows, ColumnFamily<?,?> cf) {
+	public CqlColumnListImpl(List<Row> rows, ColumnFamily<?, ?> cf) {
 		
 		for (Row row : rows) {
 

@@ -3,6 +3,7 @@ package com.netflix.astyanax.serializers;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -10,7 +11,6 @@ import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.annotations.Component;
 import com.netflix.astyanax.model.Equality;
 import com.netflix.astyanax.model.RangeEndpoint;
-import java.util.Arrays;
 
 /**
  * Serializer for a Pojo annotated with Component field annotations
@@ -60,6 +60,11 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
         public void deserialize(Object obj, ByteBuffer value) throws IllegalArgumentException, IllegalAccessException {
            	field.set(obj, serializer.fromByteBuffer(value));
         }
+        
+        public void setValueDirectly(Object obj, Object value) throws IllegalArgumentException, IllegalAccessException {
+        	System.out.println("Setting value: " + field.getName());
+           	field.set(obj, value);
+        }
 
         public ByteBuffer serializeValue(Object value) {
             ByteBuffer buf = serializer.toByteBuffer((P) value);
@@ -70,11 +75,20 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
         public int compareTo(ComponentSerializer<?> other) {
             return this.ordinal - other.ordinal;
         }
+        
+        public Serializer<P> getSerializer() {
+        	return this.serializer;
+        }
     }
 
     private final List<ComponentSerializer<?>> components;
     private final Class<T> clazz;
     private final int bufferSize;
+    
+    public AnnotatedCompositeSerializer<T> clone() {
+    	AnnotatedCompositeSerializer<T> clone = new AnnotatedCompositeSerializer<T>(this.clazz, this.bufferSize, false);
+    	return clone;
+    }
     
     public AnnotatedCompositeSerializer(Class<T> clazz, boolean includeParentFields) {
         this(clazz, DEFAULT_BUFFER_SIZE, includeParentFields);
@@ -288,4 +302,14 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
         endpoint.append(value, equality);
         return endpoint;
     }
+
+	public List<ComponentSerializer<?>> getComponents() {
+		return components;
+	}
+
+	public Class<T> getClazz() {
+		return clazz;
+	}
+    
+    
 }

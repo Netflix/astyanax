@@ -18,6 +18,7 @@ import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
+import com.netflix.astyanax.cql.CqlFamilyFactory;
 import com.netflix.astyanax.cql.util.ChainedContext;
 import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.query.CqlQuery;
@@ -159,7 +160,12 @@ public class DirectCqlQueryImpl<K, C> implements CqlQuery<K, C> {
 		@Override
 		public CqlResult<K, C> parseResultSet(ResultSet resultSet) {
 			boolean isCountQuery = basicCqlQuery.contains(" count(");
-			return new DirectCqlResult<K, C>(isCountQuery, resultSet);
+			if (isCountQuery) {
+				return new DirectCqlResult<K,C>(new Long(resultSet.one().getLong(0)));
+			} else {
+				boolean isOldStyle = CqlFamilyFactory.OldStyleThriftMode();
+				return new DirectCqlResult<K,C>(resultSet.all(), cf, isOldStyle);
+			}
 		}
 	}
 }

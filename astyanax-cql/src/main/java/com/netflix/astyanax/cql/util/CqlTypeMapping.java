@@ -1,6 +1,7 @@
 package com.netflix.astyanax.cql.util;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.cassandra.cql3.CQL3Type;
@@ -9,6 +10,8 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import com.datastax.driver.core.Row;
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
+import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer.ComponentSerializer;
 import com.netflix.astyanax.serializers.ComparatorType;
 
 
@@ -40,9 +43,11 @@ public class CqlTypeMapping {
 	}
 	
 	
-	public static Object getDynamicColumnName(Row row, Serializer<?> serializer) {
-		
-		String columnName = "column1";
+	public static <T> Object getDynamicColumnName(Row row, Serializer<T> serializer) {
+		return getDynamicColumnName(row, serializer, "column1");
+	}
+	
+	public static <T> Object getDynamicColumnName(Row row, Serializer<T> serializer, String columnName) {
 		
 		ComparatorType comparatorType = serializer.getComparatorType();
 		
@@ -69,7 +74,7 @@ public class CqlTypeMapping {
 		case UTF8TYPE:
 		    return row.getString(columnName);
 		case COMPOSITETYPE:
-			throw new NotImplementedException();
+			return getCompositeColumn(row, (AnnotatedCompositeSerializer<?>) serializer);
 		case DYNAMICCOMPOSITETYPE:
 			throw new NotImplementedException();
 		case UUIDTYPE:
@@ -88,5 +93,34 @@ public class CqlTypeMapping {
 		default:
 			throw new RuntimeException("Could not recognize comparator type: " + comparatorType.getTypeName());
 		}
+	}
+	
+	
+	private static Object getCompositeColumn(Row row, AnnotatedCompositeSerializer<?> compositeSerializer) {
+		
+		Class<?> clazz = compositeSerializer.getClazz();
+		System.out.println("Class " + clazz.getName());
+		
+		Object obj = null;
+		try {
+			obj = clazz.newInstance();
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+		
+		int columnIndex = 1;
+		
+		for (ComponentSerializer<?> component : compositeSerializer.getComponents()) {
+			
+			Object value = getDynamicColumnName(row, component.getSerializer(), "column" + columnIndex++);
+			try {
+				System.out.println("Value: " + value);
+				component.setValueDirectly(obj, value);
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
+		return obj;
+//		throw new RuntimeException("Could not recognize comparator type: " + compositeSerializer.getComparatorType().getTypeName());
 	}
 }

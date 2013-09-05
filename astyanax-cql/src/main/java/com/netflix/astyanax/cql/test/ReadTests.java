@@ -12,11 +12,10 @@ import java.util.UUID;
 import junit.framework.Assert;
 
 import org.joda.time.DateTime;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-import com.netflix.astyanax.AstyanaxContext;
-import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
-import com.netflix.astyanax.cql.test.ClusterConfiguration.Driver;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
@@ -26,344 +25,60 @@ import com.netflix.astyanax.serializers.StringSerializer;
 
 public class ReadTests extends KeyspaceTests {
 
-	private static DateTime OriginalDate = new DateTime().withMillisOfSecond(0).withSecondOfMinute(0).withMinuteOfHour(0).withHourOfDay(0);
-	private static byte[] TestBytes = new String("TestBytes").getBytes();
-	private static UUID TestUUID = UUID.randomUUID();
-	private static int RowCount = 1;
+	public static DateTime OriginalDate = new DateTime().withMillisOfSecond(0).withSecondOfMinute(0).withMinuteOfHour(0).withHourOfDay(0);
+	public static byte[] TestBytes = new String("TestBytes").getBytes();
+	public static UUID TestUUID = UUID.fromString("edeb3d70-15ce-11e3-8ffd-0800200c9a66");
+	public static int RowCount = 1;
 	
-	private String[] columnNamesArr = {"firstname", "lastname", "address","age","ageShort", "ageLong","percentile", "married","single", "birthdate", "bytes", "uuid", "empty"};
-	private List<String> columnNames; 
+	public static String[] columnNamesArr = {"firstname", "lastname", "address","age","ageShort", "ageLong","percentile", "married","single", "birthdate", "bytes", "uuid", "empty"};
+	public static List<String> columnNames = new ArrayList<String>(Arrays.asList(columnNamesArr));
 	
-	private static ColumnFamily<String, String> CF_USER_INFO = ColumnFamily.newColumnFamily(
+	public static ColumnFamily<String, String> CF_USER_INFO = ColumnFamily.newColumnFamily(
 			"UserInfo", // Column Family Name
 			StringSerializer.get(), // Key Serializer
 			StringSerializer.get()); // Column Serializer
 
 
-	public ReadTests(AstyanaxContext<Keyspace> context, Keyspace keyspace, Driver driver) {
-		super(context, keyspace, driver);
-		
-    	columnNames = new ArrayList<String>(Arrays.asList(columnNamesArr));
-    	Collections.sort(columnNames);
+
+	public static void initReadTests() throws Exception {
+		initContext();
+		Collections.sort(columnNames); 
 	}
+	
 
 
-	public void createKeyspace() throws Exception {
+	private void createKeyspace() throws Exception {
 		keyspace.createColumnFamily(CF_USER_INFO, null);
 	}
-	
-	public void populateRows() throws Exception {
 
-        MutationBatch mb = keyspace.prepareMutationBatch();
+    public void testAllColumnsForRow(ColumnList<String> columns, int i) throws Exception {
 
-        for (int i=0; i<RowCount; i++) {
-        	
-        	Date date = OriginalDate.plusMinutes(i).toDate();
-            mb.withRow(CF_USER_INFO, "acct_" + i)
-            .putColumn("firstname", "john_" + i, null)
-            .putColumn("lastname", "smith_" + i, null)
-            .putColumn("address", "john smith address " + i, null)
-            .putColumn("age", 30+i, null)
-            .putColumn("ageShort", new Integer(30+i).shortValue(), null)
-            .putColumn("ageLong", new Integer(30+i).longValue(), null)
-            .putColumn("percentile", 30.1)
-            .putColumn("married", true)
-            .putColumn("single", false)
-            .putColumn("birthdate", date)
-            .putColumn("bytes", TestBytes)
-            .putColumn("uuid", TestUUID)
-            .putEmptyColumn("empty");
+    	Date date = OriginalDate.plusMinutes(i).toDate();
 
-            mb.execute();
-            mb.discardMutations();
-        }
-	}
-	
-	
-	public void deleteRows() throws Exception {
-
-        MutationBatch mb = keyspace.prepareMutationBatch();
-
-        for (int i=0; i<RowCount; i++) {
-            mb.withRow(CF_USER_INFO, "acct_" + i).delete();
-            mb.execute();
-            mb.discardMutations();
-        }
-	}
-	
-	public void testRowQueryEntireRow() throws Exception {
-		
-    	populateRows();
-    	Thread.sleep(1000);
-
-    	testRowQueryWithDifferentDataTypes();
+    	testColumnValue(columns, "firstname", columnNames, "john_" + i);
+    	testColumnValue(columns, "lastname", columnNames, "smith_" + i);
+    	testColumnValue(columns, "address", columnNames, "john smith address " + i);
+    	testColumnValue(columns, "age", columnNames, 30 + i);
+    	testColumnValue(columns, "ageShort", columnNames, new Integer(30+i).shortValue());
+    	testColumnValue(columns, "ageLong", columnNames, new Integer(30+i).longValue());
+    	testColumnValue(columns, "percentile", columnNames, 30.1);
+    	testColumnValue(columns, "married", columnNames, true);
+    	testColumnValue(columns, "single", columnNames, false);
+    	testColumnValue(columns, "birthdate", columnNames, date);
+    	testColumnValue(columns, "bytes", columnNames, TestBytes);
+    	testColumnValue(columns, "uuid", columnNames, TestUUID);
+    	testColumnValue(columns, "empty", columnNames, null);
     	
-    	deleteRows();
-    	Thread.sleep(1000);
-    	testMissingRowQuery();
-    }
-
-
-	public void testSingleRowSingleColumn() throws Exception {
-		
-    	populateRows();
-    	Thread.sleep(1000);
-
-    	testSingleRowColumnQuery();
-    	
-    	deleteRows();
-    	Thread.sleep(1000);
-    	testMissingRowColumnQuery();
-    }
-
-	public void testSingleRowColumnSliceQueryTest() throws Exception {
-		
-    	populateRows();
-    	Thread.sleep(1000);
-
-    	testSingleRowColumnSliceQueryWithCollection();
-    	testSingleRowColumnSliceQueryVarArgs();
-    	
-    	deleteRows();
-    	Thread.sleep(1000);
-    	testMissingRowColumnSliceQueryWithCollection();
-    	testMissingRowColumnSliceQueryVarArgs();
-    }
-	
-
-
-	public void test() throws Exception {
-		
-		testSingleRowColumnCountQueryTest();
-    	
-    }
-	
-	private void testSingleRowColumnCountQueryTest() throws Exception {
-    	populateRows();
-    	Thread.sleep(1000);
-
-    	testSingleRowColumnCountQuery(columnNames.size());
-    	
-    	deleteRows();
-    	Thread.sleep(1000);
-    	testSingleRowColumnCountQuery(0);
-	}
-
-
-	private void testSingleRowColumnCountQuery(int expected) throws Exception {
-        for (int i=0; i<RowCount; i++) {
-        	int count = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i).getCount().execute().getResult().intValue();
-        	Assert.assertEquals(expected, count);
-        }
-	}
-
-	private void testMissingRowColumnSliceQueryVarArgs() throws Exception {
-        for (int i=0; i<RowCount; i++) {
-        	ColumnList<String> response = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i)
-        			.withColumnSlice("firstname", "lastname", "address","age","ageShort", "ageLong","percentile", "married","single", "birthdate", "bytes", "uuid", "empty").execute().getResult();
-        	Assert.assertTrue(response.isEmpty());
-        }
-	}
-
-
-	private void testMissingRowColumnSliceQueryWithCollection() throws Exception {
-        for (int i=0; i<RowCount; i++) {
-        	ColumnList<String> response = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i).withColumnSlice(columnNames).execute().getResult();
-        	Assert.assertTrue(response.isEmpty());
-        }
-	}
-
-	private void testSingleRowColumnSliceQueryWithCollection() throws Exception {
-    	
-    	/**
-    	 * READ BY COLUMN SLICE COLLECTION
-    	 */
-        for (int i=0; i<RowCount; i++) {
-
-        	Date date = OriginalDate.plusMinutes(i).toDate();
-
-        	ColumnList<String> response = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i).withColumnSlice(columnNames).execute().getResult();
-        	
-        	testColumnValue(response, "firstname", columnNames, "john_" + i);
-        	testColumnValue(response, "lastname", columnNames, "smith_" + i);
-        	testColumnValue(response, "address", columnNames, "john smith address " + i);
-        	testColumnValue(response, "age", columnNames, 30 + i);
-        	testColumnValue(response, "ageShort", columnNames, new Integer(30+i).shortValue());
-        	testColumnValue(response, "ageLong", columnNames, new Integer(30+i).longValue());
-        	testColumnValue(response, "percentile", columnNames, 30.1);
-        	testColumnValue(response, "married", columnNames, true);
-        	testColumnValue(response, "single", columnNames, false);
-        	testColumnValue(response, "birthdate", columnNames, date);
-        	testColumnValue(response, "bytes", columnNames, TestBytes);
-        	testColumnValue(response, "uuid", columnNames, TestUUID);
-        	testColumnValue(response, "empty", columnNames, null);
-
-        }
-    }
-
-    private void testSingleRowColumnSliceQueryVarArgs() throws Exception {
-    	
-    	/**
-    	 * READ BY COLUMN SLICE COLLECTION
-    	 */
-        for (int i=0; i<RowCount; i++) {
-
-        	Date date = OriginalDate.plusMinutes(i).toDate();
-
-        	ColumnList<String> response = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i)
-        			.withColumnSlice("firstname", "lastname", "address","age","ageShort", "ageLong","percentile", "married","single", "birthdate", "bytes", "uuid", "empty").execute().getResult();
-        	
-        	testColumnValue(response, "firstname", columnNames, "john_" + i);
-        	testColumnValue(response, "lastname", columnNames, "smith_" + i);
-        	testColumnValue(response, "address", columnNames, "john smith address " + i);
-        	testColumnValue(response, "age", columnNames, 30 + i);
-        	testColumnValue(response, "ageShort", columnNames, new Integer(30+i).shortValue());
-        	testColumnValue(response, "ageLong", columnNames, new Integer(30+i).longValue());
-        	testColumnValue(response, "percentile", columnNames, 30.1);
-        	testColumnValue(response, "married", columnNames, true);
-        	testColumnValue(response, "single", columnNames, false);
-        	testColumnValue(response, "birthdate", columnNames, date);
-        	testColumnValue(response, "bytes", columnNames, TestBytes);
-        	testColumnValue(response, "uuid", columnNames, TestUUID);
-        	testColumnValue(response, "empty", columnNames, null);
-
-        }
-    }
-	
-    private void testSingleRowColumnQuery() throws Exception {
-    	
-        /** NOW READ 1000 ROWS BACK */
-    	
-    	/**
-    	 * READ BY COLUMN NAME
-    	 */
-        for (int i=0; i<RowCount; i++) {
-
-        	Date date = OriginalDate.plusMinutes(i).toDate();
-
-        	Column<String> column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("firstname").execute().getResult();
-        	testColumnValue(column, "john_" + i);
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("lastname").execute().getResult();
-        	testColumnValue(column, "smith_" + i);
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("address").execute().getResult();
-        	testColumnValue(column, "john smith address " + i);
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("age").execute().getResult();
-        	testColumnValue(column, 30 + i);
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("ageShort").execute().getResult();
-        	testColumnValue(column, new Integer(30+i).shortValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("ageLong").execute().getResult();
-        	testColumnValue(column, new Integer(30+i).longValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("percentile").execute().getResult();
-        	testColumnValue(column, 30.1);
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("married").execute().getResult();
-        	testColumnValue(column, true);
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("single").execute().getResult();
-        	testColumnValue(column, false);
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("birthdate").execute().getResult();
-        	testColumnValue(column, date);
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("bytes").execute().getResult();
-        	testColumnValue(column, TestBytes);
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("uuid").execute().getResult();
-        	testColumnValue(column, TestUUID);
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("empty").execute().getResult();
-        	testColumnValue(column, null);
-        }
-    }
-    
-    private void testMissingRowColumnQuery() throws Exception {
-    	
-        /** NOW READ 1000 ROWS BACK */
-    	
-    	/**
-    	 * READ BY COLUMN NAME
-    	 */
-        for (int i=0; i<RowCount; i++) {
-
-        	Column<String> column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("firstname").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("lastname").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("address").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("age").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("ageShort").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("ageLong").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("percentile").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("married").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("single").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("birthdate").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("bytes").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("uuid").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("empty").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        }
-    }
-    
-
-	
-    private void testRowQueryWithDifferentDataTypes() throws Exception {
-    	
-    	String[] arr = {"firstname", "lastname", "address","age","ageShort", "ageLong","percentile", "married","single", "birthdate", "bytes", "uuid", "empty"};
-    	List<String> columnNames = new ArrayList<String>(Arrays.asList(arr));
-    	Collections.sort(columnNames);
-    	
-        /** NOW READ 1000 ROWS BACK */
-    	
-    	/**
-    	 * READ BY COLUMN NAME
-    	 */
-        for (int i=0; i<RowCount; i++) {
-
-        	ColumnList<String> response = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i).execute().getResult();
-
-        	Assert.assertFalse(response.isEmpty());
-        	
-        	List<String> columnNameList = new ArrayList<String>(response.getColumnNames());
-        	Collections.sort(columnNameList);
-        	
-        	Assert.assertEquals(columnNames, columnNameList);
-        	Date date = OriginalDate.plusMinutes(i).toDate();
-
-        	testColumnValue(response, "firstname", columnNames, "john_" + i);
-        	testColumnValue(response, "lastname", columnNames, "smith_" + i);
-        	testColumnValue(response, "address", columnNames, "john smith address " + i);
-        	testColumnValue(response, "age", columnNames, 30 + i);
-        	testColumnValue(response, "ageShort", columnNames, new Integer(30+i).shortValue());
-        	testColumnValue(response, "ageLong", columnNames, new Integer(30+i).longValue());
-        	testColumnValue(response, "percentile", columnNames, 30.1);
-        	testColumnValue(response, "married", columnNames, true);
-        	testColumnValue(response, "single", columnNames, false);
-        	testColumnValue(response, "birthdate", columnNames, date);
-        	testColumnValue(response, "bytes", columnNames, TestBytes);
-        	testColumnValue(response, "uuid", columnNames, TestUUID);
-        	testColumnValue(response, "empty", columnNames, null);
-        	
-        	/** TEST THE ITERATOR INTERFACE */
-        	Iterator<Column<String>> iter = response.iterator();
-        	Iterator<String> columnNameIter = columnNames.iterator();
-        	while (iter.hasNext()) {
-        		Column<String> col = iter.next();
-        		String columnName = columnNameIter.next();
-        		Assert.assertEquals(columnName, col.getName());
-        	}
-        }
-    }
-
-    private void testMissingRowQuery() throws Exception {
-    	for (int i=0; i<RowCount; i++) {
-    		ColumnList<String> response = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i).execute().getResult();
-    		Assert.assertTrue(response.isEmpty());
+    	/** TEST THE ITERATOR INTERFACE */
+    	Iterator<Column<String>> iter = columns.iterator();
+    	Iterator<String> columnNameIter = columnNames.iterator();
+    	while (iter.hasNext()) {
+    		Column<String> col = iter.next();
+    		String columnName = columnNameIter.next();
+    		Assert.assertEquals(columnName, col.getName());
     	}
     }
+    
     
     private <T> void testColumnValue(ColumnList<String> response, String columnName, List<String> columnNames, T value) {
     	
@@ -412,6 +127,44 @@ public class ReadTests extends KeyspaceTests {
     		Assert.assertFalse(column.hasValue());
     	}
     }
-    
+	public void populateRows() throws Exception {
+
+        MutationBatch mb = keyspace.prepareMutationBatch();
+
+        for (int i=0; i<RowCount; i++) {
+        	
+        	Date date = OriginalDate.plusMinutes(i).toDate();
+            mb.withRow(CF_USER_INFO, "acct_" + i)
+            .putColumn("firstname", "john_" + i, null)
+            .putColumn("lastname", "smith_" + i, null)
+            .putColumn("address", "john smith address " + i, null)
+            .putColumn("age", 30+i, null)
+            .putColumn("ageShort", new Integer(30+i).shortValue(), null)
+            .putColumn("ageLong", new Integer(30+i).longValue(), null)
+            .putColumn("percentile", 30.1)
+            .putColumn("married", true)
+            .putColumn("single", false)
+            .putColumn("birthdate", date)
+            .putColumn("bytes", TestBytes)
+            .putColumn("uuid", TestUUID)
+            .putEmptyColumn("empty");
+
+            mb.execute();
+            mb.discardMutations();
+        }
+	}
+	
+	
+	public void deleteRows() throws Exception {
+
+        MutationBatch mb = keyspace.prepareMutationBatch();
+
+        for (int i=0; i<RowCount; i++) {
+            mb.withRow(CF_USER_INFO, "acct_" + i).delete();
+            mb.execute();
+            mb.discardMutations();
+        }
+	}
+	
     
 }

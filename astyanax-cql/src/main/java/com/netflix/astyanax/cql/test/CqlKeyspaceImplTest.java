@@ -309,7 +309,7 @@ public class CqlKeyspaceImplTest {
 	    
 	    @Test
 	    public void testHasValue() throws Exception {
-	    	new ReadTests(keyspaceContext, keyspace, Driver.JAVA_DRIVER).test();
+	    	//new ReadTests(keyspaceContext, keyspace, Driver.JAVA_DRIVER).test();
 	    }
 	    
 //	    @Test

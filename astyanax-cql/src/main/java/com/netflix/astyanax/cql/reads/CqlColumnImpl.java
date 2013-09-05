@@ -79,7 +79,6 @@ public class CqlColumnImpl<C> implements Column<C> {
 
 	@Override
 	public short getShortValue() {
-		System.out.println("isBlob: " + row.getBytes(index));
 		Integer i = (isBlob) ? ShortSerializer.get().fromByteBuffer(row.getBytes(index)) : row.getInt(index);
 		return i.shortValue();
 	}

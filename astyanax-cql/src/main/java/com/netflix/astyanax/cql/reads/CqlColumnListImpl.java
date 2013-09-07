@@ -25,6 +25,10 @@ public class CqlColumnListImpl<C> implements ColumnList<C> {
 	private List<Column<C>> columnList = new ArrayList<Column<C>>();
 	private LinkedHashMap<C, Column<C>> map = new LinkedHashMap<C, Column<C>>();
 	
+	public CqlColumnListImpl() {
+
+	}
+	
 	/**
 	 * This constructor is meant to be called when we are using CQL3 as is, i.e no backward compatibility with thrift
 	 * @param row
@@ -41,6 +45,14 @@ public class CqlColumnListImpl<C> implements ColumnList<C> {
 		}
 	}
 
+	public CqlColumnListImpl(List<Column<C>> newColumnList) {
+		this.columnList.clear();
+		for (Column<C> column : newColumnList) {
+			columnList.add(column);
+			map.put(column.getName(), column);
+		}
+	}
+
 	/**
 	 * This constructor is meant to be used when we are using the CQL3 table but still in the legacy thrift mode
 	 * @param rows
@@ -51,7 +63,7 @@ public class CqlColumnListImpl<C> implements ColumnList<C> {
 
 			List<Definition> cfDefinitions = row.getColumnDefinitions().asList();
 			
-			Object columnName = CqlTypeMapping.getDynamicColumnName(row, cf.getColumnSerializer());
+			Object columnName = CqlTypeMapping.getDynamicColumn(row, cf.getColumnSerializer());
 			CqlColumnImpl<C> cqlCol = new CqlColumnImpl<C>((C) columnName, row, cfDefinitions.size()-1);
 			columnList.add(cqlCol);
 			map.put((C) columnName, cqlCol);

@@ -1,6 +1,5 @@
 package com.netflix.astyanax.cql.reads;
 
-import com.google.common.base.Preconditions;
 
 public class CqlRangeBuilder<T> {
 	
@@ -11,8 +10,17 @@ public class CqlRangeBuilder<T> {
 
     private String columnName = "column1";
 
+    public CqlRangeBuilder<T> withRange(CqlRangeImpl<T> oldRange) {
+    	if (oldRange != null) {
+    		this.start = oldRange.getCqlStart();
+    		this.end = oldRange.getCqlEnd();
+    		this.limit = oldRange.getLimit();
+    		this.reversed = oldRange.isReversed();
+    	}
+        return this;
+    }
+
     public CqlRangeBuilder<T> setLimit(int count) {
-        Preconditions.checkArgument(count >= 0, "Invalid count in RangeBuilder : " + count);
         this.limit = count;
         return this;
     }
@@ -57,7 +65,7 @@ public class CqlRangeBuilder<T> {
     	return this.columnName;
     }
     
-    public CqlRangeImpl build() {
-    	return new CqlRangeImpl(columnName, start, end, limit, reversed);
+    public CqlRangeImpl<T> build() {
+    	return new CqlRangeImpl<T>(columnName, start, end, limit, reversed);
     }
 }

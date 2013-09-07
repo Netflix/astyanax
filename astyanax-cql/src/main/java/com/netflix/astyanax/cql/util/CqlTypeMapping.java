@@ -1,7 +1,6 @@
 package com.netflix.astyanax.cql.util;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.cassandra.cql3.CQL3Type;
@@ -43,11 +42,11 @@ public class CqlTypeMapping {
 	}
 	
 	
-	public static <T> Object getDynamicColumnName(Row row, Serializer<T> serializer) {
-		return getDynamicColumnName(row, serializer, "column1");
+	public static <T> Object getDynamicColumn(Row row, Serializer<T> serializer) {
+		return getDynamicColumn(row, serializer, "column1");
 	}
 	
-	public static <T> Object getDynamicColumnName(Row row, Serializer<T> serializer, String columnName) {
+	public static <T> Object getDynamicColumn(Row row, Serializer<T> serializer, String columnName) {
 		
 		ComparatorType comparatorType = serializer.getComparatorType();
 		
@@ -95,6 +94,54 @@ public class CqlTypeMapping {
 		}
 	}
 	
+	public static <T> Object getDynamicColumn(Row row, Serializer<T> serializer, int columnIndex) {
+		
+		ComparatorType comparatorType = serializer.getComparatorType();
+		
+		switch(comparatorType) {
+
+		case ASCIITYPE:
+			return row.getString(columnIndex);
+		case BYTESTYPE:
+			return row.getBytes(columnIndex);
+		case INTEGERTYPE:
+			return row.getInt(columnIndex);
+		case INT32TYPE:
+			return row.getInt(columnIndex);
+		case DECIMALTYPE:
+			return row.getFloat(columnIndex);
+		case LEXICALUUIDTYPE:
+			return row.getUUID(columnIndex);
+		case LOCALBYPARTITIONERTYPE:
+		    return row.getBytes(columnIndex);
+		case LONGTYPE:
+		    return row.getLong(columnIndex);
+		case TIMEUUIDTYPE:
+		    return row.getUUID(columnIndex);
+		case UTF8TYPE:
+		    return row.getString(columnIndex);
+		case COMPOSITETYPE:
+			return getCompositeColumn(row, (AnnotatedCompositeSerializer<?>) serializer);
+		case DYNAMICCOMPOSITETYPE:
+			throw new NotImplementedException();
+		case UUIDTYPE:
+		    return row.getUUID(columnIndex);
+		case COUNTERTYPE:
+		    return row.getLong(columnIndex);
+		case DOUBLETYPE:
+		    return row.getDouble(columnIndex);
+		case FLOATTYPE:
+		    return row.getFloat(columnIndex);
+		case BOOLEANTYPE:
+		    return row.getBool(columnIndex);
+		case DATETYPE:
+		    return row.getDate(columnIndex);
+		    
+		default:
+			throw new RuntimeException("Could not recognize comparator type: " + comparatorType.getTypeName());
+		}
+	}
+	
 	
 	private static Object getCompositeColumn(Row row, AnnotatedCompositeSerializer<?> compositeSerializer) {
 		
@@ -112,7 +159,7 @@ public class CqlTypeMapping {
 		
 		for (ComponentSerializer<?> component : compositeSerializer.getComponents()) {
 			
-			Object value = getDynamicColumnName(row, component.getSerializer(), "column" + columnIndex++);
+			Object value = getDynamicColumn(row, component.getSerializer(), "column" + columnIndex++);
 			try {
 				System.out.println("Value: " + value);
 				component.setValueDirectly(obj, value);

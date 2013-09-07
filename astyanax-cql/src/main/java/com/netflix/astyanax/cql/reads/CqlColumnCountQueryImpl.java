@@ -1,10 +1,7 @@
 package com.netflix.astyanax.cql.reads;
 
-import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
-
 import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.connectionpool.OperationResult;
@@ -16,29 +13,31 @@ import com.netflix.astyanax.query.ColumnCountQuery;
 
 public class CqlColumnCountQueryImpl implements ColumnCountQuery {
 
-	private ChainedContext context; 
+	private final ChainedContext context; 
+	private final Query query;
 	
-	public CqlColumnCountQueryImpl(ChainedContext ctx) {
+	public CqlColumnCountQueryImpl(ChainedContext ctx, Query query) {
 		this.context = ctx;
+		this.query = query;
 	}
 	
 	@Override
 	public OperationResult<Integer> execute() throws ConnectionException {
-		return new InternalColumnCountExecutionImpl().execute();
+		return new InternalColumnCountExecutionImpl(query).execute();
 	}
 
 	@Override
 	public ListenableFuture<OperationResult<Integer>> executeAsync() throws ConnectionException {
-		return new InternalColumnCountExecutionImpl().executeAsync();
+		return new InternalColumnCountExecutionImpl(query).executeAsync();
 	}
 
 	private class InternalColumnCountExecutionImpl extends CqlAbstractExecutionImpl<Integer> {
 
-		private final Object rowKey;
+		private final Query query;
 		
-		public InternalColumnCountExecutionImpl() {
+		public InternalColumnCountExecutionImpl(Query query) {
 			super(context);
-			rowKey = context.getNext(Object.class);
+			this.query = query;
 		}
 
 		@Override
@@ -48,16 +47,7 @@ public class CqlColumnCountQueryImpl implements ColumnCountQuery {
 
 		@Override
 		public Query getQuery() {
-			
-			if (CqlFamilyFactory.OldStyleThriftMode()) {
-				return QueryBuilder.select("column1")
-						.from(keyspace, cf.getName())
-						.where(eq(cf.getKeyAlias(), rowKey));
-			} else {
-				return QueryBuilder.select().countAll()
-						.from(keyspace, cf.getName())
-						.where(eq(cf.getKeyAlias(), rowKey));
-			}
+			return this.query;
 		}
 
 		@Override

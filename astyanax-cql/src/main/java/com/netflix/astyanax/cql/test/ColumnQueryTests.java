@@ -25,6 +25,14 @@ public class ColumnQueryTests extends ReadTests {
 		initReadTests();
 	}
 	
+
+	
+	@Test
+	public void testColumnRangeQuery() throws Exception {
+		
+		System.out.println("fff");
+	}
+	
 	public void testRowQueryEntireRow() throws Exception {
 		
     	populateRows();
@@ -64,7 +72,7 @@ public class ColumnQueryTests extends ReadTests {
     	testMissingRowColumnSliceQueryVarArgs();
     }
 	
-	@Test
+	//@Test
 	public void testSingleRowColumnCountQueryTest() throws Exception {
     	populateRows();
     	Thread.sleep(1000);

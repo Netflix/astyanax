@@ -13,7 +13,9 @@ public class CqlOperationResultImpl<R> implements OperationResult<R> {
 	private R result; 
 	
 	public CqlOperationResultImpl(ResultSet rs, R result) {
-		this.host = parseHostInfo(rs.getExecutionInfo().getQueriedHost());
+		if (rs != null) {
+			this.host = parseHostInfo(rs.getExecutionInfo().getQueriedHost());
+		}
 		this.result = result;
 	}
 	

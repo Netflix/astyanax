@@ -41,6 +41,6 @@ public class CqlRowImpl<K, C> implements Row<K, C> {
 	}
 	
 	private Object getRowKey(com.datastax.driver.core.Row row, ColumnFamily<?, ?> cf) {
-		return CqlTypeMapping.getDynamicColumnName(row, cf.getKeySerializer(), cf.getKeyAlias());
+		return CqlTypeMapping.getDynamicColumn(row, cf.getKeySerializer(), cf.getKeyAlias());
 	}
 }

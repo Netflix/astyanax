@@ -7,7 +7,7 @@ import com.netflix.astyanax.model.ColumnSlice;
 @SuppressWarnings("unchecked")
 public class CqlColumnSlice<C> extends ColumnSlice<C> {
 	
-	private CqlRangeImpl cqlRange;
+	private CqlRangeImpl<C> cqlRange;
 	private Collection<C> cqlColumns;
 	
 	public CqlColumnSlice() {
@@ -18,7 +18,7 @@ public class CqlColumnSlice<C> extends ColumnSlice<C> {
 		super(null, null);
 	}
 	
-	public CqlColumnSlice(CqlRangeImpl cqlRange) {
+	public CqlColumnSlice(CqlRangeImpl<C> cqlRange) {
 		super(null, null);
 		this.cqlRange = cqlRange;
 	}
@@ -27,12 +27,20 @@ public class CqlColumnSlice<C> extends ColumnSlice<C> {
 		super(null, null);
 		this.cqlColumns = columns;
 	}
+	
+	public void setColumns(Collection<C> columns) {
+		this.cqlColumns = columns;
+	}
+	
+	public void setCqlRange(CqlRangeImpl<C> cqlRange) {
+		this.cqlRange = cqlRange;
+	}
 
 	public CqlColumnSlice(ColumnSlice<C> columnSlice) {
 		super(null, null);
 		
 		if (columnSlice instanceof CqlColumnSlice<?>) {
-			initFrom(((CqlColumnSlice<?>)columnSlice));
+			initFrom(((CqlColumnSlice<C>)columnSlice));
 		} else {
 			
 			if (columnSlice.getColumns() != null) {
@@ -59,19 +67,21 @@ public class CqlColumnSlice<C> extends ColumnSlice<C> {
 		initFrom(cqlColumnSlice);
 	}
 	
-	private void initFrom(CqlColumnSlice<?> cqlColumnSlice) {
+	private void initFrom(CqlColumnSlice<C> cqlColumnSlice) {
 		this.cqlColumns = (Collection<C>) cqlColumnSlice.cqlColumns;
 		this.cqlRange = cqlColumnSlice.cqlRange;
 	}
 
 	@Override
 	public ColumnSlice<C> setLimit(int limit) {
-		throw new IllegalStateException();
+		this.cqlRange = new CqlRangeBuilder<C>().withRange(cqlRange).setLimit(limit).build();
+		return this;
 	}
 
 	@Override
 	public ColumnSlice<C> setReversed(boolean value) {
-		throw new IllegalStateException();
+		this.cqlRange = new CqlRangeBuilder<C>().withRange(cqlRange).setReversed(value).build();
+		return this;
 	}
 
 	public String getColumnName() {

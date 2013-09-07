@@ -5,13 +5,11 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.gte;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.in;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.lte;
 
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
@@ -27,8 +25,8 @@ import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlFamilyFactory;
 import com.netflix.astyanax.cql.reads.CqlRowSlice.RowRange;
 import com.netflix.astyanax.cql.util.ChainedContext;
-import com.netflix.astyanax.cql.util.CqlTypeMapping;
 import com.netflix.astyanax.model.ByteBufferRange;
+import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnSlice;
 import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.query.RowSliceColumnCountQuery;
@@ -38,10 +36,12 @@ import com.netflix.astyanax.query.RowSliceQuery;
 public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 
 	private ChainedContext context; 
+	private ColumnFamily<K,C> cf;
 	private CqlColumnSlice<C> columnSlice = new CqlColumnSlice<C>();
 	
 	public CqlRowSliceQueryImpl(ChainedContext ctx) {
-		this.context = ctx;
+		this.context = ctx.rewindForRead();
+		this.cf = this.context.skip().skip().getNext(ColumnFamily.class);
 	}
 	
 	@Override
@@ -84,36 +84,29 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 	}
 
 	@Override
-	public RowSliceQuery<K, C> withColumnRange(ByteBuffer startColumn, ByteBuffer endColumn, boolean reversed, int count) {
-		// Cannot infer the actual column type C here. Use another class impl instead
-		throw new NotImplementedException();
+	public RowSliceQuery<K, C> withColumnRange(ByteBuffer startColumn, ByteBuffer endColumn, boolean reversed, int limit) {
+		Serializer<C> colSerializer = cf.getColumnSerializer();
+		C start = (startColumn != null && startColumn.capacity() > 0) ? colSerializer.fromByteBuffer(startColumn) : null;
+		C end = (endColumn != null && endColumn.capacity() > 0) ? colSerializer.fromByteBuffer(endColumn) : null;
+		// TODO this is used for composite columns. Need to fix this.
+		return this.withColumnRange(start, end, reversed, limit);
 	}
 
 	@Override
 	public RowSliceQuery<K, C> withColumnRange(ByteBufferRange range) {
 		if (!(range instanceof CqlRangeImpl)) {
-			throw new NotImplementedException();
+			return this.withColumnRange(range.getStart(), range.getEnd(), range.isReversed(), range.getLimit());
 		} else {
-			this.columnSlice = new CqlColumnSlice<C>((CqlRangeImpl) range);
+			this.columnSlice.setCqlRange((CqlRangeImpl<C>) range);
 		}
 		return this;
 	}
 
 	@Override
 	public RowSliceColumnCountQuery<K> getColumnCounts() {
-//		Query query = getQuery();
-//		return new CqlRowSliceColumnCountQueryImpl<K>(context, query);
-		throw new NotImplementedException();
+		Query query = new InternalRowQueryExecutionImpl().getQuery();
+		return new CqlRowSliceColumnCountQueryImpl<K>(context, query);
 	}
-	
-
-	
-
-
-//	private OperationResult<Rows<K, C>> parseResponse(ResultSet rs) {
-//		return new CqlOperationResultImpl<Rows<K, C>>(rs, new CqlRowListImpl<K, C>(rs.all()));
-//	}
-	
 	
 	private class InternalRowQueryExecutionImpl extends CqlAbstractExecutionImpl<Rows<K, C>> {
 
@@ -138,7 +131,7 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 				case COLUMN_RANGE:
 					return queryGen.selectColumnRangeForRowKeys(rowSlice.getKeys(), columnSlice);
 				default:
-					throw new NotImplementedException();
+					throw new IllegalStateException();
 				}
 			} else {
 				switch(columnSlice.getQueryType()) {
@@ -149,7 +142,7 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 				case COLUMN_RANGE:
 					return queryGen.selectColumnRangeForRowRange(rowSlice.getRange(), columnSlice);
 				default:
-					throw new NotImplementedException();
+					throw new IllegalStateException();
 				}
 			}
 		}
@@ -167,6 +160,7 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 		public CassandraOperationType getOperationType() {
 			return CassandraOperationType.GET_ROW;
 		}
+		
 		
 		/** OLD STYLE QUERIES */ 
 		
@@ -294,29 +288,51 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 
 		Where where = null;
 
-		String tokenOfKey = "token(" + keyAlias + ")";
+		boolean keyIsPresent = false;
+		boolean tokenIsPresent = false; 
+		
+		if (rowRange.getStartKey() != null || rowRange.getEndKey() != null) {
+			keyIsPresent = true;
+		}
+		if (rowRange.getStartToken() != null || rowRange.getEndToken() != null) {
+			tokenIsPresent = true;
+		}
+		
+		if (keyIsPresent && tokenIsPresent) {
+			throw new RuntimeException("Cannot provide both token and keys for range query");
+		}
+		
+		if (keyIsPresent) {
+			if (rowRange.getStartKey() != null && rowRange.getEndKey() != null) {
 
-		if (rowRange.getStartKey() != null && rowRange.getEndKey() != null) {
+				where = select.where(gte(keyAlias, rowRange.getStartKey()))
+						.and(lte(keyAlias, rowRange.getEndKey()));
 
-			where = select.where(gte(tokenOfKey, rowRange.getStartKey()))
-					.and(lte(tokenOfKey, rowRange.getEndKey()));
+			} else if (rowRange.getStartKey() != null) {				
+				where = select.where(gte(keyAlias, rowRange.getStartKey()));
 
-		} else if (rowRange.getStartKey() != null) {				
-			where = select.where(gte(tokenOfKey, rowRange.getStartKey()));
+			} else if (rowRange.getEndKey() != null) {
+				where = select.where(lte(keyAlias, rowRange.getEndKey()));
+			}
+			
+		} else if (tokenIsPresent) {
+			String tokenOfKey ="token(" + keyAlias + ")";
 
-		} else if (rowRange.getEndKey() != null) {
-			where = select.where(lte(tokenOfKey, rowRange.getEndKey()));
+			BigInteger startToken = rowRange.getStartToken() != null ? new BigInteger(rowRange.getStartToken()) : null; 
+			BigInteger endToken = rowRange.getEndToken() != null ? new BigInteger(rowRange.getEndToken()) : null; 
+			
+			if (startToken != null && endToken != null) {
 
-		} else if (rowRange.getStartToken() != null && rowRange.getEndToken() != null) {
+				where = select.where(gte(tokenOfKey, startToken))
+								.and(lte(tokenOfKey, endToken));
 
-			where = select.where(gte(tokenOfKey, rowRange.getStartToken()))
-					.and(lte(tokenOfKey, rowRange.getEndToken()));
+			} else if (startToken != null) {
+				where = select.where(gte(tokenOfKey, startToken));
 
-		} else if (rowRange.getStartToken() != null) {
-			where = select.where(gte(tokenOfKey, rowRange.getStartToken()));
-
-		} else if (rowRange.getEndToken() != null) {
-			where = select.where(lte(tokenOfKey, rowRange.getEndToken()));
+			} else if (endToken != null) {
+				where = select.where(lte(tokenOfKey, endToken));
+			}
+			
 		} else { 
 			where = select.where();
 		}
@@ -327,8 +343,6 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 
 		return where; 
 	}
-
-
 
 	private static <C> Where addWhereClauseForColumn(Where where, CqlColumnSlice<C> columnSlice) {
 

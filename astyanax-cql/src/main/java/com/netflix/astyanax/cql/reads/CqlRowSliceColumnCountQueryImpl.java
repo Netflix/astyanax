@@ -11,7 +11,9 @@ import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
+import com.netflix.astyanax.cql.CqlFamilyFactory;
 import com.netflix.astyanax.cql.util.ChainedContext;
+import com.netflix.astyanax.cql.util.CqlTypeMapping;
 import com.netflix.astyanax.query.RowSliceColumnCountQuery;
 
 @SuppressWarnings("unchecked")
@@ -54,11 +56,25 @@ public class CqlRowSliceColumnCountQueryImpl<K> implements RowSliceColumnCountQu
 
 		@Override
 		public Map<K, Integer> parseResultSet(ResultSet resultSet) {
+			
 			Map<K, Integer> columnCountPerRow = new HashMap<K, Integer>();
-			for (Row row : resultSet.all()) {
+			
+			if (CqlFamilyFactory.OldStyleThriftMode()) {
 				
-				K key = (K) row.getString(0); // the first column is the row key
-				columnCountPerRow.put(key, row.getColumnDefinitions().size()-1);
+				for (Row row : resultSet.all()) {
+					K key = (K) CqlTypeMapping.getDynamicColumn(row, cf.getKeySerializer(), 0);
+					Integer colCount = columnCountPerRow.get(key);
+					if (colCount == null) {
+						colCount = new Integer(0);
+					}	
+					colCount = colCount.intValue() + 1;
+					columnCountPerRow.put(key, colCount);
+				}
+			} else {
+				for (Row row : resultSet.all()) {
+					K key = (K) CqlTypeMapping.getDynamicColumn(row, cf.getKeySerializer(), 0); // first col is the row key
+					columnCountPerRow.put(key, row.getColumnDefinitions().size()-1);
+				}
 			}
 			
 			return columnCountPerRow;

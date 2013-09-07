@@ -6,15 +6,15 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import com.netflix.astyanax.model.ByteBufferRange;
 
-public class CqlRangeImpl implements ByteBufferRange {
+public class CqlRangeImpl<T> implements ByteBufferRange {
 	
 	private final String columnName;
-	private final Object start;
-    private final Object end;
+	private final T start;
+    private final T end;
     private final int limit;
     private final boolean reversed;
 
-    public CqlRangeImpl(String columnName, Object start, Object end, int limit, boolean reversed) {
+    public CqlRangeImpl(String columnName, T start, T end, int limit, boolean reversed) {
     	this.columnName = columnName;
         this.start = start;
         this.end = end;
@@ -36,11 +36,11 @@ public class CqlRangeImpl implements ByteBufferRange {
     	return columnName;
     }
     
-    public Object getCqlStart() {
+    public T getCqlStart() {
 		return start;
     }
 
-    public Object getCqlEnd() {
+    public T getCqlEnd() {
 		return end;
     }
 

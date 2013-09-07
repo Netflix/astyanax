@@ -30,6 +30,11 @@ public class ChainedContext {
 		return this;
 	}
 	
+	public ChainedContext skip() {
+		index++;
+		return this;
+	}
+	
 	@SuppressWarnings("unchecked")
 	public <T> T getNext(Class<T> clazz) {
 		if (index >= contextList.size()) {

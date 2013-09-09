@@ -16,23 +16,15 @@ public class KeyspaceTests {
 	
 	public static AstyanaxContext<Keyspace> context;
 	public static Keyspace keyspace;
-	public static Driver driver; 
     
 	public KeyspaceTests() {
 		
 	}
 	
-    public KeyspaceTests(AstyanaxContext<Keyspace> context, Keyspace keyspace, Driver driver) {
-    	this.context = context;
-    	this.keyspace = keyspace;
-    	this.driver = driver;
-    }
-
-    
     public <T> void logColumnList(String label, ColumnList<T> cl) {
         LOG.info(">>>>>> " + label);
         for (Column<T> c : cl) {
-        	if (driver == Driver.JAVA_DRIVER) {
+        	if (ClusterConfiguration.TheDriver == Driver.JAVA_DRIVER) {
         		LOG.info(" " + c.getName());
         	} else {
         		LOG.info(c.getName() + " " + c.getTimestamp());
@@ -44,7 +36,7 @@ public class KeyspaceTests {
     public static void initContext() throws Exception {
     	PropertyConfigurator.configure("./src/main/java/test-log4j.properties");
 
-    	context = ClusterConfiguration.getKeyspace(Driver.JAVA_DRIVER);
+    	context = AstyanaxContextFactory.getKeyspace();
     	context.start();
         keyspace = context.getClient();
     }

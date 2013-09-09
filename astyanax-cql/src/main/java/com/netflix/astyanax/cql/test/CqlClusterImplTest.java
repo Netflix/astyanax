@@ -19,7 +19,7 @@ public class CqlClusterImplTest {
     	System.out.println("TESTING CQL KEYSPACE");
         //Thread.sleep(CASSANDRA_WAIT_TIME);
 
-    	context = ClusterConfiguration.getCluster(Driver.JAVA_DRIVER);
+    	context = AstyanaxContextFactory.getCluster(Driver.JAVA_DRIVER);
         context.start();
         
         cluster = context.getClient();

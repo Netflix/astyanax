@@ -22,8 +22,7 @@ public class ColumnTests extends KeyspaceTests {
 			LongSerializer.get(),
 			LongSerializer.get());
 
-	public ColumnTests(AstyanaxContext<Keyspace> context, Keyspace keyspace, Driver driver) {
-		super(context, keyspace, driver);
+	public ColumnTests() {
 	}
 
 	public void testMultiColumDelete() throws Exception {
@@ -58,7 +57,7 @@ public class ColumnTests extends KeyspaceTests {
         logColumnList("Delete with older timestamp", result1);
         
         // TODO fix timestamps; 
-        if (driver == Driver.JAVA_DRIVER) {
+        if (ClusterConfiguration.getDriver() == Driver.JAVA_DRIVER) {
         	Assert.assertEquals(1, result1.size());
         } else {
         	Assert.assertEquals(3, result1.size());

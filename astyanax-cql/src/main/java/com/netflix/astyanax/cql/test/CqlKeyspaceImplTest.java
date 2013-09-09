@@ -1,7 +1,5 @@
 package com.netflix.astyanax.cql.test;
 
-import java.util.Properties;
-
 import org.apache.log4j.PropertyConfigurator;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -136,7 +134,7 @@ public class CqlKeyspaceImplTest {
 	    
 	    private static void initContext() throws Exception {
 	    	
-	    	keyspaceContext = ClusterConfiguration.getKeyspace(Driver.JAVA_DRIVER);
+	    	keyspaceContext = AstyanaxContextFactory.getKeyspace(Driver.JAVA_DRIVER);
 	        keyspaceContext.start();
 	        keyspace = keyspaceContext.getClient();
 	    }
@@ -285,10 +283,6 @@ public class CqlKeyspaceImplTest {
 //	        }
 	    }
 
-	    //@Test    
-	    public void testMultiColumnDelete() throws Exception {
-	    	new ColumnTests(keyspaceContext, keyspace, Driver.JAVA_DRIVER).testMultiColumDelete();
-	    }
 
 	    
 	    @Test

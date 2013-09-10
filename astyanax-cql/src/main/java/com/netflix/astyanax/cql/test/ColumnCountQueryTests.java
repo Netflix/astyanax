@@ -3,6 +3,7 @@ package com.netflix.astyanax.cql.test;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -14,6 +15,7 @@ import org.junit.Test;
 
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.cql.test.TestUtils.TestTokenRange;
 
 public class ColumnCountQueryTests extends ReadTests {
 
@@ -40,10 +42,9 @@ public class ColumnCountQueryTests extends ReadTests {
 		testColumnCountMultipleRowKeysAndColumnSet(rowDeleted);
 		testColumnCountMultipleRowKeysAndColumnRange(rowDeleted);
 		
-//		//  TODO: Need to implement these		
-//		testColumnCountRowRangeAndAllColumns(rowDeleted); 
-//		testColumnCountRowRangeAndColumnSet(rowDeleted); 
-//		testColumnCountRowRangeAndColumnRange(rowDeleted); 
+		testColumnCountRowRangeAndAllColumns(rowDeleted); 
+		testColumnCountRowRangeAndColumnSet(rowDeleted); 
+		testColumnCountRowRangeAndColumnRange(rowDeleted); 
 
 		/** DELETE ROWS */
 		deleteRowsForColumnRange(); 
@@ -59,10 +60,9 @@ public class ColumnCountQueryTests extends ReadTests {
 		testColumnCountMultipleRowKeysAndColumnSet(rowDeleted);
 		testColumnCountMultipleRowKeysAndColumnRange(rowDeleted); 
 
-//		//  TODO: Need to implement these		
-//		testColumnCountRowRangeAndAllColumns(rowDeleted); 
-//		testColumnCountRowRangeAndColumnSet(rowDeleted); 
-//		testColumnCountRowRangeAndColumnRange(rowDeleted); 
+		testColumnCountRowRangeAndAllColumns(rowDeleted); 
+		testColumnCountRowRangeAndColumnSet(rowDeleted); 
+		testColumnCountRowRangeAndColumnRange(rowDeleted); 
 	}
 	
 	private void testColumnCountSingleRowAndAllColumns(boolean rowDeleted) throws Exception {
@@ -212,6 +212,77 @@ public class ColumnCountQueryTests extends ReadTests {
 		}
 		Assert.assertEquals("expected: " + expected + " colCount: " + columnCountsPerRowKey, expected, columnCountsPerRowKey);
 	}
+	
+	private void testColumnCountRowRangeAndAllColumns(boolean rowDeleted) throws Exception {
+
+		List<TestTokenRange> testRanges = TestUtils.getTestTokenRanges();
+		
+		Map<String, Integer> expectedRowCounts = rowDeleted ? new HashMap<String, Integer>() : getExpectedRowCountsForTokenRanges(testRanges, 26);
+		Map<String, Integer> resultRowCounts = new HashMap<String, Integer>();
+		
+		for (TestTokenRange testRange : testRanges) {
+			
+			Map<String, Integer> rowCounts = keyspace.prepareQuery(CF_COLUMN_RANGE_TEST)
+					.getRowRange(null, null, testRange.startToken, testRange.endToken, -1)
+					.getColumnCounts()
+					.execute().getResult();
+
+			resultRowCounts.putAll(rowCounts);
+		}
+		
+		Assert.assertEquals(expectedRowCounts, resultRowCounts);
+	}
+	
+	private void testColumnCountRowRangeAndColumnSet(boolean rowDeleted) throws Exception {
+
+		Collection<String> columns = getRandomColumns(new Random().nextInt(26) + 1);
+
+		List<TestTokenRange> testRanges = TestUtils.getTestTokenRanges();
+		
+		Map<String, Integer> expectedRowCounts = rowDeleted ? new HashMap<String, Integer>() : getExpectedRowCountsForTokenRanges(testRanges, columns.size());
+		Map<String, Integer> resultRowCounts = new HashMap<String, Integer>();
+		
+		for (TestTokenRange testRange : testRanges) {
+			
+			Map<String, Integer> rowCounts = keyspace.prepareQuery(CF_COLUMN_RANGE_TEST)
+					.getRowRange(null, null, testRange.startToken, testRange.endToken, -1)
+					.withColumnSlice(columns)
+					.getColumnCounts()
+					.execute().getResult();
+
+			resultRowCounts.putAll(rowCounts);
+		}
+		
+		Assert.assertEquals(expectedRowCounts, resultRowCounts);
+	}
+	
+	private void testColumnCountRowRangeAndColumnRange(boolean rowDeleted) throws Exception {
+
+		// Get the random start column
+		int rand = new Random().nextInt(26);
+		char randCH = (char) ('a' + rand);
+		String startColumn = String.valueOf(randCH);
+
+		int expectedColCount = 'z' - startColumn.charAt(0) + 1; 
+		
+		List<TestTokenRange> testRanges = TestUtils.getTestTokenRanges();
+		
+		Map<String, Integer> expectedRowCounts = rowDeleted ? new HashMap<String, Integer>() : getExpectedRowCountsForTokenRanges(testRanges, expectedColCount);
+		Map<String, Integer> resultRowCounts = new HashMap<String, Integer>();
+		
+		for (TestTokenRange testRange : testRanges) {
+			
+			Map<String, Integer> rowCounts = keyspace.prepareQuery(CF_COLUMN_RANGE_TEST)
+					.getRowRange(null, null, testRange.startToken, testRange.endToken, -1)
+					.withColumnRange(startColumn, "z", false, -1)
+					.getColumnCounts()
+					.execute().getResult();
+
+			resultRowCounts.putAll(rowCounts);
+		}
+		
+		Assert.assertEquals(expectedRowCounts, resultRowCounts);
+	}
 
 	private void populateRowsForColumnRange() throws Exception {
 		
@@ -239,7 +310,6 @@ public class ColumnCountQueryTests extends ReadTests {
         }
 	}
 	
-	
 	private Collection<String> getRandomRowKeys() {
 
 		Random random = new Random();
@@ -254,5 +324,18 @@ public class ColumnCountQueryTests extends ReadTests {
 			hashSet.add(String.valueOf(ch));
 		}
 		return hashSet;
+	}
+	
+	private Map<String, Integer> getExpectedRowCountsForTokenRanges(List<TestTokenRange> testRanges, int expectedColumnCountForEachRow) {
+		
+		Map<String, Integer> expectedRowCounts = new HashMap<String, Integer>();
+
+		for (TestTokenRange range : testRanges) {
+			for (String rowKey : range.expectedRowKeys) {
+				expectedRowCounts.put(rowKey, expectedColumnCountForEachRow);
+			}
+		}
+		
+		return expectedRowCounts;
 	}
 }

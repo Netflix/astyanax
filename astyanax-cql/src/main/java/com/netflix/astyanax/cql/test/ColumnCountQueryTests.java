@@ -12,6 +12,9 @@ import junit.framework.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.netflix.astyanax.ColumnListMutation;
+import com.netflix.astyanax.MutationBatch;
+
 public class ColumnCountQueryTests extends ReadTests {
 
 	@BeforeClass
@@ -20,24 +23,49 @@ public class ColumnCountQueryTests extends ReadTests {
 	}
 	
 	@Test
-	public void test() throws Exception {
+	public void runAllTests() throws Exception {
 		
-//		testColumnCountSingleRowAndAllColumns(); 
-//		testColumnCountSingleRowAndColumnSet(); 
-//		testColumnCountSingleRowAndColumnRange();
-//		
-//		testColumnCountMultipleRowKeysAndAllColumns(); 
-//		testColumnCountMultipleRowKeysAndColumnSet();
-		testColumnCountMultipleRowKeysAndColumnRange(); 
-//		
-//		testColumnCountRowRangeAndAllColumns(); 
-//		testColumnCountRowRangeAndColumnSet(); 
-//		testColumnCountRowRangeAndColumnRange(); 
+		boolean rowDeleted = false; 
+		
+		/** INSERT ROWS FOR COLUMN COUNT READ TESTS */
+		populateRowsForColumnRange();
+		Thread.sleep(1000);
+		
+		/** PERFORM READS AND CHECK FOR COLUMN COUNTS */
+		testColumnCountSingleRowAndAllColumns(rowDeleted); 
+		testColumnCountSingleRowAndColumnSet(rowDeleted); 
+		testColumnCountSingleRowAndColumnRange(rowDeleted);
+		
+		testColumnCountMultipleRowKeysAndAllColumns(rowDeleted); 
+		testColumnCountMultipleRowKeysAndColumnSet(rowDeleted);
+		testColumnCountMultipleRowKeysAndColumnRange(rowDeleted);
+		
+//		//  TODO: Need to implement these		
+//		testColumnCountRowRangeAndAllColumns(rowDeleted); 
+//		testColumnCountRowRangeAndColumnSet(rowDeleted); 
+//		testColumnCountRowRangeAndColumnRange(rowDeleted); 
 
+		/** DELETE ROWS */
+		deleteRowsForColumnRange(); 
+		Thread.sleep(1000);
+		rowDeleted = true; 
 		
+		/** PERFORM READS AND CHECK FOR COLUMN COUNTS  = 0 */
+		testColumnCountSingleRowAndAllColumns(rowDeleted); 
+		testColumnCountSingleRowAndColumnSet(rowDeleted); 
+		testColumnCountSingleRowAndColumnRange(rowDeleted);
+		
+		testColumnCountMultipleRowKeysAndAllColumns(rowDeleted); 
+		testColumnCountMultipleRowKeysAndColumnSet(rowDeleted);
+		testColumnCountMultipleRowKeysAndColumnRange(rowDeleted); 
+
+//		//  TODO: Need to implement these		
+//		testColumnCountRowRangeAndAllColumns(rowDeleted); 
+//		testColumnCountRowRangeAndColumnSet(rowDeleted); 
+//		testColumnCountRowRangeAndColumnRange(rowDeleted); 
 	}
 	
-	public void testColumnCountSingleRowAndAllColumns() throws Exception {
+	private void testColumnCountSingleRowAndAllColumns(boolean rowDeleted) throws Exception {
 
 		char ch = 'A';
 		while (ch <= 'Z') {
@@ -49,13 +77,13 @@ public class ColumnCountQueryTests extends ReadTests {
 					.getCount()
 					.execute().getResult();
 
-			int expected = 26;
+			int expected = rowDeleted ? 0 : 26;
 			Assert.assertTrue("expected: " + expected + " colCount: " + columnCount, expected == columnCount);
 			ch++;
 		}
 	}
 	
-	public void testColumnCountSingleRowAndColumnSet() throws Exception {
+	private void testColumnCountSingleRowAndColumnSet(boolean rowDeleted) throws Exception {
 
 		Random random = new Random();
 		
@@ -72,15 +100,13 @@ public class ColumnCountQueryTests extends ReadTests {
 					.getCount()
 					.execute().getResult();
 
-			int expected = numColumns;
+			int expected = rowDeleted ? 0 : numColumns;
 			Assert.assertTrue("expected: " + expected + " colCount: " + columnCount, expected == columnCount);
 			ch++;
 		}
 	}
 	
-	
-
-	public void testColumnCountSingleRowAndColumnRange() throws Exception {
+	private void testColumnCountSingleRowAndColumnRange(boolean rowDeleted) throws Exception {
 		
 		Random random = new Random();
 		
@@ -102,7 +128,7 @@ public class ColumnCountQueryTests extends ReadTests {
 					.execute().getResult();
 
 			int charOffset = startCol.charAt(0) - 'a' + 1;
-			int expected = 26 - charOffset + 1;
+			int expected = rowDeleted ? 0 : 26 - charOffset + 1;
 			
 			/**
 			 * e.g  if start col = 'b' 
@@ -118,7 +144,7 @@ public class ColumnCountQueryTests extends ReadTests {
 		}
 	}
 	
-	public void testColumnCountMultipleRowKeysAndAllColumns() throws Exception {
+	private void testColumnCountMultipleRowKeysAndAllColumns(boolean rowDeleted) throws Exception {
 
 		Collection<String> rowKeys = getRandomRowKeys();
 		
@@ -129,13 +155,15 @@ public class ColumnCountQueryTests extends ReadTests {
 				.execute().getResult();
 
 		Map<String, Integer> expected = new HashMap<String, Integer>();
-		for (String key : rowKeys) {
-			expected.put(key, 26);
+		if (!rowDeleted) {
+			for (String key : rowKeys) {
+				expected.put(key, 26);
+			}
 		}
 		Assert.assertEquals("expected: " + expected + " colCount: " + columnCountsPerRowKey, expected, columnCountsPerRowKey);
 	}
 
-	public void testColumnCountMultipleRowKeysAndColumnSet() throws Exception {
+	private void testColumnCountMultipleRowKeysAndColumnSet(boolean rowDeleted) throws Exception {
 
 		Collection<String> rowKeys = getRandomRowKeys();
 		Collection<String> columns = getRandomColumns(new Random().nextInt(26) + 1);
@@ -149,13 +177,15 @@ public class ColumnCountQueryTests extends ReadTests {
 				.execute().getResult();
 
 		Map<String, Integer> expected = new HashMap<String, Integer>();
-		for (String key : rowKeys) {
-			expected.put(key, columns.size());
+		if (!rowDeleted) {
+			for (String key : rowKeys) {
+				expected.put(key, columns.size());
+			}
 		}
 		Assert.assertEquals("expected: " + expected + " colCount: " + columnCountsPerRowKey, expected, columnCountsPerRowKey);
 	}
 	
-	public void testColumnCountMultipleRowKeysAndColumnRange() throws Exception {
+	private void testColumnCountMultipleRowKeysAndColumnRange(boolean rowDeleted) throws Exception {
 
 		Collection<String> rowKeys = getRandomRowKeys();
 
@@ -175,14 +205,41 @@ public class ColumnCountQueryTests extends ReadTests {
 		int expectedColCount = 26 - charOffset + 1;
 
 		Map<String, Integer> expected = new HashMap<String, Integer>();
-		for (String key : rowKeys) {
-			expected.put(key, expectedColCount);
+		if (!rowDeleted) {
+			for (String key : rowKeys) {
+				expected.put(key, expectedColCount);
+			}
 		}
 		Assert.assertEquals("expected: " + expected + " colCount: " + columnCountsPerRowKey, expected, columnCountsPerRowKey);
 	}
 
+	private void populateRowsForColumnRange() throws Exception {
+		
+        MutationBatch m = keyspace.prepareMutationBatch();
 
+        for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
+        	String rowKey = Character.toString(keyName);
+        	ColumnListMutation<String> colMutation = m.withRow(CF_COLUMN_RANGE_TEST, rowKey);
+              for (char cName = 'a'; cName <= 'z'; cName++) {
+            	  colMutation.putColumn(Character.toString(cName), (int) (cName - 'a') + 1, null);
+              }
+              m.execute();
+        }
+        m.discardMutations();
+	}
 
+	private void deleteRowsForColumnRange() throws Exception {
+		
+        for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
+            MutationBatch m = keyspace.prepareMutationBatch();
+        	String rowKey = Character.toString(keyName);
+        	m.withRow(CF_COLUMN_RANGE_TEST, rowKey).delete();
+        	m.execute();
+        	m.discardMutations();
+        }
+	}
+	
+	
 	private Collection<String> getRandomRowKeys() {
 
 		Random random = new Random();

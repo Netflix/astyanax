@@ -203,6 +203,9 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 				Object[] columns = cols.toArray(new Object[cols.size()]); 
 
 				Select select = QueryBuilder.select().all().from(keyspace, cf.getName());
+				if (columns != null && columns.length > 0) {
+					select.allowFiltering();
+				}
 				Where where = addWhereClauseForRowKey("key", select, range);
 				where.and(in("column1", columns));
 				
@@ -211,8 +214,11 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 
 			public Query selectColumnRangeForRowRange(RowRange<K> range, CqlColumnSlice<C> columnSlice) {
 
-				Select select = QueryBuilder.select().all()
-						.from(keyspace, cf.getName());
+				Select select = QueryBuilder.select().all().from(keyspace, cf.getName());
+				if (columnSlice != null && columnSlice.isRangeQuery()) {
+					select.allowFiltering();
+				}
+
 				Where where = addWhereClauseForRowKey("key", select, range);			
 				where = addWhereClauseForColumn(where, columnSlice);
 				return where;
@@ -260,6 +266,9 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 
 				Select select = QueryBuilder.select(getColumnsArray(cols))
 											.from(keyspace, cf.getName());
+				if (cols != null && cols.size() > 0) {
+					select.allowFiltering();
+				}
 				return addWhereClauseForRowKey(cf.getKeyAlias(), select, range);
 			}
 
@@ -267,6 +276,10 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 			public Query selectColumnRangeForRowRange(RowRange<K> range, CqlColumnSlice<C> columnSlice) {
 				Select select = QueryBuilder.select()
 						.from(keyspace, cf.getName());
+				if (columnSlice != null && columnSlice.isRangeQuery()) {
+					select.allowFiltering();
+				}
+
 				Where where = addWhereClauseForRowKey(cf.getKeyAlias(), select, range);
 				where = addWhereClauseForColumnRange(where, columnSlice);
 				return where;

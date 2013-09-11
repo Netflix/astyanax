@@ -4,6 +4,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import com.netflix.astyanax.ColumnListMutation;
+import com.netflix.astyanax.Keyspace;
+import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.model.ColumnFamily;
+import com.netflix.astyanax.serializers.IntegerSerializer;
+import com.netflix.astyanax.serializers.StringSerializer;
+
 public class TestUtils {
 
 	public static class TestTokenRange {
@@ -48,5 +55,43 @@ public class TestUtils {
 		tokenRanges.add(new TestTokenRange("8889191829175541774", "9176724567785656400","D", "U"));
 
 		return tokenRanges;
+	}
+
+	/** CERTAIN COLUMN FAMILIES THAT GET RE-USED A LOT FOR DIFFERENT UNIT TESTS */
+	
+	public static ColumnFamily<String, String> CF_COLUMN_RANGE_TEST = ColumnFamily.newColumnFamily(
+			"columnrange", // Column Family Name
+			StringSerializer.get(), // Key Serializer
+			StringSerializer.get(), // Column Serializer
+			IntegerSerializer.get()); // Data serializer;
+	
+	public static void createColumnFamilyForColumnRange(Keyspace keyspace) throws Exception {
+		keyspace.createColumnFamily(CF_COLUMN_RANGE_TEST, null);
+	}
+	
+	public static void populateRowsForColumnRange(Keyspace keyspace) throws Exception {
+		
+        MutationBatch m = keyspace.prepareMutationBatch();
+
+        for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
+        	String rowKey = Character.toString(keyName);
+        	ColumnListMutation<String> colMutation = m.withRow(CF_COLUMN_RANGE_TEST, rowKey);
+              for (char cName = 'a'; cName <= 'z'; cName++) {
+            	  colMutation.putColumn(Character.toString(cName), (int) (cName - 'a') + 1, null);
+              }
+              m.execute();
+        }
+        m.discardMutations();
+	}
+
+	public static void deleteRowsForColumnRange(Keyspace keyspace) throws Exception {
+		
+        for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
+            MutationBatch m = keyspace.prepareMutationBatch();
+        	String rowKey = Character.toString(keyName);
+        	m.withRow(CF_COLUMN_RANGE_TEST, rowKey).delete();
+        	m.execute();
+        	m.discardMutations();
+        }
 	}
 }

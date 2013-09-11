@@ -284,12 +284,6 @@ public class CqlKeyspaceImplTest {
 	    }
 
 
-	    
-	    @Test
-	    public void testHasValue() throws Exception {
-	    	//new ReadTests(keyspaceContext, keyspace, Driver.JAVA_DRIVER).test();
-	    }
-	    
 //	    @Test
 //	    public void getKeyspaceDefinition() throws Exception {
 //	        KeyspaceDefinition def = keyspaceContext.getEntity().describeKeyspace();

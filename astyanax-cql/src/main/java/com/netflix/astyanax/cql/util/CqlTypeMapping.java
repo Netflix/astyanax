@@ -43,10 +43,14 @@ public class CqlTypeMapping {
 	
 	
 	public static <T> Object getDynamicColumn(Row row, Serializer<T> serializer) {
-		return getDynamicColumn(row, serializer, "column1");
+		int numCols = row.getColumnDefinitions().size();
+		if (numCols < 2) {
+			throw new RuntimeException("Not enough columns for in row for parsing the column name");
+		}
+		return getDynamicColumn(row, serializer, numCols-2);
 	}
 	
-	public static <T> Object getDynamicColumn(Row row, Serializer<T> serializer, String columnName) {
+	private static <T> Object getDynamicColumn(Row row, Serializer<T> serializer, String columnName) {
 		
 		ComparatorType comparatorType = serializer.getComparatorType();
 		
@@ -162,7 +166,7 @@ public class CqlTypeMapping {
 			Object value = getDynamicColumn(row, component.getSerializer(), "column" + columnIndex++);
 			try {
 				System.out.println("Value: " + value);
-				component.setValueDirectly(obj, value);
+				component.setFieldValueDirectly(obj, value);
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}

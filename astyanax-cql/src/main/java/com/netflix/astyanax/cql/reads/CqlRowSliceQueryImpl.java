@@ -1,8 +1,11 @@
 package com.netflix.astyanax.cql.reads;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.desc;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.gt;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.gte;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.in;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.lt;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.lte;
 
 import java.math.BigInteger;
@@ -10,6 +13,8 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
@@ -31,6 +36,10 @@ import com.netflix.astyanax.model.ColumnSlice;
 import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.query.RowSliceColumnCountQuery;
 import com.netflix.astyanax.query.RowSliceQuery;
+import com.netflix.astyanax.serializers.CompositeRangeBuilder;
+import com.netflix.astyanax.serializers.CompositeRangeBuilder.CompositeByteBufferRange;
+import com.netflix.astyanax.serializers.CompositeRangeBuilder.RangeQueryOp;
+import com.netflix.astyanax.serializers.CompositeRangeBuilder.RangeQueryRecord;
 
 @SuppressWarnings("unchecked")
 public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
@@ -38,6 +47,7 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 	private ChainedContext context; 
 	private ColumnFamily<K,C> cf;
 	private CqlColumnSlice<C> columnSlice = new CqlColumnSlice<C>();
+	private CompositeByteBufferRange compositeRange = null;
 	
 	public CqlRowSliceQueryImpl(ChainedContext ctx) {
 		this.context = ctx.rewindForRead();
@@ -94,10 +104,17 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 
 	@Override
 	public RowSliceQuery<K, C> withColumnRange(ByteBufferRange range) {
-		if (!(range instanceof CqlRangeImpl)) {
-			return this.withColumnRange(range.getStart(), range.getEnd(), range.isReversed(), range.getLimit());
-		} else {
+		
+		if (range instanceof CompositeByteBufferRange) {
+			this.compositeRange = (CompositeByteBufferRange) range;
+			
+		} else if (range instanceof CompositeRangeBuilder) {
+			this.compositeRange = ((CompositeRangeBuilder)range).build();
+			
+		} else if (range instanceof CqlRangeImpl) {
 			this.columnSlice.setCqlRange((CqlRangeImpl<C>) range);
+		} else {
+			return this.withColumnRange(range.getStart(), range.getEnd(), range.isReversed(), range.getLimit());
 		}
 		return this;
 	}
@@ -123,6 +140,11 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 			RowSliceQueryGenerator<K,C> queryGen = (CqlFamilyFactory.OldStyleThriftMode()) ? new OldStyle<K,C>() : new NewStyle<K,C>();
 
 			if (rowSlice.isCollectionQuery()) {
+				
+				if (compositeRange != null) {
+					return queryGen.selectCompositeColumnRangeForRowKeys(rowSlice.getKeys(), compositeRange);
+				}
+				
 				switch(columnSlice.getQueryType()) {
 				case SELECT_ALL:
 					return queryGen.selectAllColumnsForRowKeys(rowSlice.getKeys());
@@ -134,6 +156,11 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 					throw new IllegalStateException();
 				}
 			} else {
+				
+				if (compositeRange != null) {
+					return queryGen.selectCompositeColumnRangeForRowRange(rowSlice.getRange(), compositeRange);
+				}
+
 				switch(columnSlice.getQueryType()) {
 				case SELECT_ALL:
 					return queryGen.selectAllColumnsForRowRange(rowSlice.getRange());
@@ -182,6 +209,7 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 				return where;
 			}
 
+			@Override
 			public Query selectColumnSetForRowKeys(Collection<K> rowKeys, Collection<C> cols) {
 					
 				Object[] columns = cols.toArray(new Object[cols.size()]); 
@@ -191,6 +219,18 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 							.and(in("column1", columns));
 			}
 
+			@Override
+			public Query selectCompositeColumnRangeForRowKeys(Collection<K> rowKeys, CompositeByteBufferRange compositeRange) {
+				
+				Where stmt = QueryBuilder.select().all()
+						.from(keyspace, cf.getName())
+							.where(in("key", rowKeys.toArray()));
+
+				stmt = addWhereClauseForCompositeColumnRange(stmt, compositeRange);
+				return stmt;
+			}
+
+			@Override
 			public Query selectAllColumnsForRowRange(RowRange<K> range) {
 
 				Select select = QueryBuilder.select().all()
@@ -224,6 +264,18 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 				return where;
 			}
 
+			@Override
+			public Query selectCompositeColumnRangeForRowRange(RowRange<K> range, CompositeByteBufferRange compositeRange) {
+
+				Select select = QueryBuilder.select().all().from(keyspace, cf.getName());
+				if (compositeRange != null) {
+					select.allowFiltering();
+				}
+
+				Where where = addWhereClauseForRowKey("key", select, range);	
+				where = addWhereClauseForCompositeColumnRange(where, compositeRange);
+				return where;
+			}
 		}
 		
 		/** NEW STYLE QUERIES */
@@ -292,6 +344,16 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 					columns[index++] = String.valueOf(col);
 				}
 				return columns;
+			}
+
+			@Override
+			public Query selectCompositeColumnRangeForRowKeys(Collection<K> rowKeys, CompositeByteBufferRange compositeRange) {
+				throw new NotImplementedException();
+			}
+
+			@Override
+			public Query selectCompositeColumnRangeForRowRange(RowRange<K> range, CompositeByteBufferRange compositeRange) {
+				throw new NotImplementedException();
 			}
 		}
 		
@@ -401,15 +463,54 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 		return stmt;
 	}
 	
+	private static Where addWhereClauseForCompositeColumnRange(Where stmt, CompositeByteBufferRange compositeRange) {
+
+		List<RangeQueryRecord> records = compositeRange.getRecords();
+		int componentIndex = 1; 
+
+		for (RangeQueryRecord record : records) {
+
+			String columnName = "column" + componentIndex;
+
+			for (RangeQueryOp op : record.getOps()) {
+
+				switch (op.getOperator()) {
+
+				case EQUAL:
+					stmt.and(eq(columnName, op.getValue()));
+					break;
+				case LESS_THAN :
+					stmt.and(lt(columnName, op.getValue()));
+					break;
+				case LESS_THAN_EQUALS:
+					stmt.and(lte(columnName, op.getValue()));
+					break;
+				case GREATER_THAN:
+					stmt.and(gt(columnName, op.getValue()));
+					break;
+				case GREATER_THAN_EQUALS:
+					stmt.and(gte(columnName, op.getValue()));
+					break;
+				default:
+					throw new RuntimeException("Cannot recognize operator: " + op.getOperator().name());
+				}; // end of switch stmt
+			} // end of inner for for ops for each range query record
+			componentIndex++;
+		}
+		return stmt;
+	}
+
 	private static interface RowSliceQueryGenerator<K,C> {
 		// QUERIES FOR ROW KEYS
 		Query selectAllColumnsForRowKeys(Collection<K> rowKeys); 
 		Query selectColumnSetForRowKeys(Collection<K> rowKeys, Collection<C> cols);
 		Query selectColumnRangeForRowKeys(Collection<K> rowKeys, CqlColumnSlice<C> columnSlice);
+		Query selectCompositeColumnRangeForRowKeys(Collection<K> rowKeys, CompositeByteBufferRange compositeRange);
 		// QUERIES FOR ROW RANGES
 		Query selectAllColumnsForRowRange(RowRange<K> range); 
 		Query selectColumnSetForRowRange(RowRange<K> range, Collection<C> cols);
 		Query selectColumnRangeForRowRange(RowRange<K> range, CqlColumnSlice<C> columnSlice);
+		Query selectCompositeColumnRangeForRowRange(RowRange<K> range, CompositeByteBufferRange compositeRange);
 	}
 }
 

@@ -61,9 +61,20 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
            	field.set(obj, serializer.fromByteBuffer(value));
         }
         
-        public void setValueDirectly(Object obj, Object value) throws IllegalArgumentException, IllegalAccessException {
-        	System.out.println("Setting value: " + field.getName());
-           	field.set(obj, value);
+        public void setFieldValueDirectly(Object obj, Object value) { 
+        	try {
+               	field.set(obj, value);
+        	} catch (Exception e) {
+        		throw new RuntimeException(e);
+        	}
+        }
+
+        public Object getFieldValueDirectly(Object obj) {
+        	try {
+        		return field.get(obj);
+        	} catch (Exception e) {
+        		throw new RuntimeException(e);
+        	}
         }
 
         public ByteBuffer serializeValue(Object value) {
@@ -224,7 +235,7 @@ public class AnnotatedCompositeSerializer<T> extends AbstractSerializer<T> {
         return new CompositeRangeBuilder() {
             private int position = 0;
 
-            public void nextComponent() {
+            public void getNextComponent() {
                 position++;
             }
 

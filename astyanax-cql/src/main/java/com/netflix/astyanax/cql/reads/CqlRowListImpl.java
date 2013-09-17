@@ -28,7 +28,7 @@ public class CqlRowListImpl<K, C> implements Rows<K, C> {
 			K prevKey = null; 
 			List<com.datastax.driver.core.Row> tempList = new ArrayList<com.datastax.driver.core.Row>();
 			for (com.datastax.driver.core.Row row : resultRows) {
-				K rowKey = (K) CqlTypeMapping.getDynamicColumn(row, keySerializer, "key");
+				K rowKey = (K) CqlTypeMapping.getDynamicColumn(row, keySerializer, 0);
 				if (prevKey == null || prevKey.equals(rowKey)) {
 					tempList.add(row);
 				} else {

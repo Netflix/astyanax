@@ -1,5 +1,6 @@
 package com.netflix.astyanax.cql.writes;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -7,6 +8,9 @@ import java.util.Map;
 import com.google.common.base.Preconditions;
 import com.netflix.astyanax.cql.util.ChainedContext;
 import com.netflix.astyanax.model.ConsistencyLevel;
+import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
+import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer.ComponentSerializer;
+import com.netflix.astyanax.serializers.ComparatorType;
 
 public class OldStyleCFMutationQuery extends CqlStyleMutationQuery {
 
@@ -34,7 +38,7 @@ public class OldStyleCFMutationQuery extends CqlStyleMutationQuery {
 			if (colMutation.deleteColumn) {
 
 				statements.addBatchQuery(getDeleteColumnStatement(keyspace, cf.getName()));
-				statements.addBatchValues(rowKey, colMutation.columnName);
+				statements.addBatchValues(getBatchValues(colMutation.columnName, rowKey));
 
 			} else if (colMutation.counterColumn) {
 
@@ -45,10 +49,10 @@ public class OldStyleCFMutationQuery extends CqlStyleMutationQuery {
 					delta = Math.abs(delta);
 				}
 				statements.addBatchQuery(getCounterColumnStatement(keyspace, cf.getName(), increment));
-				statements.addBatchValues(delta, rowKey, colMutation.columnName);
+				statements.addBatchValues(getBatchValues(colMutation.columnName, delta, rowKey));
 			} else {
 				statements.addBatchQuery(getUpdateColumnStatement(keyspace, cf.getName()));
-				statements.addBatchValues(colMutation.columnValue, rowKey, colMutation.columnName);
+				statements.addBatchValues(getBatchValues(colMutation.columnName, colMutation.columnValue, rowKey));
 			}
 		}
 
@@ -62,7 +66,8 @@ public class OldStyleCFMutationQuery extends CqlStyleMutationQuery {
 		
 		String updateStatement = updateStatementCache.get(kfCF);
 		if (updateStatement == null) {
-			updateStatement = "UPDATE " + keyspace + "." + cfName + " SET value = ? WHERE key = ? and column1 = ? ; \n";
+			StringBuilder sb = new StringBuilder("UPDATE " + keyspace + "." + cfName + " SET value = ?");
+			updateStatement = appendWhereClause(sb).toString();
 			updateStatementCache.put(kfCF, updateStatement);
 		}
 		
@@ -73,13 +78,14 @@ public class OldStyleCFMutationQuery extends CqlStyleMutationQuery {
 
 		KeyspaceColumnFamily kfCF = new KeyspaceColumnFamily(keyspace, cfName);
 		
-		String updateStatement = deleteStatementCache.get(kfCF);
-		if (updateStatement == null) {
-			updateStatement = "DELETE FROM " + keyspace + "." + cfName + " WHERE key = ? and column1 = ? ; \n";
-			deleteStatementCache.put(kfCF, updateStatement);
+		String deleteStatement = deleteStatementCache.get(kfCF);
+		if (deleteStatement == null) {
+			StringBuilder sb = new StringBuilder("DELETE FROM " + keyspace + "." + cfName);
+			deleteStatement = appendWhereClause(sb).toString();
+			deleteStatementCache.put(kfCF, deleteStatement);
 		}
 		
-		return updateStatement;
+		return deleteStatement;
 	}
 
 	private String getCounterColumnStatement(String keyspace, String cfName, boolean increment) {
@@ -90,18 +96,67 @@ public class OldStyleCFMutationQuery extends CqlStyleMutationQuery {
 		
 		String counterStatement = cache.get(kfCF);
 		if (counterStatement == null) {
+			StringBuilder sb = new StringBuilder();
 			if (increment) {
-				counterStatement = "UPDATE " + keyspace + "." + cfName + " SET value = value + ? WHERE key = ? and column1 = ?; \n";
+				sb.append("UPDATE " + keyspace + "." + cfName + " SET value = value + ? ");
 			} else {
-				counterStatement = "UPDATE " + keyspace + "." + cfName + " SET value = value - ? WHERE key = ? and column1 = ?; \n";
+				sb.append("UPDATE " + keyspace + "." + cfName + " SET value = value - ? ");
 			}
+			counterStatement = appendWhereClause(sb).toString();
 			cache.put(kfCF, counterStatement);
 		}
 		
 		return counterStatement;
 	}
 
+	private StringBuilder appendWhereClause(StringBuilder sb) { 
+		
+		if (isCompositeColumn()) {
+			
+			AnnotatedCompositeSerializer<?> compSerializer = (AnnotatedCompositeSerializer<?>) this.cf.getColumnSerializer();
+			
+			int numComponents = compSerializer.getComponents().size(); 
+			sb.append(" WHERE key = ?");
+			for (int i=1; i<=numComponents; i++) {
+				sb.append(" and column").append(i).append(" = ?");
+			}
+			sb.append(";\n");
+			
+		} else {
+			
+			sb.append(" WHERE key = ? and column1 = ?; \n");
+		}
+		return sb;
+	}
+	
+	private Object[] getBatchValues(Object column, Object ... preObjectList) {
+		
+		List<Object> list = new ArrayList<Object>();
+		for (Object obj : preObjectList) {
+			list.add(obj);
+		}
+		
+		if (isCompositeColumn()) {
+			
+			AnnotatedCompositeSerializer<?> compSerializer = (AnnotatedCompositeSerializer<?>) this.cf.getColumnSerializer();
+			for (ComponentSerializer<?> component : compSerializer.getComponents()) {
+				try {
+					list.add(component.getFieldValueDirectly(column));
+				} catch (Exception e) {
+					throw new RuntimeException(e);
+				}
+			}
+		} else {
+			list.add(column);
+		}
+		
+		return list.toArray();
+	}
 
+	private boolean isCompositeColumn() {
+		return cf.getColumnSerializer().getComparatorType() == ComparatorType.COMPOSITETYPE;
+	}
+	
 	private static class KeyspaceColumnFamily { 
 		private String keyspace;
 		private String columnFamily; 

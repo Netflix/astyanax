@@ -123,7 +123,7 @@ public class CqlColumnSlice<C> extends ColumnSlice<C> {
 			return false;
 		}
 		
-		if (cqlRange != null) {
+		if (cqlRange != null)  {
 			return true;
 		}
 		

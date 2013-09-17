@@ -2,8 +2,10 @@ package com.netflix.astyanax.cql.reads;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.desc;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.gt;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.gte;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.in;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.lt;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.lte;
 
 import java.nio.ByteBuffer;
@@ -39,12 +41,17 @@ import com.netflix.astyanax.model.ColumnSlice;
 import com.netflix.astyanax.query.ColumnCountQuery;
 import com.netflix.astyanax.query.ColumnQuery;
 import com.netflix.astyanax.query.RowQuery;
+import com.netflix.astyanax.serializers.CompositeRangeBuilder;
+import com.netflix.astyanax.serializers.CompositeRangeBuilder.CompositeByteBufferRange;
+import com.netflix.astyanax.serializers.CompositeRangeBuilder.RangeQueryOp;
+import com.netflix.astyanax.serializers.CompositeRangeBuilder.RangeQueryRecord;
 
 public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 	private final ChainedContext context; 
 	private final ColumnFamily<K, C> cf;
 	private final CqlColumnSlice<C> columnSlice = new CqlColumnSlice<C>();
+	private CompositeByteBufferRange compositeRange;
 	private final PaginationContext paginationContext = new PaginationContext(columnSlice);
 	
 
@@ -111,16 +118,23 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 		Serializer<C> colSerializer = cf.getColumnSerializer();
 		C start = (startColumn != null && startColumn.capacity() > 0) ? colSerializer.fromByteBuffer(startColumn) : null;
 		C end = (endColumn != null && endColumn.capacity() > 0) ? colSerializer.fromByteBuffer(endColumn) : null;
-		// TODO this is used for composite columns. Need to fix this.
 		return this.withColumnRange(start, end, reversed, limit);
 	}
 
 	@Override
 	public RowQuery<K, C> withColumnRange(ByteBufferRange range) {
-		if (!(range instanceof CqlRangeImpl)) {
-			return this.withColumnRange(range.getStart(), range.getEnd(), range.isReversed(), range.getLimit());
-		} else {
+		
+		if (range instanceof CompositeByteBufferRange) {
+			this.compositeRange = (CompositeByteBufferRange) range;
+			
+		} else if (range instanceof CompositeRangeBuilder) {
+			this.compositeRange = ((CompositeRangeBuilder)range).build();
+			
+		} else if (range instanceof CqlRangeImpl) {
 			this.columnSlice.setCqlRange((CqlRangeImpl<C>) range);
+			
+		} else {
+			return this.withColumnRange(range.getStart(), range.getEnd(), range.isReversed(), range.getLimit());
 		}
 		return this;
 	}
@@ -152,6 +166,10 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 	public ColumnCountQuery getCount() {
 		return new CqlColumnCountQueryImpl(this.context.clone(), new InternalRowQueryExecutionImpl().getQuery());
 	}
+	
+	private boolean isCompositeRangeQuery() {
+		return this.compositeRange != null;
+	}
 
 	private class InternalRowQueryExecutionImpl extends CqlAbstractExecutionImpl<ColumnList<C>> {
 
@@ -167,22 +185,30 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 			if (CqlFamilyFactory.OldStyleThriftMode()) {
 				
-				if (columnSlice.isSelectAllQuery()) {
-					return new OldStyle().getSelectEntireRowQuery();
-				} else if (columnSlice.isColumnSelectQuery()) {
+				if (columnSlice.isColumnSelectQuery()) {
 					return new OldStyle().getSelectColumnsQuery();
-				} else {
+				} else if (columnSlice.isRangeQuery()) {
 					return new OldStyle().getSelectColumnRangeQuery();
+				} else if (compositeRange != null) {
+					return new OldStyle().getSelectCompositeColumnRangeQuery();
+				} else if (columnSlice.isSelectAllQuery()) {
+					return new OldStyle().getSelectEntireRowQuery();
+				} else {
+					throw new IllegalStateException("Undefined query type");
 				}
 				
 			} else {
 				
-				if (columnSlice.isSelectAllQuery()) {
-					return new NewStyle().getSelectEntireRowQuery();
-				} else if (columnSlice.isColumnSelectQuery()) {
+				if (columnSlice.isColumnSelectQuery()) {
 					return new NewStyle().getSelectColumnsQuery();
-				} else {
+				} else if (columnSlice.isRangeQuery()) {
 					return new NewStyle().getSelectColumnRangeQuery();
+				} else if (compositeRange != null) {
+					throw new NotImplementedException();
+				} else if (columnSlice.isSelectAllQuery()) {
+					return new NewStyle().getSelectEntireRowQuery();
+				} else {
+					throw new IllegalStateException("Undefined query type");
 				}
 			}
 		}
@@ -208,7 +234,6 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 		}
 		
 		
-		
 		/** OLD STYLE QUERIES */ 
 		
 		private class OldStyle {
@@ -220,6 +245,11 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 			}
 			
 			Query getSelectColumnsQuery() {
+				
+				// Make sure that we are not attempting to do a composite range query
+				if (isCompositeRangeQuery()) {
+					throw new RuntimeException("Cannot perform composite column slice using column set, use CompositeRangeBuilder instead");
+				}
 				
 				Collection<C> cols = columnSlice.getColumns(); 
 				Object[] columns = cols.toArray(new Object[cols.size()]); 
@@ -254,7 +284,51 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 				return stmt;
 			}
+			
+			Query getSelectCompositeColumnRangeQuery() {
+
+				Where stmt = QueryBuilder.select().all()
+						.from(keyspace, cf.getName())
+						.where(eq("key", rowKey));
+
+				List<RangeQueryRecord> records = compositeRange.getRecords();
+				
+				int componentIndex = 1; 
+				
+				for (RangeQueryRecord record : records) {
+					
+					String columnName = "column" + componentIndex;
+					
+					for (RangeQueryOp op : record.getOps()) {
+						
+						switch (op.getOperator()) {
+							
+					    case EQUAL:
+					    	stmt.and(eq(columnName, op.getValue()));
+					    	break;
+						case LESS_THAN :
+							stmt.and(lt(columnName, op.getValue()));
+					    	break;
+						case LESS_THAN_EQUALS:
+							stmt.and(lte(columnName, op.getValue()));
+					    	break;
+						case GREATER_THAN:
+							stmt.and(gt(columnName, op.getValue()));
+					    	break;
+						case GREATER_THAN_EQUALS:
+							stmt.and(gte(columnName, op.getValue()));
+							break;
+						default:
+							throw new RuntimeException("Cannot recognize operator: " + op.getOperator().name());
+						}; // end of switch stmt
+					} // end of inner for for ops for each range query record
+					componentIndex++;
+				}
+				return stmt;
+			}
+			
 		}
+	
 		
 		/** NEW STYLE QUERIES */
 		private class NewStyle {
@@ -267,6 +341,11 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 			
 			Query getSelectColumnsQuery() {
 				
+				// Make sure that we are not attempting to do a composite range query
+				if (isCompositeRangeQuery()) {
+					throw new RuntimeException("Cannot perform composite column slice using column set, use CompositeRangeBuilder instead");
+				}
+
 				Collection<C> columns = columnSlice.getColumns(); 
 				Selection selection = QueryBuilder.select();
 
@@ -279,6 +358,10 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 			
 			Query getSelectColumnRangeQuery() {
 
+				if (isCompositeRangeQuery()) {
+					throw new NotImplementedException();
+				}
+				
 				Where stmt = QueryBuilder.select().all()
 						.from(keyspace, cf.getName())
 						.where(eq(cf.getKeyAlias(), rowKey));
@@ -370,4 +453,21 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 			return lastPageConsumed;
 		}
 	}
+	
+//	private boolean isSingleEqualityRecord(RangeQueryRecord oldRecord) {
+//		
+//		List<RangeQueryOp> ops  = oldRecord.getOps();
+//		if (ops.size() != 1) {
+//			return false;
+//		}
+//		Equality operator = ops.get(0).getOperator();
+//		if (operator != Equality.EQUAL) {
+//			return false;
+//		}
+//		return true;
+//	}
+//	
+//	private boolean checkSingleRecord() {
+//		
+//	}
 }

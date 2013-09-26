@@ -200,7 +200,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                 if (dc != null && !ed.getDatacenter().equals(dc)) {
                                     continue;
                                 }
-                                else if (rack != null && !ed.getRack().equals(dc)) {
+                                else if (rack != null && !ed.getRack().equals(rack)) {
                                     continue;
                                 }
                                 else {

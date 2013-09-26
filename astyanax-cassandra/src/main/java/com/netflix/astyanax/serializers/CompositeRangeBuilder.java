@@ -78,6 +78,18 @@ public abstract class CompositeRangeBuilder implements ByteBufferRange {
         return this;
     }
 
+    public CompositeRangeBuilder startWith(Object value, Equality equality) {
+        lockComponent = true;
+        append(start, value, equality);
+        return this;
+    }
+
+    public CompositeRangeBuilder endWith(Object value, Equality equality) {
+        lockComponent = true;
+        append(end, value, equality);
+        return this;
+    }
+
     @Override
     @Deprecated
     public ByteBuffer getStart() {

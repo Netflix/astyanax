@@ -140,33 +140,33 @@ public class ThriftAllRowsImpl<K, C> implements Rows<K, C> {
 
             @Override
             public void remove() {
-                throw new IllegalStateException();
+                throw new Exception("not implemented");
             }
         };
     }
 
     @Override
     public Row<K, C> getRow(K key) {
-        throw new IllegalStateException();
+        throw new Exception("not implemented");
     }
 
     @Override
     public int size() {
-        throw new IllegalStateException();
+        throw new Exception("not implemented");
     }
 
     @Override
     public boolean isEmpty() {
-        throw new IllegalStateException();
+        throw new Exception("not implemented");
     }
 
     @Override
     public Row<K, C> getRowByIndex(int i) {
-        throw new IllegalStateException();
+        throw new Exception("not implemented");
     }
 
     @Override
     public Collection<K> getKeys() {
-        throw new IllegalStateException();
+        throw new Exception("not implemented");
     }
 }

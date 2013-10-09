@@ -33,6 +33,7 @@ public abstract class AbstractThriftCqlQuery<K,C> implements CqlQuery<K,C> {
     AbstractThriftCqlQuery(ThriftColumnFamilyQueryImpl<K,C> cfQuery, String cql) {
         this.cfQuery = cfQuery;
         this.cql = cql;
+        this.cl = cfQuery.consistencyLevel;
     }
     
     @Override

@@ -226,13 +226,13 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
         /**
          * Define this on the ShardReaderPolicy instead 
-         * @param internval
+         * @param interval
          * @param units
          * @return
          */
         @Deprecated
-        public Builder withPollInterval(Long internval, TimeUnit units) {
-            this.metadata.setPollInterval(TimeUnit.MILLISECONDS.convert(internval,  units));
+        public Builder withPollInterval(Long interval, TimeUnit units) {
+            this.metadata.setPollInterval(TimeUnit.MILLISECONDS.convert(interval,  units));
             return this;
         }
 
@@ -409,7 +409,8 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
     /**
      * Return the shard for this timestamp
-     * @param message
+     * @param messageTime
+     * @param modShard
      * @return
      */
     private String getShardKey(long messageTime, int modShard) {
@@ -418,7 +419,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             timePartition = (messageTime / metadata.getPartitionDuration()) % metadata.getPartitionCount();
         else
             timePartition = 0;
-        return getName() + ":" + timePartition + ":" + modShard;
+        return getName() + ":" + timePartition + ":" + Math.abs(modShard);
     }
 
     String getCompositeKey(String name, String key) {
@@ -1017,7 +1018,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
      * Peek into messages contained in the shard.  This call does not take trigger time into account
      * and will return messages that are not yet due to be executed
      * @param shardName
-     * @param itemsToPop
+     * @param itemsToPeek
      * @return
      * @throws MessageQueueException
      */

@@ -7,7 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 
@@ -60,8 +59,20 @@ public class BatchedStatements {
 		batchValues.addAll(otherBatch.getBatchValues());
 	}
 
-	public BoundStatement getBoundStatement(Cluster cluster, boolean atomicBatch) {
+	public BoundStatement getBoundStatement(Session session, boolean atomicBatch) {
 		
+		String query = getBatchQuery(atomicBatch);
+		PreparedStatement statement = session.prepare(query);
+		
+		BoundStatement boundStatement = new BoundStatement(statement);
+
+		Object[] valueArr = batchValues.toArray();
+		boundStatement.bind(valueArr);
+		
+		return boundStatement;
+	}
+	
+	public String getBatchQuery(boolean atomicBatch) {
 		StringBuilder sb = new StringBuilder();
 		
 		boolean isBatch = batchQueries.size() > 1;
@@ -78,7 +89,7 @@ public class BatchedStatements {
 		}
 		
 		if (isBatch) {
-			sb.append(" APPLY BATCH");
+			sb.append(" APPLY BATCH; ");
 		}
 		
 		String query = sb.toString(); 
@@ -87,14 +98,6 @@ public class BatchedStatements {
 			LOG.debug("Query : " + query);
 			LOG.debug("Bind values: " + batchValues);
 		}
-		Session session = cluster.connect();
-		PreparedStatement statement = session.prepare(query);
-		
-		BoundStatement boundStatement = new BoundStatement(statement);
-
-		Object[] valueArr = batchValues.toArray();
-		boundStatement.bind(valueArr);
-		
-		return boundStatement;
+		return query;
 	}
 }

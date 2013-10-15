@@ -13,9 +13,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import com.datastax.driver.core.BoundStatement;
+import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
@@ -29,15 +32,19 @@ import com.netflix.astyanax.RowCopier;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.cql.ConsistencyLevelMapping;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlFamilyFactory;
+import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.CqlOperationResultImpl;
-import com.netflix.astyanax.cql.util.ChainedContext;
+import com.netflix.astyanax.cql.writes.CqlColumnFamilyMutationImpl.ColumnFamilyMutationContext;
+import com.netflix.astyanax.cql.writes.StatementCache;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ColumnSlice;
+import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.query.ColumnCountQuery;
 import com.netflix.astyanax.query.ColumnQuery;
 import com.netflix.astyanax.query.RowQuery;
@@ -48,16 +55,21 @@ import com.netflix.astyanax.serializers.CompositeRangeBuilder.RangeQueryRecord;
 
 public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
-	private final ChainedContext context; 
-	private final ColumnFamily<K, C> cf;
+	private final KeyspaceContext ksContext;
+	private final ColumnFamilyMutationContext cfContext;
+
+	private final K rowKey;
 	private final CqlColumnSlice<C> columnSlice = new CqlColumnSlice<C>();
 	private CompositeByteBufferRange compositeRange;
 	private final PaginationContext paginationContext = new PaginationContext(columnSlice);
 	
+	private com.datastax.driver.core.ConsistencyLevel cl = com.datastax.driver.core.ConsistencyLevel.ONE;
 
-	public CqlRowQueryImpl(ChainedContext ctx) {
-		this.context = ctx.rewindForRead();
-		this.cf = this.context.skip().skip().getNext(ColumnFamily.class);
+	public CqlRowQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext cfCtx, K rKey, ConsistencyLevel clLevel) {
+		this.ksContext = ksCtx;
+		this.cfContext = cfCtx;
+		this.rowKey = rKey;
+		this.cl = ConsistencyLevelMapping.getCL(clLevel);
 	}
 
 	@Override
@@ -66,6 +78,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 		if (paginationContext.isPaginating() && paginationContext.lastPageConsumed()) {
 			return new CqlOperationResultImpl<ColumnList<C>>(null, new CqlColumnListImpl<C>());
 		}
+		
 		return new InternalRowQueryExecutionImpl().execute();
 	}
 
@@ -77,7 +90,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 	@Override
 	public ColumnQuery<C> getColumn(C column) {
-		return new CqlColumnQueryImpl<C>(context.clone().add(column));
+		return new CqlColumnQueryImpl<C>(ksContext, cfContext, column);
 	}
 
 	@Override
@@ -115,7 +128,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 	@Override
 	public RowQuery<K, C> withColumnRange(ByteBuffer startColumn, ByteBuffer endColumn, boolean reversed, int limit) {
 			
-		Serializer<C> colSerializer = cf.getColumnSerializer();
+		Serializer<C> colSerializer = cfContext.getColumnFamily().getColumnSerializer();
 		C start = (startColumn != null && startColumn.capacity() > 0) ? colSerializer.fromByteBuffer(startColumn) : null;
 		C end = (endColumn != null && endColumn.capacity() > 0) ? colSerializer.fromByteBuffer(endColumn) : null;
 		return this.withColumnRange(start, end, reversed, limit);
@@ -164,7 +177,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 	@Override
 	public ColumnCountQuery getCount() {
-		return new CqlColumnCountQueryImpl(this.context.clone(), new InternalRowQueryExecutionImpl().getQuery());
+		return new CqlColumnCountQueryImpl(ksContext, cfContext, new InternalRowQueryExecutionImpl().getQuery());
 	}
 	
 	private boolean isCompositeRangeQuery() {
@@ -173,11 +186,29 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 	private class InternalRowQueryExecutionImpl extends CqlAbstractExecutionImpl<ColumnList<C>> {
 
-		private final Object rowKey; 
-		
 		public InternalRowQueryExecutionImpl() {
-			super(context);
-			this.rowKey = context.getNext(Object.class); 
+			super(ksContext, cfContext);
+		}
+
+		@Override
+		public OperationResult<ColumnList<C>> execute() throws ConnectionException {
+
+			PreparedStatement pStmt = 
+					StatementCache.getInstance().getStatement(CqlRowQueryImpl.class.getName().hashCode(), new Callable<PreparedStatement>() {
+
+						@Override
+						public PreparedStatement call() throws Exception {
+							String query = "select * from astyanaxperf.test1 where key=?;";
+							return session.prepare(query);
+						}
+					});
+
+			BoundStatement bStmt = pStmt.bind(rowKey);
+			bStmt.setConsistencyLevel(cl);
+			ResultSet resultSet = session.execute(bStmt);
+			ColumnList<C> result = parseResultSet(resultSet);
+			OperationResult<ColumnList<C>> opResult = new CqlOperationResultImpl<ColumnList<C>>(resultSet, result);
+			return opResult;
 		}
 
 		@Override
@@ -236,12 +267,14 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 		
 		/** OLD STYLE QUERIES */ 
 		
+		private static final String Key = "key";
+		
 		private class OldStyle {
 			
 			Query getSelectEntireRowQuery() {
 				return QueryBuilder.select().all()
 						.from(keyspace, cf.getName())
-						.where(eq("key", rowKey));
+						.where(eq(Key, rowKey));
 			}
 			
 			Query getSelectColumnsQuery() {

@@ -8,7 +8,6 @@ import java.util.UUID;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.SimpleStatement;
@@ -19,21 +18,21 @@ import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlFamilyFactory;
-import com.netflix.astyanax.cql.util.ChainedContext;
+import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
+import com.netflix.astyanax.cql.writes.CqlColumnFamilyMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.query.CqlQuery;
 import com.netflix.astyanax.query.PreparedCqlQuery;
 
 public class DirectCqlQueryImpl<K, C> implements CqlQuery<K, C> {
 
-	private Cluster cluster;
-	private String basicCqlQuery; 
-	private ChainedContext context;
+	private final KeyspaceContext ksContext;
+	private final ColumnFamilyMutationContext cfContext;
+	private final String basicCqlQuery; 
 	
-	public DirectCqlQueryImpl(ChainedContext context, String basicCqlQuery) {
-		this.context = context;
-		this.context.rewindForRead();
-		this.cluster = context.getNext(Cluster.class);
+	public DirectCqlQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext cfCtx, String basicCqlQuery) {
+		this.ksContext = ksCtx;
+		this.cfContext = cfCtx;
 		this.basicCqlQuery = basicCqlQuery;
 	}
 	
@@ -55,7 +54,7 @@ public class DirectCqlQueryImpl<K, C> implements CqlQuery<K, C> {
 	@Override
 	public PreparedCqlQuery<K, C> asPreparedStatement() {
 		
-		final BoundStatement boundStatement = new BoundStatement(cluster.connect().prepare(basicCqlQuery));
+		final BoundStatement boundStatement = new BoundStatement(ksContext.getSession().prepare(basicCqlQuery));
 		final List<Object> bindList = new ArrayList<Object>();
 		
 		return new PreparedCqlQuery<K, C>() {
@@ -75,17 +74,20 @@ public class DirectCqlQueryImpl<K, C> implements CqlQuery<K, C> {
 
 			@Override
 			public <V> PreparedCqlQuery<K, C> withByteBufferValue(V value, Serializer<V> serializer) {
-				throw new NotImplementedException();
+				bindList.add(value);
+				return this;
 			}
 
 			@Override
 			public PreparedCqlQuery<K, C> withValue(ByteBuffer value) {
-				throw new NotImplementedException();
+				bindList.add(value);
+				return this;
 			}
 
 			@Override
 			public PreparedCqlQuery<K, C> withValues(List<ByteBuffer> value) {
-				throw new NotImplementedException();
+				bindList.addAll(value);
+				return this;
 			}
 
 			@Override
@@ -143,7 +145,7 @@ public class DirectCqlQueryImpl<K, C> implements CqlQuery<K, C> {
 		private final Query query;
 		
 		public InternalExecutionImpl(Query query) {
-			super(context);
+			super(ksContext, cfContext);
 			this.query = query;
 		}
 

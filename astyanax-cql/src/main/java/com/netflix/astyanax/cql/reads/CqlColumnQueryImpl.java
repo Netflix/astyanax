@@ -18,8 +18,9 @@ import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlFamilyFactory;
-import com.netflix.astyanax.cql.util.ChainedContext;
+import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.util.CqlTypeMapping;
+import com.netflix.astyanax.cql.writes.CqlColumnFamilyMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.query.ColumnQuery;
 import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
@@ -28,10 +29,14 @@ import com.netflix.astyanax.serializers.ComparatorType;
 
 public class CqlColumnQueryImpl<C> implements ColumnQuery<C> {
 
-	private ChainedContext context; 
+	private final KeyspaceContext ksContext;
+	private final ColumnFamilyMutationContext cfContext;
+	private final C column;
 	
-	CqlColumnQueryImpl(ChainedContext ctx) {
-		this.context = ctx;
+	CqlColumnQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext cfCtx, C col) {
+		this.ksContext = ksCtx;
+		this.cfContext = cfCtx;
+		this.column = col;
 	}
 	
 	@Override
@@ -46,11 +51,8 @@ public class CqlColumnQueryImpl<C> implements ColumnQuery<C> {
 
 	private class InternalColumnQueryExecutionImpl extends CqlAbstractExecutionImpl<Column<C>> {
 
-		private final Object rowKey = context.getNext(Object.class); 
-		private final Object column = context.getNext(Object.class); 
-
 		public InternalColumnQueryExecutionImpl() {
-			super(context);
+			super(ksContext, cfContext);
 		}
 
 		@Override
@@ -60,6 +62,8 @@ public class CqlColumnQueryImpl<C> implements ColumnQuery<C> {
 
 		@Override
 		public Query getQuery() {
+			
+			Object rowKey = cfContext.getRowKey();
 			
 			boolean isCompositeType = cf.getColumnSerializer().getComparatorType() == ComparatorType.COMPOSITETYPE;
 			

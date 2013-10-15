@@ -2,16 +2,19 @@
 package com.netflix.astyanax.cql.writes;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.Callable;
 
 import org.apache.cassandra.thrift.Mutation;
 
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.ResultSetFuture;
 import com.google.common.base.Preconditions;
@@ -24,9 +27,9 @@ import com.netflix.astyanax.WriteAheadLog;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.CqlOperationResultImpl;
 import com.netflix.astyanax.cql.util.AsyncOperationResult;
-import com.netflix.astyanax.cql.util.ChainedContext;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
@@ -43,7 +46,7 @@ import com.netflix.astyanax.retry.RetryPolicy;
 public class CqlMutationBatchImpl implements MutationBatch {
     private static final long UNSET_TIMESTAMP = -1;
     
-    private ChainedContext context; 
+    private final KeyspaceContext ksContext; 
     
     protected long              timestamp;
     private ConsistencyLevel    consistencyLevel;
@@ -52,8 +55,6 @@ public class CqlMutationBatchImpl implements MutationBatch {
     private RetryPolicy         retry;
     private WriteAheadLog       wal;
     private boolean             useAtomicBatch = false;
-    private String              keyspace;
-    private Cluster             cluster;
 
     //private Map<K, Map<String, List<Mutation>>> mutationMap = new HashMap<K, Map<String, List<Mutation>>>();
     private Map<KeyAndColumnFamily, CqlColumnFamilyMutationImpl<?,?>> rowLookup = Maps.newHashMap();
@@ -111,12 +112,9 @@ public class CqlMutationBatchImpl implements MutationBatch {
         }
     }
     
-    public CqlMutationBatchImpl(ChainedContext context, Clock clock, ConsistencyLevel consistencyLevel, RetryPolicy retry) {
+    public CqlMutationBatchImpl(KeyspaceContext ksCtx, Clock clock, ConsistencyLevel consistencyLevel, RetryPolicy retry) {
     	
-    	this.context = context;
-    	context.rewindForRead(); 
-    	this.cluster = context.getNext(Cluster.class);
-    	this.keyspace = context.getNext(String.class);
+    	this.ksContext = ksCtx;
     	
         this.clock            = clock;
         this.timestamp        = UNSET_TIMESTAMP;
@@ -151,9 +149,7 @@ public class CqlMutationBatchImpl implements MutationBatch {
 //                innerMutationMap.put(columnFamily.getName(), innerMutationList);
 //            }
             
-            clm = new CqlColumnFamilyMutationImpl<K, C>(context.clone()
-            											.add(columnFamily)
-            											.add(rowKey), this.consistencyLevel, timestamp);
+            clm = new CqlColumnFamilyMutationImpl<K, C>(ksContext, columnFamily, rowKey, this.consistencyLevel, timestamp);
             rowLookup.put(kacf, clm);
         }
         return clm;
@@ -181,8 +177,7 @@ public class CqlMutationBatchImpl implements MutationBatch {
      */
     @Override
     public boolean isEmpty() {
-    	throw new NotImplementedException();
-        //return mutationMap.isEmpty();
+    	return rowLookup.isEmpty();
     }
 
     /**
@@ -194,21 +189,9 @@ public class CqlMutationBatchImpl implements MutationBatch {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("CqlMutationBatch[");
-//        boolean first = true;
-//        for (Entry<ByteBuffer, Map<String, List<Mutation>>> row : mutationMap.entrySet()) {
-//            if (!first)
-//                sb.append(",");
-//            sb.append(Hex.encodeHex(row.getKey().array())).append("(");
-//            boolean first2 = true;
-//            for (Entry<String, List<Mutation>> cf : row.getValue().entrySet()) {
-//                if (!first2)
-//                    sb.append(",");
-//                sb.append(cf.getKey()).append(":").append(cf.getValue().size());
-//                first2 = false;
-//            }
-//            first = false;
-//            sb.append(")");
-//        }
+        for (Entry<KeyAndColumnFamily, CqlColumnFamilyMutationImpl<?, ?>> clm : rowLookup.entrySet()) {
+        	sb.append("\n").append(clm.toString());
+        }
         sb.append("]");
         return sb.toString();
     }
@@ -355,8 +338,8 @@ public class CqlMutationBatchImpl implements MutationBatch {
 	@Override
 	public OperationResult<Void> execute() throws ConnectionException {
 		
-		BoundStatement statement = getTotalStatement();
-		ResultSet rs = cluster.connect().execute(statement);
+		BoundStatement statement = getCachedPreparedStatement();
+		ResultSet rs = ksContext.getSession().execute(statement);
 		return new CqlOperationResultImpl<Void>(rs, null);
 	}
 
@@ -367,8 +350,8 @@ public class CqlMutationBatchImpl implements MutationBatch {
 			throw new NotImplementedException();
 		}
 		
-		BoundStatement statement = getTotalStatement();
-		ResultSetFuture rsFuture = cluster.connect().executeAsync(statement);
+		BoundStatement statement = getCachedPreparedStatement();
+		ResultSetFuture rsFuture = ksContext.getSession().executeAsync(statement);
 		return new AsyncOperationResult<Void>(rsFuture) {
 			@Override
 			public OperationResult<Void> getOperationResult(ResultSet rs) {
@@ -377,21 +360,54 @@ public class CqlMutationBatchImpl implements MutationBatch {
 		};
 	}
 	
-	private BoundStatement getTotalStatement() {
-		BatchedStatements statements = new BatchedStatements();
+//	private BoundStatement getTotalStatement() {
+//		BatchedStatements statements = new BatchedStatements();
+//		
+//		for (CqlColumnFamilyMutationImpl<?, ?> cfMutation : rowLookup.values()) {
+//			statements.addBatch(cfMutation.getBatch());
+//		}
+//		
+//		return statements.getBoundStatement(session, useAtomicBatch);
+//	}
+
+
+	private BoundStatement getCachedPreparedStatement() {
 		
-		for (CqlColumnFamilyMutationImpl<?, ?> cfMutation : rowLookup.values()) {
-			statements.addBatch(cfMutation.getBatch());
+		Integer id = CqlColumnFamilyMutationImpl.class.getName().hashCode();
+		
+		final List<Object> bindValues = new ArrayList<Object>();
+		
+		PreparedStatement pStmt = StatementCache.getInstance().getStatement(id, new Callable<PreparedStatement>() {
+
+			@Override
+			public PreparedStatement call() throws Exception {
+				BatchedStatements statements = new BatchedStatements();
+				for (CqlColumnFamilyMutationImpl<?, ?> cfMutation : rowLookup.values()) {
+					statements.addBatch(cfMutation.getBatch());
+				}
+				bindValues.addAll(statements.getBatchValues());
+				
+				PreparedStatement preparedStmt = ksContext.getSession().prepare(statements.getBatchQuery(false));
+				return preparedStmt;
+			}
+		});
+		
+		if (bindValues.size() == 0) {
+			for (CqlColumnFamilyMutationImpl<?, ?> cfMutation : rowLookup.values()) {
+				bindValues.addAll(cfMutation.getBindValues());
+			}
 		}
 		
-		return statements.getBoundStatement(cluster, useAtomicBatch);
+		BoundStatement bStmt = pStmt.bind(bindValues.toArray());
+		return bStmt;
 	}
 
-	public String getKeyspace() {
-		return keyspace;
-	}
+//	public String getKeyspace() {
+//		return keyspace;
+//	}
+//
+//	public Session getSession() {
+//		return session;
+//	}
 
-	public Cluster getCluster() {
-		return cluster;
-	}
 }

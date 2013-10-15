@@ -10,18 +10,17 @@ import org.slf4j.LoggerFactory;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
-import com.google.common.base.Preconditions;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.ColumnMutation;
 import com.netflix.astyanax.Execution;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
-import com.netflix.astyanax.cql.util.ChainedContext;
+import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.util.ConsistencyLevelTransform;
+import com.netflix.astyanax.cql.writes.CqlColumnFamilyMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
@@ -31,13 +30,11 @@ public class CqlColumnMutationImpl implements ColumnMutation {
 
 	private static final Logger LOG = LoggerFactory.getLogger(CqlColumnMutationImpl.class);
 	
-	private ChainedContext context;
-
-	protected final Cluster cluster;
-	protected final String keyspace;
-	protected final ColumnFamily<?,?> cf;
-	protected final Object rowKey;
+	protected final KeyspaceContext ksContext;
+	protected final ColumnFamilyMutationContext cfContext;
 	protected final Object columnName;
+
+	// Tracking state
 	protected Object columnValue;
 	protected boolean counterColumn = false;
 	protected boolean deleteColumn = false;
@@ -46,16 +43,16 @@ public class CqlColumnMutationImpl implements ColumnMutation {
 	private Long timestamp;
 	private Integer ttl;
 	
-	public CqlColumnMutationImpl(ChainedContext ctx) {
-		
-		this.context = ctx;
-		ctx.rewindForRead();
+	public CqlColumnMutationImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext cfCtx, Object cName) {
+		this.ksContext = ksCtx;
+		this.cfContext = cfCtx;
+		this.columnName = cName;
+	}
 
-		cluster = context.getNext(Cluster.class);
-		keyspace = context.getNext(String.class);
-		cf = context.getNext(ColumnFamily.class);
-		rowKey = context.getNext(Object.class);
-		columnName = context.getNext(Object.class);
+	public CqlColumnMutationImpl(KeyspaceContext ksCtx, ColumnFamily<?,?> cf, Object rKey, Object cName) {
+		this.ksContext = ksCtx;
+		this.cfContext = null; // TODO fix this
+		this.columnName = cName;
 	}
 
 	@Override
@@ -138,7 +135,7 @@ public class CqlColumnMutationImpl implements ColumnMutation {
 	@Override
 	public <T> Execution<Void> putValue(T value, Serializer<T> serializer, Integer ttl) {
 		
-		if (cf.getDefaultValueSerializer().getComparatorType() == ByteBufferSerializer.get().getComparatorType()) {
+		if (cfContext.getColumnFamily().getDefaultValueSerializer().getComparatorType() == ByteBufferSerializer.get().getComparatorType()) {
 			ByteBuffer valueBytes = serializer.toByteBuffer(value);
 			return exec(valueBytes, ttl, CassandraOperationType.COLUMN_MUTATE);
 		}
@@ -173,7 +170,7 @@ public class CqlColumnMutationImpl implements ColumnMutation {
 		this.columnValue = value;
 		this.ttl = ttl;
 
-		return new CqlAbstractExecutionImpl<Void>(context) {
+		return new CqlAbstractExecutionImpl<Void>(ksContext, cfContext) {
 
 			@Override
 			public CassandraOperationType getOperationType() {
@@ -182,10 +179,6 @@ public class CqlColumnMutationImpl implements ColumnMutation {
 
 			@Override
 			public Query getQuery() {
-
-				Preconditions.checkArgument(rowKey != null, "Row key must be provided");
-				Preconditions.checkArgument(keyspace != null, "Keyspace must be provided");
-				Preconditions.checkArgument(cf != null, "ColumnFamily must be provided");
 
 				StringBuilder sb = new StringBuilder("UPDATE ");
 				sb.append( keyspace + "." + cf.getName());
@@ -206,9 +199,9 @@ public class CqlColumnMutationImpl implements ColumnMutation {
 					LOG.debug("UPDATE query: " + query);
 				}
 
-				PreparedStatement statement = cluster.connect().prepare(query);
+				PreparedStatement statement = session.prepare(query);
 				BoundStatement boundStatement = new BoundStatement(statement);
-				boundStatement.bind(columnValue, rowKey);
+				boundStatement.bind(columnValue, cfContext.getRowKey());
 
 				return boundStatement;
 			}
@@ -265,5 +258,9 @@ public class CqlColumnMutationImpl implements ColumnMutation {
 			}
 			sb.append(" CONSISTENCY " + ConsistencyLevelTransform.getConsistencyLevel(consistencyLevel).name());
 		}
+	}
+	
+	public String toString() {
+		return columnName.toString();
 	}
 }

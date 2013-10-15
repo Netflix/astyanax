@@ -8,7 +8,9 @@ import java.util.List;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import com.netflix.astyanax.connectionpool.Host;
-import com.netflix.astyanax.cql.util.ChainedContext;
+import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
+import com.netflix.astyanax.cql.writes.CqlColumnFamilyMutationImpl.ColumnFamilyMutationContext;
+import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.query.AllRowsQuery;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
@@ -20,15 +22,19 @@ import com.netflix.astyanax.retry.RetryPolicy;
 
 public class CqlColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C> {
 
-	private ChainedContext context; 
+	private final KeyspaceContext ksContext;
+	private final ColumnFamilyMutationContext cfContext;
+	private ConsistencyLevel consistencyLevel = ConsistencyLevel.CL_ONE;
 	
-	public CqlColumnFamilyQueryImpl(ChainedContext context) {
-		this.context = context;
+	public CqlColumnFamilyQueryImpl(KeyspaceContext ksCtx, ColumnFamily<K,C> cf) {
+		this.ksContext = ksCtx;
+		this.cfContext = new ColumnFamilyMutationContext<K,C>(cf, null);
 	}
 	
 	@Override
-	public ColumnFamilyQuery<K, C> setConsistencyLevel(ConsistencyLevel consistencyLevel) {
-		throw new NotImplementedException();
+	public ColumnFamilyQuery<K, C> setConsistencyLevel(ConsistencyLevel clLevel) {
+		this.consistencyLevel = clLevel;
+		return this;
 	}
 
 	@Override
@@ -43,12 +49,12 @@ public class CqlColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C> {
 
 	@Override
 	public RowQuery<K, C> getKey(K rowKey) {
-		return new CqlRowQueryImpl<K, C>(context.clone().add(rowKey));
+		return new CqlRowQueryImpl<K, C>(ksContext, cfContext, rowKey, consistencyLevel);
 	}
 
 	@Override
 	public RowQuery<K, C> getRow(K rowKey) {
-		return new CqlRowQueryImpl<K, C>(context.clone().add(rowKey));
+		return new CqlRowQueryImpl<K, C>(ksContext, cfContext, rowKey, consistencyLevel);
 	}
 
 	@Override
@@ -59,7 +65,7 @@ public class CqlColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C> {
 	@Override
 	public RowSliceQuery<K, C> getRowRange(K startKey, K endKey, String startToken, String endToken, int count) {
 		CqlRowSlice<K> rowSlice = new CqlRowSlice<K>(startKey, endKey, startToken, endToken, count);
-		return new CqlRowSliceQueryImpl<K, C>(context.clone().add(rowSlice));
+		return new CqlRowSliceQueryImpl<K, C>(ksContext, cfContext, rowSlice);
 	}
 
 	@Override
@@ -81,7 +87,7 @@ public class CqlColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C> {
 	@Override
 	public RowSliceQuery<K, C> getRowSlice(Collection<K> keys) {
 		CqlRowSlice<K> rowSlice = new CqlRowSlice<K>(keys);
-		return new CqlRowSliceQueryImpl<K, C>(context.clone().add(rowSlice));
+		return new CqlRowSliceQueryImpl<K, C>(ksContext, cfContext, rowSlice);
 	}
 
 	@Override
@@ -100,12 +106,12 @@ public class CqlColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C> {
 
 	@Override
 	public AllRowsQuery<K, C> getAllRows() {
-		throw new NotImplementedException();
+		throw new RuntimeException("Not Implemented: Use AllRowsReader recipe instead");
 	}
 
 	@Override
 	public CqlQuery<K, C> withCql(String cql) {
-		return new DirectCqlQueryImpl<K, C>(context.clone(), cql);
+		return new DirectCqlQueryImpl<K, C>(ksContext, cfContext, cql);
 	}
 
 	@Override

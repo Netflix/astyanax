@@ -1,6 +1,7 @@
 package com.netflix.astyanax.cql.test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,8 +21,6 @@ import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
 import com.netflix.astyanax.serializers.IntegerSerializer;
-
-import edu.emory.mathcs.backport.java.util.Arrays;
 
 public class CompositeColumnTests extends KeyspaceTests {
 

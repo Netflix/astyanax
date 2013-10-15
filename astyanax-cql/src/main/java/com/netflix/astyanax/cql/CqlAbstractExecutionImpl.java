@@ -3,10 +3,10 @@ package com.netflix.astyanax.cql;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.ResultSetFuture;
+import com.datastax.driver.core.Session;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.CassandraOperationTracer;
 import com.netflix.astyanax.CassandraOperationType;
@@ -14,31 +14,36 @@ import com.netflix.astyanax.Execution;
 import com.netflix.astyanax.KeyspaceTracerFactory;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.util.AsyncOperationResult;
-import com.netflix.astyanax.cql.util.ChainedContext;
+import com.netflix.astyanax.cql.writes.CqlColumnFamilyMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.model.ColumnFamily;
 
 public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(CqlAbstractExecutionImpl.class);
 	
-	protected final Cluster cluster; 
+	protected final Session session;
 	protected final String keyspace;
 	protected final ColumnFamily<?, ?> cf;
-	private final ChainedContext context; 
 	protected final KeyspaceTracerFactory tracerFactory;
 	
-	public CqlAbstractExecutionImpl(ChainedContext ctx) {
-		this.context = ctx;
+	public CqlAbstractExecutionImpl(KeyspaceContext ksContext, ColumnFamilyMutationContext cfContext) {
 		
-		this.context.rewindForRead();
-		this.cluster = this.context.getNext(Cluster.class);
-		
-		this.keyspace = context.getNext(String.class);
-		this.cf = context.getNext(ColumnFamily.class);
-		
-		this.tracerFactory = context.getTracerFactory();
+		this.session = ksContext.getSession();
+		this.keyspace = ksContext.getKeyspace();
+		this.cf = cfContext.getColumnFamily();
+		this.tracerFactory = ksContext.getTracerFactory();
 	}
+
+//	public CqlAbstractExecutionImpl(ChainedContext ctx) {
+//		throw new RuntimeException("Fix this!!");
+////		this.session = ksContext.getSession();
+////		this.keyspace = ksContext.getKeyspace();
+////		this.cf = cfContext.getColumnFamily();
+////		this.tracerFactory = ksContext.getTracerFactory();
+//	}
+
 
 	@Override
 	public OperationResult<R> execute() throws ConnectionException {
@@ -58,7 +63,8 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 			LOG.debug("Query: " + query);
 		}
 		
-		ResultSet resultSet = cluster.connect().execute(query);
+		
+		ResultSet resultSet = session.execute(query);
 		R result = parseResultSet(resultSet);
 		OperationResult<R> opResult = new CqlOperationResultImpl<R>(resultSet, result);
 		tracer.success();
@@ -76,7 +82,7 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 			LOG.debug("Query: " + query);
 		}
 
-		ResultSetFuture rsFuture = cluster.connect().executeAsync(query);
+		ResultSetFuture rsFuture = session.executeAsync(query);
 		return new AsyncOperationResult<R>(rsFuture) {
 			@Override
 			public OperationResult<R> getOperationResult(ResultSet resultSet) {

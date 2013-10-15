@@ -9,38 +9,31 @@ import com.google.common.base.Preconditions;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.cql.CqlFamilyFactory;
-import com.netflix.astyanax.cql.util.ChainedContext;
+import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
+import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnPath;
 import com.netflix.astyanax.model.ConsistencyLevel;
 
 @SuppressWarnings("deprecation")
 public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutationImpl<C> {
 
-	private ChainedContext context; 
+	private final KeyspaceContext ksContext;
+	private final ColumnFamilyMutationContext<K,C> cfContext;
 	
 	private List<CqlColumnMutationImpl> mutationList = new ArrayList<CqlColumnMutationImpl>();
 	private boolean deleteRow = false; 
 	
-//	private ColumnFamily<K, C> columnFamily; 
-//	private K rowKey;
-//	private String keyspace;
-//	private Cluster cluster; 
 	private com.netflix.astyanax.model.ConsistencyLevel consistencyLevel;
-
+	
 	// Tracks the mutations on this ColumnFamily.
 	private MutationState currentState = new InitialState();
 
-	public CqlColumnFamilyMutationImpl(ChainedContext context, ConsistencyLevel level, long timestamp) {
+	public CqlColumnFamilyMutationImpl(KeyspaceContext ksCtx, ColumnFamily<K,C> cf, K rowKey, ConsistencyLevel level, long timestamp) {
+		
 		super(timestamp);
+		this.ksContext = ksCtx;
+		this.cfContext = new ColumnFamilyMutationContext<K,C>(cf, rowKey);
 		
-		this.context = context;
-		context.rewindForRead(); 
-		
-//		cluster = context.getNext(Cluster.class);
-//		keyspace = context.getNext(String.class);
-//		columnFamily = context.getNext(ColumnFamily.class);
-//		rowKey = (K) context.getNext(Object.class);
-
 		this.consistencyLevel = level;
 		
 		if (CqlFamilyFactory.OldStyleThriftMode()) {
@@ -48,15 +41,10 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 		}
 	}
 
-//	public String getColumnFamilyName() {
-//		return columnFamily.getName();
-//	}
-	
 	
 	@Override
 	public <V> ColumnListMutation<C> putColumn(C columnName, V value, Serializer<V> valueSerializer, Integer ttl) {
 		
-		System.out.println("Columnname : " + columnName + " " + valueSerializer.getComparatorType() + " " + valueSerializer.getClass().getName());
 		Preconditions.checkArgument(columnName != null, "Column Name must not be null");
 		
 		if (currentState instanceof CqlColumnFamilyMutationImpl.InitialState || 
@@ -67,7 +55,7 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 		}
 		checkAndSetTTL(ttl);
 		
-		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(context.clone().add(columnName));
+		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(ksContext, cfContext, columnName);
 		mutation.putValue(value, valueSerializer, ttl);
 		
 		mutationList.add(mutation);
@@ -91,7 +79,7 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 			checkState(new UpdateColumnState());
 		}
 
-		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(context.clone().add(columnName));
+		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(ksContext, cfContext, columnName);
 		mutation.putEmptyColumn(ttl);
 		mutationList.add(mutation);
 		
@@ -103,7 +91,7 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 		
 		checkState(new UpdateColumnState());
 
-		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(context.clone().add(columnName));
+		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(ksContext, cfContext, columnName);
 		mutation.incrementCounterColumn(amount);
 		mutationList.add(mutation);
 		
@@ -115,7 +103,7 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 		
 		checkState(new UpdateColumnState());
 		
-		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(context.clone().add(columnName));
+		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(ksContext, cfContext, columnName);
 		mutation.deleteColumn();
 		mutationList.add(mutation);
 		
@@ -132,10 +120,15 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 	public BatchedStatements getBatch() {
 		return currentState.getStatement();
 	}
+	
+	public List<Object> getBindValues() {
+		return currentState.getBindValues();
+	}
 
 	private interface MutationState { 
 		public MutationState next(MutationState state);
 		public BatchedStatements getStatement();
+		public List<Object> getBindValues();
 	}
 	
 	private class InitialState implements MutationState {
@@ -147,6 +140,11 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 
 		@Override
 		public BatchedStatements getStatement() {
+			throw new RuntimeException("Mutation list is empty");
+		}
+
+		@Override
+		public List<Object> getBindValues() {
 			throw new RuntimeException("Mutation list is empty");
 		}
 	}
@@ -163,8 +161,14 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 
 		@Override
 		public BatchedStatements getStatement() {
-			return new OldStyleCFMutationQuery(context.clone(), mutationList, deleteRow, timestamp, defaultTTL, consistencyLevel).getQuery();
+			return new OldStyleCFMutationQuery(ksContext, cfContext, mutationList, deleteRow, timestamp, defaultTTL, consistencyLevel).getQuery();
 		}
+		
+		@Override
+		public List<Object> getBindValues() {
+			return new OldStyleCFMutationQuery(ksContext, cfContext, mutationList, deleteRow, timestamp, defaultTTL, consistencyLevel).getBindValues();
+		}
+
 	}
 
 	private class UpdateColumnState implements MutationState {
@@ -179,7 +183,13 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 
 		@Override
 		public BatchedStatements getStatement() {
-			return new CqlStyleUpdateQuery(context.clone(), mutationList, timestamp, defaultTTL, consistencyLevel).getQuery();
+			return null; // TODO
+			//return new CqlStyleUpdateQuery(context.clone(), mutationList, timestamp, defaultTTL, consistencyLevel).getQuery();
+		}
+
+		@Override
+		public List<Object> getBindValues() {
+			throw new RuntimeException("Not implemented");
 		}
 	}
 
@@ -199,7 +209,13 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 
 		@Override
 		public BatchedStatements getStatement() {
-			return new CqlStyleInsertQuery(context.clone(), mutationList, timestamp, defaultTTL, consistencyLevel).getQuery();
+			return null; // TODO
+			//			return new CqlStyleInsertQuery(context.clone(), mutationList, timestamp, defaultTTL, consistencyLevel).getQuery();
+		}
+
+		@Override
+		public List<Object> getBindValues() {
+			throw new RuntimeException("Not implemented");
 		}
 	}
 	
@@ -213,7 +229,13 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 		public BatchedStatements getStatement() {
 			
 			Preconditions.checkArgument(mutationList == null || mutationList.size() == 0, "Mutation list must be empty when deleting row");
-			return new CqlStyleDeleteRowQuery(context.clone(), mutationList, timestamp, defaultTTL, consistencyLevel).getQuery();
+			return null; // TODO
+			//			return new CqlStyleDeleteRowQuery(context.clone(), mutationList, timestamp, defaultTTL, consistencyLevel).getQuery();
+		}
+
+		@Override
+		public List<Object> getBindValues() {
+			throw new RuntimeException("Not implemented");
 		}
 	}
 	
@@ -237,4 +259,37 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 		checkAndSetTTL(ttl);
         return this;
     }
+	
+	public static class ColumnFamilyMutationContext<K,C> {
+		
+		private final ColumnFamily<K,C> columnFamily;
+		private final K rowKey;
+		
+		public ColumnFamilyMutationContext(ColumnFamily<K,C> cf, K rKey) {
+			this.columnFamily = cf;
+			this.rowKey = rKey;
+		}
+		
+		public ColumnFamily<K, C> getColumnFamily() {
+			return columnFamily;
+		}
+
+		public K getRowKey() {
+			return rowKey;
+		}
+		
+		public String toString() {
+			StringBuilder sb = new StringBuilder();
+			sb.append("CF=").append(columnFamily.getName());
+			sb.append(" RowKey: ").append(rowKey.toString());
+			return sb.toString();
+		}
+	}
+	
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append(cfContext.toString());
+		sb.append(" MutationList: ").append(mutationList.toString());
+		return sb.toString();
+	}
 }

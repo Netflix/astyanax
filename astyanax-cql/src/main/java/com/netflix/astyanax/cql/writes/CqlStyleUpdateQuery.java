@@ -5,23 +5,24 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.netflix.astyanax.cql.util.ChainedContext;
+import com.netflix.astyanax.cql.util.ChainedContext2;
 import com.netflix.astyanax.model.ConsistencyLevel;
 
 public class CqlStyleUpdateQuery extends CqlStyleMutationQuery {
 
 
-	public CqlStyleUpdateQuery(ChainedContext context, List<CqlColumnMutationImpl> mutationList, Long timestamp, Integer ttl, ConsistencyLevel consistencyLevel) {
-		super(context, mutationList, false, timestamp, ttl, consistencyLevel);
+	public CqlStyleUpdateQuery(ChainedContext2 context, List<CqlColumnMutationImpl> mutationList, Long timestamp, Integer ttl, ConsistencyLevel consistencyLevel) {
+		super(null, null, mutationList, false, timestamp, ttl, consistencyLevel);
+		// TODO fix this
 	}
 	
 	public BatchedStatements getQuery() {
 
 		Preconditions.checkArgument(mutationList.size() > 0, "Empty mutation list");
-		Preconditions.checkArgument(rowKey != null, "Row key must be provided");
+//		Preconditions.checkArgument(rowKey != null, "Row key must be provided");
 		
 		StringBuilder sb = new StringBuilder("UPDATE ");
-		sb.append(keyspace + "." + cf.getName());
+//		sb.append(keyspace + "." + cf.getName());
 		
 		appendWriteOptions(sb);
 		
@@ -53,7 +54,7 @@ public class CqlStyleUpdateQuery extends CqlStyleMutationQuery {
 		
 		sb.append(" WHERE key = ?");
 
-		bindList.add(rowKey);
+//		bindList.add(rowKey);
 		
 		// sb1 + sb2
 		String query = sb.toString();

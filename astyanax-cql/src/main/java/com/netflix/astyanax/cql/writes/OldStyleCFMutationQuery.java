@@ -6,7 +6,9 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.common.base.Preconditions;
-import com.netflix.astyanax.cql.util.ChainedContext;
+import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
+import com.netflix.astyanax.cql.writes.CqlColumnFamilyMutationImpl.ColumnFamilyMutationContext;
+import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
 import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer.ComponentSerializer;
@@ -19,22 +21,67 @@ public class OldStyleCFMutationQuery extends CqlStyleMutationQuery {
 	private Map<KeyspaceColumnFamily, String> counterIncrStatementCache = new HashMap<KeyspaceColumnFamily, String>();
 	private Map<KeyspaceColumnFamily, String> counterDecrStatementCache = new HashMap<KeyspaceColumnFamily, String>();
 
-	public OldStyleCFMutationQuery(ChainedContext context, List<CqlColumnMutationImpl> mutationList, boolean deleteRow, Long timestamp, Integer ttl, ConsistencyLevel consistencyLevel) {
-		super(context, mutationList, deleteRow, timestamp, ttl, consistencyLevel);
+	public OldStyleCFMutationQuery(KeyspaceContext ksContext, ColumnFamilyMutationContext cfContext, 
+								   List<CqlColumnMutationImpl> mutationList, boolean deleteRow, 
+								   Long timestamp, Integer ttl, ConsistencyLevel consistencyLevel) {
+		super(ksContext, cfContext, mutationList, deleteRow, timestamp, ttl, consistencyLevel);
+	}
+
+	public List<Object> getBindValues() {
+		
+		List<Object> values = new ArrayList<Object>();
+		
+		if (deleteRow) {
+			Preconditions.checkArgument(mutationList.size() == 0, "Cannot delete row with pending column mutations");
+			values.add(super.cfContext.getRowKey());
+			return values;
+		}
+
+		for (CqlColumnMutationImpl colMutation : mutationList) {
+
+			Object rowKey = super.cfContext.getRowKey();
+			
+			if (colMutation.deleteColumn) {
+
+				values.add(colMutation.columnName);
+				values.add(rowKey);
+
+			} else if (colMutation.counterColumn) {
+
+				Integer delta = (Integer) colMutation.columnValue;
+				if (delta < 0) {
+					delta = Math.abs(delta);
+				}
+				
+				values.add(colMutation.columnName);
+				values.add(delta);
+				values.add(rowKey);
+			} else {
+				values.add(colMutation.columnValue);
+				values.add(rowKey);
+				values.add(colMutation.columnName);
+			}
+		}
+
+		return values;
 	}
 	
 	public BatchedStatements getQuery() {
-
+		
 		BatchedStatements statements = new BatchedStatements();
 		
 		if (deleteRow) {
 			Preconditions.checkArgument(mutationList.size() == 0, "Cannot delete row with pending column mutations");
-			statements.addBatch(super.getDeleteEntireRowQuery(), super.rowKey);
+			statements.addBatch(super.getDeleteEntireRowQuery(), super.cfContext.getRowKey());
 			return statements;
 		}
 
 		for (CqlColumnMutationImpl colMutation : mutationList) {
 
+			String keyspace = ksContext.getKeyspace();
+			ColumnFamily<?,?> cf = cfContext.getColumnFamily();
+			Object rowKey = cfContext.getRowKey();
+			
 			if (colMutation.deleteColumn) {
 
 				statements.addBatchQuery(getDeleteColumnStatement(keyspace, cf.getName()));
@@ -111,9 +158,11 @@ public class OldStyleCFMutationQuery extends CqlStyleMutationQuery {
 
 	private StringBuilder appendWhereClause(StringBuilder sb) { 
 		
+		ColumnFamily<?,?> cf = cfContext.getColumnFamily();
+
 		if (isCompositeColumn()) {
 			
-			AnnotatedCompositeSerializer<?> compSerializer = (AnnotatedCompositeSerializer<?>) this.cf.getColumnSerializer();
+			AnnotatedCompositeSerializer<?> compSerializer = (AnnotatedCompositeSerializer<?>) cf.getColumnSerializer();
 			
 			int numComponents = compSerializer.getComponents().size(); 
 			sb.append(" WHERE key = ?");
@@ -137,8 +186,8 @@ public class OldStyleCFMutationQuery extends CqlStyleMutationQuery {
 		}
 		
 		if (isCompositeColumn()) {
-			
-			AnnotatedCompositeSerializer<?> compSerializer = (AnnotatedCompositeSerializer<?>) this.cf.getColumnSerializer();
+			ColumnFamily<?,?> cf = cfContext.getColumnFamily();
+			AnnotatedCompositeSerializer<?> compSerializer = (AnnotatedCompositeSerializer<?>) cf.getColumnSerializer();
 			for (ComponentSerializer<?> component : compSerializer.getComponents()) {
 				try {
 					list.add(component.getFieldValueDirectly(column));
@@ -154,6 +203,7 @@ public class OldStyleCFMutationQuery extends CqlStyleMutationQuery {
 	}
 
 	private boolean isCompositeColumn() {
+		ColumnFamily<?,?> cf = cfContext.getColumnFamily();
 		return cf.getColumnSerializer().getComparatorType() == ComparatorType.COMPOSITETYPE;
 	}
 	

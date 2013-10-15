@@ -5,6 +5,8 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.apache.cassandra.db.marshal.UTF8Type;
@@ -13,10 +15,10 @@ import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.ResultSetFuture;
 import com.datastax.driver.core.Session;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.OperationResult;
@@ -25,7 +27,6 @@ import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
 import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
-import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
@@ -55,21 +56,52 @@ public class TestDriver {
 //			cluster = (CqlClusterImpl) context.getClient();
 
 			
-			Cluster cluster2 = Cluster.builder().addContactPoint("localhost").build();
+			Cluster cluster2 = Cluster.builder().addContactPoint("localhost").withPort(9042).build();
+//			Cluster cluster2 = Cluster.builder().addContactPoint("ec2-54-227-36-120.compute-1.amazonaws.com").withPort(7104).build();
 			
-			String query = "begin batch insert into astyanaxunittests.test1 (key, column1) values (?, ?); insert into astyanaxunittests.test1 (key, column1) values (1, 8); insert into astyanaxunittests.test1 (key, column1) values (?, ?);  apply batch"; 
-			
-			//cluster2.connect().execute(query);
-			
-			PreparedStatement statement = cluster2.connect().prepare(query);
-			BoundStatement boundStatement = new BoundStatement(statement);
-			
-			boundStatement.bind(1,7, 1, 10);
+//			String query = "begin batch insert into astyanaxunittests.test1 (key, column1) values (?, ?); insert into astyanaxunittests.test1 (key, column1) values (1, 8); insert into astyanaxunittests.test1 (key, column1) values (?, ?);  apply batch"; 
+//			
+//			//cluster2.connect().execute(query);
+//			
+//			PreparedStatement statement = cluster2.connect().prepare(query);
+//			BoundStatement boundStatement = new BoundStatement(statement);
+//			
+//			boundStatement.bind(1,7, 1, 10);
 			//boundStatement.bind(columnValue, rowKey);
 
-			cluster2.connect().execute(boundStatement);
+//			cluster2.connect().execute(boundStatement);
+//			
 			
-			cluster2.shutdown();
+//			String query = "select * from astyanaxperf.test1 where key=300000;";
+	
+			String query = "begin unlogged batch insert into astyanaxunittests.test12 (key, column1) values (1, 8); apply batch"; 
+
+			//ResultSet rs = cluster2.connect().execute(query);
+			
+			ExecutorService threadPool = Executors.newFixedThreadPool(1);
+
+			final ResultSetFuture rsFuture = cluster2.connect().executeAsync(query);
+			
+			rsFuture.addListener(new Runnable() {
+
+				@Override
+				public void run() {
+					
+					try {
+						ResultSet rs = rsFuture.get();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					} catch (ExecutionException e) {
+						e.printStackTrace();
+					}
+				}
+				
+			}, threadPool);
+			
+			
+			//System.out.println(rs.all().size());
+			
+			//cluster2.shutdown();
 			
 			
 			//PreparedStatement pstmt = new PreparedSta/

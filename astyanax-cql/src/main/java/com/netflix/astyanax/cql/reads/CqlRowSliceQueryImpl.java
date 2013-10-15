@@ -28,10 +28,10 @@ import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlFamilyFactory;
+import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.reads.CqlRowSlice.RowRange;
-import com.netflix.astyanax.cql.util.ChainedContext;
+import com.netflix.astyanax.cql.writes.CqlColumnFamilyMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.model.ByteBufferRange;
-import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnSlice;
 import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.query.RowSliceColumnCountQuery;
@@ -44,14 +44,17 @@ import com.netflix.astyanax.serializers.CompositeRangeBuilder.RangeQueryRecord;
 @SuppressWarnings("unchecked")
 public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 
-	private ChainedContext context; 
-	private ColumnFamily<K,C> cf;
+	private final KeyspaceContext ksContext;
+	private final ColumnFamilyMutationContext cfContext;
+
+	private final CqlRowSlice<K> rowSlice;
 	private CqlColumnSlice<C> columnSlice = new CqlColumnSlice<C>();
 	private CompositeByteBufferRange compositeRange = null;
 	
-	public CqlRowSliceQueryImpl(ChainedContext ctx) {
-		this.context = ctx.rewindForRead();
-		this.cf = this.context.skip().skip().getNext(ColumnFamily.class);
+	public CqlRowSliceQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext cfCtx, CqlRowSlice<K> rSlice) {
+		this.ksContext = ksCtx;
+		this.cfContext = cfCtx;
+		this.rowSlice = rSlice;
 	}
 	
 	@Override
@@ -95,10 +98,9 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 
 	@Override
 	public RowSliceQuery<K, C> withColumnRange(ByteBuffer startColumn, ByteBuffer endColumn, boolean reversed, int limit) {
-		Serializer<C> colSerializer = cf.getColumnSerializer();
+		Serializer<C> colSerializer = cfContext.getColumnFamily().getColumnSerializer();
 		C start = (startColumn != null && startColumn.capacity() > 0) ? colSerializer.fromByteBuffer(startColumn) : null;
 		C end = (endColumn != null && endColumn.capacity() > 0) ? colSerializer.fromByteBuffer(endColumn) : null;
-		// TODO this is used for composite columns. Need to fix this.
 		return this.withColumnRange(start, end, reversed, limit);
 	}
 
@@ -122,16 +124,13 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 	@Override
 	public RowSliceColumnCountQuery<K> getColumnCounts() {
 		Query query = new InternalRowQueryExecutionImpl().getQuery();
-		return new CqlRowSliceColumnCountQueryImpl<K>(context, query);
+		return new CqlRowSliceColumnCountQueryImpl<K>(ksContext, cfContext, query);
 	}
 	
 	private class InternalRowQueryExecutionImpl extends CqlAbstractExecutionImpl<Rows<K, C>> {
 
-		private final CqlRowSlice<K> rowSlice;
-
 		public InternalRowQueryExecutionImpl() {
-			super(context);
-			this.rowSlice = context.getNext(CqlRowSlice.class); 
+			super(ksContext, cfContext);
 		}
 
 		@Override

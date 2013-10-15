@@ -8,7 +8,10 @@ import java.util.Properties;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Session;
+import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.AstyanaxConfiguration;
@@ -30,24 +33,28 @@ import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.cql.reads.CqlColumnFamilyQueryImpl;
 import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
 import com.netflix.astyanax.cql.schema.CqlKeyspaceDefinitionImpl;
-import com.netflix.astyanax.cql.util.ChainedContext;
 import com.netflix.astyanax.cql.writes.CqlColumnMutationImpl;
 import com.netflix.astyanax.cql.writes.CqlMutationBatchImpl;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
 import com.netflix.astyanax.model.ColumnFamily;
+import com.netflix.astyanax.partitioner.BigInteger127Partitioner;
+import com.netflix.astyanax.partitioner.Murmur3Partitioner;
 import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
+import com.netflix.astyanax.serializers.SerializerPackageImpl;
 import com.netflix.astyanax.serializers.UnknownComparatorException;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 
 public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 
 	private MicrosecondsAsyncClock microsClock = new MicrosecondsAsyncClock();
 	
-	private volatile Cluster cluster;
-	private volatile ChainedContext context; 
+	private volatile Session session;
+	
+	private final KeyspaceContext ksContext;
 	private final String keyspaceName;
 	private final AstyanaxConfiguration astyanaxConfig;
 	private final KeyspaceTracerFactory tracerFactory; 
@@ -56,14 +63,15 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 		this.keyspaceName = ksName.toLowerCase();
 		this.astyanaxConfig = asConfig;
 		this.tracerFactory = tracerFactory;
+		this.ksContext = new KeyspaceContext();
 	}
 
-	public CqlKeyspaceImpl(Cluster cluster, String ksName, AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory) {
-		this.cluster = cluster;
-		this.context = new ChainedContext(tracerFactory).add(cluster).add(ksName); 
+	public CqlKeyspaceImpl(Session session, String ksName, AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory) {
+		this.session = session;
 		this.keyspaceName = ksName.toLowerCase();
 		this.astyanaxConfig = asConfig;
 		this.tracerFactory = tracerFactory;
+		this.ksContext = new KeyspaceContext();
 	}
 
 	@Override
@@ -78,37 +86,58 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 
 	@Override
 	public Partitioner getPartitioner() throws ConnectionException {
-		throw new NotImplementedException();
+		String pName = describePartitioner();
+		if (pName.contains("Murmur3Partitioner")) {
+			return Murmur3Partitioner.get();
+		} else if (pName.contains("RandomPartitioner")) {
+			return BigInteger127Partitioner.get();
+		} else {
+			throw new RuntimeException("Unrecognized partitioner: " + pName);
+		}
 	}
 
 	@Override
 	public String describePartitioner() throws ConnectionException {
-		throw new NotImplementedException();
+		Query q = QueryBuilder.select("partitioner").from("system", "local");
+		ResultSet result = session.execute(q);
+		com.datastax.driver.core.Row row = result.one();
+		if (row == null) {
+			throw new RuntimeException("Missing paritioner");
+		}
+		String pName = row.getString(0);
+		return pName;
 	}
 
 	@Override
 	public List<TokenRange> describeRing() throws ConnectionException {
-		throw new NotImplementedException();
+		return CqlRingDescriber.getInstance().getTokenRanges(session, false);
 	}
 
 	@Override
 	public List<TokenRange> describeRing(String dc) throws ConnectionException {
-		throw new NotImplementedException();
+		return CqlRingDescriber.getInstance().getTokenRanges(session, dc, null);
 	}
 
 	@Override
 	public List<TokenRange> describeRing(String dc, String rack) throws ConnectionException {
-		throw new NotImplementedException();
+		return CqlRingDescriber.getInstance().getTokenRanges(session, dc, rack);
 	}
 
 	@Override
 	public List<TokenRange> describeRing(boolean cached) throws ConnectionException {
-		throw new NotImplementedException();
+		return CqlRingDescriber.getInstance().getTokenRanges(session, cached);
 	}
 
 	@Override
 	public KeyspaceDefinition describeKeyspace() throws ConnectionException {
-		return new CqlClusterImpl(cluster, astyanaxConfig, tracerFactory).describeKeyspace(keyspaceName);
+		
+		Query query = QueryBuilder.select().from("system", "schema_keyspaces").where(eq("keyspace_name", keyspaceName));
+
+		try {
+			return (new CqlKeyspaceDefinitionImpl(session, session.execute(query).one()));
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}	
 	}
 
 	@Override
@@ -135,102 +164,110 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 
 	@Override
 	public SerializerPackage getSerializerPackage(String cfName, boolean ignoreErrors) throws ConnectionException, UnknownComparatorException {
-		throw new NotImplementedException();
+		
+		ColumnFamilyDefinition cfDef = null;
+		return new SerializerPackageImpl(cfDef, ignoreErrors);
 	}
 
 	@Override
 	public MutationBatch prepareMutationBatch() {
-		return new CqlMutationBatchImpl(context.clone(), microsClock, null, null);
+		return new CqlMutationBatchImpl(ksContext, microsClock, null, null);
 	}
 
 	@Override
 	public <K, C> ColumnMutation prepareColumnMutation(ColumnFamily<K, C> columnFamily, K rowKey, C column) {
-		return new CqlColumnMutationImpl(context.clone().add(columnFamily).add(rowKey).add(column));
+		return new CqlColumnMutationImpl(ksContext, columnFamily, rowKey, column);
 	}
 
 	@Override
 	public <K, C> ColumnFamilyQuery<K, C> prepareQuery(ColumnFamily<K, C> cf) {
-		return new CqlColumnFamilyQueryImpl<K,C>(context.clone().add(cf));
+		return new CqlColumnFamilyQueryImpl<K,C>(ksContext, cf);
 	}
 
 	@Override
 	public OperationResult<SchemaChangeResult> createKeyspace(Map<String, Object> options) throws ConnectionException {
-		return new CqlKeyspaceDefinitionImpl(cluster, options).setName(keyspaceName).execute();
+		return new CqlKeyspaceDefinitionImpl(session, options).setName(keyspaceName).execute();
 	}
 
 	@Override
 	public OperationResult<SchemaChangeResult> createKeyspace(Properties properties) throws ConnectionException {
-		return new CqlKeyspaceDefinitionImpl(cluster, properties).setName(keyspaceName).execute();
+		return new CqlKeyspaceDefinitionImpl(session, properties).setName(keyspaceName).execute();
 	}
 
 	@SuppressWarnings("rawtypes")
 	@Override
 	public OperationResult<SchemaChangeResult> createKeyspace(Map<String, Object> options, Map<ColumnFamily, Map<String, Object>> cfs) throws ConnectionException {
-		throw new NotImplementedException();
+		
+		CqlKeyspaceDefinitionImpl ksDef = new CqlKeyspaceDefinitionImpl(session, options);
+		
+		for (ColumnFamily cf : cfs.keySet()) {
+			CqlColumnFamilyDefinitionImpl cfDef = new CqlColumnFamilyDefinitionImpl(session, ksDef.getName(), cf, cfs.get(cf));
+			ksDef.addColumnFamily(cfDef);
+		}
+		
+		return ksDef.execute();
 	}
 
 	@Override
 	public OperationResult<SchemaChangeResult> updateKeyspace(Map<String, Object> options) throws ConnectionException {
-		return new CqlKeyspaceDefinitionImpl(cluster, options).setName(keyspaceName).alterKeyspace().execute();
+		return new CqlKeyspaceDefinitionImpl(session, options).setName(keyspaceName).alterKeyspace().execute();
 	}
 
 	@Override
 	public OperationResult<SchemaChangeResult> updateKeyspace(Properties props) throws ConnectionException {
-		return new CqlKeyspaceDefinitionImpl(cluster, props).setName(keyspaceName).alterKeyspace().execute();
+		return new CqlKeyspaceDefinitionImpl(session, props).setName(keyspaceName).alterKeyspace().execute();
 	}
 
 	@Override
 	public OperationResult<SchemaChangeResult> dropKeyspace() throws ConnectionException {
-		return new CqlOperationResultImpl<SchemaChangeResult>(
-				cluster.connect().execute("DROP KEYSPACE " + keyspaceName), null);
+		return new CqlOperationResultImpl<SchemaChangeResult>(session.execute("DROP KEYSPACE " + keyspaceName), null);
 	}
 	
 	@Override
 	public <K, C> OperationResult<Void> truncateColumnFamily(ColumnFamily<K, C> columnFamily) throws OperationException, ConnectionException {
-		ResultSet result = cluster.connect().execute("TRUNCATE " + keyspaceName + "." + columnFamily.getName());
+		ResultSet result = session.execute("TRUNCATE " + keyspaceName + "." + columnFamily.getName());
 		return new CqlOperationResultImpl<Void>(result, null);
 	}
 
 	@Override
 	public OperationResult<Void> truncateColumnFamily(String columnFamily) throws ConnectionException {
-		ResultSet result = cluster.connect().execute("TRUNCATE " + keyspaceName + "." + columnFamily);
+		ResultSet result = session.execute("TRUNCATE " + keyspaceName + "." + columnFamily);
 		return new CqlOperationResultImpl<Void>(result, null);
 	}
 
 	@Override
 	public <K, C> OperationResult<SchemaChangeResult> createColumnFamily(ColumnFamily<K, C> columnFamily, Map<String, Object> options) throws ConnectionException {
-		return new CqlColumnFamilyDefinitionImpl(cluster, keyspaceName, columnFamily, options).execute();
+		return new CqlColumnFamilyDefinitionImpl(session, keyspaceName, columnFamily, options).execute();
 	}
 
 	@Override
 	public OperationResult<SchemaChangeResult> createColumnFamily(Properties props) throws ConnectionException {
-		return new CqlColumnFamilyDefinitionImpl(cluster, keyspaceName, props).execute();
+		return new CqlColumnFamilyDefinitionImpl(session, keyspaceName, props).execute();
 	}
 
 	@Override
 	public OperationResult<SchemaChangeResult> createColumnFamily(Map<String, Object> options) throws ConnectionException {
-		return new CqlColumnFamilyDefinitionImpl(cluster, keyspaceName, options).execute();
+		return new CqlColumnFamilyDefinitionImpl(session, keyspaceName, options).execute();
 	}
 
 	@Override
 	public <K, C> OperationResult<SchemaChangeResult> updateColumnFamily(ColumnFamily<K, C> columnFamily, Map<String, Object> options) throws ConnectionException {
-		return new CqlColumnFamilyDefinitionImpl(cluster, keyspaceName, columnFamily, options).alterTable().execute();
+		return new CqlColumnFamilyDefinitionImpl(session, keyspaceName, columnFamily, options).alterTable().execute();
 	}
 
 	@Override
 	public OperationResult<SchemaChangeResult> updateColumnFamily(Properties props) throws ConnectionException {
-		return new CqlColumnFamilyDefinitionImpl(cluster, keyspaceName, props).alterTable().execute();
+		return new CqlColumnFamilyDefinitionImpl(session, keyspaceName, props).alterTable().execute();
 	}
 
 	@Override
 	public OperationResult<SchemaChangeResult> updateColumnFamily(Map<String, Object> options) throws ConnectionException {
-		return new CqlColumnFamilyDefinitionImpl(cluster, keyspaceName, options).alterTable().execute();
+		return new CqlColumnFamilyDefinitionImpl(session, keyspaceName, options).alterTable().execute();
 	}
 
 	@Override
 	public OperationResult<SchemaChangeResult> dropColumnFamily(String columnFamilyName) throws ConnectionException {
-		return new CqlOperationResultImpl<SchemaChangeResult>(
-				cluster.connect().execute("DROP TABLE " + keyspaceName + "." + columnFamilyName), null);
+		return new CqlOperationResultImpl<SchemaChangeResult>(session.execute("DROP TABLE " + keyspaceName + "." + columnFamilyName), null);
 	}
 
 	@Override
@@ -240,7 +277,7 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 
 	@Override
 	public Map<String, List<String>> describeSchemaVersions() throws ConnectionException {
-		throw new NotImplementedException();
+		return new CqlSchemaVersionReader(session).exec();
 	}
 
 	@Override
@@ -279,8 +316,20 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 			}
 		});
 
-		this.cluster = Cluster.builder().addContactPoints(contactPoints.toArray(new String[0])).build();
-		this.context = new ChainedContext(tracerFactory).add(cluster).add(keyspaceName); 
+		Cluster cluster = Cluster.builder().addContactPoints(contactPoints.toArray(new String[0])).build();
+		session = cluster.connect(keyspaceName);
 	}
 
+	public class KeyspaceContext {
+		
+		public Session getSession() {
+			return session;
+		}
+		public String getKeyspace() {
+			return keyspaceName;
+		}
+		public KeyspaceTracerFactory getTracerFactory() {
+			return tracerFactory;
+		}
+	}
 }

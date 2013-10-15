@@ -20,10 +20,10 @@ import org.codehaus.jettison.json.JSONObject;
 
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
-import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
+import com.datastax.driver.core.Session;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
@@ -39,7 +39,7 @@ import com.netflix.astyanax.model.ColumnFamily;
 
 public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 
-	private Cluster cluster; 
+	private Session session; 
 	
 	private String cfName; 
 	private String keyspaceName;
@@ -54,18 +54,18 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	private boolean alterTable = false;
 	
 	private boolean initedViaResultSet = false; 
-	
-	public CqlColumnFamilyDefinitionImpl(Cluster cluster) {
-		this.cluster = cluster;
-		checkEmptyOptions();
-	}
-	
-	public CqlColumnFamilyDefinitionImpl(Cluster cluster, String keyspace, Properties props) {
-		this(cluster, keyspace, propertiesToMap(props));
+
+	public CqlColumnFamilyDefinitionImpl(Session session) {
+		this.session = session;
 	}
 
-	public CqlColumnFamilyDefinitionImpl(Cluster cluster, String keyspace, Map<String, Object> options) {
-		this(cluster);
+	
+	public CqlColumnFamilyDefinitionImpl(Session session, String keyspace, Properties props) {
+		this(session, keyspace, propertiesToMap(props));
+	}
+
+	public CqlColumnFamilyDefinitionImpl(Session session, String keyspace, Map<String, Object> options) {
+		this.session = session;
 		
 		if (options == null) {
 			options = new HashMap<String, Object>();
@@ -75,18 +75,27 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 			options.put("keyspace", keyspace);
 		}
 		
-		init(options);
+		initFromMap(options);
 	}
 	
-	private void checkEmptyOptions() {
-		if (properties.size() == 0) {
-			// add a comment by default
-			properties.put("comment", "default");
-		}
+
+	public CqlColumnFamilyDefinitionImpl(Session session, String ksName, String cfName) {
+
+		Query query = QueryBuilder.select().all()
+				.from("system", "schema_columnfamilies")
+				.where(eq("keyspace_name", ksName))
+				.and(eq("columnfamily_name", cfName));
+
+		ResultSet rs = session.execute(query);
+		initFromResultSet(session, rs.one());
+	}
+	
+	public CqlColumnFamilyDefinitionImpl(Session session, Row row) {
+		initFromResultSet(session, row);
 	}
 
-	public CqlColumnFamilyDefinitionImpl(Cluster cluster, String keyspace, ColumnFamily<?, ?> columnFamily, Map<String, Object> options) {
-		this(cluster);
+	public CqlColumnFamilyDefinitionImpl(Session session, String keyspace, ColumnFamily<?, ?> columnFamily, Map<String, Object> options) {
+		this.session = session;
 		
 		Preconditions.checkArgument(columnFamily != null, "ColumnFamily cannot be null");
 
@@ -111,11 +120,11 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 			options.put("default_validation_class", columnFamily.getDefaultValueSerializer().getComparatorType().getClassName());
 		}
 		
-		init(options);
+		initFromMap(options);
 	}
 	
 	
-	private void init(Map<String, Object> options) {
+	private void initFromMap(Map<String, Object> options) {
 		
 		cfName = (String) options.remove("name");
 		keyspaceName = (String) options.remove("keyspace");
@@ -141,20 +150,22 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 			this.makeColumnDefinition().setName("value").setValidationClass(dataValidationClass);
 
 		} else {
-			
 			throw new NotImplementedException();
 		}
-
 	}
-    
-	public CqlColumnFamilyDefinitionImpl(Cluster cluster, Row row) {
 	
-		this.cluster = cluster;
+	private void initFromResultSet(Session session, Row row) {
+
+		if (row == null) {
+			throw new RuntimeException("Result Set is empty");
+		}
+
+		this.session = session;
 		initedViaResultSet = true; 
-		
+
 		this.setName(row.getString("columnfamily_name"));
 		this.keyspaceName = row.getString("keyspace_name");
-		
+
 		properties.put("keyspace_name", row.getString("keyspace_name")); 
 		properties.put("columnfamily_name", row.getString("columnfamily_name")); 
 		properties.put("bloom_filter_fp_chance", row.getDouble("bloom_filter_fp_chance")); 
@@ -182,9 +193,11 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		properties.put("subcomparator", row.getString("subcomparator")); 
 		properties.put("type", row.getString("type")); 
 		properties.put("value_alias", row.getString("value_alias")); 
-		
-	}
 
+	}
+    
+
+	
 	public CqlColumnFamilyDefinitionImpl alterTable() {
 		alterTable = true;
 		return this;
@@ -520,7 +533,7 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 			.where(eq("keyspace_name", keyspaceName))
 			.and(eq("columnfamily_name", cfName));
 			
-			ResultSet rs = cluster.connect().execute(query);
+			ResultSet rs = session.execute(query);
 			for (Row row : rs.all()) {
 				colDefList.add(new CqlColumnDefinitionImpl(row));
 			}
@@ -583,7 +596,7 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	}
 
 	@Override
-	public Properties getProperties() throws Exception {
+	public Properties getProperties() {
 		Properties props = new Properties();
 		for (String key : properties.keySet()) {
 			if (properties.get(key) != null) {
@@ -605,7 +618,7 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		String query = (alterTable) ? getUpdateQuery() : getCreateQuery();
 		System.out.println("Query: " + query);
 		
-		ResultSet rs =  cluster.connect().execute(query);
+		ResultSet rs = session.execute(query);
 
 		return new CqlOperationResultImpl<SchemaChangeResult>(rs, null);
 	}
@@ -762,4 +775,11 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 			throw new RuntimeException(e);
 		}
 	}
+	private void checkEmptyOptions() {
+		if (properties.size() == 0) {
+			// add a comment by default
+			properties.put("comment", "default");
+		}
+	}
+
 }

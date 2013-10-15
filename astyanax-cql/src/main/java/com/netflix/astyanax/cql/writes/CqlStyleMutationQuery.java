@@ -2,32 +2,27 @@ package com.netflix.astyanax.cql.writes;
 
 import java.util.List;
 
-import com.datastax.driver.core.Cluster;
-import com.netflix.astyanax.cql.util.ChainedContext;
+import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.util.ConsistencyLevelTransform;
+import com.netflix.astyanax.cql.writes.CqlColumnFamilyMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 
 public class CqlStyleMutationQuery {
 
-
-	protected final String keyspace;
-	protected final ColumnFamily<?,?> cf; 
-	protected final Object rowKey;
+	protected final KeyspaceContext ksContext;
+	protected final ColumnFamilyMutationContext cfContext;
 	protected final List<CqlColumnMutationImpl> mutationList; 
 	protected boolean deleteRow;
 	protected final Long timestamp;
 	protected final Integer ttl; 
 	protected final ConsistencyLevel consistencyLevel;
 
-	public CqlStyleMutationQuery(ChainedContext context, List<CqlColumnMutationImpl> mutationList, boolean deleteRow, Long timestamp, Integer ttl, ConsistencyLevel consistencyLevel) {
+	public CqlStyleMutationQuery(KeyspaceContext ksCtx, ColumnFamilyMutationContext cfCtx, List<CqlColumnMutationImpl> mutationList, boolean deleteRow, Long timestamp, Integer ttl, ConsistencyLevel consistencyLevel) {
 		
-		context.rewindForRead(); 
+		this.ksContext = ksCtx;
+		this.cfContext = cfCtx;
 		
-		context.getNext(Cluster.class);
-		this.keyspace = context.getNext(String.class);
-		this.cf = context.getNext(ColumnFamily.class);
-		this.rowKey = context.getNext(Object.class);
 		this.mutationList = mutationList;
 		this.deleteRow = deleteRow;
 		this.timestamp = timestamp;
@@ -36,7 +31,8 @@ public class CqlStyleMutationQuery {
 	}
 	
 	public String getDeleteEntireRowQuery() {
-		return "DELETE FROM " + keyspace + "." + cf.getName() + " WHERE " + cf.getKeyAlias() + " = ?;";
+		ColumnFamily<?,?> cf = cfContext.getColumnFamily();
+		return "DELETE FROM " + ksContext.getKeyspace() + "." + cf.getName() + " WHERE " + cf.getKeyAlias() + " = ?;";
 	}
 
 	public void appendWriteOptions(StringBuilder sb) {

@@ -1,6 +1,7 @@
 package com.netflix.astyanax.cql.test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -23,7 +24,6 @@ import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 
-import edu.emory.mathcs.backport.java.util.Collections;
 
 public class RowSliceRowRangeQueryTests extends ReadTests {
 

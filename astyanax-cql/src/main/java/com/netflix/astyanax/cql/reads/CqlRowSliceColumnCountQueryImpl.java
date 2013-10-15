@@ -12,18 +12,21 @@ import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlFamilyFactory;
-import com.netflix.astyanax.cql.util.ChainedContext;
+import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.util.CqlTypeMapping;
+import com.netflix.astyanax.cql.writes.CqlColumnFamilyMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.query.RowSliceColumnCountQuery;
 
 @SuppressWarnings("unchecked")
 public class CqlRowSliceColumnCountQueryImpl<K> implements RowSliceColumnCountQuery<K> {
 
-	private Query query;
-	private ChainedContext context;
+	private final KeyspaceContext ksContext;
+	private final ColumnFamilyMutationContext cfContext;
+	private final Query query;
 	
-	public CqlRowSliceColumnCountQueryImpl(ChainedContext context, Query query) {
-		this.context = context;
+	public CqlRowSliceColumnCountQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext cfCtx, Query query) {
+		this.ksContext = ksCtx;
+		this.cfContext = cfCtx;
 		this.query = query;
 		
 	}
@@ -41,7 +44,7 @@ public class CqlRowSliceColumnCountQueryImpl<K> implements RowSliceColumnCountQu
 	private class InternalQueryExecutionImpl extends CqlAbstractExecutionImpl<Map<K, Integer>> {
 
 		public InternalQueryExecutionImpl() {
-			super(context);
+			super(ksContext, cfContext);
 		}
 
 		@Override

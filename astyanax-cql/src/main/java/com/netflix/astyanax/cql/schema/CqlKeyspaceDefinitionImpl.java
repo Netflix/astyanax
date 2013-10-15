@@ -2,6 +2,7 @@ package com.netflix.astyanax.cql.schema;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -19,9 +20,10 @@ import org.slf4j.LoggerFactory;
 
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
-import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Query;
+import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
+import com.datastax.driver.core.Session;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
@@ -37,28 +39,29 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 
 	private static final Logger Log = LoggerFactory.getLogger(CqlKeyspaceDefinitionImpl.class);
 	
-	private final Cluster cluster; 
+	private final Session session; 
 	private String keyspaceName; 
 	private boolean alterKeyspace; 
-	private Map<String, Object> options = new HashMap<String, Object>();
+	private final Map<String, Object> options = new HashMap<String, Object>();
+	private final List<CqlColumnFamilyDefinitionImpl> cfDefList = new ArrayList<CqlColumnFamilyDefinitionImpl>();
 	
-	public CqlKeyspaceDefinitionImpl(Cluster cluster) {
-		this.cluster = cluster;
+	public CqlKeyspaceDefinitionImpl(Session session) {
+		this.session = session;
 	}
 
-	public CqlKeyspaceDefinitionImpl(Cluster cluster, Map<String, Object> input) {
-		this.cluster = cluster;
+	public CqlKeyspaceDefinitionImpl(Session session, Map<String, Object> input) {
+		this.session = session;
 		checkOptionsMap(input);
 	}
 
-	public CqlKeyspaceDefinitionImpl(Cluster cluster, Properties props) {
-		this.cluster = cluster;
+	public CqlKeyspaceDefinitionImpl(Session session, Properties props) {
+		this.session = session;
 		checkOptionsMap(propertiesToMap(props));
 	}
 
-	public CqlKeyspaceDefinitionImpl(Cluster cluster, Row row) {
+	public CqlKeyspaceDefinitionImpl(Session session, Row row) {
 		
-		this.cluster = cluster; 
+		this.session = session; 
 		this.setName(row.getString("keyspace_name"));
 		this.setStrategyClass(row.getString("strategy_class"));
 		this.setStrategyOptionsMap(parseStrategyOptions(row.getString("strategy_options")));
@@ -123,23 +126,30 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 
 	@Override
 	public List<ColumnFamilyDefinition> getColumnFamilyList() {
-		throw new NotImplementedException();
+		Query query = QueryBuilder.select().all()
+				.from("system", "schema_columnfamilies")
+				.where(eq("keyspace_name", keyspaceName));
+				
+		ResultSet rs = session.execute(query);
+		List<ColumnFamilyDefinition> cfDefs = new ArrayList<ColumnFamilyDefinition>();
+		List<Row> rows = rs.all();
+		if (rows != null) {
+			for (Row row : rows) {
+				cfDefs.add(new CqlColumnFamilyDefinitionImpl(session, row));
+			}
+		}
+		return cfDefs;
 	}
 
 	@Override
-	public ColumnFamilyDefinition getColumnFamily(String columnFamily) {
-		
-		Query query = QueryBuilder.select().all()
-								  .from("system", "schema_columnfamilies")
-								  .where(eq("keyspace_name", keyspaceName))
-								  .and(eq("columnfamily_name", columnFamily));
-		
-		return new CqlColumnFamilyDefinitionImpl(cluster, cluster.connect().execute(query).one());
+	public ColumnFamilyDefinition getColumnFamily(String columnFamilyName) {
+		return new CqlColumnFamilyDefinitionImpl(session, keyspaceName, columnFamilyName);
 	}
 
 	@Override
 	public KeyspaceDefinition addColumnFamily(ColumnFamilyDefinition cfDef) {
-		throw new NotImplementedException();
+		cfDefList.add((CqlColumnFamilyDefinitionImpl) cfDef);
+		return this;
 	}
 
 	@Override
@@ -174,7 +184,8 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 
 	@Override
 	public void setProperties(Properties props) throws Exception {
-		options = propertiesToMap(props);
+		options.clear();
+		options.putAll(propertiesToMap(props));
 	}
 	
 	
@@ -185,7 +196,14 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 		if (Log.isDebugEnabled()) {
 			Log.debug("Query : " + query);
 		}
-		return new CqlOperationResultImpl<SchemaChangeResult>(cluster.connect().execute(query), null);
+		
+		CqlOperationResultImpl<SchemaChangeResult> result = new CqlOperationResultImpl<SchemaChangeResult>(session.execute(query), null);
+		
+		for (CqlColumnFamilyDefinitionImpl cfDef : cfDefList) {
+			cfDef.execute();
+		}
+		
+		return result;
 	}
 
 	
@@ -236,14 +254,13 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 		
 		if (strategyOptions == null) {
 			Preconditions.checkArgument(input.get("replication") != null, "Invalid CREATE KEYSPACE properties");
-			options = new HashMap<String, Object>();
+			options.clear();
 			options.putAll(input);
 			
 		} else {
 			
 			// this is an old style map. Convert to the new spec of CREATE KEYSPACE
-
-			options = new HashMap<String, Object>();
+			options.clear();
 			
 			Map<String, Object> oldStrategyOptions = (Map<String, Object>) input.get("strategy_options");
 			this.setStrategyOptionsMap(oldStrategyOptions);

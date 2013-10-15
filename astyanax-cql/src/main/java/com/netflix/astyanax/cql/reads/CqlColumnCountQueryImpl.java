@@ -8,16 +8,19 @@ import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlFamilyFactory;
-import com.netflix.astyanax.cql.util.ChainedContext;
+import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
+import com.netflix.astyanax.cql.writes.CqlColumnFamilyMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.query.ColumnCountQuery;
 
 public class CqlColumnCountQueryImpl implements ColumnCountQuery {
 
-	private final ChainedContext context; 
+	private final KeyspaceContext ksContext;
+	private final ColumnFamilyMutationContext cfContext;
 	private final Query query;
 	
-	public CqlColumnCountQueryImpl(ChainedContext ctx, Query query) {
-		this.context = ctx;
+	public CqlColumnCountQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext cfCtx, Query query) {
+		this.ksContext = ksCtx;
+		this.cfContext = cfCtx;
 		this.query = query;
 	}
 	
@@ -33,11 +36,8 @@ public class CqlColumnCountQueryImpl implements ColumnCountQuery {
 
 	private class InternalColumnCountExecutionImpl extends CqlAbstractExecutionImpl<Integer> {
 
-		private final Query query;
-		
 		public InternalColumnCountExecutionImpl(Query query) {
-			super(context);
-			this.query = query;
+			super(ksContext, cfContext);
 		}
 
 		@Override
@@ -47,7 +47,7 @@ public class CqlColumnCountQueryImpl implements ColumnCountQuery {
 
 		@Override
 		public Query getQuery() {
-			return this.query;
+			return query;
 		}
 
 		@Override

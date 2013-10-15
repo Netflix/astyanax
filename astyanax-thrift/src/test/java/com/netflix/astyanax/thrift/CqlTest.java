@@ -2,8 +2,8 @@ package com.netflix.astyanax.thrift;
 
 import java.util.Iterator;
 import java.util.Map;
-import java.util.UUID;
 import java.util.Map.Entry;
+import java.util.UUID;
 
 import junit.framework.Assert;
 
@@ -148,17 +148,17 @@ public class CqlTest {
         result = keyspace
                 .prepareCqlStatement()
                 .withCql(
-                        "INSERT INTO employees (empID, deptID, first_name, last_name) VALUES ('111', '222', 'eran', 'landau');")
+                        "INSERT INTO employees (empID, deptID, first_name, last_name) VALUES (111, 222, 'eran', 'landau');")
                 .execute();
 
         result = keyspace
                 .prepareCqlStatement()
                 .withCql(
-                        "INSERT INTO employees (empID, deptID, first_name, last_name) VALUES ('111', '233', 'netta', 'landau');")
+                        "INSERT INTO employees (empID, deptID, first_name, last_name) VALUES (111, 233, 'netta', 'landau');")
                 .execute();
 
         result = keyspace.prepareCqlStatement()
-                .withCql("SELECT * FROM employees WHERE empId='111';")
+                .withCql("SELECT * FROM employees WHERE empId=111;")
                 .execute();
 
         Assert.assertTrue(!result.getResult().getRows(CQL3_CF).isEmpty());
@@ -190,7 +190,7 @@ public class CqlTest {
                 .withStringValue("Landau").execute();
 
         result = keyspace.prepareQuery(CQL3_CF)
-                .withCql("SELECT * FROM employees WHERE empId='222';")
+                .withCql("SELECT * FROM employees WHERE empId=222;")
                 .execute();
         Assert.assertTrue(!result.getResult().getRows().isEmpty());
         for (Row<Integer, String> row : result.getResult().getRows()) {
@@ -213,11 +213,11 @@ public class CqlTest {
     public void testKeyspaceCql() throws Exception {
         keyspace.prepareQuery(CQL3_CF)
                 .withCql(
-                        "INSERT INTO employees (empID, deptID, first_name, last_name) VALUES ('999', '233', 'arielle', 'landau');")
+                        "INSERT INTO employees (empID, deptID, first_name, last_name) VALUES (999, 233, 'arielle', 'landau');")
                 .execute();
 
         CqlStatementResult result = keyspace.prepareCqlStatement()
-                .withCql("SELECT * FROM employees WHERE empID = '999';")
+                .withCql("SELECT * FROM employees WHERE empID = 999;")
                 .execute().getResult();
 
         CqlSchema schema = result.getSchema();
@@ -262,14 +262,14 @@ public class CqlTest {
         CqlStatementResult result;
         keyspace.prepareCqlStatement()
                 .withCql(
-                        "CREATE TABLE uuidtest (id UUID PRIMARY KEY, given text, surname text);")
+                        "CREATE TABLE uuidpart (id UUID PRIMARY KEY, given text, surname text);")
                 .execute();
         keyspace.prepareCqlStatement()
                 .withCql(
-                        "INSERT INTO uuidtest (id, given, surname) VALUES (00000000-0000-0000-0000-000000000000, 'x', 'arielle');")
+                        "INSERT INTO uuidpart (id, given, surname) VALUES (00000000-0000-0000-0000-000000000000, 'x', 'arielle');")
                 .execute();
         result = keyspace.prepareCqlStatement()
-                .withCql("SELECT given,surname FROM uuidtest ;").execute()
+                .withCql("SELECT given,surname FROM uuidpart ;").execute()
                 .getResult();
 
         Rows<UUID, String> rows = result.getRows(UUID_CF);

@@ -5,6 +5,26 @@ Apache Cassandra is a highly available column oriented database.
 
 Astyanax is currently in use at [Netflix](http://movies.netflix.com). Issues generally are fixed as quickly as possible and releases done frequently.
 
+Artifacts
+-------------------------------
+
+Astyanax jars are published to Maven Central.  As of astyanax 1.56.27 the project has been split into multiple sub project, each of which needs to be pulled in separately.
+
+Required artifacts
+
+|GroupID/Org|ArtifactID/Name|
+| --------- | ------------- |
+|com.netflix.astyanax|astyanax-core|
+|com.netflix.astyanax|astyanax-thrift|
+|com.netflix.astyanax|astyanax-cassandra|
+
+Optional artifacts
+
+|GroupID/Org|ArtifactID/Name|
+| --------- | ------------- |
+|com.netflix.astyanax|astyanax-queue|
+|com.netflix.astyanax|astyanax-entity-mapper|
+|com.netflix.astyanax|astyanax-recipes|
 
 Features
 --------

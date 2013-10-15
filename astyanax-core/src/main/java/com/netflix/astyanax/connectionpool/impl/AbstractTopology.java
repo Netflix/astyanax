@@ -96,11 +96,6 @@ public class AbstractTopology<CL> implements Topology<CL> {
     }
 
     @Override
-    public TokenHostConnectionPoolPartition<CL> getPartition(String token) {
-        return allPools;
-    }
-
-    @Override
     public Map<String, TokenHostConnectionPoolPartition<CL>> getPartitions() {
         return ImmutableMap.of(allPools.id().toString(), allPools);
     }

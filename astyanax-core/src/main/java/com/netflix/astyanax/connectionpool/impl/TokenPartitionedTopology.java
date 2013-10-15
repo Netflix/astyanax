@@ -212,11 +212,6 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
     }
 
     @Override
-    public TokenHostConnectionPoolPartition<CL> getPartition(String token) {
-        return tokenToPartitionMap.get(partitioner.getRingPositionForToken(token));
-    }
-    
-    @Override
     public TokenHostConnectionPoolPartition<CL> getPartition(ByteBuffer rowkey) {
         if (rowkey == null)
             return getAllPools();

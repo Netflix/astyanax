@@ -54,12 +54,13 @@ public class CqlColumnImpl<C> implements Column<C> {
 
 	@Override
 	public long getTimestamp() {
+		// TODO: not sure that the java-driver gives us access to this. May need to file a ticket with dse
 		throw new NotImplementedException();
 	}
 
 	@Override
 	public <V> V getValue(Serializer<V> valSer) {
-		throw new NotImplementedException();
+		return valSer.fromByteBuffer(row.getBytes(index));
 	}
 
 	@Override
@@ -69,7 +70,7 @@ public class CqlColumnImpl<C> implements Column<C> {
 
 	@Override
 	public String getCompressedStringValue() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
@@ -131,17 +132,18 @@ public class CqlColumnImpl<C> implements Column<C> {
 	@Override
 	@Deprecated
 	public <C2> ColumnList<C2> getSubColumns(Serializer<C2> ser) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	@Deprecated
 	public boolean isParentColumn() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	public int getTtl() {
+		// TODO: java-driver does not expose this at the moment. Need to review this. 
 		throw new NotImplementedException();
 	}
 

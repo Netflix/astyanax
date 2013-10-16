@@ -4,7 +4,7 @@ import java.util.List;
 
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.util.ConsistencyLevelTransform;
-import com.netflix.astyanax.cql.writes.CqlColumnFamilyMutationImpl.ColumnFamilyMutationContext;
+import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 

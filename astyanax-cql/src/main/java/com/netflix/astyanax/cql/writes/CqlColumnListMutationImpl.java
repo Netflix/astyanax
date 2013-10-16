@@ -15,7 +15,7 @@ import com.netflix.astyanax.model.ColumnPath;
 import com.netflix.astyanax.model.ConsistencyLevel;
 
 @SuppressWarnings("deprecation")
-public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutationImpl<C> {
+public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationImpl<C> {
 
 	private final KeyspaceContext ksContext;
 	private final ColumnFamilyMutationContext<K,C> cfContext;
@@ -28,7 +28,7 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 	// Tracks the mutations on this ColumnFamily.
 	private MutationState currentState = new InitialState();
 
-	public CqlColumnFamilyMutationImpl(KeyspaceContext ksCtx, ColumnFamily<K,C> cf, K rowKey, ConsistencyLevel level, long timestamp) {
+	public CqlColumnListMutationImpl(KeyspaceContext ksCtx, ColumnFamily<K,C> cf, K rowKey, ConsistencyLevel level, long timestamp) {
 		
 		super(timestamp);
 		this.ksContext = ksCtx;
@@ -40,15 +40,14 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 			currentState = new OldStyleThriftState();
 		}
 	}
-
 	
 	@Override
 	public <V> ColumnListMutation<C> putColumn(C columnName, V value, Serializer<V> valueSerializer, Integer ttl) {
 		
 		Preconditions.checkArgument(columnName != null, "Column Name must not be null");
 		
-		if (currentState instanceof CqlColumnFamilyMutationImpl.InitialState || 
-				currentState instanceof CqlColumnFamilyMutationImpl.NewRowState) {
+		if (currentState instanceof CqlColumnListMutationImpl.InitialState || 
+				currentState instanceof CqlColumnListMutationImpl.NewRowState) {
 			checkState(new NewRowState());
 		} else {
 			checkState(new UpdateColumnState());
@@ -72,8 +71,8 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 
 		checkAndSetTTL(ttl);
 
-		if (currentState instanceof CqlColumnFamilyMutationImpl.InitialState || 
-				currentState instanceof CqlColumnFamilyMutationImpl.NewRowState) {
+		if (currentState instanceof CqlColumnListMutationImpl.InitialState || 
+				currentState instanceof CqlColumnListMutationImpl.NewRowState) {
 			checkState(new NewRowState());
 		} else {
 			checkState(new UpdateColumnState());
@@ -117,6 +116,14 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 		return this;
 	}
 	
+	public void mergeColumnListMutation(CqlColumnListMutationImpl<?, ?> colListMutation) {
+		this.mutationList.addAll(colListMutation.getMutationList());
+	}
+	
+	public List<CqlColumnMutationImpl> getMutationList() {
+		return mutationList;
+	}
+	
 	public BatchedStatements getBatch() {
 		return currentState.getStatement();
 	}
@@ -153,7 +160,7 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 
 		@Override
 		public MutationState next(MutationState state) {
-			if (state instanceof CqlColumnFamilyMutationImpl.DeleteRowState) {
+			if (state instanceof CqlColumnListMutationImpl.DeleteRowState) {
 				return state;
 			}
 			return this;  // once in this state - stay in same state
@@ -175,7 +182,7 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 
 		@Override
 		public MutationState next(MutationState nextState) {
-			if (! (nextState instanceof CqlColumnFamilyMutationImpl.UpdateColumnState)) {
+			if (! (nextState instanceof CqlColumnListMutationImpl.UpdateColumnState)) {
 				throw new RuntimeException("Must only call PutColumn for this ColumnFamily mutation");
 			}
 			return nextState;
@@ -197,10 +204,10 @@ public class CqlColumnFamilyMutationImpl<K, C> extends AbstractColumnListMutatio
 
 		@Override
 		public MutationState next(MutationState nextState) {
-			if (nextState instanceof CqlColumnFamilyMutationImpl.UpdateColumnState) {
+			if (nextState instanceof CqlColumnListMutationImpl.UpdateColumnState) {
 				return nextState;
 			}
-			if (nextState instanceof CqlColumnFamilyMutationImpl.NewRowState) {
+			if (nextState instanceof CqlColumnListMutationImpl.NewRowState) {
 				return nextState;
 			}
 			

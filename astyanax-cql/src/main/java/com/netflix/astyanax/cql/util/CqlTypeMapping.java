@@ -150,7 +150,6 @@ public class CqlTypeMapping {
 	private static Object getCompositeColumn(Row row, AnnotatedCompositeSerializer<?> compositeSerializer) {
 		
 		Class<?> clazz = compositeSerializer.getClazz();
-		System.out.println("Class " + clazz.getName());
 		
 		Object obj = null;
 		try {
@@ -172,6 +171,5 @@ public class CqlTypeMapping {
 			}
 		}
 		return obj;
-//		throw new RuntimeException("Could not recognize comparator type: " + compositeSerializer.getComparatorType().getTypeName());
 	}
 }

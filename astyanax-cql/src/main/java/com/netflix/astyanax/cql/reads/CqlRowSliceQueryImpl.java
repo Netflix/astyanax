@@ -30,8 +30,9 @@ import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlFamilyFactory;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.reads.CqlRowSlice.RowRange;
-import com.netflix.astyanax.cql.writes.CqlColumnFamilyMutationImpl.ColumnFamilyMutationContext;
+import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.model.ByteBufferRange;
+import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnSlice;
 import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.query.RowSliceColumnCountQuery;
@@ -45,13 +46,13 @@ import com.netflix.astyanax.serializers.CompositeRangeBuilder.RangeQueryRecord;
 public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 
 	private final KeyspaceContext ksContext;
-	private final ColumnFamilyMutationContext cfContext;
+	private final ColumnFamilyMutationContext<K,C> cfContext;
 
 	private final CqlRowSlice<K> rowSlice;
 	private CqlColumnSlice<C> columnSlice = new CqlColumnSlice<C>();
 	private CompositeByteBufferRange compositeRange = null;
 	
-	public CqlRowSliceQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext cfCtx, CqlRowSlice<K> rSlice) {
+	public CqlRowSliceQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<K,C> cfCtx, CqlRowSlice<K> rSlice) {
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;
 		this.rowSlice = rSlice;
@@ -179,7 +180,7 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 			List<com.datastax.driver.core.Row> rows = rs.all(); 
 
 			boolean oldStyle = CqlFamilyFactory.OldStyleThriftMode();
-			return new CqlRowListImpl<K, C>(rows, cf, oldStyle);
+			return new CqlRowListImpl<K, C>(rows, (ColumnFamily<K, C>) cf, oldStyle);
 		}
 
 		@Override

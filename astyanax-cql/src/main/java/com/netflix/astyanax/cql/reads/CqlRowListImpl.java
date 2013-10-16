@@ -20,7 +20,7 @@ public class CqlRowListImpl<K, C> implements Rows<K, C> {
 	private List<Row<K,C>>   rows;
 	private Map<K, Row<K,C>> lookup;
 
-	public CqlRowListImpl(List<com.datastax.driver.core.Row> resultRows, ColumnFamily<?,?> cf, boolean oldStyle) {
+	public CqlRowListImpl(List<com.datastax.driver.core.Row> resultRows, ColumnFamily<K,C> cf, boolean oldStyle) {
 		
 		this.rows   = new ArrayList<Row<K, C>>(resultRows.size());
 		if (oldStyle) {

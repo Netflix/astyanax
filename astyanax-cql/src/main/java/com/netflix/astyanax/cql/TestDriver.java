@@ -16,6 +16,7 @@ import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.ResultSetFuture;
+import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -42,8 +43,27 @@ public class TestDriver {
 	public static void main(String[] args) {
 
 		
+		
 		CqlClusterImpl cluster = null;
 		try {
+			
+			
+			String host = "ec2-204-236-195-101.compute-1.amazonaws.com";
+			
+			Cluster cluster11 = new Cluster.Builder().addContactPoint(host).withPort(7104).build();
+			
+			Session session = cluster11.connect();
+			
+			ResultSet rs = session.execute("select * from astyanaxperf.test1 where key = 10000 and column1 = 10");
+			
+			Row row = rs.one();
+			
+			Long rowKey = row.getLong("key");
+			Integer col1 = row.getInt("column1");
+			String value = row.getString("value");
+			
+			System.out.println(" " + rowKey + " = " + " " + col1 + " -> " + value);
+			
 //			
 //			AstyanaxContext<com.netflix.astyanax.Cluster> context = new AstyanaxContext.Builder()
 //				.forCluster("Test Cluster")
@@ -56,7 +76,7 @@ public class TestDriver {
 //			cluster = (CqlClusterImpl) context.getClient();
 
 			
-			Cluster cluster2 = Cluster.builder().addContactPoint("localhost").withPort(9042).build();
+//			Cluster cluster2 = Cluster.builder().addContactPoint("localhost").withPort(9042).build();
 //			Cluster cluster2 = Cluster.builder().addContactPoint("ec2-54-227-36-120.compute-1.amazonaws.com").withPort(7104).build();
 			
 //			String query = "begin batch insert into astyanaxunittests.test1 (key, column1) values (?, ?); insert into astyanaxunittests.test1 (key, column1) values (1, 8); insert into astyanaxunittests.test1 (key, column1) values (?, ?);  apply batch"; 
@@ -74,58 +94,58 @@ public class TestDriver {
 			
 //			String query = "select * from astyanaxperf.test1 where key=300000;";
 	
-			String query = "begin unlogged batch insert into astyanaxunittests.test12 (key, column1) values (1, 8); apply batch"; 
-
-			//ResultSet rs = cluster2.connect().execute(query);
-			
-			ExecutorService threadPool = Executors.newFixedThreadPool(1);
-
-			final ResultSetFuture rsFuture = cluster2.connect().executeAsync(query);
-			
-			rsFuture.addListener(new Runnable() {
-
-				@Override
-				public void run() {
-					
-					try {
-						ResultSet rs = rsFuture.get();
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					} catch (ExecutionException e) {
-						e.printStackTrace();
-					}
-				}
-				
-			}, threadPool);
-			
-			
-			//System.out.println(rs.all().size());
-			
-			//cluster2.shutdown();
-			
-			
-			//PreparedStatement pstmt = new PreparedSta/
-			
-			//executeSampleBoundStatement22();
-			
-			//cluster = new CqlClusterImpl();
-			
-			//createKeyspace(cluster);
-			//createTable(cluster);
-			//truncateTable(cluster);
-			//insertIntoTable(cluster);
-
-//			MetricsRegistry registry = cluster.cluster.getMetrics().getRegistry();
-//			ConsoleReporter.enable(registry, 5, TimeUnit.SECONDS);
-
-//			// reads
-//			while (true) {
-//				Thread.sleep(2000);
-//				readMultipleColumnsFromTable(cluster);
-//			}
-			//readRowCount(cluster);
-			//describeClusterAndKeyspace(cluster);
-			
+//			String query = "begin unlogged batch insert into astyanaxunittests.test12 (key, column1) values (1, 8); apply batch"; 
+//
+//			//ResultSet rs = cluster2.connect().execute(query);
+//			
+//			ExecutorService threadPool = Executors.newFixedThreadPool(1);
+//
+//			final ResultSetFuture rsFuture = cluster2.connect().executeAsync(query);
+//			
+//			rsFuture.addListener(new Runnable() {
+//
+//				@Override
+//				public void run() {
+//					
+//					try {
+//						ResultSet rs = rsFuture.get();
+//					} catch (InterruptedException e) {
+//						e.printStackTrace();
+//					} catch (ExecutionException e) {
+//						e.printStackTrace();
+//					}
+//				}
+//				
+//			}, threadPool);
+//			
+//			
+//			//System.out.println(rs.all().size());
+//			
+//			//cluster2.shutdown();
+//			
+//			
+//			//PreparedStatement pstmt = new PreparedSta/
+//			
+//			//executeSampleBoundStatement22();
+//			
+//			//cluster = new CqlClusterImpl();
+//			
+//			//createKeyspace(cluster);
+//			//createTable(cluster);
+//			//truncateTable(cluster);
+//			//insertIntoTable(cluster);
+//
+////			MetricsRegistry registry = cluster.cluster.getMetrics().getRegistry();
+////			ConsoleReporter.enable(registry, 5, TimeUnit.SECONDS);
+//
+////			// reads
+////			while (true) {
+////				Thread.sleep(2000);
+////				readMultipleColumnsFromTable(cluster);
+////			}
+//			//readRowCount(cluster);
+//			//describeClusterAndKeyspace(cluster);
+//			
 			
 		} catch (Exception e) {
 			e.printStackTrace();

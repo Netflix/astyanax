@@ -20,7 +20,7 @@ import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlFamilyFactory;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.util.CqlTypeMapping;
-import com.netflix.astyanax.cql.writes.CqlColumnFamilyMutationImpl.ColumnFamilyMutationContext;
+import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.query.ColumnQuery;
 import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
@@ -30,10 +30,10 @@ import com.netflix.astyanax.serializers.ComparatorType;
 public class CqlColumnQueryImpl<C> implements ColumnQuery<C> {
 
 	private final KeyspaceContext ksContext;
-	private final ColumnFamilyMutationContext cfContext;
+	private final ColumnFamilyMutationContext<?,C> cfContext;
 	private final C column;
 	
-	CqlColumnQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext cfCtx, C col) {
+	CqlColumnQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<?,C> cfCtx, C col) {
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;
 		this.column = col;
@@ -103,6 +103,7 @@ public class CqlColumnQueryImpl<C> implements ColumnQuery<C> {
 			} else {
 				
 				if (isCompositeType) {
+					// TODO: we need to entire columns schema here to be able to construct the query - i.e we need all the columns names. Need to implement this
 					throw new NotImplementedException();
 				}
 				query = QueryBuilder.select(String.valueOf(column))
@@ -117,7 +118,7 @@ public class CqlColumnQueryImpl<C> implements ColumnQuery<C> {
 			
 			Row row = rs.one();
 			if (row == null) {
-				return new CqlColumnImpl();
+				return new CqlColumnImpl<C>();
 			}
 			
 			Object columnName = CqlTypeMapping.getDynamicColumn(row, cf.getColumnSerializer());

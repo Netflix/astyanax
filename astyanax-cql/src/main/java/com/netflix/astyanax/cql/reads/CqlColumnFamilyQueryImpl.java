@@ -9,7 +9,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
-import com.netflix.astyanax.cql.writes.CqlColumnFamilyMutationImpl.ColumnFamilyMutationContext;
+import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.query.AllRowsQuery;
@@ -23,7 +23,7 @@ import com.netflix.astyanax.retry.RetryPolicy;
 public class CqlColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C> {
 
 	private final KeyspaceContext ksContext;
-	private final ColumnFamilyMutationContext cfContext;
+	private final ColumnFamilyMutationContext<K,C> cfContext;
 	private ConsistencyLevel consistencyLevel = ConsistencyLevel.CL_ONE;
 	
 	public CqlColumnFamilyQueryImpl(KeyspaceContext ksCtx, ColumnFamily<K,C> cf) {
@@ -39,11 +39,13 @@ public class CqlColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C> {
 
 	@Override
 	public ColumnFamilyQuery<K, C> withRetryPolicy(RetryPolicy retry) {
+		// TODO: we should implement this. This should be do-able
 		throw new NotImplementedException();
 	}
 
 	@Override
 	public ColumnFamilyQuery<K, C> pinToHost(Host host) {
+		// TODO fix this: this is totally do-able
 		throw new NotImplementedException();
 	}
 
@@ -106,7 +108,7 @@ public class CqlColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C> {
 
 	@Override
 	public AllRowsQuery<K, C> getAllRows() {
-		throw new RuntimeException("Not Implemented: Use AllRowsReader recipe instead");
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
@@ -116,7 +118,6 @@ public class CqlColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C> {
 
 	@Override
 	public IndexQuery<K, C> searchWithIndex() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
-
 }

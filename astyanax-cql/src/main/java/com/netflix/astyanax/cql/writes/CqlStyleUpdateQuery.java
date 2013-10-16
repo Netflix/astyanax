@@ -11,7 +11,7 @@ import com.netflix.astyanax.model.ConsistencyLevel;
 public class CqlStyleUpdateQuery extends CqlStyleMutationQuery {
 
 
-	public CqlStyleUpdateQuery(ChainedContext2 context, List<CqlColumnMutationImpl> mutationList, Long timestamp, Integer ttl, ConsistencyLevel consistencyLevel) {
+	public CqlStyleUpdateQuery(ChainedContext2 context, List<CqlColumnMutationImpl<?,?>> mutationList, Long timestamp, Integer ttl, ConsistencyLevel consistencyLevel) {
 		super(null, null, mutationList, false, timestamp, ttl, consistencyLevel);
 		// TODO fix this
 	}
@@ -30,9 +30,9 @@ public class CqlStyleUpdateQuery extends CqlStyleMutationQuery {
 
 		List<Object> bindList = new ArrayList<Object>();
 		
-		Iterator<CqlColumnMutationImpl> iter = mutationList.iterator();
+		Iterator<CqlColumnMutationImpl<?,?>> iter = mutationList.iterator();
 		while (iter.hasNext()) {
-			CqlColumnMutationImpl m = iter.next();
+			CqlColumnMutationImpl<?,?> m = iter.next();
 			
 			if (m.counterColumn) {
 				long increment = ((Long)m.columnValue).longValue();

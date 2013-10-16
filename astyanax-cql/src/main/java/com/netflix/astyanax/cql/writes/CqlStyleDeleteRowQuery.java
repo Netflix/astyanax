@@ -8,7 +8,7 @@ import com.netflix.astyanax.model.ConsistencyLevel;
 
 public class CqlStyleDeleteRowQuery extends CqlStyleMutationQuery {
 
-	public CqlStyleDeleteRowQuery(ChainedContext2 context, List<CqlColumnMutationImpl> mutationList, Long timestamp, Integer ttl, ConsistencyLevel consistencyLevel) {
+	public CqlStyleDeleteRowQuery(ChainedContext2 context, List<CqlColumnMutationImpl<?,?>> mutationList, Long timestamp, Integer ttl, ConsistencyLevel consistencyLevel) {
 		//super(context, mutationList, true, timestamp, ttl, consistencyLevel);
 		// TODO
 		super(null, null, mutationList, true, timestamp, ttl, consistencyLevel);

@@ -3,8 +3,6 @@ package com.netflix.astyanax.cql.writes;
 import java.util.ArrayList;
 import java.util.List;
 
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
-
 import com.google.common.base.Preconditions;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Serializer;
@@ -20,7 +18,7 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 	private final KeyspaceContext ksContext;
 	private final ColumnFamilyMutationContext<K,C> cfContext;
 	
-	private List<CqlColumnMutationImpl> mutationList = new ArrayList<CqlColumnMutationImpl>();
+	private List<CqlColumnMutationImpl<?,?>> mutationList = new ArrayList<CqlColumnMutationImpl<?,?>>();
 	private boolean deleteRow = false; 
 	
 	private com.netflix.astyanax.model.ConsistencyLevel consistencyLevel;
@@ -54,7 +52,7 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 		}
 		checkAndSetTTL(ttl);
 		
-		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(ksContext, cfContext, columnName);
+		CqlColumnMutationImpl<K,C> mutation = new CqlColumnMutationImpl<K,C>(ksContext, cfContext, columnName);
 		mutation.putValue(value, valueSerializer, ttl);
 		
 		mutationList.add(mutation);
@@ -63,7 +61,7 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 
 	@Override
 	public <SC> ColumnListMutation<SC> withSuperColumn(ColumnPath<SC> superColumnPath) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
@@ -78,7 +76,7 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 			checkState(new UpdateColumnState());
 		}
 
-		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(ksContext, cfContext, columnName);
+		CqlColumnMutationImpl<K,C> mutation = new CqlColumnMutationImpl<K,C>(ksContext, cfContext, columnName);
 		mutation.putEmptyColumn(ttl);
 		mutationList.add(mutation);
 		
@@ -90,7 +88,7 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 		
 		checkState(new UpdateColumnState());
 
-		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(ksContext, cfContext, columnName);
+		CqlColumnMutationImpl<K,C> mutation = new CqlColumnMutationImpl<K,C>(ksContext, cfContext, columnName);
 		mutation.incrementCounterColumn(amount);
 		mutationList.add(mutation);
 		
@@ -102,7 +100,7 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 		
 		checkState(new UpdateColumnState());
 		
-		CqlColumnMutationImpl mutation = new CqlColumnMutationImpl(ksContext, cfContext, columnName);
+		CqlColumnMutationImpl<K,C> mutation = new CqlColumnMutationImpl<K,C>(ksContext, cfContext, columnName);
 		mutation.deleteColumn();
 		mutationList.add(mutation);
 		
@@ -117,10 +115,13 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 	}
 	
 	public void mergeColumnListMutation(CqlColumnListMutationImpl<?, ?> colListMutation) {
-		this.mutationList.addAll(colListMutation.getMutationList());
+		
+		for (CqlColumnMutationImpl<?,?> colMutation : colListMutation.getMutationList()) {
+			this.mutationList.add(colMutation);
+		}
 	}
 	
-	public List<CqlColumnMutationImpl> getMutationList() {
+	public List<CqlColumnMutationImpl<?,?>> getMutationList() {
 		return mutationList;
 	}
 	

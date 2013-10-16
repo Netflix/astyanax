@@ -7,8 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
-
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
@@ -59,10 +57,6 @@ public class CqlMutationBatchImpl extends AbstractMutationBatchImpl {
 	@Override
 	public ListenableFuture<OperationResult<Void>> executeAsync() throws ConnectionException {
 
-		if (super.rowLookup.values().size() > 1) {
-			throw new NotImplementedException();
-		}
-		
 		BoundStatement statement = getCachedPreparedStatement();
 		ResultSetFuture rsFuture = ksContext.getSession().executeAsync(statement);
 		return new AsyncOperationResult<Void>(rsFuture) {

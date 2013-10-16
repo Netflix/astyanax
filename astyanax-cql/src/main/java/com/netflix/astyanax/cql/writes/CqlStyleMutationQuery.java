@@ -11,14 +11,14 @@ import com.netflix.astyanax.model.ConsistencyLevel;
 public class CqlStyleMutationQuery {
 
 	protected final KeyspaceContext ksContext;
-	protected final ColumnFamilyMutationContext cfContext;
-	protected final List<CqlColumnMutationImpl> mutationList; 
+	protected final ColumnFamilyMutationContext<?,?> cfContext;
+	protected final List<CqlColumnMutationImpl<?,?>> mutationList; 
 	protected boolean deleteRow;
 	protected final Long timestamp;
 	protected final Integer ttl; 
 	protected final ConsistencyLevel consistencyLevel;
 
-	public CqlStyleMutationQuery(KeyspaceContext ksCtx, ColumnFamilyMutationContext cfCtx, List<CqlColumnMutationImpl> mutationList, boolean deleteRow, Long timestamp, Integer ttl, ConsistencyLevel consistencyLevel) {
+	public CqlStyleMutationQuery(KeyspaceContext ksCtx, ColumnFamilyMutationContext<?,?> cfCtx, List<CqlColumnMutationImpl<?,?>> mutationList, boolean deleteRow, Long timestamp, Integer ttl, ConsistencyLevel consistencyLevel) {
 		
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;

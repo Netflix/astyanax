@@ -26,12 +26,12 @@ import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
 
-public class CqlColumnMutationImpl implements ColumnMutation {
+public class CqlColumnMutationImpl<K,C> implements ColumnMutation {
 
 	private static final Logger LOG = LoggerFactory.getLogger(CqlColumnMutationImpl.class);
 	
 	protected final KeyspaceContext ksContext;
-	protected final ColumnFamilyMutationContext cfContext;
+	protected final ColumnFamilyMutationContext<K,C> cfContext;
 	protected final Object columnName;
 
 	// Tracking state
@@ -43,13 +43,13 @@ public class CqlColumnMutationImpl implements ColumnMutation {
 	private Long timestamp;
 	private Integer ttl;
 	
-	public CqlColumnMutationImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext cfCtx, Object cName) {
+	public CqlColumnMutationImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<K,C> cfCtx, Object cName) {
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;
 		this.columnName = cName;
 	}
 
-	public CqlColumnMutationImpl(KeyspaceContext ksCtx, ColumnFamily<?,?> cf, Object rKey, Object cName) {
+	public CqlColumnMutationImpl(KeyspaceContext ksCtx, ColumnFamily<K,C> cf, Object rKey, Object cName) {
 		this.ksContext = ksCtx;
 		this.cfContext = null; // TODO fix this
 		this.columnName = cName;

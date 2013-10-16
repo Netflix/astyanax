@@ -21,8 +21,8 @@ public class OldStyleCFMutationQuery extends CqlStyleMutationQuery {
 	private Map<KeyspaceColumnFamily, String> counterIncrStatementCache = new HashMap<KeyspaceColumnFamily, String>();
 	private Map<KeyspaceColumnFamily, String> counterDecrStatementCache = new HashMap<KeyspaceColumnFamily, String>();
 
-	public OldStyleCFMutationQuery(KeyspaceContext ksContext, ColumnFamilyMutationContext cfContext, 
-								   List<CqlColumnMutationImpl> mutationList, boolean deleteRow, 
+	public OldStyleCFMutationQuery(KeyspaceContext ksContext, ColumnFamilyMutationContext<?,?> cfContext, 
+								   List<CqlColumnMutationImpl<?,?>> mutationList, boolean deleteRow, 
 								   Long timestamp, Integer ttl, ConsistencyLevel consistencyLevel) {
 		super(ksContext, cfContext, mutationList, deleteRow, timestamp, ttl, consistencyLevel);
 	}

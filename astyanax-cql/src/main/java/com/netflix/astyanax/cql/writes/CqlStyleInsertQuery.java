@@ -10,7 +10,7 @@ import com.netflix.astyanax.model.ConsistencyLevel;
 
 public class CqlStyleInsertQuery extends CqlStyleMutationQuery {
 	
-	public CqlStyleInsertQuery(ChainedContext2 context, List<CqlColumnMutationImpl> mutationList, Long timestamp, Integer ttl, ConsistencyLevel consistencyLevel) {
+	public CqlStyleInsertQuery(ChainedContext2 context, List<CqlColumnMutationImpl<?,?>> mutationList, Long timestamp, Integer ttl, ConsistencyLevel consistencyLevel) {
 		super(null, null, mutationList, false, timestamp, ttl, consistencyLevel);
 		throw new RuntimeException("Fix this");  // TODO fix this
 	}

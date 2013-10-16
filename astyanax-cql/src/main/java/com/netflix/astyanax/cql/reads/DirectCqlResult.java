@@ -12,7 +12,7 @@ public class DirectCqlResult<K, C> implements CqlResult<K, C> {
 	private Long number = null;
 	private CqlRowListImpl<K, C> rows; 
 	
-	public DirectCqlResult(List<Row> rows, ColumnFamily<?,?> cf, boolean oldStyle) {
+	public DirectCqlResult(List<Row> rows, ColumnFamily<K,C> cf, boolean oldStyle) {
 		this.rows = new CqlRowListImpl<K, C>(rows, cf, oldStyle);
 	}
 

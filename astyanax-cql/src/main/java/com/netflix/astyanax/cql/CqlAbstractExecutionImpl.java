@@ -16,7 +16,7 @@ import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.util.AsyncOperationResult;
-import com.netflix.astyanax.cql.writes.CqlColumnFamilyMutationImpl.ColumnFamilyMutationContext;
+import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.model.ColumnFamily;
 
 public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
@@ -28,7 +28,7 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 	protected final ColumnFamily<?, ?> cf;
 	protected final KeyspaceTracerFactory tracerFactory;
 	
-	public CqlAbstractExecutionImpl(KeyspaceContext ksContext, ColumnFamilyMutationContext cfContext) {
+	public CqlAbstractExecutionImpl(KeyspaceContext ksContext, ColumnFamilyMutationContext<?,?> cfContext) {
 		
 		this.session = ksContext.getSession();
 		this.keyspace = ksContext.getKeyspace();

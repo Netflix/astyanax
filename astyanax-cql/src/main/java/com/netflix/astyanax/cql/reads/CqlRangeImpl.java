@@ -2,8 +2,6 @@ package com.netflix.astyanax.cql.reads;
 
 import java.nio.ByteBuffer;
 
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
-
 import com.netflix.astyanax.model.ByteBufferRange;
 
 public class CqlRangeImpl<T> implements ByteBufferRange {
@@ -24,12 +22,12 @@ public class CqlRangeImpl<T> implements ByteBufferRange {
 
     @Override
     public ByteBuffer getStart() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
     }
 
     @Override
     public ByteBuffer getEnd() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
     }
 
     public String getColumnName() {

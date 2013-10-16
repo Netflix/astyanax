@@ -9,8 +9,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
 
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
-
 import com.datastax.driver.core.ColumnDefinitions.Definition;
 import com.datastax.driver.core.Row;
 import com.netflix.astyanax.Serializer;
@@ -98,7 +96,12 @@ public class CqlColumnListImpl<C> implements ColumnList<C> {
 
 	@Override
 	public String getCompressedStringValue(C columnName, String defaultValue) {
-		throw new NotImplementedException();
+		Column<C> column = map.get(columnName);
+		if (column == null) {
+			return defaultValue;
+		} else {
+			return column.getCompressedStringValue();
+		}
 	}
 
 	@Override
@@ -163,7 +166,12 @@ public class CqlColumnListImpl<C> implements ColumnList<C> {
 
 	@Override
 	public <T> T getValue(C columnName, Serializer<T> serializer, T defaultValue) {
-		throw new NotImplementedException();
+		Column<C> column = map.get(columnName);
+		if (column == null) {
+			return defaultValue;
+		} else {
+			return column.getValue(serializer);
+		}
 	}
 
 	@Override
@@ -193,12 +201,12 @@ public class CqlColumnListImpl<C> implements ColumnList<C> {
 
 	@Override
 	public <C2> Column<C2> getSuperColumn(C columnName, Serializer<C2> colSer) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operaiton not supported");
 	}
 
 	@Override
 	public <C2> Column<C2> getSuperColumn(int idx, Serializer<C2> colSer) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operaiton not supported");
 	}
 
 	@Override
@@ -213,6 +221,6 @@ public class CqlColumnListImpl<C> implements ColumnList<C> {
 
 	@Override
 	public boolean isSuperColumn() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operaiton not supported");
 	}
 }

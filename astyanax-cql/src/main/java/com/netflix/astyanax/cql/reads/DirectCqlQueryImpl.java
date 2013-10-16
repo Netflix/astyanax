@@ -5,8 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
-
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
@@ -19,7 +17,8 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlFamilyFactory;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
-import com.netflix.astyanax.cql.writes.CqlColumnFamilyMutationImpl.ColumnFamilyMutationContext;
+import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
+import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.query.CqlQuery;
 import com.netflix.astyanax.query.PreparedCqlQuery;
@@ -27,10 +26,10 @@ import com.netflix.astyanax.query.PreparedCqlQuery;
 public class DirectCqlQueryImpl<K, C> implements CqlQuery<K, C> {
 
 	private final KeyspaceContext ksContext;
-	private final ColumnFamilyMutationContext cfContext;
+	private final ColumnFamilyMutationContext<K,C> cfContext;
 	private final String basicCqlQuery; 
 	
-	public DirectCqlQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext cfCtx, String basicCqlQuery) {
+	public DirectCqlQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<K,C> cfCtx, String basicCqlQuery) {
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;
 		this.basicCqlQuery = basicCqlQuery;
@@ -48,7 +47,7 @@ public class DirectCqlQueryImpl<K, C> implements CqlQuery<K, C> {
 	
 	@Override
 	public CqlQuery<K, C> useCompression() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
@@ -166,7 +165,7 @@ public class DirectCqlQueryImpl<K, C> implements CqlQuery<K, C> {
 				return new DirectCqlResult<K,C>(new Long(resultSet.one().getLong(0)));
 			} else {
 				boolean isOldStyle = CqlFamilyFactory.OldStyleThriftMode();
-				return new DirectCqlResult<K,C>(resultSet.all(), cf, isOldStyle);
+				return new DirectCqlResult<K,C>(resultSet.all(), (ColumnFamily<K, C>) cf, isOldStyle);
 			}
 		}
 	}

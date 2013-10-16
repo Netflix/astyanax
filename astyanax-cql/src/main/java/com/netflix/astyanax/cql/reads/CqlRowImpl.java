@@ -3,26 +3,28 @@ package com.netflix.astyanax.cql.reads;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
-
 import com.netflix.astyanax.cql.util.CqlTypeMapping;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.Row;
 
+@SuppressWarnings("unchecked")
 public class CqlRowImpl<K, C> implements Row<K, C> {
 
-	private K rowKey;
-	private CqlColumnListImpl<C> cqlColumnList; 
+	private final K rowKey;
+	private final CqlColumnListImpl<C> cqlColumnList;
+	private final ColumnFamily<K, C> cf;
 	
-	public CqlRowImpl(com.datastax.driver.core.Row resultRow, ColumnFamily<?, ?> cf) {
+	public CqlRowImpl(com.datastax.driver.core.Row resultRow, ColumnFamily<K, C> cf) {
 		this.rowKey = (K) getRowKey(resultRow, cf);
 		this.cqlColumnList = new CqlColumnListImpl<C>(resultRow);
+		this.cf = cf;
 	}
 	
-	public CqlRowImpl(List<com.datastax.driver.core.Row> rows, ColumnFamily<?, ?> cf) {
+	public CqlRowImpl(List<com.datastax.driver.core.Row> rows, ColumnFamily<K, C> cf) {
 		this.rowKey = (K) getRowKey(rows.get(0), cf);
 		this.cqlColumnList = new CqlColumnListImpl<C>(rows, cf);
+		this.cf = cf;
 	}
 	
 	@Override
@@ -32,7 +34,7 @@ public class CqlRowImpl<K, C> implements Row<K, C> {
 
 	@Override
 	public ByteBuffer getRawKey() {
-		throw new NotImplementedException();
+		return cf.getKeySerializer().toByteBuffer(rowKey);
 	}
 
 	@Override
@@ -40,7 +42,7 @@ public class CqlRowImpl<K, C> implements Row<K, C> {
 		return cqlColumnList;
 	}
 	
-	private Object getRowKey(com.datastax.driver.core.Row row, ColumnFamily<?, ?> cf) {
+	private Object getRowKey(com.datastax.driver.core.Row row, ColumnFamily<K, C> cf) {
 		return CqlTypeMapping.getDynamicColumn(row, cf.getKeySerializer(), 0);
 	}
 }

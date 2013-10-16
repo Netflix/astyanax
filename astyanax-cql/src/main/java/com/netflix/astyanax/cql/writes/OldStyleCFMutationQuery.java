@@ -7,7 +7,7 @@ import java.util.Map;
 
 import com.google.common.base.Preconditions;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
-import com.netflix.astyanax.cql.writes.CqlColumnFamilyMutationImpl.ColumnFamilyMutationContext;
+import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;

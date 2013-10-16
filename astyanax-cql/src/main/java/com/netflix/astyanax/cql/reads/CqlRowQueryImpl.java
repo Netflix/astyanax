@@ -37,7 +37,7 @@ import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlFamilyFactory;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.CqlOperationResultImpl;
-import com.netflix.astyanax.cql.writes.CqlColumnFamilyMutationImpl.ColumnFamilyMutationContext;
+import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.cql.writes.StatementCache;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.Column;
@@ -56,7 +56,7 @@ import com.netflix.astyanax.serializers.CompositeRangeBuilder.RangeQueryRecord;
 public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 	private final KeyspaceContext ksContext;
-	private final ColumnFamilyMutationContext cfContext;
+	private final ColumnFamilyMutationContext<K,C> cfContext;
 
 	private final K rowKey;
 	private final CqlColumnSlice<C> columnSlice = new CqlColumnSlice<C>();
@@ -65,7 +65,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 	
 	private com.datastax.driver.core.ConsistencyLevel cl = com.datastax.driver.core.ConsistencyLevel.ONE;
 
-	public CqlRowQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext cfCtx, K rKey, ConsistencyLevel clLevel) {
+	public CqlRowQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<K,C> cfCtx, K rKey, ConsistencyLevel clLevel) {
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;
 		this.rowKey = rKey;
@@ -172,6 +172,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 	@Override
 	public RowCopier<K, C> copyTo(ColumnFamily<K, C> columnFamily, K rowKey) {
+		// TODO: we should probably do this. This may not take all use cases into account e.g composite cols. But we should review this.
 		throw new NotImplementedException();
 	}
 
@@ -486,21 +487,4 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 			return lastPageConsumed;
 		}
 	}
-	
-//	private boolean isSingleEqualityRecord(RangeQueryRecord oldRecord) {
-//		
-//		List<RangeQueryOp> ops  = oldRecord.getOps();
-//		if (ops.size() != 1) {
-//			return false;
-//		}
-//		Equality operator = ops.get(0).getOperator();
-//		if (operator != Equality.EQUAL) {
-//			return false;
-//		}
-//		return true;
-//	}
-//	
-//	private boolean checkSingleRecord() {
-//		
-//	}
 }

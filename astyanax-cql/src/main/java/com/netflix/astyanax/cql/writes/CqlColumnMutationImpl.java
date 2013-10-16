@@ -20,7 +20,7 @@ import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.util.ConsistencyLevelTransform;
-import com.netflix.astyanax.cql.writes.CqlColumnFamilyMutationImpl.ColumnFamilyMutationContext;
+import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
@@ -63,6 +63,7 @@ public class CqlColumnMutationImpl implements ColumnMutation {
 
 	@Override
 	public ColumnMutation withRetryPolicy(RetryPolicy retry) {
+		// TODO: we should implement this
 		throw new NotImplementedException();
 	}
 

@@ -1,11 +1,11 @@
 package com.netflix.astyanax.cql;
 
+import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Query;
@@ -30,6 +30,7 @@ import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
+import com.netflix.astyanax.cql.direct.DirectCqlStatement;
 import com.netflix.astyanax.cql.reads.CqlColumnFamilyQueryImpl;
 import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
 import com.netflix.astyanax.cql.schema.CqlKeyspaceDefinitionImpl;
@@ -46,7 +47,6 @@ import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.serializers.SerializerPackageImpl;
 import com.netflix.astyanax.serializers.UnknownComparatorException;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 
 public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 
@@ -282,23 +282,23 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 
 	@Override
 	public CqlStatement prepareCqlStatement() {
-		throw new NotImplementedException();
+		return new DirectCqlStatement(session);
 	}
 
 	@Override
 	public ConnectionPool<?> getConnectionPool() throws ConnectionException {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 
 	@Override
 	public OperationResult<Void> testOperation(Operation<?, ?> operation) throws ConnectionException {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	public OperationResult<Void> testOperation(Operation<?, ?> operation, RetryPolicy retry) throws ConnectionException {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override

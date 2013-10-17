@@ -7,9 +7,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.common.base.Function;
@@ -50,6 +54,8 @@ import com.netflix.astyanax.serializers.UnknownComparatorException;
 
 public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 
+	private static final Logger Logger = LoggerFactory.getLogger(CqlKeyspaceImpl.class);
+	
 	private MicrosecondsAsyncClock microsClock = new MicrosecondsAsyncClock();
 	
 	private volatile Session session;
@@ -58,13 +64,6 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 	private final String keyspaceName;
 	private final AstyanaxConfiguration astyanaxConfig;
 	private final KeyspaceTracerFactory tracerFactory; 
-
-	public CqlKeyspaceImpl(String ksName, AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory) {
-		this.keyspaceName = ksName.toLowerCase();
-		this.astyanaxConfig = asConfig;
-		this.tracerFactory = tracerFactory;
-		this.ksContext = new KeyspaceContext();
-	}
 
 	public CqlKeyspaceImpl(Session session, String ksName, AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory) {
 		this.session = session;
@@ -132,12 +131,11 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 	public KeyspaceDefinition describeKeyspace() throws ConnectionException {
 		
 		Query query = QueryBuilder.select().from("system", "schema_keyspaces").where(eq("keyspace_name", keyspaceName));
-
-		try {
-			return (new CqlKeyspaceDefinitionImpl(session, session.execute(query).one()));
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}	
+		Row row = session.execute(query).one();
+		if (row == null) {
+			throw new RuntimeException("Keyspace not found: " + keyspaceName);
+		}
+		return (new CqlKeyspaceDefinitionImpl(session, row));
 	}
 
 	@Override
@@ -176,7 +174,7 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 
 	@Override
 	public <K, C> ColumnMutation prepareColumnMutation(ColumnFamily<K, C> columnFamily, K rowKey, C column) {
-		return new CqlColumnMutationImpl(ksContext, columnFamily, rowKey, column);
+		return new CqlColumnMutationImpl<K,C>(ksContext, columnFamily, rowKey, column);
 	}
 
 	@Override
@@ -199,13 +197,18 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 	public OperationResult<SchemaChangeResult> createKeyspace(Map<String, Object> options, Map<ColumnFamily, Map<String, Object>> cfs) throws ConnectionException {
 		
 		CqlKeyspaceDefinitionImpl ksDef = new CqlKeyspaceDefinitionImpl(session, options);
+		if (ksDef.getName() == null) {
+			ksDef.setName(keyspaceName);
+		}
+		
+		OperationResult<SchemaChangeResult> result = ksDef.execute();
 		
 		for (ColumnFamily cf : cfs.keySet()) {
 			CqlColumnFamilyDefinitionImpl cfDef = new CqlColumnFamilyDefinitionImpl(session, ksDef.getName(), cf, cfs.get(cf));
 			ksDef.addColumnFamily(cfDef);
 		}
 		
-		return ksDef.execute();
+		return result;
 	}
 
 	@Override
@@ -303,21 +306,28 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 
 	@Override
 	public void setHosts(Collection<Host> hosts) {
-		
-		List<Host> hostList = Lists.newArrayList(hosts);
-		
-		List<String> contactPoints = Lists.transform(hostList, new Function<Host, String>() {
-			@Override
-			public String apply(Host input) {
-				if (input != null) {
-					return input.getHostName(); 
-				}
-				return null;
-			}
-		});
 
-		Cluster cluster = Cluster.builder().addContactPoints(contactPoints.toArray(new String[0])).build();
-		session = cluster.connect(keyspaceName);
+		try {
+			List<Host> hostList = Lists.newArrayList(hosts);
+
+			List<String> contactPoints = Lists.transform(hostList, new Function<Host, String>() {
+				@Override
+				public String apply(Host input) {
+					if (input != null) {
+						return input.getHostName(); 
+					}
+					return null;
+				}
+			});
+
+			Cluster cluster = Cluster.builder().addContactPoints(contactPoints.toArray(new String[0])).build();
+			session = cluster.connect();
+
+		} catch (RuntimeException e) {
+			Logger.error("Failed to set hosts for keyspace impl", e);
+		} catch (Exception e) {
+			Logger.error("Failed to set hosts for keyspace impl", e);
+		}
 	}
 
 	public class KeyspaceContext {

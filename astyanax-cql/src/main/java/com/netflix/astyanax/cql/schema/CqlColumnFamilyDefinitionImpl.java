@@ -44,7 +44,7 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	private String cfName; 
 	private String keyspaceName;
 	
-	private Map<String, Object> properties = new HashMap<String, Object>();
+	private Map<String, Object> optionsMap = new HashMap<String, Object>();
 	
 	private List<ColumnDefinition> colDefList = new ArrayList<ColumnDefinition>();
 	private List<ColumnDefinition> primaryKeyList = new ArrayList<ColumnDefinition>();
@@ -66,28 +66,12 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 
 	public CqlColumnFamilyDefinitionImpl(Session session, String keyspace, Map<String, Object> options) {
 		this.session = session;
+		this.keyspaceName = keyspace;
 		
 		if (options == null) {
 			options = new HashMap<String, Object>();
 		}
-		
-		if (!options.containsKey("keyspace")) {
-			options.put("keyspace", keyspace);
-		}
-		
 		initFromMap(options);
-	}
-	
-
-	public CqlColumnFamilyDefinitionImpl(Session session, String ksName, String cfName) {
-
-		Query query = QueryBuilder.select().all()
-				.from("system", "schema_columnfamilies")
-				.where(eq("keyspace_name", ksName))
-				.and(eq("columnfamily_name", cfName));
-
-		ResultSet rs = session.execute(query);
-		initFromResultSet(session, rs.one());
 	}
 	
 	public CqlColumnFamilyDefinitionImpl(Session session, Row row) {
@@ -103,22 +87,12 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 			options = new HashMap<String, Object>();
 		}
 		
-		if (!options.containsKey("keyspace")) {
-			options.put("keyspace", keyspace);
-		}
-		
-		if (!options.containsKey("name")) {
-			options.put("name", columnFamily.getName());
-		}
-		if (!options.containsKey("key_validation_class")) {
-			options.put("key_validation_class", columnFamily.getKeySerializer().getComparatorType().getClassName());
-		}
-		if (!options.containsKey("comparator_type")) {
-			options.put("comparator_type", columnFamily.getColumnSerializer().getComparatorType().getClassName());
-		}
-		if (!options.containsKey("default_validation_class")) {
-			options.put("default_validation_class", columnFamily.getDefaultValueSerializer().getComparatorType().getClassName());
-		}
+		keyspaceName = keyspace;
+		cfName = columnFamily.getName();
+
+		optionsMap.put("key_validation_class", columnFamily.getKeySerializer().getComparatorType().getClassName());
+		optionsMap.put("comparator_type", columnFamily.getColumnSerializer().getComparatorType().getClassName());
+		optionsMap.put("default_validation_class", columnFamily.getDefaultValueSerializer().getComparatorType().getClassName());
 		
 		initFromMap(options);
 	}
@@ -126,18 +100,26 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	
 	private void initFromMap(Map<String, Object> options) {
 		
-		cfName = (String) options.remove("name");
-		keyspaceName = (String) options.remove("keyspace");
+		String cName = (String) options.get("name");
+		if (cName != null) {
+			cfName = cName;
+			options.remove("name");
+		}
 		
-		this.properties.putAll(options);
+		String kName = (String) options.get("keyspace");
+		if (kName != null) {
+			keyspaceName = kName;
+		}
+		
+		this.optionsMap.putAll(options);
 
-		String keyClass = (String) properties.remove("key_validation_class");
+		String keyClass = (String) optionsMap.remove("key_validation_class");
 		keyClass = (keyClass == null) ?	keyClass = "blob" : keyClass;
 		
-		String comparatorClass = (String) properties.remove("comparator_type");
+		String comparatorClass = (String) optionsMap.remove("comparator_type");
 		comparatorClass = (comparatorClass == null) ?	comparatorClass = "blob" : comparatorClass;
 		
-		String dataValidationClass = (String) properties.remove("default_validation_class");
+		String dataValidationClass = (String) optionsMap.remove("default_validation_class");
 		dataValidationClass = (dataValidationClass == null) ?	dataValidationClass = "blob" : dataValidationClass;
 
 		if (CqlFamilyFactory.OldStyleThriftMode()) {
@@ -163,40 +145,37 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		this.session = session;
 		initedViaResultSet = true; 
 
-		this.setName(row.getString("columnfamily_name"));
 		this.keyspaceName = row.getString("keyspace_name");
+		this.cfName = row.getString("columnfamily_name");
 
-		properties.put("keyspace_name", row.getString("keyspace_name")); 
-		properties.put("columnfamily_name", row.getString("columnfamily_name")); 
-		properties.put("bloom_filter_fp_chance", row.getDouble("bloom_filter_fp_chance")); 
-		properties.put("caching", row.getString("caching")); 
-		properties.put("column_aliases", row.getString("column_aliases")); 
-		properties.put("comment", row.getString("comment")); 
-		properties.put("compaction_strategy_class", row.getString("compaction_strategy_class")); 
-		properties.put("compaction_strategy_options", row.getString("compaction_strategy_options")); 
-		properties.put("comparator", row.getString("comparator")); 
-		properties.put("compression_parameters", row.getString("compression_parameters")); 
-		properties.put("default_read_consistency", row.getString("default_read_consistency")); 
-		properties.put("default_validator", row.getString("default_validator")); 
-		properties.put("default_write_consistency", row.getString("default_write_consistency")); 
-		properties.put("gc_grace_seconds", row.getInt("gc_grace_seconds")); 
-		properties.put("id", row.getInt("id")); 
-		properties.put("key_alias", row.getString("key_alias")); 
-		properties.put("key_aliases", row.getString("key_aliases")); 
-		properties.put("key_validator", row.getString("key_validator")); 
-		properties.put("local_read_repair_chance", row.getDouble("local_read_repair_chance")); 
-		properties.put("max_compaction_threshold", row.getInt("max_compaction_threshold")); 
-		properties.put("min_compaction_threshold", row.getInt("min_compaction_threshold")); 
-		properties.put("populate_io_cache_on_flush", row.getBool("populate_io_cache_on_flush")); 
-		properties.put("read_repair_chance", row.getDouble("read_repair_chance")); 
-		properties.put("replicate_on_write", row.getBool("replicate_on_write")); 
-		properties.put("subcomparator", row.getString("subcomparator")); 
-		properties.put("type", row.getString("type")); 
-		properties.put("value_alias", row.getString("value_alias")); 
-
+		optionsMap.put("keyspace_name", row.getString("keyspace_name")); 
+		optionsMap.put("columnfamily_name", row.getString("columnfamily_name")); 
+		optionsMap.put("bloom_filter_fp_chance", row.getDouble("bloom_filter_fp_chance")); 
+		optionsMap.put("caching", row.getString("caching")); 
+		optionsMap.put("column_aliases", row.getString("column_aliases")); 
+		optionsMap.put("comment", row.getString("comment")); 
+		optionsMap.put("compaction_strategy_class", row.getString("compaction_strategy_class")); 
+		optionsMap.put("compaction_strategy_options", row.getString("compaction_strategy_options")); 
+		optionsMap.put("comparator", row.getString("comparator")); 
+		optionsMap.put("compression_parameters", row.getString("compression_parameters")); 
+		optionsMap.put("default_read_consistency", row.getString("default_read_consistency")); 
+		optionsMap.put("default_validator", row.getString("default_validator")); 
+		optionsMap.put("default_write_consistency", row.getString("default_write_consistency")); 
+		optionsMap.put("gc_grace_seconds", row.getInt("gc_grace_seconds")); 
+		optionsMap.put("id", row.getInt("id")); 
+		optionsMap.put("key_alias", row.getString("key_alias")); 
+		optionsMap.put("key_aliases", row.getString("key_aliases")); 
+		optionsMap.put("key_validator", row.getString("key_validator")); 
+		optionsMap.put("local_read_repair_chance", row.getDouble("local_read_repair_chance")); 
+		optionsMap.put("max_compaction_threshold", row.getInt("max_compaction_threshold")); 
+		optionsMap.put("min_compaction_threshold", row.getInt("min_compaction_threshold")); 
+		optionsMap.put("populate_io_cache_on_flush", row.getBool("populate_io_cache_on_flush")); 
+		optionsMap.put("read_repair_chance", row.getDouble("read_repair_chance")); 
+		optionsMap.put("replicate_on_write", row.getBool("replicate_on_write")); 
+		optionsMap.put("subcomparator", row.getString("subcomparator")); 
+		optionsMap.put("type", row.getString("type")); 
+		optionsMap.put("value_alias", row.getString("value_alias")); 
 	}
-    
-
 	
 	public CqlColumnFamilyDefinitionImpl alterTable() {
 		alterTable = true;
@@ -205,13 +184,13 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 
 	@Override
 	public ColumnFamilyDefinition setComment(String comment) {
-		properties.put("comment", "'" + comment + "'");
+		optionsMap.put("comment", "'" + comment + "'");
 		return this;
 	}
 
 	@Override
 	public String getComment() {
-		return (String) properties.get("comment");
+		return (String) optionsMap.get("comment");
 	}
 
 	@Override
@@ -273,80 +252,80 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 
 	@Override
 	public ColumnFamilyDefinition setMinCompactionThreshold(Integer value) {
-		properties.put("min_compaction_threshold", value);
+		optionsMap.put("min_compaction_threshold", value);
 		return this;
 	}
 
 	@Override
 	public Integer getMinCompactionThreshold() {
-		return (Integer) properties.get("min_compaction_threshold");
+		return (Integer) optionsMap.get("min_compaction_threshold");
 	}
 
 	@Override
 	public ColumnFamilyDefinition setMaxCompactionThreshold(Integer value) {
-		properties.put("max_compaction_threshold", value);
+		optionsMap.put("max_compaction_threshold", value);
 		return this;
 	}
 
 	@Override
 	public Integer getMaxCompactionThreshold() {
-		return (Integer) properties.get("max_compaction_threshold");
+		return (Integer) optionsMap.get("max_compaction_threshold");
 	}
 
 	@Override
 	public ColumnFamilyDefinition setCompactionStrategy(String strategy) {
-		properties.put("compaction_strategy_class", strategy);
+		optionsMap.put("compaction_strategy_class", strategy);
 		return this;
 	}
 
 	@Override
 	public String getCompactionStrategy() {
-		return (String) properties.get("compaction_strategy_class");
+		return (String) optionsMap.get("compaction_strategy_class");
 	}
 
 	@Override
 	public ColumnFamilyDefinition setCompactionStrategyOptions(Map<String, String> options) {
-		properties.put("compaction_strategy_options", toJsonString(options));
+		optionsMap.put("compaction_strategy_options", toJsonString(options));
 		return this;
 	}
 
 	@Override
 	public Map<String, String> getCompactionStrategyOptions() {
-		return fromJsonString((String) properties.get("compaction_strategy_options"));
+		return fromJsonString((String) optionsMap.get("compaction_strategy_options"));
 	}
 
 	@Override
 	public ColumnFamilyDefinition setCompressionOptions(Map<String, String> options) {
-		properties.put("compression_parameters", toJsonString(options));
+		optionsMap.put("compression_parameters", toJsonString(options));
 		return this;
 	}
 
 	@Override
 	public Map<String, String> getCompressionOptions() {
-		return fromJsonString((String) properties.get("compression_parameters"));
+		return fromJsonString((String) optionsMap.get("compression_parameters"));
 	}
 
 	
 	@Override
 	public ColumnFamilyDefinition setBloomFilterFpChance(Double chance) {
-		properties.put("bloom_filter_fp_chance", chance);
+		optionsMap.put("bloom_filter_fp_chance", chance);
 		return this;
 	}
 
 	@Override
 	public Double getBloomFilterFpChance() {
-		return (Double) properties.get("bloom_filter_fp_chance");
+		return (Double) optionsMap.get("bloom_filter_fp_chance");
 	}
 
 	@Override
 	public ColumnFamilyDefinition setCaching(String caching) {
-		properties.put("caching", caching);
+		optionsMap.put("caching", caching);
 		return this;
 	}
 
 	@Override
 	public String getCaching() {
-		return (String) properties.get("caching");
+		return (String) optionsMap.get("caching");
 	}
 
 	@Override
@@ -362,35 +341,35 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 
 	@Override
 	public ColumnFamilyDefinition setReadRepairChance(Double value) {
-		properties.put("read_repair_chance", value);
+		optionsMap.put("read_repair_chance", value);
 		return this;
 	}
 
 	@Override
 	public Double getReadRepairChance() {
-		return (Double) properties.get("read_repair_chance");
+		return (Double) optionsMap.get("read_repair_chance");
 	}
 
 	@Override
 	public ColumnFamilyDefinition setLocalReadRepairChance(Double value) {
-		properties.put("local_read_repair_chance", value);
+		optionsMap.put("local_read_repair_chance", value);
 		return this;
 	}
 
 	@Override
 	public Double getLocalReadRepairChance() {
-		return (Double) properties.get("local_read_repair_chance");
+		return (Double) optionsMap.get("local_read_repair_chance");
 	}
 
 	@Override
 	public ColumnFamilyDefinition setReplicateOnWrite(Boolean value) {
-		properties.put("replicate_on_write", value);
+		optionsMap.put("replicate_on_write", value);
 		return this;
 	}
 
 	@Override
 	public Boolean getReplicateOnWrite() {
-		return (Boolean) properties.get("replicate_on_write");
+		return (Boolean) optionsMap.get("replicate_on_write");
 	}
 
 	@Override
@@ -425,13 +404,13 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 
 	@Override
 	public ColumnFamilyDefinition setComparatorType(String value) {
-		properties.put("comparator", value);
+		optionsMap.put("comparator", value);
 		return this;
 	}
 
 	@Override
 	public String getComparatorType() {
-		return (String) properties.get("comparator");
+		return (String) optionsMap.get("comparator");
 	}
 
 	@Override
@@ -446,13 +425,13 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 
 	@Override
 	public ColumnFamilyDefinition setId(Integer id) {
-		properties.put("id", id);
+		optionsMap.put("id", id);
 		return this;
 	}
 
 	@Override
 	public Integer getId() {
-		return (Integer) properties.get("id");
+		return (Integer) optionsMap.get("id");
 	}
 
 	@Override
@@ -506,7 +485,7 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	@Override
 	public ColumnFamilyDefinition setKeyValidationClass(String keyValidationClass) {
 		// nothing to do here.
-		properties.put("key_validation_class", keyValidationClass);
+		optionsMap.put("key_validation_class", keyValidationClass);
 		return this;
 	}
 	
@@ -576,13 +555,13 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 
 	@Override
 	public ColumnFamilyDefinition setGcGraceSeconds(Integer seconds) {
-		properties.put("gc_grace_seconds", seconds);
+		optionsMap.put("gc_grace_seconds", seconds);
 		return this;
 	}
 
 	@Override
 	public Integer getGcGraceSeconds() {
-		return (Integer) properties.get("gc_grace_seconds");
+		return (Integer) optionsMap.get("gc_grace_seconds");
 	}
 
 	@Override
@@ -598,9 +577,9 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	@Override
 	public Properties getProperties() {
 		Properties props = new Properties();
-		for (String key : properties.keySet()) {
-			if (properties.get(key) != null) {
-				props.put(key, properties.get(key));
+		for (String key : optionsMap.keySet()) {
+			if (optionsMap.get(key) != null) {
+				props.put(key, optionsMap.get(key));
 			}
 		}
 		return props;
@@ -610,7 +589,7 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	public void setProperties(Properties additionalProperties) throws Exception {
 		
 		Map<String, Object> props = propertiesToMap(additionalProperties);
-		properties.putAll(props);
+		optionsMap.putAll(props);
 	}
 
 	public OperationResult<SchemaChangeResult> execute() {
@@ -647,14 +626,14 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		
 		sb.append(")");
 		
-		if (properties.size() > 0) {
+		if (optionsMap.size() > 0) {
 			sb.append(" WITH ");
 			
-			Iterator<String> propIter = properties.keySet().iterator();
+			Iterator<String> propIter = optionsMap.keySet().iterator();
 			while(propIter.hasNext()) {
 				
 				String pKey = propIter.next();
-				Object pValue = properties.get(pKey);
+				Object pValue = optionsMap.get(pKey);
 				
 				if (pValue == null) {
 					continue;
@@ -685,11 +664,11 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		
 			sb.append(" WITH ");
 			
-			Iterator<String> propIter = properties.keySet().iterator();
+			Iterator<String> propIter = optionsMap.keySet().iterator();
 			while(propIter.hasNext()) {
 				
 				String pKey = propIter.next();
-				Object pValue = properties.get(pKey);
+				Object pValue = optionsMap.get(pKey);
 				
 				sb.append(pKey).append(" = ").append(pValue);
 				
@@ -776,9 +755,9 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		}
 	}
 	private void checkEmptyOptions() {
-		if (properties.size() == 0) {
+		if (optionsMap.size() == 0) {
 			// add a comment by default
-			properties.put("comment", "default");
+			optionsMap.put("comment", "default");
 		}
 	}
 

@@ -36,8 +36,8 @@ public class CqlFamilyFactory implements AstyanaxTypeFactory<Cluster> {
 			throw new RuntimeException("Cannot use CqlFamilyFactory with a connection pool type other than ConnectionPoolType.JAVA_DRIVER");
 		}
 
-		CqlKeyspaceImpl keyspace = new CqlKeyspaceImpl(ksName, asConfig, tracerFactory);
-		
+		CqlKeyspaceImpl keyspace = new CqlKeyspaceImpl(null, ksName, asConfig, tracerFactory);
+		System.out.println("Adding listener: " + keyspace);
 		((CqlConnectionPoolProxy<Cluster>)cp).addListener(keyspace);
 		
 		return keyspace;

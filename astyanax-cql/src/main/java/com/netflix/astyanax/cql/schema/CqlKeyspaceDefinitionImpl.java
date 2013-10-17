@@ -18,8 +18,6 @@ import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
-
 import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
@@ -40,7 +38,6 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 	private static final Logger Log = LoggerFactory.getLogger(CqlKeyspaceDefinitionImpl.class);
 	
 	private final Session session; 
-	private String keyspaceName; 
 	private boolean alterKeyspace; 
 	private final Map<String, Object> options = new HashMap<String, Object>();
 	private final List<CqlColumnFamilyDefinitionImpl> cfDefList = new ArrayList<CqlColumnFamilyDefinitionImpl>();
@@ -65,6 +62,7 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 		this.setName(row.getString("keyspace_name"));
 		this.setStrategyClass(row.getString("strategy_class"));
 		this.setStrategyOptionsMap(parseStrategyOptions(row.getString("strategy_options")));
+		this.options.put("durable_writes", row.getBool("durable_writes"));
 	}
 	
 	public CqlKeyspaceDefinitionImpl alterKeyspace() {
@@ -75,14 +73,13 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 
 	@Override
 	public CqlKeyspaceDefinitionImpl setName(String name) {
-		this.keyspaceName = name.toLowerCase(); 
-		this.options.put("name", keyspaceName);
+		this.options.put("name", name.toLowerCase());
 		return this;
 	}
 
 	@Override
 	public String getName() {
-		return keyspaceName;
+		return (String) options.get("name");
 	}
 
 	@Override
@@ -128,7 +125,7 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 	public List<ColumnFamilyDefinition> getColumnFamilyList() {
 		Query query = QueryBuilder.select().all()
 				.from("system", "schema_columnfamilies")
-				.where(eq("keyspace_name", keyspaceName));
+				.where(eq("keyspace_name", getName()));
 				
 		ResultSet rs = session.execute(query);
 		List<ColumnFamilyDefinition> cfDefs = new ArrayList<ColumnFamilyDefinition>();
@@ -143,38 +140,65 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 
 	@Override
 	public ColumnFamilyDefinition getColumnFamily(String columnFamilyName) {
-		return new CqlColumnFamilyDefinitionImpl(session, keyspaceName, columnFamilyName);
+		
+		Query query = QueryBuilder.select().all()
+				.from("system", "schema_columnfamilies")
+				.where(eq("keyspace_name", getName()))
+				.and(eq("columnfamily_name", columnFamilyName.toLowerCase()));
+
+		System.out.println("Query : " + query.toString());
+		Row row = session.execute(query).one();
+		
+		if (row == null) {
+			throw new RuntimeException("CF not found: " + columnFamilyName);
+		}
+		return new CqlColumnFamilyDefinitionImpl(session, row);
 	}
 
 	@Override
 	public KeyspaceDefinition addColumnFamily(ColumnFamilyDefinition cfDef) {
-		cfDefList.add((CqlColumnFamilyDefinitionImpl) cfDef);
+		CqlColumnFamilyDefinitionImpl cqlCfDef = (CqlColumnFamilyDefinitionImpl) cfDef; 
+		cqlCfDef.execute();
 		return this;
 	}
 
 	@Override
 	public Collection<String> getFieldNames() {
-		throw new NotImplementedException();
+		return options.keySet();
 	}
 
 	@Override
 	public Object getFieldValue(String name) {
-		throw new NotImplementedException();
+		return options.get(name);
 	}
 
 	@Override
 	public KeyspaceDefinition setFieldValue(String name, Object value) {
-		throw new NotImplementedException();
+		this.options.put(name, value);
+		return this;
 	}
 
 	@Override
 	public Collection<FieldMetadata> getFieldsMetadata() {
-		throw new NotImplementedException();
+		
+		List<FieldMetadata> list = new ArrayList<FieldMetadata>();
+		
+		for (String key : options.keySet()) {
+			Object value = options.get(key);
+			
+			Class<?> clazz = value.getClass();
+			
+			String name = key.toUpperCase();
+			String type = clazz.getSimpleName().toUpperCase();
+			boolean isContainer = Collection.class.isAssignableFrom(clazz) || Map.class.isAssignableFrom(clazz);
+			list.add(new FieldMetadata(name, type, isContainer));
+		}
+		return list;
 	}
 
 	@Override
-	public void setFields(Map<String, Object> options) {
-		throw new NotImplementedException();
+	public void setFields(Map<String, Object> optionsMap) {
+		checkOptionsMap(optionsMap);
 	}
 
 	@Override
@@ -213,7 +237,7 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 		
 		StringBuilder sb = new StringBuilder(cmd); 
 		sb.append(" KEYSPACE ");
-		sb.append(keyspaceName);
+		sb.append(getName());
 		
 		Map<String, Object> replicationOptions = (Map<String, Object>) options.get("replication");
 		appendReplicationOptions(sb, replicationOptions);
@@ -262,11 +286,14 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 			// this is an old style map. Convert to the new spec of CREATE KEYSPACE
 			options.clear();
 			
+			Map<String, Object> replicationOptions = new HashMap<String, Object>();
+			options.put("replication", replicationOptions);
+			
 			Map<String, Object> oldStrategyOptions = (Map<String, Object>) input.get("strategy_options");
-			this.setStrategyOptionsMap(oldStrategyOptions);
+			replicationOptions.putAll(oldStrategyOptions);
 
 			String strategyClass = (String) input.get("strategy_class");
-			this.setStrategyClass(strategyClass);
+			replicationOptions.put("class", strategyClass);
 		}
 	}
 	
@@ -311,7 +338,7 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 			if (entry.getValue() instanceof Map) {
 				addProperties(props, key, (Map<String, Object>) entry.getValue());
 			} else {
-				props.put(key, entry.getValue());
+				props.put(key, entry.getValue().toString());
 			}
 		}
 	}
@@ -338,5 +365,8 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 	}
 	
 
+	public String toString() {
+		return "CqlKeyspaceDefinition=[ " + options.toString() + " ]";
+	}
 
 }

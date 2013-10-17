@@ -5,6 +5,9 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.connectionpool.impl.Topology;
@@ -13,6 +16,8 @@ import com.netflix.astyanax.retry.RetryPolicy;
 
 public class CqlConnectionPoolProxy<T> implements ConnectionPool<T> {
 
+	private static final Logger Logger = LoggerFactory.getLogger(CqlConnectionPoolProxy.class);
+	
 	private AtomicReference<SeedHostListener> listener = new AtomicReference<SeedHostListener>(null);
 	private AtomicBoolean firstRound = new AtomicBoolean(true);
 	
@@ -26,7 +31,7 @@ public class CqlConnectionPoolProxy<T> implements ConnectionPool<T> {
 	public void setHosts(Collection<Host> hosts) {
 		
 		if (firstRound.get() && listener.get() != null) {
-			System.out.println("Setting hosts");
+			Logger.info("Setting hosts for listener: " + listener.getClass().getName() +  "   " + hosts);
 			listener.get().setHosts(hosts);
 		}
 	}

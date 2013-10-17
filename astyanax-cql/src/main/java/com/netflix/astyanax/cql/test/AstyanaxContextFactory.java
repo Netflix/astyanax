@@ -21,6 +21,7 @@ import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
 import com.netflix.astyanax.cql.CqlFamilyFactory;
 import com.netflix.astyanax.cql.test.ClusterConfiguration.Driver;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
+import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 
 public class AstyanaxContextFactory {
 
@@ -76,19 +77,24 @@ public class AstyanaxContextFactory {
     }
     
     public static AstyanaxContext<Keyspace> getKeyspace() {
-    	return getKeyspace(TheDriver); 
+    	return getKeyspace(TEST_KEYSPACE_NAME, TheDriver); 
     }
 
-    public static AstyanaxContext<Keyspace> getKeyspace(Driver driver) {
-    	if (driver != Driver.JAVA_DRIVER) {
-    		throw new NotImplementedException();
+    public static AstyanaxContext<Keyspace> getKeyspace(String keyspaceName) {
+    	return getKeyspace(keyspaceName, TheDriver); 
+    }
+
+    public static AstyanaxContext<Keyspace> getKeyspace(String keyspaceName, Driver driver) {
+    	if (driver == Driver.THRIFT) {
+        	return keyspaceWithThriftDriver(keyspaceName); 
+    	} else {
+    		return keyspaceWithJavaDriver(keyspaceName);
     	}
-    	return keyspaceWithJavaDriver(); 
     }
     
-    private static AstyanaxContext<Keyspace> keyspaceWithJavaDriver() {
+    private static AstyanaxContext<Keyspace> keyspaceWithJavaDriver(String keyspaceName) {
 
-    	final String SEEDS = "localhost:9160";
+    	final String SEEDS = "localhost:9042";
 
 		Supplier<List<Host>> HostSupplier = new Supplier<List<Host>>() {
 
@@ -101,7 +107,7 @@ public class AstyanaxContextFactory {
     	
     	AstyanaxContext<Keyspace> context = new AstyanaxContext.Builder()
                 .forCluster(TEST_CLUSTER_NAME)
-                .forKeyspace(TEST_KEYSPACE_NAME)
+                .forKeyspace(keyspaceName)
                 .withAstyanaxConfiguration(
                         new AstyanaxConfigurationImpl()
                                 .setDiscoveryType(NodeDiscoveryType.DISCOVERY_SERVICE)
@@ -122,4 +128,42 @@ public class AstyanaxContextFactory {
 
     	return context;
     }
+    
+    private static AstyanaxContext<Keyspace> keyspaceWithThriftDriver(String keyspaceName) {
+
+    	final String SEEDS = "localhost:9160";
+
+		Supplier<List<Host>> HostSupplier = new Supplier<List<Host>>() {
+
+			@Override
+			public List<Host> get() {
+				Host host = new Host(SEEDS, -1);
+				return Collections.singletonList(host);
+			}
+    	};
+    	
+    	AstyanaxContext<Keyspace> context = new AstyanaxContext.Builder()
+                .forCluster(TEST_CLUSTER_NAME)
+                .forKeyspace(keyspaceName)
+                .withAstyanaxConfiguration(
+                        new AstyanaxConfigurationImpl()
+                                .setDiscoveryType(NodeDiscoveryType.DISCOVERY_SERVICE)
+                                .setConnectionPoolType(ConnectionPoolType.ROUND_ROBIN)
+                                .setDiscoveryDelayInSeconds(60000))
+                .withConnectionPoolConfiguration(
+                        new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME
+                                + "_" + TEST_KEYSPACE_NAME)
+                                .setSocketTimeout(30000)
+                                .setMaxTimeoutWhenExhausted(2000)
+                                .setMaxConnsPerHost(20)
+                                .setInitConnsPerHost(10)
+                                .setSeeds(SEEDS)
+                                )
+                .withHostSupplier(HostSupplier)
+                .withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
+                .buildKeyspace(ThriftFamilyFactory.getInstance());
+
+    	return context;
+    }
+
 }

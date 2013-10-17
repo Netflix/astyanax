@@ -70,7 +70,7 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostLis
 	
 	@Override
 	public String describeSnitch() throws ConnectionException {
-		throw new RuntimeException("describe snitch is not a CQL cmd");
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
@@ -139,7 +139,7 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostLis
 
 	@Override
 	public KeyspaceDefinition describeKeyspace(String ksName) throws ConnectionException {
-		return new CqlKeyspaceImpl(ksName, astyanaxConfig, tracerFactory).describeKeyspace();
+		return new CqlKeyspaceImpl(session, ksName, astyanaxConfig, tracerFactory).describeKeyspace();
 	}
 
 	@Override
@@ -216,7 +216,11 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostLis
 	
 	@Override
 	public Properties getColumnFamilyProperties(String keyspace, String columnfamilyName) throws ConnectionException {
-		return new CqlColumnFamilyDefinitionImpl(session, keyspace, columnfamilyName).getProperties();
+		try {
+			return new CqlKeyspaceDefinitionImpl(session).setName(keyspace).getColumnFamily(columnfamilyName).getProperties();
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	@Override

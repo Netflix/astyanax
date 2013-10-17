@@ -1,13 +1,13 @@
 package com.netflix.astyanax.cql.schema;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.cassandra.db.marshal.UTF8Type;
-
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import com.datastax.driver.core.Row;
 import com.netflix.astyanax.cql.util.CqlTypeMapping;
@@ -16,7 +16,7 @@ import com.netflix.astyanax.ddl.FieldMetadata;
 
 public class CqlColumnDefinitionImpl implements ColumnDefinition {
 
-	Map<String, String> options = new HashMap<String, String>();
+	Map<String, Object> options = new HashMap<String, Object>();
 
 	public CqlColumnDefinitionImpl() {
 		
@@ -24,7 +24,6 @@ public class CqlColumnDefinitionImpl implements ColumnDefinition {
 	
 	public CqlColumnDefinitionImpl(Row row) {
 		this.setName(row.getString("column_name"));
-		this.setIndex(row.getString("index_name"), row.getString("index_type"));
 		this.setValidationClass(row.getString("validator"));
 	}
 	
@@ -52,29 +51,27 @@ public class CqlColumnDefinitionImpl implements ColumnDefinition {
 
 	@Override
 	public ColumnDefinition setIndex(String name, String type) {
-		options.put("index_name", name);
-		options.put("index_type", type);
-		return this;
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	public ColumnDefinition setKeysIndex(String name) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	public ColumnDefinition setKeysIndex() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	public ColumnDefinition setIndexWithType(String type) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	public String getName() {
-		return options.get("column_name");
+		return (String) options.get("column_name");
 	}
 
 	@Override
@@ -84,17 +81,17 @@ public class CqlColumnDefinitionImpl implements ColumnDefinition {
 
 	@Override
 	public String getValidationClass() {
-		return options.get("validator");
+		return (String) options.get("validator");
 	}
 
 	@Override
 	public String getIndexName() {
-		return options.get("index_name");
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	public String getIndexType() {
-		return options.get("index_type");
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
@@ -104,12 +101,16 @@ public class CqlColumnDefinitionImpl implements ColumnDefinition {
 
 	@Override
 	public Map<String, String> getOptions() {
-		return options;
+		Map<String, String> result = new HashMap<String, String>();
+		for (String key : options.keySet()) {
+			result.put(key, options.get(key).toString());
+		}
+		return result;
 	}
 
 	@Override
 	public String getOption(String name, String defaultValue) {
-		String value = options.get(name);
+		String value = (String) options.get(name);
 		if (value == null) {
 			return defaultValue;
 		} else {
@@ -118,40 +119,54 @@ public class CqlColumnDefinitionImpl implements ColumnDefinition {
 	}
 
 	@Override
-	public ColumnDefinition setOptions(Map<String, String> index_options) {
-		this.options.putAll(index_options);
+	public ColumnDefinition setOptions(Map<String, String> setOptions) {
+		this.options.putAll(setOptions);
 		return this;
 	}
 
 	@Override
 	public String setOption(String name, String value) {
 		this.options.put(name, value);
-		return options.get(name);
+		return options.get(name).toString();
 	}
 
 	@Override
 	public Collection<String> getFieldNames() {
-		throw new NotImplementedException();
+		return options.keySet();
 	}
 
 	@Override
 	public Collection<FieldMetadata> getFieldsMetadata() {
-		throw new NotImplementedException();
+		
+		List<FieldMetadata> list = new ArrayList<FieldMetadata>();
+		
+		for (String key : options.keySet()) {
+			Object value = options.get(key);
+			Class<?> clazz = value.getClass();
+			
+			String name = key.toUpperCase();
+			String type = clazz.getSimpleName().toUpperCase();
+			boolean isContainer = Collection.class.isAssignableFrom(clazz) || Map.class.isAssignableFrom(clazz);
+			list.add(new FieldMetadata(name, type, isContainer));
+		}
+		return list;
 	}
 
 	@Override
 	public Object getFieldValue(String name) {
-		throw new NotImplementedException();
+		return options.get(name);
 	}
 
 	@Override
 	public ColumnDefinition setFieldValue(String name, Object value) {
-		throw new NotImplementedException();
+		options.put(name, String.valueOf(value));
+		return this;
 	}
 
 	@Override
 	public ColumnDefinition setFields(Map<String, Object> fields) {
-		throw new NotImplementedException();
+		options.putAll(fields);
+		return this;
 	}
 
 	public String getCqlType() {

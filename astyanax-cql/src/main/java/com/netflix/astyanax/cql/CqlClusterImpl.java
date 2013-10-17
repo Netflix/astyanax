@@ -56,7 +56,6 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostLis
 	@Override
 	public String getVersion() throws ConnectionException {
 		
-		
 		Query query = QueryBuilder.select("release_version")
 								  .from("system", "local")
 								  .where(eq("key", "local"));
@@ -86,7 +85,6 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostLis
 	public Map<String, List<String>> describeSchemaVersions() throws ConnectionException {
 		return new CqlSchemaVersionReader(session).exec();
 	}
-
 
 	@Override
 	public KeyspaceDefinition makeKeyspaceDefinition() {
@@ -129,6 +127,10 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostLis
 		List<KeyspaceDefinition> ksDefs = new ArrayList<KeyspaceDefinition>();
 		try {
 			for(Row row : session.execute(query).all()) {
+				String keyspaceName = row.getString("keyspace_name");
+				if (keyspaceName.equals("system") || keyspaceName.startsWith("system_")) {
+					continue;
+				}
 				ksDefs.add(new CqlKeyspaceDefinitionImpl(session, row));
 			}
 			return ksDefs;
@@ -149,8 +151,7 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostLis
 
 	@Override
 	public OperationResult<SchemaChangeResult> dropKeyspace(String keyspaceName) throws ConnectionException {
-		return new CqlOperationResultImpl<SchemaChangeResult>(
-				session.execute("DROP KEYSPACE " + keyspaceName.toLowerCase()), null);
+		return new CqlKeyspaceImpl(session, keyspaceName.toLowerCase(), astyanaxConfig, tracerFactory).dropKeyspace();
 	}
 
 	@Override
@@ -245,9 +246,7 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostLis
 
 	@Override
 	public OperationResult<SchemaChangeResult> dropColumnFamily(String keyspaceName, String columnFamilyName) throws ConnectionException {
-		
-		return new CqlOperationResultImpl<SchemaChangeResult>(
-				session.execute("DROP TABLE " + keyspaceName + "." + columnFamilyName), null);
+		return new CqlKeyspaceImpl(session, keyspaceName, astyanaxConfig, tracerFactory).dropColumnFamily(columnFamilyName);
 	}
 
 	@Override

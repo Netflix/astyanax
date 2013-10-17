@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.regex.Pattern;
 import java.util.Properties;
 
 import org.apache.cassandra.cql3.CQL3Type;
@@ -30,11 +31,14 @@ import com.google.common.collect.Maps;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.cql.CqlFamilyFactory;
 import com.netflix.astyanax.cql.CqlOperationResultImpl;
+import com.netflix.astyanax.cql.util.CqlTypeMapping;
 import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.FieldMetadata;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
 import com.netflix.astyanax.model.ColumnFamily;
+import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
+import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer.ComponentSerializer;
 
 
 public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
@@ -48,6 +52,8 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	
 	private List<ColumnDefinition> colDefList = new ArrayList<ColumnDefinition>();
 	private List<ColumnDefinition> primaryKeyList = new ArrayList<ColumnDefinition>();
+	
+	private AnnotatedCompositeSerializer<?> compositeSerializer = null; 
 	
 	private ByteBuffer keyAlias; 
 	
@@ -94,6 +100,9 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		optionsMap.put("comparator_type", columnFamily.getColumnSerializer().getComparatorType().getClassName());
 		optionsMap.put("default_validation_class", columnFamily.getDefaultValueSerializer().getComparatorType().getClassName());
 		
+		if (columnFamily.getColumnSerializer() instanceof AnnotatedCompositeSerializer) {
+			compositeSerializer = (AnnotatedCompositeSerializer<?>) columnFamily.getColumnSerializer();
+		}
 		initFromMap(options);
 	}
 	
@@ -126,13 +135,47 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 			
 			ColumnDefinition key = new CqlColumnDefinitionImpl().setName("key").setValidationClass(keyClass);
 			primaryKeyList.add(key);
-			ColumnDefinition column1 = new CqlColumnDefinitionImpl().setName("column1").setValidationClass(comparatorClass);
-			primaryKeyList.add(column1);
+			
+			if (compositeSerializer != null) {
+				processCompositeComparator();
+			} else if (comparatorClass.contains("CompositeType")) {
+				processCompositeComparatorSpec(comparatorClass);
+			} else if (comparatorClass.equals(AnnotatedCompositeSerializer.class.getName())) {
+			} else {
+				ColumnDefinition column1 = new CqlColumnDefinitionImpl().setName("column1").setValidationClass(comparatorClass);
+				primaryKeyList.add(column1);
+			}
 
 			this.makeColumnDefinition().setName("value").setValidationClass(dataValidationClass);
 
 		} else {
 			throw new NotImplementedException();
+		}
+	}
+	
+	private void processCompositeComparator() {
+		
+		int colIndex = 1;
+		for (ComponentSerializer<?> componentSerializer : compositeSerializer.getComponents()) {
+			String type = CqlTypeMapping.getCqlType(componentSerializer.getSerializer().getComparatorType().getTypeName());
+			ColumnDefinition column = new CqlColumnDefinitionImpl().setName("column" + colIndex++).setValidationClass(type);
+			primaryKeyList.add(column);
+		}
+	}
+	
+	private void processCompositeComparatorSpec(String comparatorSpec) {
+		// e.g  CompositeType(UTF8Type, LongType, UTF8Type)
+		
+		String regex = "[\\(,\\)]";
+		Pattern pattern = Pattern.compile(regex);
+		String[] parts = pattern.split(comparatorSpec);
+
+		int colIndex = 1;
+		for (int i=1; i<parts.length; i++) {
+			String componentTypeString = parts[i].trim();
+			String type = CqlTypeMapping.getCqlType(componentTypeString);
+			ColumnDefinition column = new CqlColumnDefinitionImpl().setName("column" + colIndex++).setValidationClass(type);
+			primaryKeyList.add(column);
 		}
 	}
 	
@@ -508,6 +551,11 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	public List<ColumnDefinition> getColumnDefinitionList() {
 		if (colDefList.isEmpty() && initedViaResultSet) {
 			
+			System.out.println(" " + optionsMap.get("column_aliases"));
+			System.out.println(" " + optionsMap.get("comparator"));
+			
+			processColumnComparator();
+			
 			Query query = QueryBuilder.select().from("system", "schema_columns")
 			.where(eq("keyspace_name", keyspaceName))
 			.and(eq("columnfamily_name", cfName));
@@ -518,6 +566,33 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 			}
 		}
 		return colDefList;
+	}
+	
+	private void processColumnComparator() {
+		
+		String nameRegex = "[\\[\",\\]]";
+		Pattern namePattern = Pattern.compile(nameRegex);
+		String[] name_parts = namePattern.split((String)optionsMap.get("column_aliases"));
+		
+		String typeRegex = "[\\(,\\)]";
+		Pattern typePattern = Pattern.compile(typeRegex);
+		String[] type_parts = typePattern.split((String)optionsMap.get("comparator"));
+		
+		String[] name_parts_clean = new String[type_parts.length];
+		int index = 1;
+		for (int i=0; i<name_parts.length; i++) {
+			String name = name_parts[i].trim();
+			if (name.length() > 0) {
+				name_parts_clean[index++] = name;
+			}
+		}
+		
+		for (int i=1; i<type_parts.length-1; i++) {
+
+			CqlColumnDefinitionImpl colDef = new CqlColumnDefinitionImpl();
+			colDef.setName(name_parts_clean[i]).setValidationClass(type_parts[i]);
+			colDefList.add(colDef);
+		}
 	}
 
 	@Override

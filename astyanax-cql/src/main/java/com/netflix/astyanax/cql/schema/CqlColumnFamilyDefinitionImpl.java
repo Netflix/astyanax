@@ -11,15 +11,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.regex.Pattern;
 import java.util.Properties;
+import java.util.regex.Pattern;
 
-import org.apache.cassandra.cql3.CQL3Type;
 import org.apache.commons.lang.StringUtils;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
@@ -29,7 +26,6 @@ import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.netflix.astyanax.connectionpool.OperationResult;
-import com.netflix.astyanax.cql.CqlFamilyFactory;
 import com.netflix.astyanax.cql.CqlOperationResultImpl;
 import com.netflix.astyanax.cql.util.CqlTypeMapping;
 import com.netflix.astyanax.ddl.ColumnDefinition;
@@ -49,17 +45,12 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	private String keyspaceName;
 	
 	private Map<String, Object> optionsMap = new HashMap<String, Object>();
-	
 	private List<ColumnDefinition> colDefList = new ArrayList<ColumnDefinition>();
 	private List<ColumnDefinition> primaryKeyList = new ArrayList<ColumnDefinition>();
 	
 	private AnnotatedCompositeSerializer<?> compositeSerializer = null; 
 	
-	private ByteBuffer keyAlias; 
-	
 	private boolean alterTable = false;
-	
-	private boolean initedViaResultSet = false; 
 
 	public CqlColumnFamilyDefinitionImpl(Session session) {
 		this.session = session;
@@ -121,37 +112,9 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		}
 		
 		this.optionsMap.putAll(options);
-
-		String keyClass = (String) optionsMap.remove("key_validation_class");
-		keyClass = (keyClass == null) ?	keyClass = "blob" : keyClass;
-		
-		String comparatorClass = (String) optionsMap.remove("comparator_type");
-		comparatorClass = (comparatorClass == null) ?	comparatorClass = "blob" : comparatorClass;
-		
-		String dataValidationClass = (String) optionsMap.remove("default_validation_class");
-		dataValidationClass = (dataValidationClass == null) ?	dataValidationClass = "blob" : dataValidationClass;
-
-		if (CqlFamilyFactory.OldStyleThriftMode()) {
-			
-			ColumnDefinition key = new CqlColumnDefinitionImpl().setName("key").setValidationClass(keyClass);
-			primaryKeyList.add(key);
-			
-			if (compositeSerializer != null) {
-				processCompositeComparator();
-			} else if (comparatorClass.contains("CompositeType")) {
-				processCompositeComparatorSpec(comparatorClass);
-			} else if (comparatorClass.equals(AnnotatedCompositeSerializer.class.getName())) {
-			} else {
-				ColumnDefinition column1 = new CqlColumnDefinitionImpl().setName("column1").setValidationClass(comparatorClass);
-				primaryKeyList.add(column1);
-			}
-
-			this.makeColumnDefinition().setName("value").setValidationClass(dataValidationClass);
-
-		} else {
-			throw new NotImplementedException();
-		}
 	}
+	
+
 	
 	private void processCompositeComparator() {
 		
@@ -186,7 +149,6 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		}
 
 		this.session = session;
-		initedViaResultSet = true; 
 
 		this.keyspaceName = row.getString("keyspace_name");
 		this.cfName = row.getString("columnfamily_name");
@@ -199,16 +161,16 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		optionsMap.put("comment", row.getString("comment")); 
 		optionsMap.put("compaction_strategy_class", row.getString("compaction_strategy_class")); 
 		optionsMap.put("compaction_strategy_options", row.getString("compaction_strategy_options")); 
-		optionsMap.put("comparator", row.getString("comparator")); 
+		optionsMap.put("comparator_type", row.getString("comparator")); 
 		optionsMap.put("compression_parameters", row.getString("compression_parameters")); 
 		optionsMap.put("default_read_consistency", row.getString("default_read_consistency")); 
-		optionsMap.put("default_validator", row.getString("default_validator")); 
+		optionsMap.put("default_validation_class", row.getString("default_validator")); 
 		optionsMap.put("default_write_consistency", row.getString("default_write_consistency")); 
 		optionsMap.put("gc_grace_seconds", row.getInt("gc_grace_seconds")); 
 		optionsMap.put("id", row.getInt("id")); 
 		optionsMap.put("key_alias", row.getString("key_alias")); 
 		optionsMap.put("key_aliases", row.getString("key_aliases")); 
-		optionsMap.put("key_validator", row.getString("key_validator")); 
+		optionsMap.put("key_validation_class", row.getString("key_validator")); 
 		optionsMap.put("local_read_repair_chance", row.getDouble("local_read_repair_chance")); 
 		optionsMap.put("max_compaction_threshold", row.getInt("max_compaction_threshold")); 
 		optionsMap.put("min_compaction_threshold", row.getInt("min_compaction_threshold")); 
@@ -250,47 +212,47 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	@Override
 	@Deprecated
 	public ColumnFamilyDefinition setMemtableFlushAfterMins(Integer value) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	@Deprecated
 	public Integer getMemtableFlushAfterMins() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	@Deprecated
 	public ColumnFamilyDefinition setMemtableOperationsInMillions(Double value) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	@Deprecated
 	public Double getMemtableOperationsInMillions() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	@Deprecated
 	public ColumnFamilyDefinition setMemtableThroughputInMb(Integer value) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	@Deprecated
 	public Integer getMemtableThroughputInMb() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	public ColumnFamilyDefinition setMergeShardsChance(Double value) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	public Double getMergeShardsChance() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
@@ -417,53 +379,54 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 
 	@Override
 	public ColumnFamilyDefinition setRowCacheProvider(String value) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	public String getRowCacheProvider() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	public ColumnFamilyDefinition setRowCacheSavePeriodInSeconds(Integer value) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	public Integer getRowCacheSavePeriodInSeconds() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	public ColumnFamilyDefinition setRowCacheSize(Double size) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	public Double getRowCacheSize() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	public ColumnFamilyDefinition setComparatorType(String value) {
-		optionsMap.put("comparator", value);
+		optionsMap.put("comparator_type", value);
 		return this;
 	}
 
 	@Override
 	public String getComparatorType() {
-		return (String) optionsMap.get("comparator");
+		return (String) optionsMap.get("comparator_type");
 	}
 
 	@Override
 	public ColumnFamilyDefinition setDefaultValidationClass(String value) {
-		throw new NotImplementedException();
+		optionsMap.put("default_validation_class", value);
+		return this;
 	}
 
 	@Override
 	public String getDefaultValidationClass() {
-		throw new NotImplementedException();
+		return (String) optionsMap.get("default_validation_class");
 	}
 
 	@Override
@@ -479,80 +442,48 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 
 	@Override
 	public ColumnFamilyDefinition setKeyAlias(ByteBuffer alias) {
-
-		keyAlias = alias;
-		setKeyAlias(CQL3Type.Native.TEXT.getType().getString(alias));
-		
-		return this;
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 	
-	private void setKeyAlias(String keyAlias) {
-		// TODO: won't work for composite columns, fix this!
-		ColumnDefinition primaryKeyCol; 
-
-		if (primaryKeyList.size() > 0) {
-			primaryKeyCol = primaryKeyList.get(0); 
-		} else {
-			primaryKeyCol = new CqlColumnDefinitionImpl();
-			primaryKeyList.add(primaryKeyCol);
-		}
-				
-		primaryKeyCol.setName(keyAlias);
-	}
-
 	@Override
 	public ByteBuffer getKeyAlias() {
-		return keyAlias;
+		return null;
 	}
 
 	@Override
 	public ColumnFamilyDefinition setKeyCacheSavePeriodInSeconds(Integer value) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	public Integer getKeyCacheSavePeriodInSeconds() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	public ColumnFamilyDefinition setKeyCacheSize(Double keyCacheSize) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	public Double getKeyCacheSize() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override
 	public ColumnFamilyDefinition setKeyValidationClass(String keyValidationClass) {
-		// nothing to do here.
 		optionsMap.put("key_validation_class", keyValidationClass);
 		return this;
 	}
 	
-	private void addToPartitionKey(String columnName, String validationClass) {
-		ColumnDefinition partitionKeyCol = new CqlColumnDefinitionImpl().setName(columnName);
-		primaryKeyList.add(partitionKeyCol);
-	}
-
 	@Override
 	public String getKeyValidationClass() {
-		// TOOD: won't work for composite columns, fix this!
-		if (primaryKeyList.size() > 0) {
-			return primaryKeyList.get(0).getValidationClass();
-		} else {
-			return null;
-		}
+		return (String) optionsMap.get("key_validation_class");
 	}
 
 	@Override
 	public List<ColumnDefinition> getColumnDefinitionList() {
-		if (colDefList.isEmpty() && initedViaResultSet) {
-			
-			System.out.println(" " + optionsMap.get("column_aliases"));
-			System.out.println(" " + optionsMap.get("comparator"));
+		if (colDefList.isEmpty()) {
 			
 			processColumnComparator();
 			
@@ -615,17 +546,18 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 
 	@Override
 	public Collection<String> getFieldNames() {
-		throw new NotImplementedException();
+		return optionsMap.keySet();
 	}
 
 	@Override
 	public Object getFieldValue(String name) {
-		throw new NotImplementedException();
+		return optionsMap.get(name);
 	}
 
 	@Override
 	public ColumnFamilyDefinition setFieldValue(String name, Object value) {
-		throw new NotImplementedException();
+		optionsMap.put(name, value);
+		return this;
 	}
 
 	@Override
@@ -641,12 +573,24 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 
 	@Override
 	public Collection<FieldMetadata> getFieldsMetadata() {
-		throw new NotImplementedException();
+		List<FieldMetadata> list = new ArrayList<FieldMetadata>();
+		
+		for (String key : optionsMap.keySet()) {
+			Object value = optionsMap.get(key);
+			
+			Class<?> clazz = value.getClass();
+			
+			String name = key.toUpperCase();
+			String type = clazz.getSimpleName().toUpperCase();
+			boolean isContainer = Collection.class.isAssignableFrom(clazz) || Map.class.isAssignableFrom(clazz);
+			list.add(new FieldMetadata(name, type, isContainer));
+		}
+		return list;
 	}
 
 	@Override
 	public void setFields(Map<String, Object> options) {
-		throw new NotImplementedException();
+		optionsMap.putAll(options);
 	}
 
 	@Override
@@ -667,7 +611,36 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		optionsMap.putAll(props);
 	}
 
+	private void createColumnDefinitions() {
+
+		String keyClass = (String) optionsMap.remove("key_validation_class");
+		keyClass = (keyClass == null) ?	keyClass = "blob" : keyClass;
+		
+		String comparatorClass = (String) optionsMap.remove("comparator_type");
+		comparatorClass = (comparatorClass == null) ?	comparatorClass = "blob" : comparatorClass;
+		
+		String dataValidationClass = (String) optionsMap.remove("default_validation_class");
+		dataValidationClass = (dataValidationClass == null) ?	dataValidationClass = "blob" : dataValidationClass;
+
+		ColumnDefinition key = new CqlColumnDefinitionImpl().setName("key").setValidationClass(keyClass);
+		primaryKeyList.add(key);
+
+		if (compositeSerializer != null) {
+			processCompositeComparator();
+		} else if (comparatorClass.contains("CompositeType")) {
+			processCompositeComparatorSpec(comparatorClass);
+		} else if (comparatorClass.equals(AnnotatedCompositeSerializer.class.getName())) {
+		} else {
+			ColumnDefinition column1 = new CqlColumnDefinitionImpl().setName("column1").setValidationClass(comparatorClass);
+			primaryKeyList.add(column1);
+		}
+
+		this.makeColumnDefinition().setName("value").setValidationClass(dataValidationClass);
+	}
+	
 	public OperationResult<SchemaChangeResult> execute() {
+		
+		createColumnDefinitions();
 		
 		String query = (alterTable) ? getUpdateQuery() : getCreateQuery();
 		ResultSet rs = session.execute(query);
@@ -827,11 +800,4 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 			throw new RuntimeException(e);
 		}
 	}
-	private void checkEmptyOptions() {
-		if (optionsMap.size() == 0) {
-			// add a comment by default
-			optionsMap.put("comment", "default");
-		}
-	}
-
 }

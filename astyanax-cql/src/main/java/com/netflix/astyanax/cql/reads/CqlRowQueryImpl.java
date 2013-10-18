@@ -172,8 +172,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 	@Override
 	public RowCopier<K, C> copyTo(ColumnFamily<K, C> columnFamily, K rowKey) {
-		// TODO: we should probably do this. This may not take all use cases into account e.g composite cols. But we should review this.
-		throw new NotImplementedException();
+		return new CqlRowCopier<K,C>(columnFamily, rowKey, this, ksContext);
 	}
 
 	@Override
@@ -194,19 +193,21 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 		@Override
 		public OperationResult<ColumnList<C>> execute() throws ConnectionException {
 
-			PreparedStatement pStmt = 
-					StatementCache.getInstance().getStatement(CqlRowQueryImpl.class.getName().hashCode(), new Callable<PreparedStatement>() {
+//			PreparedStatement pStmt = 
+//					StatementCache.getInstance().getStatement(CqlRowQueryImpl.class.getName().hashCode(), new Callable<PreparedStatement>() {
+//
+//						@Override
+//						public PreparedStatement call() throws Exception {
+//							String query = "select * from astyanaxperf.test1 where key=?;";
+//							return session.prepare(query);
+//						}
+//					});
+//
+//			BoundStatement bStmt = pStmt.bind(rowKey);
+//			bStmt.setConsistencyLevel(cl);
 
-						@Override
-						public PreparedStatement call() throws Exception {
-							String query = "select * from astyanaxperf.test1 where key=?;";
-							return session.prepare(query);
-						}
-					});
-
-			BoundStatement bStmt = pStmt.bind(rowKey);
-			bStmt.setConsistencyLevel(cl);
-			ResultSet resultSet = session.execute(bStmt);
+			Query query = getQuery();
+			ResultSet resultSet = session.execute(query);
 			ColumnList<C> result = parseResultSet(resultSet);
 			OperationResult<ColumnList<C>> opResult = new CqlOperationResultImpl<ColumnList<C>>(resultSet, result);
 			return opResult;

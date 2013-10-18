@@ -72,7 +72,11 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 		this.tracerFactory = tracerFactory;
 		this.ksContext = new KeyspaceContext();
 	}
-
+	
+	public CqlKeyspaceImpl(KeyspaceContext ksContext) {
+		this(ksContext.getSession(), ksContext.getKeyspace(), ksContext.getConfig(), ksContext.getTracerFactory());
+	}
+	
 	@Override
 	public AstyanaxConfiguration getConfig() {
 		return astyanaxConfig;
@@ -337,6 +341,9 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 		}
 		public String getKeyspace() {
 			return keyspaceName;
+		}
+		public AstyanaxConfiguration getConfig() {
+			return astyanaxConfig;
 		}
 		public KeyspaceTracerFactory getTracerFactory() {
 			return tracerFactory;

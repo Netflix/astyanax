@@ -4,15 +4,19 @@ import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.UUID;
 
+import org.apache.cassandra.cql3.CQL3Type;
+
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import com.datastax.driver.core.ColumnDefinitions.Definition;
 import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.Row;
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.cql.util.CqlTypeMapping;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.serializers.BooleanSerializer;
+import com.netflix.astyanax.serializers.ComparatorType;
 import com.netflix.astyanax.serializers.DateSerializer;
 import com.netflix.astyanax.serializers.DoubleSerializer;
 import com.netflix.astyanax.serializers.FloatSerializer;
@@ -27,6 +31,8 @@ public class CqlColumnImpl<C> implements Column<C> {
 	private Row row; 
 	private C columnName; 
 	private int index;
+	
+	private ComparatorType cType;
 	
 	private boolean isBlob = false;
 	
@@ -46,7 +52,7 @@ public class CqlColumnImpl<C> implements Column<C> {
 	public C getName() {
 		return columnName;
 	}
-
+	
 	@Override
 	public ByteBuffer getRawName() {
 		return StringSerializer.get().toByteBuffer(String.valueOf(columnName));
@@ -150,5 +156,34 @@ public class CqlColumnImpl<C> implements Column<C> {
 	@Override
 	public boolean hasValue() {
 		return (row != null) && !(row.isNull(index));
+	}
+	
+
+	public Object getGenericValue() {
+		ComparatorType cType = getComparatorType();
+		return CqlTypeMapping.getDynamicColumn(row, cType.getSerializer(), index);
+	}
+	
+	public ComparatorType getComparatorType() {
+		
+		if (cType != null) {
+			return cType;
+		}
+		
+		// Lazy init
+		DataType type = row.getColumnDefinitions().getType(index);
+		if (type.isCollection()) {
+			throw new RuntimeException("This operation does not work for collection objects");
+		}
+		String typeString = (type.getName().name()).toUpperCase();
+		CQL3Type cql3Type = CQL3Type.Native.valueOf(typeString);
+		
+		cType = CqlTypeMapping.getComparatorType(cql3Type);
+		
+		if (cType == null) {
+			throw new RuntimeException("Cannot find comparator type for CQL3Type: " + cql3Type + ", DataType: " + type.getName());
+		}
+		
+		return cType;
 	}
 }

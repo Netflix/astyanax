@@ -18,6 +18,8 @@ public class CqlTypeMapping {
 
 	private static Map<String, CQL3Type> directTypeMap = new HashMap<String, CQL3Type>();
 	private static Map<String, CQL3Type> reverseTypeMap = new HashMap<String, CQL3Type>();
+	
+	private static Map<CQL3Type, ComparatorType> cql3ToComparatorTypeMap = new HashMap<CQL3Type, ComparatorType>();
 		
 	static {
 		
@@ -28,6 +30,23 @@ public class CqlTypeMapping {
 				reverseTypeMap.put(cqlType.getType().getClass().getName(), cqlType);
 			}
 		}
+		
+		cql3ToComparatorTypeMap.put(CQL3Type.Native.ASCII,     ComparatorType.ASCIITYPE);
+		cql3ToComparatorTypeMap.put(CQL3Type.Native.BIGINT,    ComparatorType.INTEGERTYPE);
+		cql3ToComparatorTypeMap.put(CQL3Type.Native.BLOB,      ComparatorType.BYTESTYPE);    
+		cql3ToComparatorTypeMap.put(CQL3Type.Native.BOOLEAN,   ComparatorType.BOOLEANTYPE);  
+		cql3ToComparatorTypeMap.put(CQL3Type.Native.COUNTER,   ComparatorType.COUNTERTYPE); 
+		cql3ToComparatorTypeMap.put(CQL3Type.Native.DECIMAL,   ComparatorType.DECIMALTYPE);
+		cql3ToComparatorTypeMap.put(CQL3Type.Native.DOUBLE,    ComparatorType.DOUBLETYPE);   
+		cql3ToComparatorTypeMap.put(CQL3Type.Native.FLOAT,     ComparatorType.FLOATTYPE);   
+		cql3ToComparatorTypeMap.put(CQL3Type.Native.INET,      null);    
+		cql3ToComparatorTypeMap.put(CQL3Type.Native.INT,       ComparatorType.INT32TYPE);
+		cql3ToComparatorTypeMap.put(CQL3Type.Native.TEXT,      ComparatorType.UTF8TYPE);   
+		cql3ToComparatorTypeMap.put(CQL3Type.Native.TIMESTAMP, ComparatorType.DATETYPE);
+		cql3ToComparatorTypeMap.put(CQL3Type.Native.UUID,      ComparatorType.UUIDTYPE);     
+		cql3ToComparatorTypeMap.put(CQL3Type.Native.VARCHAR,   ComparatorType.UTF8TYPE); 
+		cql3ToComparatorTypeMap.put(CQL3Type.Native.VARINT,    ComparatorType.INTEGERTYPE);   
+		cql3ToComparatorTypeMap.put(CQL3Type.Native.TIMEUUID,  ComparatorType.TIMEUUIDTYPE); 
 	}
 		
 	public static String getCqlType(String typeString) {
@@ -41,6 +60,9 @@ public class CqlTypeMapping {
 		return type.toString();
 	}
 	
+	public static ComparatorType getComparatorType(CQL3Type cqlType) {
+		return cql3ToComparatorTypeMap.get(cqlType);
+	}
 	
 	public static <T> Object getDynamicColumn(Row row, Serializer<T> serializer) {
 		int numCols = row.getColumnDefinitions().size();

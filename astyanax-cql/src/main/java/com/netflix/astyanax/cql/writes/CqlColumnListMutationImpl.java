@@ -133,6 +133,25 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 		return currentState.getBindValues();
 	}
 
+	public ColumnListMutation<C> putColumnWithGenericValue(C columnName, Object value, Integer ttl) {
+		
+		Preconditions.checkArgument(columnName != null, "Column Name must not be null");
+		
+		if (currentState instanceof CqlColumnListMutationImpl.InitialState || 
+				currentState instanceof CqlColumnListMutationImpl.NewRowState) {
+			checkState(new NewRowState());
+		} else {
+			checkState(new UpdateColumnState());
+		}
+		checkAndSetTTL(ttl);
+		
+		CqlColumnMutationImpl<K,C> mutation = new CqlColumnMutationImpl<K,C>(ksContext, cfContext, columnName);
+		mutation.putGenericValue(value, ttl);
+		
+		mutationList.add(mutation);
+		return this;
+	}
+	
 	private interface MutationState { 
 		public MutationState next(MutationState state);
 		public BatchedStatements getStatement();

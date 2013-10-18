@@ -125,6 +125,7 @@ public abstract class AbstractMutationBatchImpl implements MutationBatch {
 			}
 
 			rowLookup.put(kacf, innerMutationList);
+			clm = (ColumnListMutation<C>) innerMutationList;
 		}
 		return clm;
 	}

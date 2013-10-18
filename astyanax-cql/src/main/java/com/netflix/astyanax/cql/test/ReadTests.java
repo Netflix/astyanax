@@ -57,7 +57,6 @@ public class ReadTests extends KeyspaceTests {
 	}
 	
 
-
 	private void createKeyspace() throws Exception {
 		keyspace.createColumnFamily(CF_USER_INFO, null);
 	}

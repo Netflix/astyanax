@@ -142,6 +142,10 @@ public class CqlColumnMutationImpl<K,C> implements ColumnMutation {
 		}
 		return exec(value, ttl, CassandraOperationType.COLUMN_MUTATE);
 	}
+	
+	public Execution<Void> putGenericValue(Object value, Integer ttl) {
+		return exec(value, ttl, CassandraOperationType.COLUMN_MUTATE);
+	}
 
 	@Override
 	public Execution<Void> putEmptyColumn(Integer ttl) {

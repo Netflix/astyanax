@@ -62,7 +62,6 @@ public class CqlRowCopier<K,C> implements RowCopier<K,C> {
 		
 		while(iter.hasNext()) {
 			
-			System.out.println("Putting value");
 			CqlColumnImpl<C> col = (CqlColumnImpl<C>) iter.next();
 			
 			if (first && useOriginalTimestamp) {

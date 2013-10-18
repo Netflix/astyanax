@@ -41,7 +41,7 @@ public class AstyanaxContextFactory {
     
     private static AstyanaxContext<Cluster> clusterWithJavaDriver() {
 
-    	final String SEEDS = "localhost:9160";
+    	final String SEEDS = "localhost";
 
 		Supplier<List<Host>> HostSupplier = new Supplier<List<Host>>() {
 
@@ -68,6 +68,7 @@ public class AstyanaxContextFactory {
                                 .setMaxConnsPerHost(20)
                                 .setInitConnsPerHost(10)
                                 .setSeeds(SEEDS)
+                                .setPort(9042)
                                 )
                 .withHostSupplier(HostSupplier)
                 .withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
@@ -94,7 +95,7 @@ public class AstyanaxContextFactory {
     
     private static AstyanaxContext<Keyspace> keyspaceWithJavaDriver(String keyspaceName) {
 
-    	final String SEEDS = "localhost:9042";
+    	final String SEEDS = "localhost";
 
 		Supplier<List<Host>> HostSupplier = new Supplier<List<Host>>() {
 
@@ -121,6 +122,7 @@ public class AstyanaxContextFactory {
                                 .setMaxConnsPerHost(20)
                                 .setInitConnsPerHost(10)
                                 .setSeeds(SEEDS)
+                                .setPort(9042)
                                 )
                 .withHostSupplier(HostSupplier)
                 .withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
@@ -131,7 +133,7 @@ public class AstyanaxContextFactory {
     
     private static AstyanaxContext<Keyspace> keyspaceWithThriftDriver(String keyspaceName) {
 
-    	final String SEEDS = "localhost:9160";
+    	final String SEEDS = "localhost";
 
 		Supplier<List<Host>> HostSupplier = new Supplier<List<Host>>() {
 

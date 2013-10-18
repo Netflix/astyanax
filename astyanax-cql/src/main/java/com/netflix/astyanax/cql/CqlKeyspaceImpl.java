@@ -309,7 +309,7 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 	}
 
 	@Override
-	public void setHosts(Collection<Host> hosts) {
+	public void setHosts(Collection<Host> hosts, int port) {
 
 		try {
 			List<Host> hostList = Lists.newArrayList(hosts);
@@ -324,7 +324,11 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 				}
 			});
 
-			Cluster cluster = Cluster.builder().addContactPoints(contactPoints.toArray(new String[0])).build();
+			Cluster cluster = Cluster.builder()
+					.addContactPoints(contactPoints.toArray(new String[0]))
+					.withPort(port)
+					.build();
+
 			session = cluster.connect();
 
 		} catch (RuntimeException e) {

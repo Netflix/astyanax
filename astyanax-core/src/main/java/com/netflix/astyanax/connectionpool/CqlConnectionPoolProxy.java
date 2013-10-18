@@ -21,9 +21,13 @@ public class CqlConnectionPoolProxy<T> implements ConnectionPool<T> {
 	private AtomicReference<SeedHostListener> listener = new AtomicReference<SeedHostListener>(null);
 	private AtomicBoolean firstRound = new AtomicBoolean(true);
 	
+	private int port;
+	
 	public CqlConnectionPoolProxy(ConnectionPoolConfiguration cpConfig,
 			ConnectionFactory<T> connectionFactory,
 			ConnectionPoolMonitor monitor) {
+		
+		this.port = cpConfig.getPort();
 	}
 
 
@@ -32,12 +36,12 @@ public class CqlConnectionPoolProxy<T> implements ConnectionPool<T> {
 		
 		if (firstRound.get() && listener.get() != null) {
 			Logger.info("Setting hosts for listener: " + listener.getClass().getName() +  "   " + hosts);
-			listener.get().setHosts(hosts);
+			listener.get().setHosts(hosts, port);
 		}
 	}
 
 	public interface SeedHostListener {
-		public void setHosts(Collection<Host> hosts);
+		public void setHosts(Collection<Host> hosts, int port);
 	}
 	
 	public void addListener(SeedHostListener listener) {

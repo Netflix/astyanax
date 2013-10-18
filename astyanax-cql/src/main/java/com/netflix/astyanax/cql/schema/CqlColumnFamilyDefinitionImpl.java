@@ -670,8 +670,6 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	public OperationResult<SchemaChangeResult> execute() {
 		
 		String query = (alterTable) ? getUpdateQuery() : getCreateQuery();
-		System.out.println("Query: " + query);
-		
 		ResultSet rs = session.execute(query);
 
 		return new CqlOperationResultImpl<SchemaChangeResult>(rs, null);

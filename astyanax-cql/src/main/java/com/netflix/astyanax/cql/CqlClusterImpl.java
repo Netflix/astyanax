@@ -260,7 +260,7 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostLis
 	}
 
 	@Override
-	public void setHosts(Collection<Host> hosts) {
+	public void setHosts(Collection<Host> hosts, int port) {
 		
 		List<Host> hostList = Lists.newArrayList(hosts);
 		
@@ -274,7 +274,10 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostLis
 			}
 		});
 		
-		this.cluster = Cluster.builder().addContactPoints(contactPoints.toArray(new String[0])).build();
+		this.cluster = Cluster.builder()
+				.addContactPoints(contactPoints.toArray(new String[0]))
+				.withPort(port)
+				.build();
 		this.session = cluster.connect();
 	}
 }

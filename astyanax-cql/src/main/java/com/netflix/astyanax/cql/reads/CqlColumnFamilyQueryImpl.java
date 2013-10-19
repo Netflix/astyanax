@@ -5,8 +5,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
-
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
@@ -39,14 +37,13 @@ public class CqlColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C> {
 
 	@Override
 	public ColumnFamilyQuery<K, C> withRetryPolicy(RetryPolicy retry) {
-		// TODO: we should implement this. This should be do-able
-		throw new NotImplementedException();
+		this.cfContext.setRetryPolicy(retry.duplicate());
+		return this;
 	}
 
 	@Override
 	public ColumnFamilyQuery<K, C> pinToHost(Host host) {
-		// TODO fix this: this is totally do-able
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException("Operation not supported");
 	}
 
 	@Override

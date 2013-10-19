@@ -38,6 +38,7 @@ import com.netflix.astyanax.cql.direct.DirectCqlStatement;
 import com.netflix.astyanax.cql.reads.CqlColumnFamilyQueryImpl;
 import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
 import com.netflix.astyanax.cql.schema.CqlKeyspaceDefinitionImpl;
+import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.cql.writes.CqlColumnMutationImpl;
 import com.netflix.astyanax.cql.writes.CqlMutationBatchImpl;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
@@ -178,7 +179,7 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 
 	@Override
 	public <K, C> ColumnMutation prepareColumnMutation(ColumnFamily<K, C> columnFamily, K rowKey, C column) {
-		return new CqlColumnMutationImpl<K,C>(ksContext, columnFamily, rowKey, column);
+		return new CqlColumnMutationImpl<K,C>(ksContext, new ColumnFamilyMutationContext<K, C>(columnFamily, rowKey), column);
 	}
 
 	@Override

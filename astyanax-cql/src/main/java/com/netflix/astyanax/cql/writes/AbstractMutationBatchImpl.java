@@ -281,7 +281,7 @@ public abstract class AbstractMutationBatchImpl implements MutationBatch {
 
 	@Override
 	public MutationBatch withRetryPolicy(RetryPolicy retry) {
-		this.retry = retry;
+		this.retry = retry.duplicate();
 		return this;
 	}
 

@@ -22,6 +22,7 @@ import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.retry.RetryPolicy;
+import com.netflix.astyanax.retry.RetryPolicy.RetryPolicyFactory;
 
 /**
  * Interface defining all astyanax API configuration parameters.
@@ -30,11 +31,19 @@ import com.netflix.astyanax.retry.RetryPolicy;
  * 
  */
 public interface AstyanaxConfiguration {
-    /**
-     * TODO
-     */
+	
+	/**
+	 * @deprecated Use RetryPolicyFactory instead
+	 * @return
+	 */
     RetryPolicy getRetryPolicy();
 
+    /**
+     * Factory for creating RetryPolicy. This is called before every retryable operation.
+     * @return RetryPolicy
+     */
+    RetryPolicyFactory getRetryPolicyFactory();
+    
     /**
      * Default consistency level used when reading from the cluster. This value
      * can be overwritten on the Query operations (returned by
@@ -93,4 +102,6 @@ public interface AstyanaxConfiguration {
      * @throws Exception 
      */
     Partitioner getPartitioner(String partitionerName) throws Exception;
+    
+    
 }

@@ -11,6 +11,7 @@ import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnPath;
 import com.netflix.astyanax.model.ConsistencyLevel;
+import com.netflix.astyanax.retry.RetryPolicy;
 
 @SuppressWarnings("deprecation")
 public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationImpl<C> {
@@ -291,12 +292,20 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 		
 		private final ColumnFamily<K,C> columnFamily;
 		private final K rowKey;
+		private RetryPolicy retryPolicy;
 		
 		public ColumnFamilyMutationContext(ColumnFamily<K,C> cf, K rKey) {
 			this.columnFamily = cf;
 			this.rowKey = rKey;
+			this.retryPolicy = null;
 		}
 		
+		public ColumnFamilyMutationContext(ColumnFamily<K,C> cf, K rKey, RetryPolicy retry) {
+			this.columnFamily = cf;
+			this.rowKey = rKey;
+			this.retryPolicy = retry;
+		}
+
 		public ColumnFamily<K, C> getColumnFamily() {
 			return columnFamily;
 		}
@@ -304,7 +313,15 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 		public K getRowKey() {
 			return rowKey;
 		}
+
+		public void setRetryPolicy(RetryPolicy retry) {
+			this.retryPolicy = retry;
+		}
 		
+		public RetryPolicy getRetryPolicy() {
+			return retryPolicy;
+		}
+
 		public String toString() {
 			StringBuilder sb = new StringBuilder();
 			sb.append("CF=").append(columnFamily.getName());

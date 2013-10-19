@@ -191,29 +191,6 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 		}
 
 		@Override
-		public OperationResult<ColumnList<C>> execute() throws ConnectionException {
-
-//			PreparedStatement pStmt = 
-//					StatementCache.getInstance().getStatement(CqlRowQueryImpl.class.getName().hashCode(), new Callable<PreparedStatement>() {
-//
-//						@Override
-//						public PreparedStatement call() throws Exception {
-//							String query = "select * from astyanaxperf.test1 where key=?;";
-//							return session.prepare(query);
-//						}
-//					});
-//
-//			BoundStatement bStmt = pStmt.bind(rowKey);
-//			bStmt.setConsistencyLevel(cl);
-
-			Query query = getQuery();
-			ResultSet resultSet = session.execute(query);
-			ColumnList<C> result = parseResultSet(resultSet);
-			OperationResult<ColumnList<C>> opResult = new CqlOperationResultImpl<ColumnList<C>>(resultSet, result);
-			return opResult;
-		}
-
-		@Override
 		public Query getQuery() {
 
 			if (CqlFamilyFactory.OldStyleThriftMode()) {

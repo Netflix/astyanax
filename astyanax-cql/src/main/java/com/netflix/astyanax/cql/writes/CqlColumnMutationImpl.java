@@ -7,8 +7,6 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
-
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Query;
@@ -21,7 +19,6 @@ import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.util.ConsistencyLevelTransform;
 import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
-import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
@@ -49,12 +46,6 @@ public class CqlColumnMutationImpl<K,C> implements ColumnMutation {
 		this.columnName = cName;
 	}
 
-	public CqlColumnMutationImpl(KeyspaceContext ksCtx, ColumnFamily<K,C> cf, Object rKey, Object cName) {
-		this.ksContext = ksCtx;
-		this.cfContext = null; // TODO fix this
-		this.columnName = cName;
-	}
-
 	@Override
 	public ColumnMutation setConsistencyLevel(ConsistencyLevel consistencyLevel) {
 		this.consistencyLevel = consistencyLevel;
@@ -63,8 +54,8 @@ public class CqlColumnMutationImpl<K,C> implements ColumnMutation {
 
 	@Override
 	public ColumnMutation withRetryPolicy(RetryPolicy retry) {
-		// TODO: we should implement this
-		throw new NotImplementedException();
+		this.cfContext.setRetryPolicy(retry.duplicate());
+		return this;
 	}
 
 	@Override

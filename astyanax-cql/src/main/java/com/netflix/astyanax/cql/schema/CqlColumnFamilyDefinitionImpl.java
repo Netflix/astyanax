@@ -56,7 +56,6 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		this.session = session;
 	}
 
-	
 	public CqlColumnFamilyDefinitionImpl(Session session, String keyspace, Properties props) {
 		this(session, keyspace, propertiesToMap(props));
 	}

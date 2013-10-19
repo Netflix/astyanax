@@ -15,10 +15,10 @@ import com.netflix.astyanax.query.ColumnCountQuery;
 public class CqlColumnCountQueryImpl implements ColumnCountQuery {
 
 	private final KeyspaceContext ksContext;
-	private final ColumnFamilyMutationContext cfContext;
+	private final ColumnFamilyMutationContext<?, ?> cfContext;
 	private final Query query;
 	
-	public CqlColumnCountQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext cfCtx, Query query) {
+	public CqlColumnCountQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<?,?> cfCtx, Query query) {
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;
 		this.query = query;

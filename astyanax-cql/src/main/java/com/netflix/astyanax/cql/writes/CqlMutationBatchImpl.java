@@ -9,16 +9,16 @@ import java.util.Map.Entry;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.PreparedStatement;
+import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.ResultSetFuture;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.Clock;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
-import com.netflix.astyanax.cql.CqlOperationResultImpl;
-import com.netflix.astyanax.cql.util.AsyncOperationResult;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
@@ -49,22 +49,45 @@ public class CqlMutationBatchImpl extends AbstractMutationBatchImpl {
 	@Override
 	public OperationResult<Void> execute() throws ConnectionException {
 		
-		BoundStatement statement = getCachedPreparedStatement();
-		ResultSet rs = ksContext.getSession().execute(statement);
-		return new CqlOperationResultImpl<Void>(rs, null);
+		return new CqlAbstractExecutionImpl<Void>(ksContext, getRetryPolicy()) {
+
+			@Override
+			public CassandraOperationType getOperationType() {
+				return CassandraOperationType.BATCH_MUTATE;
+			}
+
+			@Override
+			public Query getQuery() {
+				return getCachedPreparedStatement();
+			}
+
+			@Override
+			public Void parseResultSet(ResultSet resultSet) {
+				return null; // do nothing for mutations
+			}
+		}.execute();
 	}
 
 	@Override
 	public ListenableFuture<OperationResult<Void>> executeAsync() throws ConnectionException {
+		
+		return new CqlAbstractExecutionImpl<Void>(ksContext, getRetryPolicy()) {
 
-		BoundStatement statement = getCachedPreparedStatement();
-		ResultSetFuture rsFuture = ksContext.getSession().executeAsync(statement);
-		return new AsyncOperationResult<Void>(rsFuture) {
 			@Override
-			public OperationResult<Void> getOperationResult(ResultSet rs) {
-				return new CqlOperationResultImpl<Void>(rs, null);
+			public CassandraOperationType getOperationType() {
+				return CassandraOperationType.BATCH_MUTATE;
 			}
-		};
+
+			@Override
+			public Query getQuery() {
+				return getCachedPreparedStatement();
+			}
+
+			@Override
+			public Void parseResultSet(ResultSet resultSet) {
+				return null; // do nothing for mutations
+			}
+		}.executeAsync();
 	}
 	
 //	private BoundStatement getTotalStatement() {

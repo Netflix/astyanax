@@ -1,4 +1,4 @@
-package com.netflix.astyanax.cql.reads;
+package com.netflix.astyanax.cql.reads.model;
 
 import java.util.Collection;
 

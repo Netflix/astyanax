@@ -60,8 +60,7 @@ public class CqlColumnImpl<C> implements Column<C> {
 
 	@Override
 	public long getTimestamp() {
-		// TODO: not sure that the java-driver gives us access to this. May need to file a ticket with dse
-		throw new NotImplementedException();
+		return row.getLong(index+2);
 	}
 
 	@Override
@@ -149,8 +148,7 @@ public class CqlColumnImpl<C> implements Column<C> {
 
 	@Override
 	public int getTtl() {
-		// TODO: java-driver does not expose this at the moment. Need to review this. 
-		throw new NotImplementedException();
+		return row.getInt(index+1);
 	}
 
 	@Override

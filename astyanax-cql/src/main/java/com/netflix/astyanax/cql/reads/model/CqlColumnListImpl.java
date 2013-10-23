@@ -42,7 +42,7 @@ public class CqlColumnListImpl<C> implements ColumnList<C> {
 			CqlColumnImpl<C> cqlCol = new CqlColumnImpl<C>((C) columnName, row, index);
 			columnList.add(cqlCol);
 			map.put((C) columnName, cqlCol);
-			index++;
+			index+=3;  // skip past the ttl and the timestamp
 		}
 	}
 

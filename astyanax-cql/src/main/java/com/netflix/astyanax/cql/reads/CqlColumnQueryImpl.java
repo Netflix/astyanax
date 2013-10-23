@@ -9,6 +9,7 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select.Builder;
+import com.datastax.driver.core.querybuilder.Select.Selection;
 import com.datastax.driver.core.querybuilder.Select.Where;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.CassandraOperationType;
@@ -80,7 +81,9 @@ public class CqlColumnQueryImpl<C> implements ColumnQuery<C> {
 
 				if (pkCols.size() == 1) {
 
-					return QueryBuilder.select((String)columnName)
+					String columnNameString = (String)columnName;
+					return QueryBuilder.select()
+							.column(columnNameString).ttl(columnNameString).writeTime(columnNameString)
 							.from(keyspace, cf.getName())
 							.where(eq(keyColumnAlias, rowKey));
 				} else {
@@ -89,7 +92,8 @@ public class CqlColumnQueryImpl<C> implements ColumnQuery<C> {
 					List<ColumnDefinition> valDef = cfDef.getValueColumnDefinitionList();
 					String valueColName = valDef.get(0).getName();
 
-					return QueryBuilder.select(valueColName)
+					return QueryBuilder.select()
+							.column(valueColName).ttl(valueColName).writeTime(valueColName)
 							.from(keyspace, cf.getName())
 							.where(eq(keyColumnAlias, rowKey))
 							.and(eq(pkColName, columnName));
@@ -106,7 +110,8 @@ public class CqlColumnQueryImpl<C> implements ColumnQuery<C> {
 				List<ComponentSerializer<?>> components = compSerializer.getComponents();
 
 				// select the individual columns as dictated by the no of component serializers
-				Builder select = QueryBuilder.select(valueColName);
+				Builder select = QueryBuilder.select()
+						.column(valueColName).ttl(valueColName).writeTime(valueColName);
 
 				Where where = select.from(keyspace, cf.getName()).where(eq(keyColumnAlias, rowKey));
 

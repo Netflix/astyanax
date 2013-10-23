@@ -49,7 +49,7 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	private List<ColumnDefinition> colDefList = new ArrayList<ColumnDefinition>();
 	private List<ColumnDefinition> primaryKeyList = new ArrayList<ColumnDefinition>();
 	private List<ColumnDefinition> valDefList = new ArrayList<ColumnDefinition>();
-	private String[] allColumnNames;
+	private String[] allPkColNames;
 	
 	private AnnotatedCompositeSerializer<?> compositeSerializer = null; 
 	
@@ -187,7 +187,6 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		readColDefinitions();
 	}
 	
-
 	private void createColumnDefinitions() {
 
 		String keyClass = (String) optionsMap.remove("key_validation_class");
@@ -294,10 +293,10 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		}
 		
 		List<String> allColumnNamesList = new ArrayList<String>();
-		for (ColumnDefinition colDef : colDefList) {
+		for (ColumnDefinition colDef : primaryKeyList) {
 			allColumnNamesList.add(colDef.getName());
 		}
-		allColumnNames = allColumnNamesList.toArray(new String[allColumnNamesList.size()]);
+		allPkColNames = allColumnNamesList.toArray(new String[allColumnNamesList.size()]);
 	}
 	
 	private List<String> parseComparatorSpec(String comparatorSpec) {
@@ -653,8 +652,8 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		return primaryKeyList;
 	}
 	
-	public String[] getAllColumnNames() {
-		return allColumnNames;
+	public String[] getAllPkColNames() {
+		return allPkColNames;
 	}
 	
 

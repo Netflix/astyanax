@@ -15,8 +15,8 @@ import org.junit.Test;
 
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.MutationBatch;
-import com.netflix.astyanax.cql.reads.CqlRangeBuilder;
-import com.netflix.astyanax.cql.reads.CqlRangeImpl;
+import com.netflix.astyanax.cql.reads.model.CqlRangeBuilder;
+import com.netflix.astyanax.cql.reads.model.CqlRangeImpl;
 import com.netflix.astyanax.cql.test.TestUtils.TestTokenRange;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.Column;

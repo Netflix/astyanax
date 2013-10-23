@@ -5,7 +5,7 @@ import java.util.List;
 import com.datastax.driver.core.ResultSet;
 import com.netflix.astyanax.cql.CqlSchema;
 import com.netflix.astyanax.cql.CqlStatementResult;
-import com.netflix.astyanax.cql.reads.CqlRowListImpl;
+import com.netflix.astyanax.cql.reads.model.CqlRowListImpl;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.Rows;
 

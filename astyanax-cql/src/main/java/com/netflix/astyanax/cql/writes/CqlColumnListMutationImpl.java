@@ -6,7 +6,6 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Serializer;
-import com.netflix.astyanax.cql.CqlFamilyFactory;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnPath;
@@ -24,9 +23,6 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 	
 	private com.netflix.astyanax.model.ConsistencyLevel consistencyLevel;
 	
-	// Tracks the mutations on this ColumnFamily.
-	private MutationState currentState = new InitialState();
-
 	public CqlColumnListMutationImpl(KeyspaceContext ksCtx, ColumnFamily<K,C> cf, K rowKey, ConsistencyLevel level, long timestamp) {
 		
 		super(timestamp);
@@ -34,10 +30,6 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 		this.cfContext = new ColumnFamilyMutationContext<K,C>(cf, rowKey);
 		
 		this.consistencyLevel = level;
-		
-		if (CqlFamilyFactory.OldStyleThriftMode()) {
-			currentState = new OldStyleThriftState();
-		}
 	}
 	
 	@Override
@@ -45,12 +37,6 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 		
 		Preconditions.checkArgument(columnName != null, "Column Name must not be null");
 		
-		if (currentState instanceof CqlColumnListMutationImpl.InitialState || 
-				currentState instanceof CqlColumnListMutationImpl.NewRowState) {
-			checkState(new NewRowState());
-		} else {
-			checkState(new UpdateColumnState());
-		}
 		checkAndSetTTL(ttl);
 		
 		CqlColumnMutationImpl<K,C> mutation = new CqlColumnMutationImpl<K,C>(ksContext, cfContext, columnName);
@@ -70,13 +56,6 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 
 		checkAndSetTTL(ttl);
 
-		if (currentState instanceof CqlColumnListMutationImpl.InitialState || 
-				currentState instanceof CqlColumnListMutationImpl.NewRowState) {
-			checkState(new NewRowState());
-		} else {
-			checkState(new UpdateColumnState());
-		}
-
 		CqlColumnMutationImpl<K,C> mutation = new CqlColumnMutationImpl<K,C>(ksContext, cfContext, columnName);
 		mutation.putEmptyColumn(ttl);
 		mutationList.add(mutation);
@@ -87,8 +66,6 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 	@Override
 	public ColumnListMutation<C> incrementCounterColumn(C columnName, long amount) {
 		
-		checkState(new UpdateColumnState());
-
 		CqlColumnMutationImpl<K,C> mutation = new CqlColumnMutationImpl<K,C>(ksContext, cfContext, columnName);
 		mutation.incrementCounterColumn(amount);
 		mutationList.add(mutation);
@@ -98,8 +75,6 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 
 	@Override
 	public ColumnListMutation<C> deleteColumn(C columnName) {
-		
-		checkState(new UpdateColumnState());
 		
 		CqlColumnMutationImpl<K,C> mutation = new CqlColumnMutationImpl<K,C>(ksContext, cfContext, columnName);
 		mutation.deleteColumn();
@@ -111,9 +86,14 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 	@Override
 	public ColumnListMutation<C> delete() {
 		deleteRow = true;
-		checkState(new DeleteRowState());
 		return this;
 	}
+	
+	@Override
+    public ColumnListMutation<C> setDefaultTtl(Integer ttl) {
+		checkAndSetTTL(ttl);
+        return this;
+    }
 	
 	public void mergeColumnListMutation(CqlColumnListMutationImpl<?, ?> colListMutation) {
 		
@@ -126,24 +106,10 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 		return mutationList;
 	}
 	
-	public BatchedStatements getBatch() {
-		return currentState.getStatement();
-	}
-	
-	public List<Object> getBindValues() {
-		return currentState.getBindValues();
-	}
-
 	public ColumnListMutation<C> putColumnWithGenericValue(C columnName, Object value, Integer ttl) {
 		
 		Preconditions.checkArgument(columnName != null, "Column Name must not be null");
 		
-		if (currentState instanceof CqlColumnListMutationImpl.InitialState || 
-				currentState instanceof CqlColumnListMutationImpl.NewRowState) {
-			checkState(new NewRowState());
-		} else {
-			checkState(new UpdateColumnState());
-		}
 		checkAndSetTTL(ttl);
 		
 		CqlColumnMutationImpl<K,C> mutation = new CqlColumnMutationImpl<K,C>(ksContext, cfContext, columnName);
@@ -153,124 +119,14 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 		return this;
 	}
 	
-	private interface MutationState { 
-		public MutationState next(MutationState state);
-		public BatchedStatements getStatement();
-		public List<Object> getBindValues();
+	public BatchedStatements getBatch() {
+		return new CFMutationQueryGenerator(ksContext, cfContext, mutationList, deleteRow, timestamp, defaultTTL, consistencyLevel).getQuery();
 	}
 	
-	private class InitialState implements MutationState {
-
-		@Override
-		public MutationState next(MutationState state) {
-			return state;
-		}
-
-		@Override
-		public BatchedStatements getStatement() {
-			throw new RuntimeException("Mutation list is empty");
-		}
-
-		@Override
-		public List<Object> getBindValues() {
-			throw new RuntimeException("Mutation list is empty");
-		}
-	}
-	
-	private class OldStyleThriftState implements MutationState {
-
-		@Override
-		public MutationState next(MutationState state) {
-			if (state instanceof CqlColumnListMutationImpl.DeleteRowState) {
-				return state;
-			}
-			return this;  // once in this state - stay in same state
-		}
-
-		@Override
-		public BatchedStatements getStatement() {
-			return new OldStyleCFMutationQuery(ksContext, cfContext, mutationList, deleteRow, timestamp, defaultTTL, consistencyLevel).getQuery();
-		}
-		
-		@Override
-		public List<Object> getBindValues() {
-			return new OldStyleCFMutationQuery(ksContext, cfContext, mutationList, deleteRow, timestamp, defaultTTL, consistencyLevel).getBindValues();
-		}
-
+	public List<Object> getBindValues() {
+		return new CFMutationQueryGenerator(ksContext, cfContext, mutationList, deleteRow, timestamp, defaultTTL, consistencyLevel).getBindValues();
 	}
 
-	private class UpdateColumnState implements MutationState {
-
-		@Override
-		public MutationState next(MutationState nextState) {
-			if (! (nextState instanceof CqlColumnListMutationImpl.UpdateColumnState)) {
-				throw new RuntimeException("Must only call PutColumn for this ColumnFamily mutation");
-			}
-			return nextState;
-		}
-
-		@Override
-		public BatchedStatements getStatement() {
-			return null; // TODO
-			//return new CqlStyleUpdateQuery(context.clone(), mutationList, timestamp, defaultTTL, consistencyLevel).getQuery();
-		}
-
-		@Override
-		public List<Object> getBindValues() {
-			throw new RuntimeException("Not implemented");
-		}
-	}
-
-	private class NewRowState implements MutationState {
-
-		@Override
-		public MutationState next(MutationState nextState) {
-			if (nextState instanceof CqlColumnListMutationImpl.UpdateColumnState) {
-				return nextState;
-			}
-			if (nextState instanceof CqlColumnListMutationImpl.NewRowState) {
-				return nextState;
-			}
-			
-			throw new RuntimeException("Must use only putColumn() or deleteColumn() for this BatchMutation");
-		}
-
-		@Override
-		public BatchedStatements getStatement() {
-			return null; // TODO
-			//			return new CqlStyleInsertQuery(context.clone(), mutationList, timestamp, defaultTTL, consistencyLevel).getQuery();
-		}
-
-		@Override
-		public List<Object> getBindValues() {
-			throw new RuntimeException("Not implemented");
-		}
-	}
-	
-	private class DeleteRowState implements MutationState {
-		@Override
-		public MutationState next(MutationState nextState) {
-			throw new RuntimeException("Cannot use another mutation after delete() on this row");
-		}
-
-		@Override
-		public BatchedStatements getStatement() {
-			
-			Preconditions.checkArgument(mutationList == null || mutationList.size() == 0, "Mutation list must be empty when deleting row");
-			return null; // TODO
-			//			return new CqlStyleDeleteRowQuery(context.clone(), mutationList, timestamp, defaultTTL, consistencyLevel).getQuery();
-		}
-
-		@Override
-		public List<Object> getBindValues() {
-			throw new RuntimeException("Not implemented");
-		}
-	}
-	
-	private void checkState(MutationState nextState) {
-		currentState = currentState.next(nextState);
-	}
-	
 	private void checkAndSetTTL(Integer newTTL) {
 		if (super.defaultTTL == null) {
 			defaultTTL = newTTL;
@@ -281,12 +137,6 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 			throw new RuntimeException("Default TTL has already been set, cannot reset");
 		}
 	}
-	
-	@Override
-    public ColumnListMutation<C> setDefaultTtl(Integer ttl) {
-		checkAndSetTTL(ttl);
-        return this;
-    }
 	
 	public static class ColumnFamilyMutationContext<K,C> {
 		

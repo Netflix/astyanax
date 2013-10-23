@@ -3,7 +3,6 @@ package com.netflix.astyanax.cql.direct;
 import java.util.List;
 
 import com.datastax.driver.core.ResultSet;
-import com.netflix.astyanax.cql.CqlFamilyFactory;
 import com.netflix.astyanax.cql.CqlSchema;
 import com.netflix.astyanax.cql.CqlStatementResult;
 import com.netflix.astyanax.cql.reads.CqlRowListImpl;
@@ -27,7 +26,7 @@ public class DirectCqlStatementResultImpl implements CqlStatementResult {
 	public <K, C> Rows<K, C> getRows(ColumnFamily<K, C> columnFamily) {
 
 		List<com.datastax.driver.core.Row> rows = rs.all(); 
-		return new CqlRowListImpl<K, C>(rows, columnFamily, CqlFamilyFactory.OldStyleThriftMode());
+		return new CqlRowListImpl<K, C>(rows, columnFamily);
 	}
 
 	@Override

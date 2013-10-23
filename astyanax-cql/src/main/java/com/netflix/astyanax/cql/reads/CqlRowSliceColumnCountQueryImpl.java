@@ -11,7 +11,6 @@ import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
-import com.netflix.astyanax.cql.CqlFamilyFactory;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.util.CqlTypeMapping;
 import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
@@ -21,10 +20,10 @@ import com.netflix.astyanax.query.RowSliceColumnCountQuery;
 public class CqlRowSliceColumnCountQueryImpl<K> implements RowSliceColumnCountQuery<K> {
 
 	private final KeyspaceContext ksContext;
-	private final ColumnFamilyMutationContext cfContext;
+	private final ColumnFamilyMutationContext<?,?> cfContext;
 	private final Query query;
 	
-	public CqlRowSliceColumnCountQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext cfCtx, Query query) {
+	public CqlRowSliceColumnCountQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<?,?> cfCtx, Query query) {
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;
 		this.query = query;
@@ -62,22 +61,14 @@ public class CqlRowSliceColumnCountQueryImpl<K> implements RowSliceColumnCountQu
 			
 			Map<K, Integer> columnCountPerRow = new HashMap<K, Integer>();
 			
-			if (CqlFamilyFactory.OldStyleThriftMode()) {
-				
-				for (Row row : resultSet.all()) {
-					K key = (K) CqlTypeMapping.getDynamicColumn(row, cf.getKeySerializer(), 0);
-					Integer colCount = columnCountPerRow.get(key);
-					if (colCount == null) {
-						colCount = new Integer(0);
-					}	
-					colCount = colCount.intValue() + 1;
-					columnCountPerRow.put(key, colCount);
-				}
-			} else {
-				for (Row row : resultSet.all()) {
-					K key = (K) CqlTypeMapping.getDynamicColumn(row, cf.getKeySerializer(), 0); // first col is the row key
-					columnCountPerRow.put(key, row.getColumnDefinitions().size()-1);
-				}
+			for (Row row : resultSet.all()) {
+				K key = (K) CqlTypeMapping.getDynamicColumn(row, cf.getKeySerializer(), 0, cf);
+				Integer colCount = columnCountPerRow.get(key);
+				if (colCount == null) {
+					colCount = new Integer(0);
+				}	
+				colCount = colCount.intValue() + 1;
+				columnCountPerRow.put(key, colCount);
 			}
 			
 			return columnCountPerRow;

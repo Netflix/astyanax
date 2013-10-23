@@ -2,7 +2,6 @@ package com.netflix.astyanax.connectionpool;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.slf4j.Logger;
@@ -19,8 +18,7 @@ public class CqlConnectionPoolProxy<T> implements ConnectionPool<T> {
 	private static final Logger Logger = LoggerFactory.getLogger(CqlConnectionPoolProxy.class);
 	
 	private AtomicReference<SeedHostListener> listener = new AtomicReference<SeedHostListener>(null);
-	private AtomicBoolean firstRound = new AtomicBoolean(true);
-	
+	private AtomicReference<Collection<Host>> lastHostList = new AtomicReference<Collection<Host>>(null);
 	private int port;
 	
 	public CqlConnectionPoolProxy(ConnectionPoolConfiguration cpConfig,
@@ -34,7 +32,11 @@ public class CqlConnectionPoolProxy<T> implements ConnectionPool<T> {
 	@Override
 	public void setHosts(Collection<Host> hosts) {
 		
-		if (firstRound.get() && listener.get() != null) {
+		if (hosts != null) {
+			lastHostList.set(hosts);
+		}
+		
+		if (listener.get() != null) {
 			Logger.info("Setting hosts for listener: " + listener.getClass().getName() +  "   " + hosts);
 			listener.get().setHosts(hosts, port);
 		}
@@ -46,6 +48,9 @@ public class CqlConnectionPoolProxy<T> implements ConnectionPool<T> {
 	
 	public void addListener(SeedHostListener listener) {
 		this.listener.set(listener);
+		if (this.lastHostList.get() != null) {
+			this.listener.get().setHosts(lastHostList.get(), port);
+		}
 	}
 
 	@Override
@@ -105,6 +110,7 @@ public class CqlConnectionPoolProxy<T> implements ConnectionPool<T> {
 
 	@Override
 	public void start() {
+		System.out.println("Called start");
 		// TODO Auto-generated method stub
 	}
 

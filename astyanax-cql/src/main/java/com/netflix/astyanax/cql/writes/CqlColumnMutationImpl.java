@@ -17,8 +17,10 @@ import com.netflix.astyanax.Execution;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
+import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
 import com.netflix.astyanax.cql.util.ConsistencyLevelTransform;
 import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
+import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
@@ -127,11 +129,18 @@ public class CqlColumnMutationImpl<K,C> implements ColumnMutation {
 	@Override
 	public <T> Execution<Void> putValue(T value, Serializer<T> serializer, Integer ttl) {
 		
+		ColumnFamily<K,C> cf = cfContext.getColumnFamily();
+		CqlColumnFamilyDefinitionImpl cfDef = (CqlColumnFamilyDefinitionImpl) cf.getColumnFamilyDefinition();
+		if (cfDef.getPartitionKeyColumnDefinitionList().size() == 1) {
+			return exec(value, ttl, CassandraOperationType.COLUMN_MUTATE);
+		}
+		
 		if (cfContext.getColumnFamily().getDefaultValueSerializer().getComparatorType() == ByteBufferSerializer.get().getComparatorType()) {
 			ByteBuffer valueBytes = serializer.toByteBuffer(value);
 			return exec(valueBytes, ttl, CassandraOperationType.COLUMN_MUTATE);
+		} else {
+			return exec(value, ttl, CassandraOperationType.COLUMN_MUTATE);
 		}
-		return exec(value, ttl, CassandraOperationType.COLUMN_MUTATE);
 	}
 	
 	public Execution<Void> putGenericValue(Object value, Integer ttl) {

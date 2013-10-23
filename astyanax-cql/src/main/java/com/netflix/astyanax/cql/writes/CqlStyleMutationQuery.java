@@ -3,6 +3,7 @@ package com.netflix.astyanax.cql.writes;
 import java.util.List;
 
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
+import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
 import com.netflix.astyanax.cql.util.ConsistencyLevelTransform;
 import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.model.ColumnFamily;
@@ -32,7 +33,9 @@ public class CqlStyleMutationQuery {
 	
 	public String getDeleteEntireRowQuery() {
 		ColumnFamily<?,?> cf = cfContext.getColumnFamily();
-		return "DELETE FROM " + ksContext.getKeyspace() + "." + cf.getName() + " WHERE " + cf.getKeyAlias() + " = ?;";
+		CqlColumnFamilyDefinitionImpl cfDef = (CqlColumnFamilyDefinitionImpl)cf.getColumnFamilyDefinition();
+		return "DELETE FROM " + ksContext.getKeyspace() + "." + cf.getName() + 
+				" WHERE " + cfDef.getPrimaryKeyColumnDefinition().getName() + " = ?;";
 	}
 
 	public void appendWriteOptions(StringBuilder sb) {

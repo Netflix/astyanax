@@ -17,7 +17,7 @@ public class CqlRowImpl<K, C> implements Row<K, C> {
 	
 	public CqlRowImpl(com.datastax.driver.core.Row resultRow, ColumnFamily<K, C> cf) {
 		this.rowKey = (K) getRowKey(resultRow, cf);
-		this.cqlColumnList = new CqlColumnListImpl<C>(resultRow);
+		this.cqlColumnList = new CqlColumnListImpl<C>(resultRow, cf);
 		this.cf = cf;
 	}
 	
@@ -43,6 +43,6 @@ public class CqlRowImpl<K, C> implements Row<K, C> {
 	}
 	
 	private Object getRowKey(com.datastax.driver.core.Row row, ColumnFamily<K, C> cf) {
-		return CqlTypeMapping.getDynamicColumn(row, cf.getKeySerializer(), 0);
+		return CqlTypeMapping.getDynamicColumn(row, cf.getKeySerializer(), 0, cf);
 	}
 }

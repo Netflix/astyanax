@@ -1,13 +1,15 @@
 package com.netflix.astyanax.cql.reads;
 
+import java.util.List;
+
 import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
-import com.netflix.astyanax.cql.CqlFamilyFactory;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.query.ColumnCountQuery;
@@ -52,11 +54,11 @@ public class CqlColumnCountQueryImpl implements ColumnCountQuery {
 
 		@Override
 		public Integer parseResultSet(ResultSet resultSet) {
-			if (CqlFamilyFactory.OldStyleThriftMode()) {
-				return resultSet.all().size();
+			List<Row> rows = resultSet.all();
+			if (rows != null) {
+				return rows.size();
 			} else {
-				Long count = resultSet.one().getLong(0);
-				return count.intValue();
+				return 0;
 			}
 		}
 	}

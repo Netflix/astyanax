@@ -45,8 +45,11 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	private String keyspaceName;
 	
 	private Map<String, Object> optionsMap = new HashMap<String, Object>();
+	
 	private List<ColumnDefinition> colDefList = new ArrayList<ColumnDefinition>();
 	private List<ColumnDefinition> primaryKeyList = new ArrayList<ColumnDefinition>();
+	private List<ColumnDefinition> valDefList = new ArrayList<ColumnDefinition>();
+	private String[] allColumnNames;
 	
 	private AnnotatedCompositeSerializer<?> compositeSerializer = null; 
 	
@@ -179,8 +182,161 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		optionsMap.put("subcomparator", row.getString("subcomparator")); 
 		optionsMap.put("type", row.getString("type")); 
 		optionsMap.put("value_alias", row.getString("value_alias")); 
+		
+		// init the primary key column definition
+		readColDefinitions();
 	}
 	
+
+	private void createColumnDefinitions() {
+
+		String keyClass = (String) optionsMap.remove("key_validation_class");
+		keyClass = (keyClass == null) ?	keyClass = "blob" : keyClass;
+		
+		String comparatorClass = (String) optionsMap.remove("comparator_type");
+		comparatorClass = (comparatorClass == null) ?	comparatorClass = "blob" : comparatorClass;
+		
+		String dataValidationClass = (String) optionsMap.remove("default_validation_class");
+		dataValidationClass = (dataValidationClass == null) ?	dataValidationClass = "blob" : dataValidationClass;
+
+		ColumnDefinition key = new CqlColumnDefinitionImpl().setName("key").setValidationClass(keyClass);
+		primaryKeyList.add(key);
+
+		if (compositeSerializer != null) {
+			processCompositeComparator();
+		} else if (comparatorClass.contains("CompositeType")) {
+			processCompositeComparatorSpec(comparatorClass);
+		} else if (comparatorClass.equals(AnnotatedCompositeSerializer.class.getName())) {
+		} else {
+			ColumnDefinition column1 = new CqlColumnDefinitionImpl().setName("column1").setValidationClass(comparatorClass);
+			primaryKeyList.add(column1);
+		}
+
+		this.makeColumnDefinition().setName("value").setValidationClass(dataValidationClass);
+	}
+	
+	private void readColDefinitions() {
+		
+		// PRIMARY KEY
+		String keyAlias = (String)optionsMap.get("key_alias");
+		if (keyAlias == null) {
+			String aliases = (String)optionsMap.get("key_aliases");
+			if  (aliases == null) {
+				keyAlias = "key";
+			} else {
+				List<String> aliasList = parseAliasSpec(aliases);
+				if (aliasList != null && aliasList.size() > 0) {
+					keyAlias = aliasList.get(0);
+				} else {
+					keyAlias = "key";
+				}
+			}
+		}
+
+		String keyClass = (String) optionsMap.remove("key_validation_class");
+		keyClass = (keyClass == null) ?	keyClass = "blob" : CqlTypeMapping.getCqlType(keyClass);
+
+		ColumnDefinition col = new CqlColumnDefinitionImpl().setName(keyAlias).setValidationClass(keyClass);
+		this.colDefList.add(col);
+		this.primaryKeyList.add(col);
+		
+		// COMPARATOR - MAY BE COMPOSITE e.g  CompositeType(UTF8Type, LongType, UTF8Type)
+		String comparatorSpec = (String)optionsMap.get("comparator_type");
+		
+		List<String> compList = parseComparatorSpec(comparatorSpec);
+		if (compList != null && compList.size() > 0) {
+			
+			String colAliasSpec = (String)optionsMap.get("column_aliases");
+			List<String> colAliasList = parseAliasSpec(colAliasSpec);
+			
+			if (colAliasList == null || colAliasList.size() == 0) {
+				colAliasList = new ArrayList<String>();
+				if (compList.size() > 1) {
+					for (int i=0; i<compList.size(); i++) {
+						colAliasList.add("column" + i+1);
+					}
+				}
+			}
+			
+			for (int i=0; i<colAliasList.size(); i++) {
+				String name = colAliasList.get(i);
+				String type = CqlTypeMapping.getCqlType(compList.get(i));
+				ColumnDefinition column = new CqlColumnDefinitionImpl().setName(name).setValidationClass(type);
+				colDefList.add(column);
+				primaryKeyList.add(column);
+			}
+		}
+		
+		// VALUE COLUMNS AND COLUMNS THAT ARE NOT PART OF THE PRIMARY KEY
+		Query query = QueryBuilder.select().from("system", "schema_columns")
+				.where(eq("keyspace_name", keyspaceName))
+				.and(eq("columnfamily_name", cfName));
+		
+		System.out.println("Query: " + query.toString());
+		
+		ResultSet rs = session.execute(query);
+		List<Row> rows = rs.all();
+		if (rows != null && rows.size() > 0) {
+			for (Row row : rows) {
+				CqlColumnDefinitionImpl colDef = new CqlColumnDefinitionImpl(row);
+				colDefList.add(colDef);
+				valDefList.add(colDef);
+			}
+		} else {
+			String name = (String)optionsMap.get("value_alias");
+			if (name == null) {
+				name = "value";
+			}
+			String type = CqlTypeMapping.getCqlType(getDefaultValidationClass());
+			ColumnDefinition colDef = new CqlColumnDefinitionImpl().setName(name).setValidationClass(type);
+			colDefList.add(colDef);
+			valDefList.add(colDef);
+		}
+		
+		List<String> allColumnNamesList = new ArrayList<String>();
+		for (ColumnDefinition colDef : colDefList) {
+			allColumnNamesList.add(colDef.getName());
+		}
+		allColumnNames = allColumnNamesList.toArray(new String[allColumnNamesList.size()]);
+	}
+	
+	private List<String> parseComparatorSpec(String comparatorSpec) {
+		
+		if (!comparatorSpec.contains("CompositeType(")) {
+			return null;
+		}
+
+		List<String> list = new ArrayList<String>();
+		String regex = "[\\(,\\)]";
+		Pattern pattern = Pattern.compile(regex);
+		String[] parts = pattern.split(comparatorSpec);
+
+		for (int i=1; i<parts.length; i++) {
+			String componentTypeString = parts[i].trim();
+			list.add(componentTypeString);
+		}
+		return list;
+	}
+
+	private List<String> parseAliasSpec(String aliasSpec) {
+		
+		if (aliasSpec == null) {
+			return null;
+		}
+		
+		String nameRegex = "[\\[\",\\]]";
+		Pattern namePattern = Pattern.compile(nameRegex);
+		String[] alias_parts = namePattern.split(aliasSpec);
+		List<String> list = new ArrayList<String>();
+		for (int i=0; i<alias_parts.length; i++) {
+			String part = alias_parts[i].trim();
+			if (part.length() > 0) {
+				list.add(part);
+			}
+		}
+		return list;
+	}
+
 	public CqlColumnFamilyDefinitionImpl alterTable() {
 		alterTable = true;
 		return this;
@@ -482,48 +638,57 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 
 	@Override
 	public List<ColumnDefinition> getColumnDefinitionList() {
-		if (colDefList.isEmpty()) {
-			
-			processColumnComparator();
-			
-			Query query = QueryBuilder.select().from("system", "schema_columns")
-			.where(eq("keyspace_name", keyspaceName))
-			.and(eq("columnfamily_name", cfName));
-			
-			ResultSet rs = session.execute(query);
-			for (Row row : rs.all()) {
-				colDefList.add(new CqlColumnDefinitionImpl(row));
-			}
-		}
 		return colDefList;
 	}
 	
-	private void processColumnComparator() {
-		
-		String nameRegex = "[\\[\",\\]]";
-		Pattern namePattern = Pattern.compile(nameRegex);
-		String[] name_parts = namePattern.split((String)optionsMap.get("column_aliases"));
-		
-		String typeRegex = "[\\(,\\)]";
-		Pattern typePattern = Pattern.compile(typeRegex);
-		String[] type_parts = typePattern.split((String)optionsMap.get("comparator"));
-		
-		String[] name_parts_clean = new String[type_parts.length];
-		int index = 1;
-		for (int i=0; i<name_parts.length; i++) {
-			String name = name_parts[i].trim();
-			if (name.length() > 0) {
-				name_parts_clean[index++] = name;
-			}
-		}
-		
-		for (int i=1; i<type_parts.length-1; i++) {
-
-			CqlColumnDefinitionImpl colDef = new CqlColumnDefinitionImpl();
-			colDef.setName(name_parts_clean[i]).setValidationClass(type_parts[i]);
-			colDefList.add(colDef);
-		}
+	public ColumnDefinition getPrimaryKeyColumnDefinition() {
+		return primaryKeyList.get(0);
 	}
+
+	public List<ColumnDefinition> getValueColumnDefinitionList() {
+		return valDefList;
+	}
+
+	public List<ColumnDefinition> getPartitionKeyColumnDefinitionList() {
+		return primaryKeyList;
+	}
+	
+	public String[] getAllColumnNames() {
+		return allColumnNames;
+	}
+	
+
+//	private void processColumnComparator() {
+//		
+//		String comparator = getComparatorType();
+//		if (!comparator.contains("CompositeType(")) {
+//			return;
+//		}
+//		
+//		String nameRegex = "[\\[\",\\]]";
+//		Pattern namePattern = Pattern.compile(nameRegex);
+//		String[] name_parts = namePattern.split((String)optionsMap.get("column_aliases"));
+//		
+//		String typeRegex = "[\\(,\\)]";
+//		Pattern typePattern = Pattern.compile(typeRegex);
+//		String[] type_parts = typePattern.split((String)optionsMap.get("comparator"));
+//		
+//		String[] name_parts_clean = new String[type_parts.length];
+//		int index = 1;
+//		for (int i=0; i<name_parts.length; i++) {
+//			String name = name_parts[i].trim();
+//			if (name.length() > 0) {
+//				name_parts_clean[index++] = name;
+//			}
+//		}
+//		
+//		for (int i=1; i<type_parts.length-1; i++) {
+//
+//			CqlColumnDefinitionImpl colDef = new CqlColumnDefinitionImpl();
+//			colDef.setName(name_parts_clean[i]).setValidationClass(type_parts[i]);
+//			colDefList.add(colDef);
+//		}
+//	}
 
 	@Override
 	public ColumnFamilyDefinition addColumnDefinition(ColumnDefinition def) {
@@ -610,32 +775,6 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		optionsMap.putAll(props);
 	}
 
-	private void createColumnDefinitions() {
-
-		String keyClass = (String) optionsMap.remove("key_validation_class");
-		keyClass = (keyClass == null) ?	keyClass = "blob" : keyClass;
-		
-		String comparatorClass = (String) optionsMap.remove("comparator_type");
-		comparatorClass = (comparatorClass == null) ?	comparatorClass = "blob" : comparatorClass;
-		
-		String dataValidationClass = (String) optionsMap.remove("default_validation_class");
-		dataValidationClass = (dataValidationClass == null) ?	dataValidationClass = "blob" : dataValidationClass;
-
-		ColumnDefinition key = new CqlColumnDefinitionImpl().setName("key").setValidationClass(keyClass);
-		primaryKeyList.add(key);
-
-		if (compositeSerializer != null) {
-			processCompositeComparator();
-		} else if (comparatorClass.contains("CompositeType")) {
-			processCompositeComparatorSpec(comparatorClass);
-		} else if (comparatorClass.equals(AnnotatedCompositeSerializer.class.getName())) {
-		} else {
-			ColumnDefinition column1 = new CqlColumnDefinitionImpl().setName("column1").setValidationClass(comparatorClass);
-			primaryKeyList.add(column1);
-		}
-
-		this.makeColumnDefinition().setName("value").setValidationClass(dataValidationClass);
-	}
 	
 	public OperationResult<SchemaChangeResult> execute() {
 		

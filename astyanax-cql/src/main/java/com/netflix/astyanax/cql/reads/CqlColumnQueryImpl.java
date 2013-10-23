@@ -4,24 +4,23 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 
 import java.util.List;
 
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
-
 import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
-import com.datastax.driver.core.querybuilder.Select.Selection;
+import com.datastax.driver.core.querybuilder.Select.Builder;
 import com.datastax.driver.core.querybuilder.Select.Where;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
-import com.netflix.astyanax.cql.CqlFamilyFactory;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
-import com.netflix.astyanax.cql.util.CqlTypeMapping;
+import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
 import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
+import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.model.Column;
+import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.query.ColumnQuery;
 import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
 import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer.ComponentSerializer;
@@ -31,14 +30,25 @@ public class CqlColumnQueryImpl<C> implements ColumnQuery<C> {
 
 	private final KeyspaceContext ksContext;
 	private final ColumnFamilyMutationContext<?,C> cfContext;
-	private final C column;
-	
-	CqlColumnQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<?,C> cfCtx, C col) {
+	private final Object rowKey;
+	private final C columnName;
+
+	private final CqlColumnFamilyDefinitionImpl cfDef;
+	private final List<ColumnDefinition> pkCols;
+	private final String keyColumnAlias;
+
+	CqlColumnQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<?,C> cfCtx, Object rowKey, C colName) {
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;
-		this.column = col;
+		this.rowKey = rowKey;
+		this.columnName = colName;
+		
+		ColumnFamily<?,?> cf = cfCtx.getColumnFamily();
+		cfDef = (CqlColumnFamilyDefinitionImpl) cf.getColumnFamilyDefinition();
+		pkCols = cfDef.getPartitionKeyColumnDefinitionList();
+		keyColumnAlias = pkCols.get(0).getName();
 	}
-	
+
 	@Override
 	public OperationResult<Column<C>> execute() throws ConnectionException {
 		return new InternalColumnQueryExecutionImpl().execute();
@@ -62,67 +72,62 @@ public class CqlColumnQueryImpl<C> implements ColumnQuery<C> {
 
 		@Override
 		public Query getQuery() {
-			
-			Object rowKey = cfContext.getRowKey();
-			
-			boolean isCompositeType = cf.getColumnSerializer().getComparatorType() == ComparatorType.COMPOSITETYPE;
-			
-			Query query = null; 
-			if (CqlFamilyFactory.OldStyleThriftMode()) {
-			
-				if (!isCompositeType) {
-					query = QueryBuilder.select("column1", "value")
-										.from(keyspace, cf.getName())
-										.where(eq("key", rowKey))
-										.and(eq("column1", column));
-				} else {
-					
-					/**  COMPOSITE COLUMN QUERY */
-					AnnotatedCompositeSerializer<?> compSerializer = (AnnotatedCompositeSerializer<?>) this.cf.getColumnSerializer();
-					List<ComponentSerializer<?>> components = compSerializer.getComponents();
-					
-					// select the individual columns as dictated by the no of component serializers
-					Selection select = QueryBuilder.select();
-					
-					for (int index = 1; index <= components.size(); index++) {
-						select.column("column" + index);
-					}
-					
-					select.column("value");
-					
-					Where where = select.from(keyspace, cf.getName()).where(eq("key", rowKey));
-					
-					int index = 1;
-					for (ComponentSerializer<?> component : components) {
-						where.and(eq("column" + index++, component.getFieldValueDirectly(column)));
-					}
 
-					return where;
+			boolean isCompositeType = cf.getColumnSerializer().getComparatorType() == ComparatorType.COMPOSITETYPE;
+
+			if (!isCompositeType) {
+
+				if (pkCols.size() == 1) {
+
+					return QueryBuilder.select((String)columnName)
+							.from(keyspace, cf.getName())
+							.where(eq(keyColumnAlias, rowKey));
+				} else {
+
+					String pkColName = pkCols.get(1).getName();
+					List<ColumnDefinition> valDef = cfDef.getValueColumnDefinitionList();
+					String valueColName = valDef.get(0).getName();
+
+					return QueryBuilder.select(valueColName)
+							.from(keyspace, cf.getName())
+							.where(eq(keyColumnAlias, rowKey))
+							.and(eq(pkColName, columnName));
+
 				}
-				
 			} else {
-				
-				if (isCompositeType) {
-					// TODO: we need to entire columns schema here to be able to construct the query - i.e we need all the columns names. Need to implement this
-					throw new NotImplementedException();
+
+				/**  COMPOSITE COLUMN QUERY */
+
+				List<ColumnDefinition> valDef = cfDef.getValueColumnDefinitionList();
+				String valueColName = valDef.get(0).getName();
+
+				AnnotatedCompositeSerializer<?> compSerializer = (AnnotatedCompositeSerializer<?>) this.cf.getColumnSerializer();
+				List<ComponentSerializer<?>> components = compSerializer.getComponents();
+
+				// select the individual columns as dictated by the no of component serializers
+				Builder select = QueryBuilder.select(valueColName);
+
+				Where where = select.from(keyspace, cf.getName()).where(eq(keyColumnAlias, rowKey));
+
+				int index = 1;
+				for (ComponentSerializer<?> component : components) {
+					where.and(eq(pkCols.get(index).getName(), component.getFieldValueDirectly(columnName)));
+					index++;
 				}
-				query = QueryBuilder.select(String.valueOf(column))
-						.from(keyspace, cf.getName())
-						.where(eq(cf.getKeyAlias(), rowKey));
+
+				return where;
 			}
-			return query;
 		}
 
 		@Override
 		public Column<C> parseResultSet(ResultSet rs) {
-			
+
 			Row row = rs.one();
 			if (row == null) {
 				return new CqlColumnImpl<C>();
 			}
-			
-			Object columnName = CqlTypeMapping.getDynamicColumn(row, cf.getColumnSerializer());
-			CqlColumnImpl<C> cqlCol = new CqlColumnImpl<C>((C) columnName, row, row.getColumnDefinitions().size()-1);
+
+			CqlColumnImpl<C> cqlCol = new CqlColumnImpl<C>((C) columnName, row, 0);
 			return cqlCol;
 		}
 	}

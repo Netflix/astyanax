@@ -136,8 +136,9 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 
 		private final CqlColumnFamilyDefinitionImpl cfDef = (CqlColumnFamilyDefinitionImpl) cf.getColumnFamilyDefinition();
 		private final String keyColumnAlias = cfDef.getPrimaryKeyColumnDefinition().getName();
-		private final String[] allColumnNames = cfDef.getAllColumnNames();
+		private final String[] allColumnNames = cfDef.getAllPkColNames();
 		private final List<ColumnDefinition> pkCols = cfDef.getPartitionKeyColumnDefinitionList();
+		private final List<ColumnDefinition> valCols = cfDef.getValueColumnDefinitionList();
 
 		public InternalRowQueryExecutionImpl() {
 			super(ksContext, cfContext);
@@ -196,126 +197,142 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 			return CassandraOperationType.GET_ROW;
 		}
 		
+		/** ALL ROW RANGE COLLECTION QUERIES HERE */ 
+
 		private Query selectAllColumnsForRowKeys(Collection<K> rowKeys) {
-				return QueryBuilder.select(allColumnNames)
-						.from(keyspace, cf.getName())
-						.where(in(keyColumnAlias, rowKeys.toArray()));
-			}
+			
+			Select select = selectAllColumnsFromKeyspaceAndCF();
+			return select.where(in(keyColumnAlias, rowKeys.toArray()));
+		}
 			
 		private Query selectColumnRangeForRowKeys(Collection<K> rowKeys, CqlColumnSlice<C> columnSlice) {
-				Where where = QueryBuilder.select().all()
-						.from(keyspace, cf.getName())
-						.where(in(keyColumnAlias, rowKeys.toArray()));
-				where = addWhereClauseForColumn(where, columnSlice);
-				return where;
-			}
+
+			Select select = selectAllColumnsFromKeyspaceAndCF();
+			Where where = select.where(in(keyColumnAlias, rowKeys.toArray()));
+			where = addWhereClauseForColumn(where, columnSlice);
+			return where;
+		}
 
 		private Query selectColumnSetForRowKeys(Collection<K> rowKeys, Collection<C> cols) {
-					
-				if (pkCols.size() == 1) {
 
-					// THIS IS A SIMPLE QUERY WHERE THE INDIVIDUAL COLS ARE BEING SELECTED E.G NAME, AGE ETC
-					Select.Selection select = QueryBuilder.select();
-					select.column(keyColumnAlias);
+			if (pkCols.size() == 1) {
 
-					for (C col : cols) {
-						select.column((String)col);
-					}
+				// THIS IS A SIMPLE QUERY WHERE THE INDIVIDUAL COLS ARE BEING SELECTED E.G NAME, AGE ETC
+				Select.Selection select = QueryBuilder.select();
+				select.column(keyColumnAlias);
 
-					return select.from(keyspace, cf.getName()).where(in(keyColumnAlias, rowKeys.toArray()));
-
-				} else if (pkCols.size() == 2) {
-
-					// THIS IS A QUERY WHERE THE COLUMN NAME IS DYNAMIC  E.G TIME SERIES
-					Object[] columns = cols.toArray(new Object[cols.size()]); 
-
-					String pkColName = pkCols.get(1).getName();
-
-					return QueryBuilder.select(allColumnNames)
-							.from(keyspace, cf.getName())
-							.where(in(keyColumnAlias, rowKeys.toArray()))
-							.and(in(pkColName, columns));
-				} else {
-					throw new RuntimeException("Composite col query - todo");
+				for (C col : cols) {
+					String columnName = (String)col; 
+					select.column(columnName).ttl(columnName).writeTime(columnName);
 				}
+
+				return select.from(keyspace, cf.getName()).where(in(keyColumnAlias, rowKeys.toArray()));
+
+			} else if (pkCols.size() == 2) {
+
+				// THIS IS A QUERY WHERE THE COLUMN NAME IS DYNAMIC  E.G TIME SERIES
+				Object[] columns = cols.toArray(new Object[cols.size()]); 
+
+				String pkColName = pkCols.get(1).getName();
+
+				Select select = selectAllColumnsFromKeyspaceAndCF();
+				return select.where(in(keyColumnAlias, rowKeys.toArray()))
+							 .and(in(pkColName, columns));
+			} else {
+				throw new RuntimeException("Composite col query - todo");
 			}
+		}
 
 		private Query selectCompositeColumnRangeForRowKeys(Collection<K> rowKeys, CompositeByteBufferRange compositeRange) {
 				
-				Where stmt = QueryBuilder.select(allColumnNames)
-							.from(keyspace, cf.getName())
-							.where(in(keyColumnAlias, rowKeys.toArray()));
+			Select select = selectAllColumnsFromKeyspaceAndCF();
+			Where stmt = select.where(in(keyColumnAlias, rowKeys.toArray()));
+			stmt = addWhereClauseForCompositeColumnRange(stmt, compositeRange);
+			return stmt;
+		}
 
-				stmt = addWhereClauseForCompositeColumnRange(stmt, compositeRange);
-				return stmt;
-			}
-
+		/** ALL ROW RANGE QUERIES FROM HERE ON */ 
 		private Query selectAllColumnsForRowRange(RowRange<K> range) {
 
-				Select select = QueryBuilder.select(allColumnNames)
-						.from(keyspace, cf.getName());
-				return addWhereClauseForRowKey(keyColumnAlias, select, range);
-			}
+			Select select = selectAllColumnsFromKeyspaceAndCF();
+			return addWhereClauseForRowKey(keyColumnAlias, select, range);
+		}
 
 		private Query selectColumnSetForRowRange(RowRange<K> range, Collection<C> cols) {
 
-				if (pkCols.size() == 1) {
+			if (pkCols.size() == 1) {
 
-					// THIS IS A SIMPLE QUERY WHERE THE INDIVIDUAL COLS ARE BEING SELECTED E.G NAME, AGE ETC
-					Select.Selection select = QueryBuilder.select();
-					select.column(keyColumnAlias);
+				// THIS IS A SIMPLE QUERY WHERE THE INDIVIDUAL COLS ARE BEING SELECTED E.G NAME, AGE ETC
+				Select.Selection select = QueryBuilder.select();
+				select.column(keyColumnAlias);
 
-					for (C col : cols) {
-						select.column((String)col);
-					}
-
-					Select select2 = select.from(keyspace, cf.getName());
-					Where where = addWhereClauseForRowKey(keyColumnAlias, select2, range);
-					return where;
-
-				} else if (pkCols.size() == 2) {
-
-					// THIS IS A QUERY WHERE THE COLUMN NAME IS DYNAMIC  E.G TIME SERIES
-
-					String pkColName = pkCols.get(1).getName();
-					Object[] columns = cols.toArray(new Object[cols.size()]); 
-
-					Select select = QueryBuilder.select(allColumnNames).from(keyspace, cf.getName());
-					if (columns != null && columns.length > 0) {
-						select.allowFiltering();
-					}
-					Where where = addWhereClauseForRowKey(keyColumnAlias, select, range);
-					where.and(in(pkColName, columns));
-				
-					return where;
-				} else {
-					throw new RuntimeException("Invalid row slice query combination");
+				for (C col : cols) {
+					String columnName = (String)col;
+					select.column(columnName).ttl(columnName).writeTime(columnName);
 				}
+
+				Select selection = select.from(keyspace, cf.getName());
+				Where where = addWhereClauseForRowKey(keyColumnAlias, selection, range);
+				return where;
+
+			} else if (pkCols.size() == 2) {
+
+				// THIS IS A QUERY WHERE THE COLUMN NAME IS DYNAMIC  E.G TIME SERIES
+
+				String pkColName = pkCols.get(1).getName();
+				Object[] columns = cols.toArray(new Object[cols.size()]); 
+
+				Select select = selectAllColumnsFromKeyspaceAndCF();
+
+				if (columns != null && columns.length > 0) {
+					select.allowFiltering();
+				}
+				Where where = addWhereClauseForRowKey(keyColumnAlias, select, range);
+				where.and(in(pkColName, columns));
+
+				return where;
+			} else {
+				throw new RuntimeException("Invalid row slice query combination");
 			}
+		}
 
 		private Query selectColumnRangeForRowRange(RowRange<K> range, CqlColumnSlice<C> columnSlice) {
 
-				Select select = QueryBuilder.select().all().from(keyspace, cf.getName());
-				if (columnSlice != null && columnSlice.isRangeQuery()) {
-					select.allowFiltering();
-				}
-
-				Where where = addWhereClauseForRowKey(keyColumnAlias, select, range);			
-				where = addWhereClauseForColumn(where, columnSlice);
-				return where;
+			Select select = selectAllColumnsFromKeyspaceAndCF();
+			if (columnSlice != null && columnSlice.isRangeQuery()) {
+				select.allowFiltering();
 			}
+
+			Where where = addWhereClauseForRowKey(keyColumnAlias, select, range);			
+			where = addWhereClauseForColumn(where, columnSlice);
+			return where;
+		}
 
 		private Query selectCompositeColumnRangeForRowRange(RowRange<K> range, CompositeByteBufferRange compositeRange) {
 
-				Select select = QueryBuilder.select().all().from(keyspace, cf.getName());
-				if (compositeRange != null) {
-					select.allowFiltering();
-				}
-
-				Where where = addWhereClauseForRowKey(keyColumnAlias, select, range);	
-				where = addWhereClauseForCompositeColumnRange(where, compositeRange);
-				return where;
+			Select select = selectAllColumnsFromKeyspaceAndCF();
+			if (compositeRange != null) {
+				select.allowFiltering();
 			}
+
+			Where where = addWhereClauseForRowKey(keyColumnAlias, select, range);	
+			where = addWhereClauseForCompositeColumnRange(where, compositeRange);
+			return where;
+		}
+		
+		private Select selectAllColumnsFromKeyspaceAndCF() {
+			
+			Select.Selection select = QueryBuilder.select();
+			for (int i=0; i<allColumnNames.length; i++) {
+				select.column(allColumnNames[i]);
+			}
+
+			for (ColumnDefinition colDef : valCols) {
+				String colName = colDef.getName();
+				select.column(colName).ttl(colName).writeTime(colName);
+			}
+			return select.from(keyspace, cf.getName());
+		}
 			
 			private Where addWhereClauseForColumn(Where where, CqlColumnSlice<C> columnSlice) {
 
@@ -396,7 +413,7 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 				if (keyIsPresent && tokenIsPresent) {
 					throw new RuntimeException("Cannot provide both token and keys for range query");
 				}
-				
+				// TODO this is broken - must use the token func instead of just the actual key
 				if (keyIsPresent) {
 					if (rowRange.getStartKey() != null && rowRange.getEndKey() != null) {
 

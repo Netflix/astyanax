@@ -22,7 +22,6 @@ public class CqlFamilyFactory implements AstyanaxTypeFactory<Cluster> {
 
 	private static CqlFamilyFactory Instance = new CqlFamilyFactory(); 
 	
-	private static AtomicBoolean NewCqlMode = new AtomicBoolean(false);
 	private static AtomicBoolean BatchColumnUpdates = new AtomicBoolean(false);
 	
 	public static CqlFamilyFactory getInstance() {
@@ -37,7 +36,6 @@ public class CqlFamilyFactory implements AstyanaxTypeFactory<Cluster> {
 		}
 
 		CqlKeyspaceImpl keyspace = new CqlKeyspaceImpl(null, ksName, asConfig, tracerFactory);
-		System.out.println("Adding listener: " + keyspace);
 		((CqlConnectionPoolProxy<Cluster>)cp).addListener(keyspace);
 		
 		return keyspace;
@@ -86,19 +84,6 @@ public class CqlFamilyFactory implements AstyanaxTypeFactory<Cluster> {
 		}
 	}	
 	
-	public CqlFamilyFactory enableNewCqlMode(boolean condition) {
-		NewCqlMode.set(condition);
-		return this;
-	}
-	
-	public static boolean OldStyleThriftMode() {
-		return !NewCqlMode.get();
-	}
-
-	public static boolean NewCqlMode() {
-		return NewCqlMode.get();
-	}
-
 	public CqlFamilyFactory enableColumnBatchUpdates(boolean condition) {
 		BatchColumnUpdates.set(condition);
 		return this;

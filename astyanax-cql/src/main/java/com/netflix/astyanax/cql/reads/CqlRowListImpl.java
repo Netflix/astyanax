@@ -2,55 +2,79 @@ package com.netflix.astyanax.cql.reads;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
 import com.netflix.astyanax.cql.util.CqlTypeMapping;
+import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 
 public class CqlRowListImpl<K, C> implements Rows<K, C> {
 
-	private List<Row<K,C>>   rows;
-	private Map<K, Row<K,C>> lookup;
+	private final List<Row<K,C>>   rows;
+	private final Map<K, Row<K,C>> lookup;
 
-	public CqlRowListImpl(List<com.datastax.driver.core.Row> resultRows, ColumnFamily<K,C> cf, boolean oldStyle) {
+	private final ColumnFamily<K,C> cf;
+	private final CqlColumnFamilyDefinitionImpl cfDef; 
+	private final List<ColumnDefinition> pkCols; 
+	
+	public CqlRowListImpl(List<com.datastax.driver.core.Row> resultRows, ColumnFamily<K,C> cf) {
 		
-		this.rows   = new ArrayList<Row<K, C>>(resultRows.size());
-		if (oldStyle) {
-			Serializer<?> keySerializer = cf.getKeySerializer();
-			K prevKey = null; 
-			List<com.datastax.driver.core.Row> tempList = new ArrayList<com.datastax.driver.core.Row>();
-			for (com.datastax.driver.core.Row row : resultRows) {
-				K rowKey = (K) CqlTypeMapping.getDynamicColumn(row, keySerializer, 0);
-				if (prevKey == null || prevKey.equals(rowKey)) {
-					tempList.add(row);
-				} else {
-					
-					// we found a set of contiguous rows that match with the same row key
-					this.rows.add(new CqlRowImpl<K, C>(tempList, cf));
-					tempList = new ArrayList<com.datastax.driver.core.Row>();
-					tempList.add(row);
-				}
-				prevKey = rowKey;
+		this.rows = new ArrayList<Row<K, C>>();
+		this.lookup = new HashMap<K, Row<K,C>>();
+		
+		this.cf = cf;
+		this.cfDef = (CqlColumnFamilyDefinitionImpl) cf.getColumnFamilyDefinition();
+		this.pkCols = cfDef.getPartitionKeyColumnDefinitionList();
+		
+		Serializer<?> keySerializer = cf.getKeySerializer();
+		K prevKey = null; 
+		List<com.datastax.driver.core.Row> tempList = new ArrayList<com.datastax.driver.core.Row>();
+		
+		for (com.datastax.driver.core.Row row : resultRows) {
+			
+			K rowKey = (K) CqlTypeMapping.getDynamicColumn(row, keySerializer, 0, cf);
+			
+			if (prevKey == null || prevKey.equals(rowKey)) {
+				tempList.add(row);
+			} else {
+			
+				// we found a set of contiguous rows that match with the same row key
+				addToResultRows(tempList);
+				tempList = new ArrayList<com.datastax.driver.core.Row>();
+				tempList.add(row);
 			}
-			// flush the final list
-			if (tempList.size() > 0) {
-				this.rows.add(new CqlRowImpl<K, C>(tempList, cf));
-			}
-		} else {
-			for (com.datastax.driver.core.Row resultRow : resultRows) {
-				this.rows.add(new CqlRowImpl<K, C>(resultRow, cf));
-			}
+			prevKey = rowKey;
+		}
+		// flush the final list
+		if (tempList.size() > 0) {
+			addToResultRows(tempList);
+		}
+		
+		for (Row<K,C> row : rows) {
+			this.lookup.put(row.getKey(),  row);
 		}
 	}
 
+	private void addToResultRows(List<com.datastax.driver.core.Row> rowList) {
+
+		if (pkCols.size() == 1 || cfDef.getValueColumnDefinitionList().size() > 1) {
+			for (com.datastax.driver.core.Row row : rowList) {
+				this.rows.add(new CqlRowImpl<K, C>(row, cf));
+			}
+		} else {
+			this.rows.add(new CqlRowImpl<K, C>(rowList, cf));
+		}
+	}
+	
 	@Override
 	public Iterator<Row<K, C>> iterator() {
 		return rows.iterator();
@@ -58,7 +82,6 @@ public class CqlRowListImpl<K, C> implements Rows<K, C> {
 
 	@Override
 	public Row<K, C> getRow(K key) {
-		lazyBuildLookup();
 		return lookup.get(key);
 	}
 
@@ -85,14 +108,5 @@ public class CqlRowListImpl<K, C> implements Rows<K, C> {
 				return row.getKey();
 			}
 		});
-	}
-
-	private void lazyBuildLookup() {
-		if (lookup == null) {
-			this.lookup = Maps.newHashMap();
-			for (Row<K,C> row : rows) {
-				this.lookup.put(row.getKey(),  row);
-			}
-		}
 	}
 }

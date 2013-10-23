@@ -161,7 +161,7 @@ public class CqlColumnImpl<C> implements Column<C> {
 
 	public Object getGenericValue() {
 		ComparatorType cType = getComparatorType();
-		return CqlTypeMapping.getDynamicColumn(row, cType.getSerializer(), index);
+		return CqlTypeMapping.getDynamicColumn(row, cType.getSerializer(), index, null);
 	}
 	
 	public ComparatorType getComparatorType() {

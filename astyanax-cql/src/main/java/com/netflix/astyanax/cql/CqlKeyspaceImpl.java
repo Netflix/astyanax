@@ -329,7 +329,7 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 					.addContactPoints(contactPoints.toArray(new String[0]))
 					.withPort(port)
 					.build();
-
+			
 			session = cluster.connect();
 
 		} catch (RuntimeException e) {

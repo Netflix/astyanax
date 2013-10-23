@@ -9,9 +9,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
 
-import com.datastax.driver.core.ColumnDefinitions.Definition;
+import com.datastax.driver.core.ColumnDefinitions;
 import com.datastax.driver.core.Row;
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
 import com.netflix.astyanax.cql.util.CqlTypeMapping;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
@@ -28,21 +29,46 @@ public class CqlColumnListImpl<C> implements ColumnList<C> {
 	}
 	
 	/**
-	 * This constructor is meant to be called when we are using CQL3 as is, i.e no backward compatibility with thrift
+	 * This constructor is meant to be called when we have a table with standard columns i.e no composites, just plain columns
 	 * @param row
 	 */
-	public CqlColumnListImpl(Row row) {
+	public CqlColumnListImpl(Row row, ColumnFamily<?,?> cf) {
 		
-		List<Definition> cfDefinitions = row.getColumnDefinitions().asList();
+		ColumnDefinitions cfDefinitions = row.getColumnDefinitions();
 		
-		for (int index=0; index< cfDefinitions.size(); index++) {
-			Definition def = cfDefinitions.get(index); 
-			CqlColumnImpl<C> cqlCol = new CqlColumnImpl<C>((C) def.getName(), row, index);
+		int index = 1; // skip the key column
+		while (index < cfDefinitions.size()) {
+			String columnName = cfDefinitions.getName(index); 
+			CqlColumnImpl<C> cqlCol = new CqlColumnImpl<C>((C) columnName, row, index);
 			columnList.add(cqlCol);
-			map.put((C) def.getName(), cqlCol);
+			map.put((C) columnName, cqlCol);
+			index++;
 		}
 	}
 
+
+	/**
+	 * This constructor is meant to be used when we are using the CQL3 table but still in the legacy thrift mode
+	 * @param rows
+	 */
+	public CqlColumnListImpl(List<Row> rows, ColumnFamily<?, ?> cf) {
+		
+		CqlColumnFamilyDefinitionImpl cfDef = (CqlColumnFamilyDefinitionImpl) cf.getColumnFamilyDefinition();
+		int numPkCols = cfDef.getPartitionKeyColumnDefinitionList().size();
+		
+		int columnNameIndex = numPkCols-1;  
+		
+		for (Row row : rows) {
+
+			Object columnName = CqlTypeMapping.getDynamicColumn(row, cf.getColumnSerializer(), columnNameIndex, cf);
+			int valueIndex = columnNameIndex+1;
+			
+			CqlColumnImpl<C> cqlCol = new CqlColumnImpl<C>((C) columnName, row, valueIndex);
+			columnList.add(cqlCol);
+			map.put((C) columnName, cqlCol);
+		}
+	}
+	
 	public CqlColumnListImpl(List<Column<C>> newColumnList) {
 		this.columnList.clear();
 		for (Column<C> column : newColumnList) {
@@ -51,22 +77,6 @@ public class CqlColumnListImpl<C> implements ColumnList<C> {
 		}
 	}
 
-	/**
-	 * This constructor is meant to be used when we are using the CQL3 table but still in the legacy thrift mode
-	 * @param rows
-	 */
-	public CqlColumnListImpl(List<Row> rows, ColumnFamily<?, ?> cf) {
-		
-		for (Row row : rows) {
-
-			List<Definition> cfDefinitions = row.getColumnDefinitions().asList();
-			
-			Object columnName = CqlTypeMapping.getDynamicColumn(row, cf.getColumnSerializer());
-			CqlColumnImpl<C> cqlCol = new CqlColumnImpl<C>((C) columnName, row, cfDefinitions.size()-1);
-			columnList.add(cqlCol);
-			map.put((C) columnName, cqlCol);
-		}
-	}
 
 	@Override
 	public Iterator<Column<C>> iterator() {

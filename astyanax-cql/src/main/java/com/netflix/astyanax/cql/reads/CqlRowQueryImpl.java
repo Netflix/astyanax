@@ -13,19 +13,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.Callable;
 
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
-
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
-import com.datastax.driver.core.querybuilder.Select.Selection;
+import com.datastax.driver.core.querybuilder.Select;
 import com.datastax.driver.core.querybuilder.Select.Where;
-import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.RowCopier;
@@ -34,11 +28,12 @@ import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.ConsistencyLevelMapping;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
-import com.netflix.astyanax.cql.CqlFamilyFactory;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.CqlOperationResultImpl;
+import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
+import com.netflix.astyanax.cql.util.AsyncOperationResult;
 import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
-import com.netflix.astyanax.cql.writes.StatementCache;
+import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
@@ -62,7 +57,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 	private final CqlColumnSlice<C> columnSlice = new CqlColumnSlice<C>();
 	private CompositeByteBufferRange compositeRange;
 	private final PaginationContext paginationContext = new PaginationContext(columnSlice);
-	
+
 	private com.datastax.driver.core.ConsistencyLevel cl = com.datastax.driver.core.ConsistencyLevel.ONE;
 
 	public CqlRowQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<K,C> cfCtx, K rKey, ConsistencyLevel clLevel) {
@@ -74,23 +69,30 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 	@Override
 	public OperationResult<ColumnList<C>> execute() throws ConnectionException {
-		
+
 		if (paginationContext.isPaginating() && paginationContext.lastPageConsumed()) {
 			return new CqlOperationResultImpl<ColumnList<C>>(null, new CqlColumnListImpl<C>());
 		}
-		
+
 		return new InternalRowQueryExecutionImpl().execute();
 	}
 
 	@Override
 	public ListenableFuture<OperationResult<ColumnList<C>>> executeAsync() throws ConnectionException {
-		// TODO: need to add in support for pagination, like above
+		if (paginationContext.isPaginating() && paginationContext.lastPageConsumed()) {
+			return new AsyncOperationResult<ColumnList<C>>(null) {
+				@Override
+				public OperationResult<ColumnList<C>> getOperationResult(ResultSet resultSet) {
+					return new CqlOperationResultImpl<ColumnList<C>>(resultSet, new CqlColumnListImpl<C>());
+				}
+			};
+		}
 		return new InternalRowQueryExecutionImpl().executeAsync();
 	}
 
 	@Override
 	public ColumnQuery<C> getColumn(C column) {
-		return new CqlColumnQueryImpl<C>(ksContext, cfContext, column);
+		return new CqlColumnQueryImpl<C>(ksContext, cfContext, rowKey, column);
 	}
 
 	@Override
@@ -127,7 +129,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 	@Override
 	public RowQuery<K, C> withColumnRange(ByteBuffer startColumn, ByteBuffer endColumn, boolean reversed, int limit) {
-			
+
 		Serializer<C> colSerializer = cfContext.getColumnFamily().getColumnSerializer();
 		C start = (startColumn != null && startColumn.capacity() > 0) ? colSerializer.fromByteBuffer(startColumn) : null;
 		C end = (endColumn != null && endColumn.capacity() > 0) ? colSerializer.fromByteBuffer(endColumn) : null;
@@ -136,16 +138,16 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 	@Override
 	public RowQuery<K, C> withColumnRange(ByteBufferRange range) {
-		
+
 		if (range instanceof CompositeByteBufferRange) {
 			this.compositeRange = (CompositeByteBufferRange) range;
-			
+
 		} else if (range instanceof CompositeRangeBuilder) {
 			this.compositeRange = ((CompositeRangeBuilder)range).build();
-			
+
 		} else if (range instanceof CqlRangeImpl) {
 			this.columnSlice.setCqlRange((CqlRangeImpl<C>) range);
-			
+
 		} else {
 			return this.withColumnRange(range.getStart(), range.getEnd(), range.isReversed(), range.getLimit());
 		}
@@ -179,12 +181,17 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 	public ColumnCountQuery getCount() {
 		return new CqlColumnCountQueryImpl(ksContext, cfContext, new InternalRowQueryExecutionImpl().getQuery());
 	}
-	
+
 	private boolean isCompositeRangeQuery() {
 		return this.compositeRange != null;
 	}
 
 	private class InternalRowQueryExecutionImpl extends CqlAbstractExecutionImpl<ColumnList<C>> {
+
+		private final CqlColumnFamilyDefinitionImpl cfDef = (CqlColumnFamilyDefinitionImpl) cf.getColumnFamilyDefinition();
+		private final String keyColumnAlias = cfDef.getPrimaryKeyColumnDefinition().getName();
+		private final String[] allColumnNames = cfDef.getAllColumnNames();
+		private final List<ColumnDefinition> pkCols = cfDef.getPartitionKeyColumnDefinitionList();
 
 		public InternalRowQueryExecutionImpl() {
 			super(ksContext, cfContext);
@@ -193,34 +200,22 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 		@Override
 		public Query getQuery() {
 
-			if (CqlFamilyFactory.OldStyleThriftMode()) {
-				
-				if (columnSlice.isColumnSelectQuery()) {
-					return new OldStyle().getSelectColumnsQuery();
-				} else if (columnSlice.isRangeQuery()) {
-					return new OldStyle().getSelectColumnRangeQuery();
-				} else if (compositeRange != null) {
-					return new OldStyle().getSelectCompositeColumnRangeQuery();
-				} else if (columnSlice.isSelectAllQuery()) {
-					return new OldStyle().getSelectEntireRowQuery();
-				} else {
-					throw new IllegalStateException("Undefined query type");
-				}
-				
+			Query query; 
+			
+			if (columnSlice.isColumnSelectQuery()) {
+				query = getSelectColumnsQuery();
+			} else if (columnSlice.isRangeQuery()) {
+				query = getSelectColumnRangeQuery();
+			} else if (compositeRange != null) {
+				query = getSelectCompositeColumnRangeQuery();
+			} else if (columnSlice.isSelectAllQuery()) {
+				query = getSelectEntireRowQuery();
 			} else {
-				
-				if (columnSlice.isColumnSelectQuery()) {
-					return new NewStyle().getSelectColumnsQuery();
-				} else if (columnSlice.isRangeQuery()) {
-					return new NewStyle().getSelectColumnRangeQuery();
-				} else if (compositeRange != null) {
-					throw new NotImplementedException();
-				} else if (columnSlice.isSelectAllQuery()) {
-					return new NewStyle().getSelectEntireRowQuery();
-				} else {
-					throw new IllegalStateException("Undefined query type");
-				}
+				throw new IllegalStateException("Undefined query type");
 			}
+			
+			query.setConsistencyLevel(cl);
+			return query;
 		}
 
 		@Override
@@ -228,13 +223,16 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 			List<Row> rows = rs.all(); 
 
-			if (CqlFamilyFactory.OldStyleThriftMode()) {
+			if (rows == null || rows.isEmpty()) {
+				throw new RuntimeException("Row not found");
+			}
+			if (pkCols.size() == 1 || cfDef.getValueColumnDefinitionList().size() > 1) {
+				CqlColumnListImpl<C> columnList = new CqlColumnListImpl<C>(rows.get(0), cf);
+				return columnList;
+			} else {
 				CqlColumnListImpl<C> columnList = new CqlColumnListImpl<C>(rows, cf);
 				ColumnList<C> newColumnList = paginationContext.trackLastColumn(columnList);
 				return newColumnList;
-			} else {
-				Preconditions.checkArgument(rows.size() <= 1, "Multiple rows returned for row query");
-				return new CqlColumnListImpl<C>(rows.get(0));
 			}
 		}
 
@@ -242,190 +240,151 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 		public CassandraOperationType getOperationType() {
 			return CassandraOperationType.GET_ROW;
 		}
-		
-		
-		/** OLD STYLE QUERIES */ 
-		
-		private static final String Key = "key";
-		
-		private class OldStyle {
-			
-			Query getSelectEntireRowQuery() {
-				return QueryBuilder.select().all()
-						.from(keyspace, cf.getName())
-						.where(eq(Key, rowKey));
+
+		Query getSelectEntireRowQuery() {
+
+			Select.Builder select = QueryBuilder.select(allColumnNames);
+			return select.from(keyspace, cf.getName()).where(eq(keyColumnAlias, rowKey));
+		}
+
+		Query getSelectColumnsQuery() {
+
+			// Make sure that we are not attempting to do a composite range query
+			if (isCompositeRangeQuery()) {
+				throw new RuntimeException("Cannot perform composite column slice using column set");
 			}
-			
-			Query getSelectColumnsQuery() {
-				
-				// Make sure that we are not attempting to do a composite range query
-				if (isCompositeRangeQuery()) {
-					throw new RuntimeException("Cannot perform composite column slice using column set, use CompositeRangeBuilder instead");
+
+			if (pkCols.size() == 1) {
+
+				// THIS IS A SIMPLE QUERY WHERE THE INDIVIDUAL COLS ARE BEING SELECTED E.G NAME, AGE ETC
+				Select.Selection select = QueryBuilder.select();
+				select.column(keyColumnAlias);
+
+				for (C col : columnSlice.getColumns()) {
+					select.column((String)col);
 				}
-				
+
+				return select.from(keyspace, cf.getName()).where(eq(keyColumnAlias, rowKey));
+
+			} else if (pkCols.size() == 2) {
+
+				// THIS IS A QUERY WHERE THE COLUMN NAME IS DYNAMIC  E.G TIME SERIES
 				Collection<C> cols = columnSlice.getColumns(); 
 				Object[] columns = cols.toArray(new Object[cols.size()]); 
-				
-				return QueryBuilder.select().all()
+
+				String pkColName = pkCols.get(1).getName();
+
+				return QueryBuilder.select(allColumnNames)
 						.from(keyspace, cf.getName())
-						.where(eq("key", rowKey))
-						.and(in("column1", columns));
-			}
-
-			Query getSelectColumnRangeQuery() {
-
-				Where stmt = QueryBuilder.select().all()
-						.from(keyspace, cf.getName())
-						.where(eq("key", rowKey));
-
-				if (columnSlice.getStartColumn() != null) {
-					stmt.and(gte("column1", columnSlice.getStartColumn()));
-				}
-
-				if (columnSlice.getEndColumn() != null) {
-					stmt.and(lte("column1", columnSlice.getEndColumn()));
-				}
-
-				if (columnSlice.getReversed()) {
-					stmt.orderBy(desc("column1"));
-				}
-
-				if (columnSlice.getLimit() != -1) {
-					stmt.limit(columnSlice.getLimit());
-				}
-
-				return stmt;
-			}
-			
-			Query getSelectCompositeColumnRangeQuery() {
-
-				Where stmt = QueryBuilder.select().all()
-						.from(keyspace, cf.getName())
-						.where(eq("key", rowKey));
-
-				List<RangeQueryRecord> records = compositeRange.getRecords();
-				
-				int componentIndex = 1; 
-				
-				for (RangeQueryRecord record : records) {
-					
-					String columnName = "column" + componentIndex;
-					
-					for (RangeQueryOp op : record.getOps()) {
-						
-						switch (op.getOperator()) {
-							
-					    case EQUAL:
-					    	stmt.and(eq(columnName, op.getValue()));
-					    	break;
-						case LESS_THAN :
-							stmt.and(lt(columnName, op.getValue()));
-					    	break;
-						case LESS_THAN_EQUALS:
-							stmt.and(lte(columnName, op.getValue()));
-					    	break;
-						case GREATER_THAN:
-							stmt.and(gt(columnName, op.getValue()));
-					    	break;
-						case GREATER_THAN_EQUALS:
-							stmt.and(gte(columnName, op.getValue()));
-							break;
-						default:
-							throw new RuntimeException("Cannot recognize operator: " + op.getOperator().name());
-						}; // end of switch stmt
-					} // end of inner for for ops for each range query record
-					componentIndex++;
-				}
-				return stmt;
-			}
-			
-		}
-	
-		
-		/** NEW STYLE QUERIES */
-		private class NewStyle {
-			
-			Query getSelectEntireRowQuery() {
-				return QueryBuilder.select().all()
-						.from(keyspace, cf.getName())
-						.where(eq(cf.getKeyAlias(), rowKey));
-			}
-			
-			Query getSelectColumnsQuery() {
-				
-				// Make sure that we are not attempting to do a composite range query
-				if (isCompositeRangeQuery()) {
-					throw new RuntimeException("Cannot perform composite column slice using column set, use CompositeRangeBuilder instead");
-				}
-
-				Collection<C> columns = columnSlice.getColumns(); 
-				Selection selection = QueryBuilder.select();
-
-				for (C column : columns) {
-					selection.column(String.valueOf(column));
-				}
-				return selection.from(keyspace, cf.getName())
-						.where(eq(cf.getKeyAlias(), rowKey));
-			}
-			
-			Query getSelectColumnRangeQuery() {
-
-				if (isCompositeRangeQuery()) {
-					throw new NotImplementedException();
-				}
-				
-				Where stmt = QueryBuilder.select().all()
-						.from(keyspace, cf.getName())
-						.where(eq(cf.getKeyAlias(), rowKey));
-
-				if (columnSlice.getStartColumn() != null) {
-					stmt.and(gte(columnSlice.getColumnName(), columnSlice.getStartColumn()));
-				}
-				
-				if (columnSlice.getEndColumn() != null) {
-					stmt.and(lte(columnSlice.getColumnName(), columnSlice.getEndColumn()));
-				}
-
-				if (columnSlice.getReversed()) {
-					stmt.orderBy(desc(columnSlice.getColumnName()));
-				}
-
-				if (columnSlice.getLimit() != -1) {
-					stmt.limit(columnSlice.getLimit());
-				}
-				
-				return stmt;
+						.where(eq(keyColumnAlias, rowKey))
+						.and(in(pkColName, columns));
+			} else {
+				throw new RuntimeException("Composite col query - todo");
 			}
 		}
-		
+
+		Query getSelectColumnRangeQuery() {
+
+			if (pkCols.size() != 2) {
+				throw new RuntimeException("Cannot perform col range query with current schema, missing pk cols");
+			}
+
+			String pkColName = pkCols.get(1).getName();
+
+			Where stmt = QueryBuilder.select(allColumnNames)
+					.from(keyspace, cf.getName())
+					.where(eq(keyColumnAlias, rowKey));
+
+			if (columnSlice.getStartColumn() != null) {
+				stmt.and(gte(pkColName, columnSlice.getStartColumn()));
+			}
+
+			if (columnSlice.getEndColumn() != null) {
+				stmt.and(lte(pkColName, columnSlice.getEndColumn()));
+			}
+
+			if (columnSlice.getReversed()) {
+				stmt.orderBy(desc(pkColName));
+			}
+
+			if (columnSlice.getLimit() != -1) {
+				stmt.limit(columnSlice.getLimit());
+			}
+
+			return stmt;
+		}
+
+		Query getSelectCompositeColumnRangeQuery() {
+
+			Where stmt = QueryBuilder.select(allColumnNames)
+					.from(keyspace, cf.getName())
+					.where(eq(keyColumnAlias, rowKey));
+
+			List<RangeQueryRecord> records = compositeRange.getRecords();
+
+			int componentIndex = 1; 
+
+			for (RangeQueryRecord record : records) {
+
+				String columnName = pkCols.get(componentIndex).getName();
+
+				for (RangeQueryOp op : record.getOps()) {
+
+					switch (op.getOperator()) {
+
+					case EQUAL:
+						stmt.and(eq(columnName, op.getValue()));
+						componentIndex++;
+						columnName = pkCols.get(componentIndex).getName();
+						break;
+					case LESS_THAN :
+						stmt.and(lt(columnName, op.getValue()));
+						break;
+					case LESS_THAN_EQUALS:
+						stmt.and(lte(columnName, op.getValue()));
+						break;
+					case GREATER_THAN:
+						stmt.and(gt(columnName, op.getValue()));
+						break;
+					case GREATER_THAN_EQUALS:
+						stmt.and(gte(columnName, op.getValue()));
+						break;
+					default:
+						throw new RuntimeException("Cannot recognize operator: " + op.getOperator().name());
+					}; // end of switch stmt
+				} // end of inner for for ops for each range query record
+			}
+			return stmt;
+		}
+
 	}
-	
+
 	private class PaginationContext {
-		
+
 		private boolean lastPageConsumed = false; 
 		private boolean paginate = false;
 		private final CqlColumnSlice<C> columnSlice;
-		
+
 		private PaginationContext(CqlColumnSlice<C> columnSlice) {
 			this.columnSlice = columnSlice;
 		}
-		
+
 		private ColumnList<C> trackLastColumn(ColumnList<C> columnList) {
-			
+
 			if (!paginate) {
 				return columnList;
 			}
-			
+
 			if (columnList.isEmpty()) {
 				lastPageConsumed = true;
 				return columnList;
 			}
-			
+
 			Column<C> lastColumn = columnList.getColumnByIndex(columnList.size()-1);
-			
+
 			if (columnSlice.getEndColumn() != null) {
 				if (lastColumn.getName().equals(columnSlice.getEndColumn())) {
-				// 	this was the last page. Stop paginating. 
+					// 	this was the last page. Stop paginating. 
 					this.lastPageConsumed = true;
 				}
 			} else {
@@ -433,13 +392,13 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 					this.lastPageConsumed = true;
 				}
 			}
-			
+
 			// Else set up the new range for the next range query
 			CqlRangeImpl<C> newRange = 
 					new CqlRangeImpl<C>("column1", lastColumn.getName(), columnSlice.getEndColumn(), columnSlice.getLimit(), columnSlice.getReversed());
-			
+
 			this.columnSlice.setCqlRange(newRange);
-			
+
 			// Now remove the first column, since it is repeating
 			ColumnList<C> result = columnList; 
 			if (!lastPageConsumed) {
@@ -453,14 +412,14 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 				result = new CqlColumnListImpl<C>(newList);
 			}
-			
+
 			return result;
 		}
-		
+
 		private boolean isPaginating() {
 			return paginate;
 		}
-		
+
 		private boolean lastPageConsumed() {
 			return lastPageConsumed;
 		}

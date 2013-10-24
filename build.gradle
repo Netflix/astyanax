@@ -58,6 +58,7 @@ project(':astyanax') {
         compile  project(':astyanax-entity-mapper')
         compile  project(':astyanax-examples')
         compile  project(':astyanax-contrib')
+        compile  project(':astyanax-test')
     }
 }
 
@@ -91,7 +92,7 @@ project(':astyanax-cql') {
     dependencies {
         compile  project(':astyanax-core')
         compile  project(':astyanax-cassandra')
-        compile "com.datastax.cassandra:cassandra-driver-core:1.0.1"
+        compile "com.datastax.cassandra:cassandra-driver-core:$javaDriverVersion"
         compile "junit:junit:$junitVersion"
     }
 }
@@ -156,5 +157,19 @@ project(':astyanax-contrib') {
         compile  project(':astyanax-core')
         compile 'com.netflix.eureka:eureka-client:1.1.110'
         compile 'com.netflix.archaius:archaius-core:0.5.12'
+    }
+}
+
+project(':astyanax-test') {
+    apply plugin: 'osgi'
+    apply plugin: 'java'
+    dependencies {
+        compile  project(':astyanax-core')
+        compile  project(':astyanax-cassandra')
+        compile  project(':astyanax-thrift')
+        compile  project(':astyanax-cql')
+        compile  project(':astyanax-recipes')
+        compile  project(':astyanax-entity-mapper')
+        compile "junit:junit:$junitVersion"
     }
 }

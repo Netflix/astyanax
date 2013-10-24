@@ -2,6 +2,7 @@ package com.netflix.astyanax.cql;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -20,8 +21,6 @@ import com.datastax.driver.core.policies.RoundRobinPolicy;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.impl.TokenRangeImpl;
-
-import edu.emory.mathcs.backport.java.util.Collections;
 
 public class CqlRingDescriber {
 

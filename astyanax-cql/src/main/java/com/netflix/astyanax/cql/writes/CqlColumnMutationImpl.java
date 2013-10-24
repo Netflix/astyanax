@@ -265,6 +265,14 @@ public class CqlColumnMutationImpl<K,C> implements ColumnMutation {
 		}
 	}
 	
+	public Integer getTTL() {
+		return ttl;
+	}
+
+	public Long getTimestamp() {
+		return timestamp;
+	}
+	
 	public String toString() {
 		return columnName.toString();
 	}

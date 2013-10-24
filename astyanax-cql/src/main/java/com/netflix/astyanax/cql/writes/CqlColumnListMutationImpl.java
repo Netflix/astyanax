@@ -18,10 +18,11 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 	private final KeyspaceContext ksContext;
 	private final ColumnFamilyMutationContext<K,C> cfContext;
 	
-	private List<CqlColumnMutationImpl<?,?>> mutationList = new ArrayList<CqlColumnMutationImpl<?,?>>();
+	private final List<CqlColumnMutationImpl<?,?>> mutationList = new ArrayList<CqlColumnMutationImpl<?,?>>();
 	private boolean deleteRow = false; 
-	
 	private com.netflix.astyanax.model.ConsistencyLevel consistencyLevel;
+	
+	private final CFMutationQueryGenerator queryGen; 
 	
 	public CqlColumnListMutationImpl(KeyspaceContext ksCtx, ColumnFamily<K,C> cf, K rowKey, ConsistencyLevel level, long timestamp) {
 		
@@ -30,6 +31,8 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 		this.cfContext = new ColumnFamilyMutationContext<K,C>(cf, rowKey);
 		
 		this.consistencyLevel = level;
+		
+		this.queryGen = new CFMutationQueryGenerator(ksContext, cfContext, mutationList, deleteRow, defaultTTL, defaultTimestamp, consistencyLevel);
 	}
 	
 	@Override
@@ -37,10 +40,8 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 		
 		Preconditions.checkArgument(columnName != null, "Column Name must not be null");
 		
-		checkAndSetTTL(ttl);
-		
 		CqlColumnMutationImpl<K,C> mutation = new CqlColumnMutationImpl<K,C>(ksContext, cfContext, columnName);
-		mutation.putValue(value, valueSerializer, ttl);
+		mutation.putValue(value, valueSerializer, getActualTTL(ttl));
 		
 		mutationList.add(mutation);
 		return this;
@@ -54,10 +55,13 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 	@Override
 	public ColumnListMutation<C> putEmptyColumn(C columnName, Integer ttl) {
 
-		checkAndSetTTL(ttl);
+		Integer theTTL = super.defaultTTL.get();
+		if (ttl != null) {
+			theTTL = ttl;
+		}
 
 		CqlColumnMutationImpl<K,C> mutation = new CqlColumnMutationImpl<K,C>(ksContext, cfContext, columnName);
-		mutation.putEmptyColumn(ttl);
+		mutation.putEmptyColumn(theTTL);
 		mutationList.add(mutation);
 		
 		return this;
@@ -90,8 +94,16 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 	}
 	
 	@Override
-    public ColumnListMutation<C> setDefaultTtl(Integer ttl) {
-		checkAndSetTTL(ttl);
+    public ColumnListMutation<C> setDefaultTtl(Integer newTTL) {
+		
+		if (super.defaultTTL.get() == null) {
+			defaultTTL.set(newTTL);
+			return this;
+		}
+		
+		if (!(defaultTTL.equals(newTTL))) {
+			throw new RuntimeException("Default TTL has already been set, cannot reset");
+		}
         return this;
     }
 	
@@ -110,32 +122,27 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 		
 		Preconditions.checkArgument(columnName != null, "Column Name must not be null");
 		
-		checkAndSetTTL(ttl);
-		
 		CqlColumnMutationImpl<K,C> mutation = new CqlColumnMutationImpl<K,C>(ksContext, cfContext, columnName);
-		mutation.putGenericValue(value, ttl);
+		mutation.putGenericValue(value, getActualTTL(ttl));
 		
 		mutationList.add(mutation);
 		return this;
 	}
 	
 	public BatchedStatements getBatch() {
-		return new CFMutationQueryGenerator(ksContext, cfContext, mutationList, deleteRow, timestamp, defaultTTL, consistencyLevel).getQuery();
+		return queryGen.getQuery();
 	}
 	
 	public List<Object> getBindValues() {
-		return new CFMutationQueryGenerator(ksContext, cfContext, mutationList, deleteRow, timestamp, defaultTTL, consistencyLevel).getBindValues();
+		return queryGen.getBindValues();
 	}
 
-	private void checkAndSetTTL(Integer newTTL) {
-		if (super.defaultTTL == null) {
-			defaultTTL = newTTL;
-			return;
+	private Integer getActualTTL(Integer overrideTTL) {
+		Integer theTTL = super.defaultTTL.get();
+		if (overrideTTL != null) {
+			theTTL = overrideTTL;
 		}
-		
-		if (!(defaultTTL.equals(newTTL))) {
-			throw new RuntimeException("Default TTL has already been set, cannot reset");
-		}
+		return theTTL;
 	}
 	
 	public static class ColumnFamilyMutationContext<K,C> {

@@ -1,10 +1,10 @@
 package com.netflix.astyanax.cql.writes;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
-import com.netflix.astyanax.cql.util.ConsistencyLevelTransform;
 import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
@@ -13,21 +13,31 @@ public class CqlStyleMutationQuery {
 
 	protected final KeyspaceContext ksContext;
 	protected final ColumnFamilyMutationContext<?,?> cfContext;
-	protected final List<CqlColumnMutationImpl<?,?>> mutationList; 
+	protected final List<CqlColumnMutationImpl<?,?>> mutationList;
+	
 	protected boolean deleteRow;
-	protected final Long timestamp;
-	protected final Integer ttl; 
+	
+	protected final AtomicReference<Long> defaultTimestamp;
+	protected final AtomicReference<Integer> defaultTTL; 
 	protected final ConsistencyLevel consistencyLevel;
 
-	public CqlStyleMutationQuery(KeyspaceContext ksCtx, ColumnFamilyMutationContext<?,?> cfCtx, List<CqlColumnMutationImpl<?,?>> mutationList, boolean deleteRow, Long timestamp, Integer ttl, ConsistencyLevel consistencyLevel) {
+	private static final String USING = " USING ";
+	private static final String TTL = " TTL ";
+	private static final String AND = " AND";
+	private static final String TIMESTAMP = " TIMESTAMP ";
+	
+	public CqlStyleMutationQuery(KeyspaceContext ksCtx, ColumnFamilyMutationContext<?,?> cfCtx, List<CqlColumnMutationImpl<?,?>> mutationList, 
+								 boolean deleteRow, AtomicReference<Integer> ttl, AtomicReference<Long> timestamp, ConsistencyLevel consistencyLevel) {
 		
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;
 		
 		this.mutationList = mutationList;
 		this.deleteRow = deleteRow;
-		this.timestamp = timestamp;
-		this.ttl = ttl;
+		this.defaultTTL = ttl;
+		this.defaultTimestamp = timestamp;
+		
+		System.out.println("defaultTimestamp " + defaultTimestamp);
 		this.consistencyLevel = consistencyLevel;
 	}
 	
@@ -38,28 +48,24 @@ public class CqlStyleMutationQuery {
 				" WHERE " + cfDef.getPrimaryKeyColumnDefinition().getName() + " = ?;";
 	}
 
-	public void appendWriteOptions(StringBuilder sb) {
+	public void appendWriteOptions(StringBuilder sb, Integer overrideTTL, Long overrideTimestamp) {
 		
-		if (timestamp != null || ttl != null || consistencyLevel != null) {
-			sb.append(" USING ");
+		Integer ttl = overrideTTL != null ? overrideTTL : defaultTTL.get();
+		Long timestamp = overrideTimestamp != null ? overrideTimestamp : defaultTimestamp.get();
+				
+		if (ttl != null || timestamp != null) {
+			sb.append(USING);
 		}
 		
 		if (ttl != null) {
-			sb.append(" TTL " + ttl);
+			sb.append(TTL + ttl);
 		}
 		
 		if (timestamp != null) {
 			if (ttl != null) {
-				sb.append(" AND");
+				sb.append(AND);
 			}
-			sb.append(" TIMESTAMP " + timestamp);
-		}
-		
-		if (consistencyLevel != null) {
-			if (ttl != null || timestamp != null) {
-				sb.append(" AND");
-			}
-			sb.append(" CONSISTENCY " + ConsistencyLevelTransform.getConsistencyLevel(consistencyLevel).name());
+			sb.append(TIMESTAMP + timestamp);
 		}
 	}
 	

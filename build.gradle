@@ -57,6 +57,7 @@ project(':astyanax') {
         compile  project(':astyanax-recipes')
         compile  project(':astyanax-entity-mapper')
         compile  project(':astyanax-examples')
+        compile  project(':astyanax-test')
     }
 }
 
@@ -140,5 +141,18 @@ project(':astyanax-examples') {
         compile  project(':astyanax-cassandra')
         compile  project(':astyanax-thrift')
         testCompile project(':astyanax-thrift')
+    }
+}
+
+project(':astyanax-test') {
+    apply plugin: 'osgi'
+    apply plugin: 'java'
+    dependencies {
+        compile  project(':astyanax-core')
+        compile  project(':astyanax-cassandra')
+        compile  project(':astyanax-thrift')
+        compile  project(':astyanax-cql')
+        compile "com.datastax.cassandra:cassandra-driver-core:1.0.1"
+        compile "junit:junit:$junitVersion"
     }
 }

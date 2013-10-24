@@ -2,7 +2,8 @@ package com.netflix.astyanax.cql.test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -25,8 +26,6 @@ import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.model.Row;
-import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
@@ -59,7 +58,7 @@ public class FooTest extends KeyspaceTests {
 			  }
 		}
 	
-		//@Test
+		@Test
 		public void testFoo1() throws Exception {
 			
 			Keyspace ks = super.keyspace;
@@ -73,54 +72,56 @@ public class FooTest extends KeyspaceTests {
 				 System.out.println("Col " + col.getName() + " " + col.getValidationClass());
 			 }
 
-//			 MutationBatch batch = ks.prepareMutationBatch();
-//			 batch.withRow(cf, "a").deleteColumn("user");
-//			 batch.withRow(cf, "aa").deleteColumn("pswd");
-//			 batch.execute();
+			 MutationBatch batch = ks.prepareMutationBatch();
+			 batch.setTimestamp(1382674138137000L);
+			 batch.withRow(cf, "b").setDefaultTtl(3600).putColumn("user", "userb").putColumn("pswd", "bb3", 1000);
+			 batch.withRow(cf, "a").putColumn("user", "usera", 1000).putColumn("pswd", "aa4", 3400);
+			 batch.execute();
 			 
-			 ColumnList<String> result1 = ks.prepareQuery(cf).getRow("aa").execute().getResult();
+			 ColumnList<String> result1 = null;
 			 
-//			 Column<String> c = result1.getColumnByName("pswd");
-//			 System.out.println(c.getName() + " " + c.getStringValue());
-//			 Column<String> c1 = result1.getColumnByName("user");
-//			 System.out.println(c1.getName() + " " + c1.getStringValue());
+//			result1 =  ks.prepareQuery(cf).getRow("a").execute().getResult();
+//			 for (Column<String> col : result1) {
+//				 System.out.println(col.getName() + " " + col.getStringValue() + " " + col.getTtl() + " " + col.getTimestamp());
+//			 }
 			 
+			 result1 = ks.prepareQuery(cf).getRow("b").execute().getResult();
 			 for (Column<String> col : result1) {
 				 System.out.println(col.getName() + " " + col.getStringValue() + " " + col.getTtl() + " " + col.getTimestamp());
 			 }
 
-			 System.out.println("\n COL SLICE SELECT QUERY");
-			 ColumnList<String> colSelectResult = ks.prepareQuery(cf).getRow("aa").withColumnSlice("user", "pswd").execute().getResult();
-
-			 for (Column<String> col : colSelectResult) {
-				 System.out.println(col.getName() + " " + col.getStringValue() + " " + col.getTtl() + " " + col.getTimestamp());
-			 }
- 
-			 System.out.println("\n COL SELECT QUERY");
-			 Column<String> colSelectResult2 = ks.prepareQuery(cf).getRow("aa").getColumn("user").execute().getResult();
-
-			 System.out.println(colSelectResult2.getName() + " " + colSelectResult2.getStringValue() + " " + colSelectResult2.getTtl() + " " + colSelectResult2.getTimestamp());
-			 
-			 System.out.println("\n ROW SLICE QUERY");
-			 Rows<String, String> result = ks.prepareQuery(cf).getRowSlice("a", "aa", "b").execute().getResult();
-			 
-			 for (Row<String, String> row : result) {
-				 System.out.println("\nRow: " + row.getKey());
-				 ColumnList<String> cols = row.getColumns();
-				 for (Column<String> col : cols) {
-					 System.out.println(col.getName() + " " + col.getStringValue() + " " + col.getTtl() + " " + col.getTimestamp());
-				 }
-			 }
-
-			 result = ks.prepareQuery(cf).getRowSlice("a", "aa", "b").withColumnSlice("user", "pswd").execute().getResult();
-
-			 for (Row<String, String> row : result) {
-				 System.out.println("\nRow: " + row.getKey());
-				 ColumnList<String> cols = row.getColumns();
-				 for (Column<String> col : cols) {
-					 System.out.println(col.getName() + " " + col.getStringValue() + " " + col.getTtl() + " " + col.getTimestamp());
-				 }
-			 }
+//			 System.out.println("\n COL SLICE SELECT QUERY");
+//			 ColumnList<String> colSelectResult = ks.prepareQuery(cf).getRow("aa").withColumnSlice("user", "pswd").execute().getResult();
+//
+//			 for (Column<String> col : colSelectResult) {
+//				 System.out.println(col.getName() + " " + col.getStringValue() + " " + col.getTtl() + " " + col.getTimestamp());
+//			 }
+// 
+//			 System.out.println("\n COL SELECT QUERY");
+//			 Column<String> colSelectResult2 = ks.prepareQuery(cf).getRow("aa").getColumn("user").execute().getResult();
+//
+//			 System.out.println(colSelectResult2.getName() + " " + colSelectResult2.getStringValue() + " " + colSelectResult2.getTtl() + " " + colSelectResult2.getTimestamp());
+//			 
+//			 System.out.println("\n ROW SLICE QUERY");
+//			 Rows<String, String> result = ks.prepareQuery(cf).getRowSlice("a", "aa", "b").execute().getResult();
+//			 
+//			 for (Row<String, String> row : result) {
+//				 System.out.println("\nRow: " + row.getKey());
+//				 ColumnList<String> cols = row.getColumns();
+//				 for (Column<String> col : cols) {
+//					 System.out.println(col.getName() + " " + col.getStringValue() + " " + col.getTtl() + " " + col.getTimestamp());
+//				 }
+//			 }
+//
+//			 result = ks.prepareQuery(cf).getRowSlice("a", "aa", "b").withColumnSlice("user", "pswd").execute().getResult();
+//
+//			 for (Row<String, String> row : result) {
+//				 System.out.println("\nRow: " + row.getKey());
+//				 ColumnList<String> cols = row.getColumns();
+//				 for (Column<String> col : cols) {
+//					 System.out.println(col.getName() + " " + col.getStringValue() + " " + col.getTtl() + " " + col.getTimestamp());
+//				 }
+//			 }
 //			 
 //			 System.out.println("SINGLE COLUMN QUERY");
 //
@@ -141,7 +142,7 @@ public class FooTest extends KeyspaceTests {
 		}
 
 
-		@Test
+		//@Test
 		public void testFoo2() throws Exception {
 			
 			Keyspace ks = super.keyspace;
@@ -155,12 +156,13 @@ public class FooTest extends KeyspaceTests {
 				 System.out.println("Col " + col.getName() + " " + col.getValidationClass());
 			 }
 
-//			 MutationBatch batch = ks.prepareMutationBatch();
-//			 batch.withRow(cf, 2).putColumn(1, "ff");
-//			 batch.withRow(cf, 2).putColumn(2, "fff");
-//			 batch.withRow(cf, 1).deleteColumn(7).putColumn(8, "get");
-//			 batch.withRow(cf, 1).deleteColumn(7).putColumn(10, "ten");
-//			 batch.execute();
+			 MutationBatch batch = ks.prepareMutationBatch();
+			 batch.withTimestamp(3000000);
+			 batch.withRow(cf, 2).putColumn(1, "one");
+			 batch.withRow(cf, 2).putColumn(2, "two");
+			 
+			 batch.withRow(cf, 1).setDefaultTtl(50000).putColumn(1, "one");
+			 batch.execute();
 			 
 			 System.out.println("FULL ROW QUERY");
 			 ColumnList<Integer> result = ks.prepareQuery(cf).getRow(1).execute().getResult();
@@ -175,59 +177,59 @@ public class FooTest extends KeyspaceTests {
 				 System.out.println(col.getName() + " " + col.getStringValue() + " " + col.getTtl() + " " + col.getTimestamp());
 			 }
 			 
-			 System.out.println("\nCOL SLICE QUERY");
-			 result = ks.prepareQuery(cf).getRow(1).withColumnSlice(8,11).execute().getResult();
-			 
-			 System.out.println();
-			 for (Column<Integer> col : result) {
-				 System.out.println(col.getName() + " " + col.getStringValue() + " " + col.getTtl() + " " + col.getTimestamp());
-			 }
-
-			 System.out.println("COL RANGE QUERY");
-			 result = ks.prepareQuery(cf).getRow(1).withColumnRange(8, 11, true, 10).execute().getResult();
-			 
-			 System.out.println();
-			 for (Column<Integer> col : result) {
-				 System.out.println(col.getName() + " " + col.getStringValue() + " " + col.getTtl() + " " + col.getTimestamp());
-			 }
-			 
-			 System.out.println("SINGLE COL QUERY");
-			 Column<Integer> col3 = ks.prepareQuery(cf).getRow(1).getColumn(8).execute().getResult();
-			 
-			 System.out.println(col3.getName() + " " + col3.getStringValue() + " " + col3.getTtl() + " " + col3.getTimestamp());
-
-			 System.out.println("\nROW SLICE QUERY");
-
-			 Rows<Integer, Integer> result1 = ks.prepareQuery(cf).getRowSlice(1, 2, 3).execute().getResult();
-
-			 for (Row<Integer, Integer> row : result1) {
-
-				 System.out.println("\nRow: " + row.getKey());
-				 ColumnList<Integer> cols = row.getColumns();
-				 for (Column<Integer> col : cols) {
-					 System.out.println(col.getName() + " " + col.getStringValue() + " " + col.getTtl() + " " + col.getTimestamp());
-				 }
-			 }
-			 
-			 result1 = ks.prepareQuery(cf).getRowSlice(1, 2, 3).withColumnSlice(1,2,3,8,11).execute().getResult();
-
-			 for (Row<Integer, Integer> row : result1) {
-				 System.out.println("\nRow: " + row.getKey());
-				 ColumnList<Integer> cols = row.getColumns();
-				 for (Column<Integer> col : cols) {
-					 System.out.println(col.getName() + " " + col.getStringValue() + " " + col.getTtl() + " " + col.getTimestamp());
-				 }
-			 }
-
-			 result1 = ks.prepareQuery(cf).getRowSlice(1, 2, 3).withColumnRange(1, 5, false, 10).execute().getResult();
-
-			 for (Row<Integer, Integer> row : result1) {
-				 System.out.println("\nRow: " + row.getKey());
-				 ColumnList<Integer> cols = row.getColumns();
-				 for (Column<Integer> col : cols) {
-					 System.out.println(col.getName() + " " + col.getStringValue() + " " + col.getTtl() + " " + col.getTimestamp());
-				 }
-			 }
+//			 System.out.println("\nCOL SLICE QUERY");
+//			 result = ks.prepareQuery(cf).getRow(1).withColumnSlice(8,11).execute().getResult();
+//			 
+//			 System.out.println();
+//			 for (Column<Integer> col : result) {
+//				 System.out.println(col.getName() + " " + col.getStringValue() + " " + col.getTtl() + " " + col.getTimestamp());
+//			 }
+//
+//			 System.out.println("COL RANGE QUERY");
+//			 result = ks.prepareQuery(cf).getRow(1).withColumnRange(8, 11, true, 10).execute().getResult();
+//			 
+//			 System.out.println();
+//			 for (Column<Integer> col : result) {
+//				 System.out.println(col.getName() + " " + col.getStringValue() + " " + col.getTtl() + " " + col.getTimestamp());
+//			 }
+//			 
+//			 System.out.println("SINGLE COL QUERY");
+//			 Column<Integer> col3 = ks.prepareQuery(cf).getRow(1).getColumn(8).execute().getResult();
+//			 
+//			 System.out.println(col3.getName() + " " + col3.getStringValue() + " " + col3.getTtl() + " " + col3.getTimestamp());
+//
+//			 System.out.println("\nROW SLICE QUERY");
+//
+//			 Rows<Integer, Integer> result1 = ks.prepareQuery(cf).getRowSlice(1, 2, 3).execute().getResult();
+//
+//			 for (Row<Integer, Integer> row : result1) {
+//
+//				 System.out.println("\nRow: " + row.getKey());
+//				 ColumnList<Integer> cols = row.getColumns();
+//				 for (Column<Integer> col : cols) {
+//					 System.out.println(col.getName() + " " + col.getStringValue() + " " + col.getTtl() + " " + col.getTimestamp());
+//				 }
+//			 }
+//			 
+//			 result1 = ks.prepareQuery(cf).getRowSlice(1, 2, 3).withColumnSlice(1,2,3,8,11).execute().getResult();
+//
+//			 for (Row<Integer, Integer> row : result1) {
+//				 System.out.println("\nRow: " + row.getKey());
+//				 ColumnList<Integer> cols = row.getColumns();
+//				 for (Column<Integer> col : cols) {
+//					 System.out.println(col.getName() + " " + col.getStringValue() + " " + col.getTtl() + " " + col.getTimestamp());
+//				 }
+//			 }
+//
+//			 result1 = ks.prepareQuery(cf).getRowSlice(1, 2, 3).withColumnRange(1, 5, false, 10).execute().getResult();
+//
+//			 for (Row<Integer, Integer> row : result1) {
+//				 System.out.println("\nRow: " + row.getKey());
+//				 ColumnList<Integer> cols = row.getColumns();
+//				 for (Column<Integer> col : cols) {
+//					 System.out.println(col.getName() + " " + col.getStringValue() + " " + col.getTtl() + " " + col.getTimestamp());
+//				 }
+//			 }
 
 //			 System.out.println("SINGLE COLUMN QUERY");
 //

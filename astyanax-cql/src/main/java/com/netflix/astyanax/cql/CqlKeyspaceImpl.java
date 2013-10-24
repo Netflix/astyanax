@@ -19,6 +19,7 @@ import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.AstyanaxConfiguration;
+import com.netflix.astyanax.Clock;
 import com.netflix.astyanax.ColumnMutation;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.KeyspaceTracerFactory;
@@ -57,7 +58,7 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 
 	private static final Logger Logger = LoggerFactory.getLogger(CqlKeyspaceImpl.class);
 	
-	private MicrosecondsAsyncClock microsClock = new MicrosecondsAsyncClock();
+	private final Clock clock;
 	
 	private volatile Session session;
 	
@@ -72,6 +73,12 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 		this.astyanaxConfig = asConfig;
 		this.tracerFactory = tracerFactory;
 		this.ksContext = new KeyspaceContext();
+		
+		if (asConfig.getClock() != null) {
+			clock = asConfig.getClock();
+		} else {
+			clock = new MicrosecondsAsyncClock();
+		}
 	}
 	
 	public CqlKeyspaceImpl(KeyspaceContext ksContext) {
@@ -174,7 +181,7 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 
 	@Override
 	public MutationBatch prepareMutationBatch() {
-		return new CqlMutationBatchImpl(ksContext, microsClock, null, null);
+		return new CqlMutationBatchImpl(ksContext, clock, astyanaxConfig.getDefaultWriteConsistencyLevel(), astyanaxConfig.getRetryPolicy());
 	}
 
 	@Override

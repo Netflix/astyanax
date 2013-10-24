@@ -1,10 +1,9 @@
 package com.netflix.astyanax.cql.writes;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.base.Preconditions;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
@@ -19,11 +18,6 @@ import com.netflix.astyanax.serializers.ComparatorType;
 
 public class CFMutationQueryGenerator extends CqlStyleMutationQuery {
 
-	private Map<KeyspaceColumnFamily, String> updateStatementCache  = new HashMap<KeyspaceColumnFamily, String>();
-	private Map<KeyspaceColumnFamily, String> deleteStatementCache  = new HashMap<KeyspaceColumnFamily, String>();
-	private Map<KeyspaceColumnFamily, String> counterIncrStatementCache = new HashMap<KeyspaceColumnFamily, String>();
-	private Map<KeyspaceColumnFamily, String> counterDecrStatementCache = new HashMap<KeyspaceColumnFamily, String>();
-	
 	private final String keyspace;
 	private final ColumnFamily<?,?> cf;
 	private final CqlColumnFamilyDefinitionImpl cfDef;
@@ -32,8 +26,8 @@ public class CFMutationQueryGenerator extends CqlStyleMutationQuery {
 
 	public CFMutationQueryGenerator(KeyspaceContext ksContext, ColumnFamilyMutationContext<?,?> cfContext, 
 								   List<CqlColumnMutationImpl<?,?>> mutationList, boolean deleteRow, 
-								   Long timestamp, Integer ttl, ConsistencyLevel consistencyLevel) {
-		super(ksContext, cfContext, mutationList, deleteRow, timestamp, ttl, consistencyLevel);
+								   AtomicReference<Integer> ttl, AtomicReference<Long> timestamp, ConsistencyLevel consistencyLevel) {
+		super(ksContext, cfContext, mutationList, deleteRow, ttl, timestamp, consistencyLevel);
 		
 		keyspace = ksContext.getKeyspace();
 		cf = cfContext.getColumnFamily();
@@ -107,7 +101,7 @@ public class CFMutationQueryGenerator extends CqlStyleMutationQuery {
 					increment = false;
 					delta = Math.abs(delta);
 				}
-				statements.addBatchQuery(getCounterColumnStatement(keyspace, cf.getName(), increment));
+				statements.addBatchQuery(getCounterColumnStatement(keyspace, cf.getName(), increment, colMutation));
 				statements.addBatchValues(getBatchValues(colMutation.columnName, delta, rowKey));
 			} else {
 				statements.addBatchQuery(getUpdateColumnStatement(colMutation));
@@ -121,7 +115,9 @@ public class CFMutationQueryGenerator extends CqlStyleMutationQuery {
 	
 	private String getUpdateColumnStatement(CqlColumnMutationImpl<?,?> colMutation) {
 
-		StringBuilder sb = new StringBuilder("UPDATE " + keyspace + "." + cf.getName() + " SET ");
+		StringBuilder sb = new StringBuilder("UPDATE " + keyspace + "." + cf.getName()); 
+		super.appendWriteOptions(sb, colMutation.getTTL(), colMutation.getTimestamp());
+		sb.append(" SET ");
 		if (isCompositeKey) { 
 			String valueAlias = cfDef.getValueColumnDefinitionList().get(0).getName();
 			sb.append(valueAlias).append(" = ? ");
@@ -196,28 +192,24 @@ public class CFMutationQueryGenerator extends CqlStyleMutationQuery {
 		return objects.toArray();
 	}
 
-	private String getCounterColumnStatement(String keyspace, String cfName, boolean increment) {
+	private String getCounterColumnStatement(String keyspace, String cfName, boolean increment, CqlColumnMutationImpl<?,?> colMutation) {
 		
 		ColumnFamily<?,?> cf = cfContext.getColumnFamily();
 		CqlColumnFamilyDefinitionImpl cfDef = (CqlColumnFamilyDefinitionImpl)cf.getColumnFamilyDefinition();
 		String valueAlias = cfDef.getValueColumnDefinitionList().get(0).getName();
 
-		KeyspaceColumnFamily kfCF = new KeyspaceColumnFamily(keyspace, cfName);
-
-		Map<KeyspaceColumnFamily, String> cache = increment ? counterIncrStatementCache : counterDecrStatementCache;
-		
-		String counterStatement = cache.get(kfCF);
-		if (counterStatement == null) {
-			StringBuilder sb = new StringBuilder();
-			if (increment) {
-				sb.append("UPDATE " + keyspace + "." + cfName + " SET " + valueAlias + " = " + valueAlias + " ? ");
-			} else {
-				sb.append("UPDATE " + keyspace + "." + cfName + " SET " + valueAlias + " = " + valueAlias + " - ? ");
-			}
-			counterStatement = appendWhereClause(sb).toString();
-			cache.put(kfCF, counterStatement);
+		StringBuilder sb = new StringBuilder();
+		if (increment) {
+			sb.append("UPDATE " + keyspace + "." + cfName); 
+			super.appendWriteOptions(sb, colMutation.getTTL(), colMutation.getTimestamp());
+			sb.append(" SET " + valueAlias + " = " + valueAlias + " ? ");
+		} else {
+			sb.append("UPDATE " + keyspace + "." + cfName);
+			super.appendWriteOptions(sb, colMutation.getTTL(), colMutation.getTimestamp());
+			sb.append(" SET " + valueAlias + " = " + valueAlias + " - ? ");
 		}
 		
+		String counterStatement = appendWhereClause(sb).toString();
 		return counterStatement;
 	}
 

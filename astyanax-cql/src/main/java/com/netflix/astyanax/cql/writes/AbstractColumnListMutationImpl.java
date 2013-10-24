@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.GZIPOutputStream;
 
 import org.apache.commons.codec.binary.StringUtils;
@@ -26,11 +27,12 @@ import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.UUIDSerializer;
 
 public abstract class AbstractColumnListMutationImpl<C> implements ColumnListMutation<C> {
-    protected Long timestamp = null;
-    protected Integer defaultTTL = null;
+    
+	protected final AtomicReference<Long> defaultTimestamp = new AtomicReference<Long>(null);
+    protected final AtomicReference<Integer> defaultTTL = new AtomicReference<Integer>(null);
 
-    public AbstractColumnListMutationImpl(long timestamp) {
-        this.timestamp = timestamp;
+    public AbstractColumnListMutationImpl(long newTimestamp) {
+        this.defaultTimestamp.set(newTimestamp);
     }
     
     @Override
@@ -359,7 +361,7 @@ public abstract class AbstractColumnListMutationImpl<C> implements ColumnListMut
 
     @Override
     public ColumnListMutation<C> setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
+        this.defaultTimestamp.set(timestamp);
         return this;
     }
 
@@ -404,10 +406,10 @@ public abstract class AbstractColumnListMutationImpl<C> implements ColumnListMut
     }
 
     public Integer getDefaultTtl() {
-        return defaultTTL;
+        return defaultTTL.get();
     }
     
     public Long getTimestamp() {
-        return timestamp;
+        return defaultTimestamp.get();
     }
 }

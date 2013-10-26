@@ -25,7 +25,7 @@ public class CFMutationQueryGenerator extends CqlStyleMutationQuery {
 	private final Object rowKey;
 
 	public CFMutationQueryGenerator(KeyspaceContext ksContext, ColumnFamilyMutationContext<?,?> cfContext, 
-								   List<CqlColumnMutationImpl<?,?>> mutationList, boolean deleteRow, 
+								   List<CqlColumnMutationImpl<?,?>> mutationList, AtomicReference<Boolean> deleteRow, 
 								   AtomicReference<Integer> ttl, AtomicReference<Long> timestamp, ConsistencyLevel consistencyLevel) {
 		super(ksContext, cfContext, mutationList, deleteRow, ttl, timestamp, consistencyLevel);
 		
@@ -40,7 +40,7 @@ public class CFMutationQueryGenerator extends CqlStyleMutationQuery {
 		
 		List<Object> values = new ArrayList<Object>();
 		
-		if (deleteRow) {
+		if (deleteRow.get()) {
 			Preconditions.checkArgument(mutationList.size() == 0, "Cannot delete row with pending column mutations");
 			values.add(super.cfContext.getRowKey());
 			return values;
@@ -79,7 +79,7 @@ public class CFMutationQueryGenerator extends CqlStyleMutationQuery {
 		
 		BatchedStatements statements = new BatchedStatements();
 		
-		if (deleteRow) {
+		if (deleteRow.get()) {
 			Preconditions.checkArgument(mutationList.size() == 0, "Cannot delete row with pending column mutations");
 			statements.addBatch(super.getDeleteEntireRowQuery(), super.cfContext.getRowKey());
 			return statements;

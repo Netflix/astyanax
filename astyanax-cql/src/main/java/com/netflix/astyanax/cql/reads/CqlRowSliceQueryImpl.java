@@ -187,7 +187,7 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 			
 			List<com.datastax.driver.core.Row> rows = rs.all();
 			if (rows == null || rows.isEmpty()) {
-				throw new RuntimeException("Empty result set");
+				return new CqlRowListImpl<K, C>();
 			}
 			return new CqlRowListImpl<K, C>(rows, (ColumnFamily<K, C>) cf);
 		}

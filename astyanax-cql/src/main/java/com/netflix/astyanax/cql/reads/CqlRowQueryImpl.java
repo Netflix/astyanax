@@ -231,7 +231,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 			List<Row> rows = rs.all(); 
 
 			if (rows == null || rows.isEmpty()) {
-				throw new RuntimeException("Row not found");
+				return new CqlColumnListImpl<C>();
 			}
 			if (pkCols.size() == 1 || cfDef.getValueColumnDefinitionList().size() > 1) {
 				CqlColumnListImpl<C> columnList = new CqlColumnListImpl<C>(rows.get(0), cf);
@@ -374,16 +374,15 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 			for (RangeQueryRecord record : records) {
 
-				String columnName = pkCols.get(componentIndex).getName();
 
 				for (RangeQueryOp op : record.getOps()) {
 
+					String columnName = pkCols.get(componentIndex).getName();
 					switch (op.getOperator()) {
 
 					case EQUAL:
 						stmt.and(eq(columnName, op.getValue()));
 						componentIndex++;
-						columnName = pkCols.get(componentIndex).getName();
 						break;
 					case LESS_THAN :
 						stmt.and(lt(columnName, op.getValue()));

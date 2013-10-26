@@ -14,6 +14,7 @@ import org.junit.Test;
 
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.annotations.Component;
+import com.netflix.astyanax.cql.test.todo.KeyspaceTests;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
@@ -37,6 +38,9 @@ public class CompositeColumnTests extends KeyspaceTests {
 	@Test
 	public void runAllTests() throws Exception {
 		
+//		keyspace.createColumnFamily(CF_POPULATION, null);
+		
+		CF_POPULATION.describe(keyspace);
 		boolean rowDeleted = false;
 		
 		populateRowsForCFPopulation();
@@ -87,6 +91,8 @@ public class CompositeColumnTests extends KeyspaceTests {
 		testReadMultipleRowKeysColumnRangeWithColumnCount(rowDeleted);
 		testReadRowRangeAllColumnsWithColumnCount(rowDeleted);
 		testReadRowRangeColumnRangeWithColumnCount(rowDeleted);
+		
+		//keyspace.dropColumnFamily(CF_POPULATION);
 	}
 	
 	private void populateRowsForCFPopulation() throws Exception {
@@ -95,7 +101,7 @@ public class CompositeColumnTests extends KeyspaceTests {
 		
 		Random random = new Random();
 		
-		for (int year = 2001; year <= 2014; year ++) {
+		for (int year = 2001; year <= 2014; year++) {
 			
 			m.withRow(CF_POPULATION, year)
 				.putColumn(NewYork.clone(), random.nextInt(25000))
@@ -157,7 +163,7 @@ public class CompositeColumnTests extends KeyspaceTests {
 		
 		AnnotatedCompositeSerializer<Population> compSerializer = new AnnotatedCompositeSerializer<Population>(Population.class);
 		
-		for (int year = 2001; year <= 2014; year++) {
+		for (int year = 2001; year <= 2001; year++) {
 
 			ColumnList<Population> result = keyspace.prepareQuery(CF_POPULATION)
 					.getRow(year)

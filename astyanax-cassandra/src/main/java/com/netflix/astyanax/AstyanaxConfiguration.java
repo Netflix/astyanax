@@ -102,6 +102,4 @@ public interface AstyanaxConfiguration {
      * @throws Exception 
      */
     Partitioner getPartitioner(String partitionerName) throws Exception;
-    
-    
 }

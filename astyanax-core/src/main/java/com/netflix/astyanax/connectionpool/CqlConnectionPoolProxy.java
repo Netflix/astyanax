@@ -41,6 +41,10 @@ public class CqlConnectionPoolProxy<T> implements ConnectionPool<T> {
 			listener.get().setHosts(hosts, port);
 		}
 	}
+	
+	public Collection<Host> getHosts() {
+		return lastHostList.get();
+	}
 
 	public interface SeedHostListener {
 		public void setHosts(Collection<Host> hosts, int port);

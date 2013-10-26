@@ -15,9 +15,14 @@ import org.junit.Test;
 
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.MutationBatch;
-import com.netflix.astyanax.cql.test.TestUtils.TestTokenRange;
+import com.netflix.astyanax.cql.test.utils.ReadTests;
+import com.netflix.astyanax.cql.test.utils.TestUtils;
+import com.netflix.astyanax.cql.test.utils.TestUtils.TestTokenRange;
+import com.netflix.astyanax.model.ColumnFamily;
 
 public class ColumnCountQueryTests extends ReadTests {
+
+	private ColumnFamily<String, String> CF_COLUMN_RANGE_TEST = TestUtils.CF_COLUMN_RANGE_TEST;
 
 	@BeforeClass
 	public static void init() throws Exception {
@@ -26,6 +31,8 @@ public class ColumnCountQueryTests extends ReadTests {
 	
 	@Test
 	public void runAllTests() throws Exception {
+		
+		CF_COLUMN_RANGE_TEST.describe(keyspace);
 		
 		boolean rowDeleted = false; 
 		

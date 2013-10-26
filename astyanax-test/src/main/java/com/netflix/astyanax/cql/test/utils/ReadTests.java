@@ -1,4 +1,4 @@
-package com.netflix.astyanax.cql.test;
+package com.netflix.astyanax.cql.test.utils;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -8,7 +8,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -17,15 +16,13 @@ import java.util.UUID;
 import junit.framework.Assert;
 
 import org.joda.time.DateTime;
-import org.junit.BeforeClass;
-import org.junit.Test;
 
 import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.cql.test.todo.KeyspaceTests;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.serializers.BytesArraySerializer;
-import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 
 
@@ -34,7 +31,7 @@ public class ReadTests extends KeyspaceTests {
 	public static DateTime OriginalDate = new DateTime().withMillisOfSecond(0).withSecondOfMinute(0).withMinuteOfHour(0).withHourOfDay(0);
 	public static byte[] TestBytes = new String("TestBytes").getBytes();
 	public static UUID TestUUID = UUID.fromString("edeb3d70-15ce-11e3-8ffd-0800200c9a66");
-	public static int RowCount = 1;
+	//public static int RowCount = 1;
 	
 	public static String[] columnNamesArr = {"firstname", "lastname", "address","age","ageShort", "ageLong","percentile", "married","single", "birthdate", "bytes", "uuid", "empty"};
 	public static List<String> columnNames = new ArrayList<String>(Arrays.asList(columnNamesArr));
@@ -44,43 +41,32 @@ public class ReadTests extends KeyspaceTests {
 			StringSerializer.get(), // Key Serializer
 			StringSerializer.get()); // Column Serializer
 
-	public static ColumnFamily<String, String> CF_COLUMN_RANGE_TEST = ColumnFamily.newColumnFamily(
-			"columnrange", // Column Family Name
-			StringSerializer.get(), // Key Serializer
-			StringSerializer.get(), // Column Serializer
-			IntegerSerializer.get()); // Data serializer;
-
-
 	public static void initReadTests() throws Exception {
 		initContext();
 		Collections.sort(columnNames); 
 	}
-	
 
-	private void createKeyspace() throws Exception {
-		keyspace.createColumnFamily(CF_USER_INFO, null);
-	}
 
-    public void testAllColumnsForRow(ColumnList<String> columns, int i) throws Exception {
+    public void testAllColumnsForRow(ColumnList<String> resultColumns, int i) throws Exception {
 
     	Date date = OriginalDate.plusMinutes(i).toDate();
 
-    	testColumnValue(columns, "firstname", columnNames, "john_" + i);
-    	testColumnValue(columns, "lastname", columnNames, "smith_" + i);
-    	testColumnValue(columns, "address", columnNames, "john smith address " + i);
-    	testColumnValue(columns, "age", columnNames, 30 + i);
-    	testColumnValue(columns, "ageShort", columnNames, new Integer(30+i).shortValue());
-    	testColumnValue(columns, "ageLong", columnNames, new Integer(30+i).longValue());
-    	testColumnValue(columns, "percentile", columnNames, 30.1);
-    	testColumnValue(columns, "married", columnNames, true);
-    	testColumnValue(columns, "single", columnNames, false);
-    	testColumnValue(columns, "birthdate", columnNames, date);
-    	testColumnValue(columns, "bytes", columnNames, TestBytes);
-    	testColumnValue(columns, "uuid", columnNames, TestUUID);
-    	testColumnValue(columns, "empty", columnNames, null);
+    	testColumnValue(resultColumns, "firstname", columnNames, "john_" + i);
+    	testColumnValue(resultColumns, "lastname", columnNames, "smith_" + i);
+    	testColumnValue(resultColumns, "address", columnNames, "john smith address " + i);
+    	testColumnValue(resultColumns, "age", columnNames, 30 + i);
+    	testColumnValue(resultColumns, "ageShort", columnNames, new Integer(30+i).shortValue());
+    	testColumnValue(resultColumns, "ageLong", columnNames, new Integer(30+i).longValue());
+    	testColumnValue(resultColumns, "percentile", columnNames, 30.1);
+    	testColumnValue(resultColumns, "married", columnNames, true);
+    	testColumnValue(resultColumns, "single", columnNames, false);
+    	testColumnValue(resultColumns, "birthdate", columnNames, date);
+    	testColumnValue(resultColumns, "bytes", columnNames, TestBytes);
+    	testColumnValue(resultColumns, "uuid", columnNames, TestUUID);
+    	testColumnValue(resultColumns, "empty", columnNames, null);
     	
     	/** TEST THE ITERATOR INTERFACE */
-    	Iterator<Column<String>> iter = columns.iterator();
+    	Iterator<Column<String>> iter = resultColumns.iterator();
     	Iterator<String> columnNameIter = columnNames.iterator();
     	while (iter.hasNext()) {
     		Column<String> col = iter.next();
@@ -90,17 +76,17 @@ public class ReadTests extends KeyspaceTests {
     }
     
     
-    private <T> void testColumnValue(ColumnList<String> response, String columnName, List<String> columnNames, T value) {
+    private <T> void testColumnValue(ColumnList<String> result, String columnName, List<String> columnNames, T expectedValue) {
     	
     	// by column name
-    	Column<String> column = response.getColumnByName(columnName);
+    	Column<String> column = result.getColumnByName(columnName);
     	Assert.assertEquals(columnName, column.getName());
-    	testColumnValue(column, value);
+    	testColumnValue(column, expectedValue);
     	
     	// by column index
     	int index = columnNames.indexOf(columnName);
-    	column = response.getColumnByIndex(index);
-    	testColumnValue(column, value);
+    	column = result.getColumnByIndex(index);
+    	testColumnValue(column, expectedValue);
     }
     
     private <T> void testColumnValue(Column<String> column, T value) {
@@ -137,39 +123,40 @@ public class ReadTests extends KeyspaceTests {
     		Assert.assertFalse(column.hasValue());
     	}
     }
-	public void populateRows() throws Exception {
+    
+    public void populateRows(int numRows) throws Exception {
+
+    	MutationBatch mb = keyspace.prepareMutationBatch();
+
+    	for (int i=0; i<numRows; i++) {
+
+    		Date date = OriginalDate.plusMinutes(i).toDate();
+    		mb.withRow(CF_USER_INFO, "acct_" + i)
+    		.putColumn("firstname", "john_" + i, null)
+    		.putColumn("lastname", "smith_" + i, null)
+    		.putColumn("address", "john smith address " + i, null)
+    		.putColumn("age", 30+i, null)
+    		.putColumn("ageShort", new Integer(30+i).shortValue(), null)
+    		.putColumn("ageLong", new Integer(30+i).longValue(), null)
+    		.putColumn("percentile", 30.1)
+    		.putColumn("married", true)
+    		.putColumn("single", false)
+    		.putColumn("birthdate", date)
+    		.putColumn("bytes", TestBytes)
+    		.putColumn("uuid", TestUUID)
+    		.putEmptyColumn("empty");
+
+    		mb.execute();
+    		mb.discardMutations();
+    	}
+    }
+	
+	
+	public void deleteRows(int numRows) throws Exception {
 
         MutationBatch mb = keyspace.prepareMutationBatch();
 
-        for (int i=0; i<RowCount; i++) {
-        	
-        	Date date = OriginalDate.plusMinutes(i).toDate();
-            mb.withRow(CF_USER_INFO, "acct_" + i)
-            .putColumn("firstname", "john_" + i, null)
-            .putColumn("lastname", "smith_" + i, null)
-            .putColumn("address", "john smith address " + i, null)
-            .putColumn("age", 30+i, null)
-            .putColumn("ageShort", new Integer(30+i).shortValue(), null)
-            .putColumn("ageLong", new Integer(30+i).longValue(), null)
-            .putColumn("percentile", 30.1)
-            .putColumn("married", true)
-            .putColumn("single", false)
-            .putColumn("birthdate", date)
-            .putColumn("bytes", TestBytes)
-            .putColumn("uuid", TestUUID)
-            .putEmptyColumn("empty");
-
-            mb.execute();
-            mb.discardMutations();
-        }
-	}
-	
-	
-	public void deleteRows() throws Exception {
-
-        MutationBatch mb = keyspace.prepareMutationBatch();
-
-        for (int i=0; i<RowCount; i++) {
+        for (int i=0; i<numRows; i++) {
             mb.withRow(CF_USER_INFO, "acct_" + i).delete();
             mb.execute();
             mb.discardMutations();

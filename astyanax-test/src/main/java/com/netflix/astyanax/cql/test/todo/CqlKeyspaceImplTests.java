@@ -1,4 +1,4 @@
-package com.netflix.astyanax.cql.test;
+package com.netflix.astyanax.cql.test.todo;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -15,7 +15,9 @@ import com.google.common.collect.ImmutableMap;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.annotations.Component;
-import com.netflix.astyanax.cql.test.ClusterConfiguration.Driver;
+import com.netflix.astyanax.cql.test.utils.AstyanaxContextFactory;
+import com.netflix.astyanax.cql.test.utils.ClusterConfiguration;
+import com.netflix.astyanax.cql.test.utils.ClusterConfiguration.Driver;
 import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;

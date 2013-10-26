@@ -2,6 +2,7 @@ package com.netflix.astyanax.cql.writes;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.base.Preconditions;
 import com.netflix.astyanax.ColumnListMutation;
@@ -19,7 +20,7 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 	private final ColumnFamilyMutationContext<K,C> cfContext;
 	
 	private final List<CqlColumnMutationImpl<?,?>> mutationList = new ArrayList<CqlColumnMutationImpl<?,?>>();
-	private boolean deleteRow = false; 
+	private AtomicReference<Boolean> deleteRow = new AtomicReference<Boolean>(false); 
 	private com.netflix.astyanax.model.ConsistencyLevel consistencyLevel;
 	
 	private final CFMutationQueryGenerator queryGen; 
@@ -89,7 +90,7 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 
 	@Override
 	public ColumnListMutation<C> delete() {
-		deleteRow = true;
+		deleteRow.set(true);
 		return this;
 	}
 	

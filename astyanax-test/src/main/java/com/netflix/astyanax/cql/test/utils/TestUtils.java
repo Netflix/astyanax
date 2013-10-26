@@ -1,8 +1,10 @@
-package com.netflix.astyanax.cql.test;
+package com.netflix.astyanax.cql.test.utils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import org.apache.log4j.PropertyConfigurator;
 
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Keyspace;
@@ -17,7 +19,7 @@ public class TestUtils {
 		
 		public String startToken;
 		public String endToken;
-		List<String> expectedRowKeys = new ArrayList<String>();
+		public List<String> expectedRowKeys = new ArrayList<String>();
 		
 		public TestTokenRange(String start, String end, String ... expectedKeys) {
 			startToken = start;

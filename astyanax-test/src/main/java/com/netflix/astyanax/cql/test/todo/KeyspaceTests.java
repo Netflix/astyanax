@@ -1,4 +1,4 @@
-package com.netflix.astyanax.cql.test;
+package com.netflix.astyanax.cql.test.todo;
 
 import org.apache.log4j.PropertyConfigurator;
 import org.slf4j.Logger;
@@ -6,7 +6,9 @@ import org.slf4j.LoggerFactory;
 
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
-import com.netflix.astyanax.cql.test.ClusterConfiguration.Driver;
+import com.netflix.astyanax.cql.test.utils.AstyanaxContextFactory;
+import com.netflix.astyanax.cql.test.utils.ClusterConfiguration;
+import com.netflix.astyanax.cql.test.utils.ClusterConfiguration.Driver;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnList;
 

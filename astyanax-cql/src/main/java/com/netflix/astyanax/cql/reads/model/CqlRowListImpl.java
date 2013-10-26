@@ -26,6 +26,15 @@ public class CqlRowListImpl<K, C> implements Rows<K, C> {
 	private final CqlColumnFamilyDefinitionImpl cfDef; 
 	private final List<ColumnDefinition> pkCols; 
 	
+	public CqlRowListImpl() {
+		this.rows = new ArrayList<Row<K, C>>();
+		this.lookup = new HashMap<K, Row<K,C>>();
+		
+		this.cf = null;
+		this.cfDef = null;
+		this.pkCols = null;
+	}
+	
 	public CqlRowListImpl(List<com.datastax.driver.core.Row> resultRows, ColumnFamily<K,C> cf) {
 		
 		this.rows = new ArrayList<Row<K, C>>();

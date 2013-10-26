@@ -15,7 +15,7 @@ public class CqlStyleMutationQuery {
 	protected final ColumnFamilyMutationContext<?,?> cfContext;
 	protected final List<CqlColumnMutationImpl<?,?>> mutationList;
 	
-	protected boolean deleteRow;
+	protected AtomicReference<Boolean> deleteRow;
 	
 	protected final AtomicReference<Long> defaultTimestamp;
 	protected final AtomicReference<Integer> defaultTTL; 
@@ -26,8 +26,9 @@ public class CqlStyleMutationQuery {
 	private static final String AND = " AND";
 	private static final String TIMESTAMP = " TIMESTAMP ";
 	
-	public CqlStyleMutationQuery(KeyspaceContext ksCtx, ColumnFamilyMutationContext<?,?> cfCtx, List<CqlColumnMutationImpl<?,?>> mutationList, 
-								 boolean deleteRow, AtomicReference<Integer> ttl, AtomicReference<Long> timestamp, ConsistencyLevel consistencyLevel) {
+	public CqlStyleMutationQuery(KeyspaceContext ksCtx, ColumnFamilyMutationContext<?,?> cfCtx, 
+								 List<CqlColumnMutationImpl<?,?>> mutationList, AtomicReference<Boolean> deleteRow, 
+								 AtomicReference<Integer> ttl, AtomicReference<Long> timestamp, ConsistencyLevel consistencyLevel) {
 		
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;

@@ -1,11 +1,14 @@
-package com.netflix.astyanax.cql.test;
+package com.netflix.astyanax.cql.test.utils;
 
-import static com.netflix.astyanax.cql.test.ClusterConfiguration.TEST_CLUSTER_NAME;
-import static com.netflix.astyanax.cql.test.ClusterConfiguration.TEST_KEYSPACE_NAME;
-import static com.netflix.astyanax.cql.test.ClusterConfiguration.TheDriver;
+import static com.netflix.astyanax.cql.test.utils.ClusterConfiguration.TEST_CLUSTER_NAME;
+import static com.netflix.astyanax.cql.test.utils.ClusterConfiguration.TEST_KEYSPACE_NAME;
+import static com.netflix.astyanax.cql.test.utils.ClusterConfiguration.TheDriver;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.apache.log4j.PropertyConfigurator;
 
 import com.google.common.base.Supplier;
 import com.netflix.astyanax.AstyanaxContext;
@@ -17,12 +20,21 @@ import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
 import com.netflix.astyanax.cql.CqlFamilyFactory;
-import com.netflix.astyanax.cql.test.ClusterConfiguration.Driver;
+import com.netflix.astyanax.cql.test.utils.ClusterConfiguration.Driver;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 
 public class AstyanaxContextFactory {
 
+    private static final AtomicReference<Keyspace> keyspaceReference = new AtomicReference<Keyspace>(null);
+    
+    static {
+    	PropertyConfigurator.configure("./src/main/java/test-log4j.properties");
+
+    	AstyanaxContext<Keyspace> context = AstyanaxContextFactory.getKeyspace();
+    	context.start();
+    	keyspaceReference.set(context.getClient());
+    }
     
     public static AstyanaxContext<Cluster> getCluster() {
     	return getCluster(TEST_CLUSTER_NAME, TheDriver);
@@ -201,4 +213,7 @@ public class AstyanaxContextFactory {
     	return context;
     }
 
+    public Keyspace getCachedKeyspace() {
+    	return keyspaceReference.get();
+    }
 }

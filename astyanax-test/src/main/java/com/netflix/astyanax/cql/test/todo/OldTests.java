@@ -1,4 +1,4 @@
-package com.netflix.astyanax.cql.test;
+package com.netflix.astyanax.cql.test.todo;
 
 
 public class OldTests {

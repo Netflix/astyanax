@@ -7,12 +7,14 @@ import junit.framework.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.netflix.astyanax.cql.test.utils.ReadTests;
+import com.netflix.astyanax.cql.test.utils.TestUtils;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.util.RangeBuilder;
 
-public class PaginationTests extends ReadTests {
+public class SingleRowColumnPaginationTests extends ReadTests {
 	
 	@BeforeClass
 	public static void init() throws Exception {
@@ -21,6 +23,8 @@ public class PaginationTests extends ReadTests {
 	
 	@Test
 	public void runAllTests() throws Exception {
+		
+		TestUtils.CF_COLUMN_RANGE_TEST.describe(keyspace);
 		
 		boolean rowDeleted = false;
 		
@@ -55,7 +59,7 @@ public class PaginationTests extends ReadTests {
 		ColumnList<String> columns;
 		
 		RowQuery<String, String> query = keyspace
-				.prepareQuery(CF_COLUMN_RANGE_TEST)
+				.prepareQuery(TestUtils.CF_COLUMN_RANGE_TEST)
 				.getKey(rowKey)
 				.autoPaginate(true)
 				.withColumnRange(

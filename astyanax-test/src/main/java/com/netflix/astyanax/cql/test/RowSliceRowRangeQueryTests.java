@@ -17,15 +17,20 @@ import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.cql.reads.model.CqlRangeBuilder;
 import com.netflix.astyanax.cql.reads.model.CqlRangeImpl;
-import com.netflix.astyanax.cql.test.TestUtils.TestTokenRange;
+import com.netflix.astyanax.cql.test.utils.ReadTests;
+import com.netflix.astyanax.cql.test.utils.TestUtils;
+import com.netflix.astyanax.cql.test.utils.TestUtils.TestTokenRange;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.Column;
+import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 
 
 public class RowSliceRowRangeQueryTests extends ReadTests {
+
+	private ColumnFamily<String, String> CF_COLUMN_RANGE_TEST = TestUtils.CF_COLUMN_RANGE_TEST;
 
 	@BeforeClass
 	public static void init() throws Exception {
@@ -35,9 +40,12 @@ public class RowSliceRowRangeQueryTests extends ReadTests {
 	@Test
 	public void runAllTests() throws Exception {
 		
+		keyspace.createColumnFamily(CF_COLUMN_RANGE_TEST, null);
+		
+		CF_COLUMN_RANGE_TEST.describe(keyspace);
 		boolean rowDeleted = false; 
 		
-		populateRowsForColumnRange(); 
+		TestUtils.populateRowsForColumnRange(keyspace);
 		Thread.sleep(1000);
 		
 		testRowKeysWithAllColumns(rowDeleted);
@@ -48,7 +56,7 @@ public class RowSliceRowRangeQueryTests extends ReadTests {
 		testRowRangeWithColumnSet(rowDeleted);
 		testRowRangeWithColumnRange(rowDeleted);
 		
-		deleteRowsForColumnRange();
+		TestUtils.deleteRowsForColumnRange(keyspace);
 		Thread.sleep(1000);
 		rowDeleted = true; 
 		
@@ -59,6 +67,8 @@ public class RowSliceRowRangeQueryTests extends ReadTests {
 		testRowRangeWithAllColumns(rowDeleted);
 		testRowRangeWithColumnSet(rowDeleted);
 		testRowRangeWithColumnRange(rowDeleted);
+		
+		//keyspace.dropColumnFamily(CF_COLUMN_RANGE_TEST);
 	}
 	
 	private void testRowKeysWithAllColumns(boolean rowDeleted) throws Exception {

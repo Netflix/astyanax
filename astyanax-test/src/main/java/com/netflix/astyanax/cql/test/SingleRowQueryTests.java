@@ -14,12 +14,15 @@ import junit.framework.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.netflix.astyanax.cql.test.utils.ReadTests;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.serializers.BytesArraySerializer;
 
-public class ColumnQueryTests extends ReadTests {
+public class SingleRowQueryTests extends ReadTests {
 
+	private static int TestRowCount = 1; 
+	
 	@BeforeClass
 	public static void init() throws Exception {
 		initReadTests();
@@ -27,48 +30,57 @@ public class ColumnQueryTests extends ReadTests {
 	
 	@Test
 	public void runAllTests() throws Exception {
-		super.RowCount = 10; 
+		
+		TestRowCount = 100;
+		
 		try {
+			/** CREATE TABLE */
+			
+			//super.keyspace.createColumnFamily(CF_USER_INFO, null);
+			super.CF_USER_INFO.describe(super.keyspace);
 
 			/** POPULATE ROWS FOR READ TESTS */
-			
-			populateRows();  // NOTE THAT WE ARE UING USER_INFO CF
+
+			populateRows(TestRowCount);  // NOTE THAT WE ARE UING USER_INFO CF
 			Thread.sleep(1000);
+			boolean rowDeleted = false; 
 
 			/** NOW READ BACK THE COLUMNS FOR EACH ROW */
 			
-			testSingleRowAllColumnsQuery(); 
-			testSingleRowSingleColumnQuery();
-			testSingleRowColumnSliceQueryWithCollection();
-			testSingleRowColumnSliceQueryVarArgs();
-			testSingleRowAllColumnsColumnCountQuery(false);
-			testSingleRowColumnSliceCollectionColumnCountQuery(false);
-			testSingleRowColumnSliceVarArgsColumnCountQuery(false);
+			testSingleRowAllColumnsQuery(rowDeleted); 
+			testSingleRowSingleColumnQuery(rowDeleted);
+			testSingleRowColumnSliceQueryWithCollection(rowDeleted);
+			testSingleRowColumnSliceQueryVarArgs(rowDeleted);
+			testSingleRowAllColumnsColumnCountQuery(rowDeleted);
+			testSingleRowColumnSliceCollectionColumnCountQuery(rowDeleted);
+			testSingleRowColumnSliceVarArgsColumnCountQuery(rowDeleted);
 
 			/** NOW DELETE THE ROWS */ 
 
-			deleteRows();
+			deleteRows(TestRowCount);
 			Thread.sleep(1000);
-
+			rowDeleted = true;
+			
 			/** NOW ISSUE THE SAME QUERY BUT VERIFY THAT THE RESULTS ARE EMPTY */
 			
-			testSingleRowAllColumnsWithMissingRow();
-			testSingleRowSingleColumnQueryWithMissingRow();
-			testSingleRowColumnSliceQueryWithCollectionWithMissingRow();
-			testSingleRowColumnSliceQueryVarArgsWithMissingRow();
-			testSingleRowAllColumnsColumnCountQuery(true);
-			testSingleRowColumnSliceCollectionColumnCountQuery(true);
-			testSingleRowColumnSliceCollectionColumnCountQuery(true);
-			testSingleRowColumnSliceVarArgsColumnCountQuery(true);
+			testSingleRowAllColumnsQuery(rowDeleted); 
+			testSingleRowSingleColumnQuery(rowDeleted);
+			testSingleRowColumnSliceQueryWithCollection(rowDeleted);
+			testSingleRowColumnSliceQueryVarArgs(rowDeleted);
+			testSingleRowAllColumnsColumnCountQuery(rowDeleted);
+			testSingleRowColumnSliceCollectionColumnCountQuery(rowDeleted);
+			testSingleRowColumnSliceVarArgsColumnCountQuery(rowDeleted);
+			
+			/** DELETE COLUMN FAMILY */
+			//keyspace.dropColumnFamily(CF_USER_INFO);
 			
 		} catch (Exception e) {
-			deleteRows();
 			e.printStackTrace();
 			Assert.fail(e.getMessage());
 		}
 	}
 
-    private void testSingleRowAllColumnsQuery() throws Exception {
+    private void testSingleRowAllColumnsQuery(boolean rowDeleted) throws Exception {
     	
     	String[] arr = {"firstname", "lastname", "address","age","ageShort", "ageLong","percentile", "married","single", "birthdate", "bytes", "uuid", "empty"};
     	List<String> columnNames = new ArrayList<String>(Arrays.asList(arr));
@@ -79,10 +91,15 @@ public class ColumnQueryTests extends ReadTests {
     	/**
     	 * READ BY COLUMN NAME
     	 */
-        for (int i=0; i<RowCount; i++) {
+        for (int i=0; i<TestRowCount; i++) {
 
         	ColumnList<String> response = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i).execute().getResult();
 
+        	if (rowDeleted) {
+            	Assert.assertTrue(response.isEmpty());
+            	continue;
+        	}
+        	
         	Assert.assertFalse(response.isEmpty());
         	
         	List<String> columnNameList = new ArrayList<String>(response.getColumnNames());
@@ -116,19 +133,26 @@ public class ColumnQueryTests extends ReadTests {
         }
     }
 
-
-    private void testSingleRowSingleColumnQuery() throws Exception {
+    private void testSingleRowSingleColumnQuery(boolean rowDeleted) throws Exception {
     	
         /** NOW READ 1000 ROWS BACK */
     	
     	/**
     	 * READ BY COLUMN NAME
     	 */
-        for (int i=0; i<RowCount; i++) {
+        for (int i=0; i<TestRowCount; i++) {
 
         	Date date = OriginalDate.plusMinutes(i).toDate();
 
         	Column<String> column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("firstname").execute().getResult();
+        	
+        	if (rowDeleted) {
+        		Assert.assertFalse(column.hasValue());
+        		continue;
+        	} else {
+        		Assert.assertTrue(column.hasValue());
+        	}
+        	
         	testColumnValue(column, "john_" + i);
         	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("lastname").execute().getResult();
         	testColumnValue(column, "smith_" + i);
@@ -160,16 +184,23 @@ public class ColumnQueryTests extends ReadTests {
 
 
 
-	private void testSingleRowColumnSliceQueryWithCollection() throws Exception {
+	private void testSingleRowColumnSliceQueryWithCollection(boolean rowDeleted) throws Exception {
     	
     	/**
     	 * READ BY COLUMN SLICE COLLECTION
     	 */
-        for (int i=0; i<RowCount; i++) {
+        for (int i=0; i<TestRowCount; i++) {
 
         	Date date = OriginalDate.plusMinutes(i).toDate();
 
         	ColumnList<String> response = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i).withColumnSlice(columnNames).execute().getResult();
+        	
+        	if (rowDeleted) {
+        		Assert.assertTrue(response.isEmpty());
+        		continue;
+        	} else {
+        		Assert.assertFalse(response.isEmpty());
+        	}
         	
         	testColumnValue(response, "firstname", columnNames, "john_" + i);
         	testColumnValue(response, "lastname", columnNames, "smith_" + i);
@@ -184,22 +215,28 @@ public class ColumnQueryTests extends ReadTests {
         	testColumnValue(response, "bytes", columnNames, TestBytes);
         	testColumnValue(response, "uuid", columnNames, TestUUID);
         	testColumnValue(response, "empty", columnNames, null);
-
         }
     }
 
-    private void testSingleRowColumnSliceQueryVarArgs() throws Exception {
+    private void testSingleRowColumnSliceQueryVarArgs(boolean rowDeleted) throws Exception {
     	
     	/**
     	 * READ BY COLUMN SLICE COLLECTION
     	 */
-        for (int i=0; i<RowCount; i++) {
+        for (int i=0; i<TestRowCount; i++) {
 
         	Date date = OriginalDate.plusMinutes(i).toDate();
 
         	ColumnList<String> response = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i)
         			.withColumnSlice("firstname", "lastname", "address","age","ageShort", "ageLong","percentile", "married","single", "birthdate", "bytes", "uuid", "empty").execute().getResult();
         	
+        	if (rowDeleted) {
+        		Assert.assertTrue(response.isEmpty());
+        		continue;
+        	} else {
+        		Assert.assertFalse(response.isEmpty());
+        	}
+
         	testColumnValue(response, "firstname", columnNames, "john_" + i);
         	testColumnValue(response, "lastname", columnNames, "smith_" + i);
         	testColumnValue(response, "address", columnNames, "john smith address " + i);
@@ -213,77 +250,12 @@ public class ColumnQueryTests extends ReadTests {
         	testColumnValue(response, "bytes", columnNames, TestBytes);
         	testColumnValue(response, "uuid", columnNames, TestUUID);
         	testColumnValue(response, "empty", columnNames, null);
-
         }
     }
-	
-
-    
-    private void testSingleRowAllColumnsWithMissingRow() throws Exception {
-    	for (int i=0; i<RowCount; i++) {
-    		ColumnList<String> response = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i).execute().getResult();
-    		Assert.assertTrue(response.isEmpty());
-    	}
-    }
-    
-    private void testSingleRowSingleColumnQueryWithMissingRow() throws Exception {
-    	
-        /** NOW READ 1000 ROWS BACK */
-    	
-    	/**
-    	 * READ BY COLUMN NAME
-    	 */
-        for (int i=0; i<RowCount; i++) {
-
-        	Column<String> column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("firstname").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("lastname").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("address").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("age").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("ageShort").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("ageLong").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("percentile").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("married").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("single").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("birthdate").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("bytes").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("uuid").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        	column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("empty").execute().getResult();
-        	Assert.assertFalse(column.hasValue());
-        }
-    }
-    
-
-	private void testSingleRowColumnSliceQueryWithCollectionWithMissingRow() throws Exception {
-        for (int i=0; i<RowCount; i++) {
-        	ColumnList<String> response = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i).withColumnSlice(columnNames).execute().getResult();
-        	Assert.assertTrue(response.isEmpty());
-        }
-	}
-
-	private void testSingleRowColumnSliceQueryVarArgsWithMissingRow() throws Exception {
-        for (int i=0; i<RowCount; i++) {
-        	ColumnList<String> response = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i)
-        			.withColumnSlice("firstname", "lastname", "address","age","ageShort", "ageLong","percentile", "married","single", "birthdate", "bytes", "uuid", "empty").execute().getResult();
-        	Assert.assertTrue(response.isEmpty());
-        }
-	}
-
 
 	private void testSingleRowAllColumnsColumnCountQuery(boolean rowDeleted) throws Exception {
 		int expected = rowDeleted ? 0 : columnNames.size();
-        for (int i=0; i<RowCount; i++) {
+        for (int i=0; i<TestRowCount; i++) {
         	int count = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i).getCount().execute().getResult().intValue();
         	Assert.assertEquals(expected, count);
         }
@@ -291,7 +263,7 @@ public class ColumnQueryTests extends ReadTests {
 	
 	private void testSingleRowColumnSliceCollectionColumnCountQuery(boolean rowDeleted) throws Exception {
 		int expected = rowDeleted ? 0 : columnNames.size();
-        for (int i=0; i<RowCount; i++) {
+        for (int i=0; i<TestRowCount; i++) {
         	int count = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i).withColumnSlice(columnNames).getCount().execute().getResult();
         	Assert.assertEquals(expected, count);
         }
@@ -299,7 +271,7 @@ public class ColumnQueryTests extends ReadTests {
 
 	private void testSingleRowColumnSliceVarArgsColumnCountQuery(boolean rowDeleted) throws Exception {
 		int expected = rowDeleted ? 0 : columnNames.size();
-        for (int i=0; i<RowCount; i++) {
+        for (int i=0; i<TestRowCount; i++) {
         	int count = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i)
         			.withColumnSlice("firstname", "lastname", "address","age","ageShort", "ageLong","percentile", "married","single", "birthdate", "bytes", "uuid", "empty")
         			.getCount().execute().getResult();

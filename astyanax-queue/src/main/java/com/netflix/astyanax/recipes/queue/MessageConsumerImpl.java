@@ -93,7 +93,7 @@ class MessageConsumerImpl implements MessageConsumer {
         ShardLock lock = null;
         try {
             lock = queue.lockManager.acquireLock(shardName);
-            MutationBatch m = queue.keyspace.prepareMutationBatch().setConsistencyLevel(queue.consistencyLevel);
+            MutationBatch m = queue.keyspace.prepareMutationBatch().setConsistencyLevel(queue.getReadConsistency());
             ColumnListMutation<MessageQueueEntry> rowMutation = m.withRow(queue.queueColumnFamily, shardName);
             long curTimeMicros = TimeUUIDUtils.getMicrosTimeFromUUID(TimeUUIDUtils.getUniqueTimeUUIDinMicros());
             return readMessagesInternal(shardName, itemToPop, 0, null, rowMutation, m, curTimeMicros);
@@ -118,11 +118,11 @@ class MessageConsumerImpl implements MessageConsumer {
             // 1. Write the lock column
             lockColumn = MessageQueueEntry.newLockEntry(MessageQueueEntryState.None);
             long curTimeMicros = TimeUUIDUtils.getTimeFromUUID(lockColumn.getTimestamp());
-            m = queue.keyspace.prepareMutationBatch().setConsistencyLevel(queue.consistencyLevel);
+            m = queue.keyspace.prepareMutationBatch().setConsistencyLevel(queue.getReadConsistency());
             m.withRow(queue.queueColumnFamily, shardName).putColumn(lockColumn, curTimeMicros + queue.lockTimeout, queue.lockTtl);
             m.execute();
             // 2. Read back lock columns and entries
-            ColumnList<MessageQueueEntry> result = queue.keyspace.prepareQuery(queue.queueColumnFamily).setConsistencyLevel(queue.consistencyLevel).getKey(shardName)
+            ColumnList<MessageQueueEntry> result = queue.keyspace.prepareQuery(queue.queueColumnFamily).setConsistencyLevel(queue.getReadConsistency()).getKey(shardName)
                     .withColumnRange(ShardedDistributedMessageQueue.entrySerializer
                                                                                    .buildRange()
                                                                                    .greaterThanEquals((byte) MessageQueueEntryType.Lock.ordinal())
@@ -131,7 +131,7 @@ class MessageConsumerImpl implements MessageConsumer {
                                                                    )
                     .execute()
                     .getResult();
-            m = queue.keyspace.prepareMutationBatch().setConsistencyLevel(queue.consistencyLevel);
+            m = queue.keyspace.prepareMutationBatch().setConsistencyLevel(queue.getWriteConsistency());
             rowMutation = m.withRow(queue.queueColumnFamily, shardName);
             rowMutation.deleteColumn(lockColumn);
             int lockCount = 0;
@@ -175,7 +175,7 @@ class MessageConsumerImpl implements MessageConsumer {
             }
         }
         long curTimeMicros = TimeUUIDUtils.getMicrosTimeFromUUID(lockColumn.getTimestamp());
-        m = queue.keyspace.prepareMutationBatch().setConsistencyLevel(queue.consistencyLevel);
+        m = queue.keyspace.prepareMutationBatch().setConsistencyLevel(queue.getWriteConsistency());
         // First, release the lock column
         rowMutation = m.withRow(queue.queueColumnFamily, shardName);
         rowMutation.deleteColumn(lockColumn);
@@ -184,7 +184,7 @@ class MessageConsumerImpl implements MessageConsumer {
 
     @Override
     public void ackMessage(MessageContext context) throws MessageQueueException {
-        MutationBatch mb = queue.keyspace.prepareMutationBatch().setConsistencyLevel(queue.consistencyLevel);
+        MutationBatch mb = queue.keyspace.prepareMutationBatch().setConsistencyLevel(queue.getWriteConsistency());
         fillAckMutation(context, mb);
         try {
             mb.execute();
@@ -195,7 +195,7 @@ class MessageConsumerImpl implements MessageConsumer {
 
     @Override
     public void ackMessages(Collection<MessageContext> messages) throws MessageQueueException {
-        MutationBatch mb = queue.keyspace.prepareMutationBatch().setConsistencyLevel(queue.consistencyLevel);
+        MutationBatch mb = queue.keyspace.prepareMutationBatch().setConsistencyLevel(queue.getWriteConsistency());
         for (MessageContext context : messages) {
             fillAckMutation(context, mb);
         }
@@ -250,7 +250,7 @@ class MessageConsumerImpl implements MessageConsumer {
     @Override
     public void ackPoisonMessage(MessageContext context) throws MessageQueueException {
         // TODO: Remove bad message and add to poison queue
-        MutationBatch mb = queue.keyspace.prepareMutationBatch().setConsistencyLevel(queue.consistencyLevel);
+        MutationBatch mb = queue.keyspace.prepareMutationBatch().setConsistencyLevel(queue.getWriteConsistency());
         fillAckMutation(context, mb);
         try {
             mb.execute();
@@ -280,7 +280,7 @@ class MessageConsumerImpl implements MessageConsumer {
             }
 
             ColumnList<MessageQueueEntry> result = queue.keyspace.prepareQuery(queue.queueColumnFamily)
-                    .setConsistencyLevel(queue.consistencyLevel).getKey(shardName).
+                    .setConsistencyLevel(queue.getReadConsistency()).getKey(shardName).
                     withColumnRange(new RangeBuilder()
                                         .setLimit(itemsToPop + (lockColumn == null? 0:(lockColumnCount + 1)))
                                         .setEnd(re.toBytes())

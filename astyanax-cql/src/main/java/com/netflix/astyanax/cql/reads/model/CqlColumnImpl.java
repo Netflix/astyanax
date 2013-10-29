@@ -6,8 +6,6 @@ import java.util.UUID;
 
 import org.apache.cassandra.cql3.CQL3Type;
 
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
-
 import com.datastax.driver.core.ColumnDefinitions.Definition;
 import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.Row;

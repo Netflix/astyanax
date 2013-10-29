@@ -1,11 +1,10 @@
 package com.netflix.astyanax.cql.writes;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.UUID;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.PreparedStatement;
@@ -18,17 +17,23 @@ import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
-import com.netflix.astyanax.cql.util.ConsistencyLevelTransform;
 import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
+import com.netflix.astyanax.serializers.BooleanSerializer;
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
+import com.netflix.astyanax.serializers.DateSerializer;
+import com.netflix.astyanax.serializers.DoubleSerializer;
+import com.netflix.astyanax.serializers.FloatSerializer;
+import com.netflix.astyanax.serializers.IntegerSerializer;
+import com.netflix.astyanax.serializers.LongSerializer;
+import com.netflix.astyanax.serializers.ShortSerializer;
+import com.netflix.astyanax.serializers.StringSerializer;
+import com.netflix.astyanax.serializers.UUIDSerializer;
 
 public class CqlColumnMutationImpl<K,C> implements ColumnMutation {
 
-	private static final Logger LOG = LoggerFactory.getLogger(CqlColumnMutationImpl.class);
-	
 	protected final KeyspaceContext ksContext;
 	protected final ColumnFamilyMutationContext<K,C> cfContext;
 	protected final Object columnName;
@@ -39,13 +44,18 @@ public class CqlColumnMutationImpl<K,C> implements ColumnMutation {
 	protected boolean deleteColumn = false;
 	
 	private ConsistencyLevel consistencyLevel;
-	private Long timestamp;
-	private Integer ttl;
+	private final AtomicReference<Long> timestamp = new AtomicReference<Long>(null);
+	private final AtomicReference<Integer> ttl = new AtomicReference<Integer>(null);
+	
+	private final CFMutationQueryGenerator queryGen; 
 	
 	public CqlColumnMutationImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<K,C> cfCtx, Object cName) {
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;
 		this.columnName = cName;
+		
+		this.queryGen = new CFMutationQueryGenerator(ksContext, cfContext, new ArrayList<CqlColumnMutationImpl<?,?>>(), 
+				new AtomicReference<Boolean>(false), ttl, timestamp, consistencyLevel);
 	}
 
 	@Override
@@ -61,44 +71,46 @@ public class CqlColumnMutationImpl<K,C> implements ColumnMutation {
 	}
 
 	@Override
-	public ColumnMutation withTimestamp(long timestamp) {
-		this.timestamp = timestamp;
+	public ColumnMutation withTimestamp(long newValue) {
+		this.timestamp.set(newValue);
 		return this;
 	}
 
 	@Override
 	public Execution<Void> putValue(String value, Integer ttl) {
-		return exec(value, ttl, CassandraOperationType.COLUMN_MUTATE);
+		return putValue(value, StringSerializer.get(), ttl);
 	}
 
 	@Override
 	public Execution<Void> putValue(byte[] value, Integer ttl) {
-		return exec(value, ttl, CassandraOperationType.COLUMN_MUTATE);
+		return exec(ByteBuffer.wrap(value), ttl, CassandraOperationType.COLUMN_MUTATE);
 	}
 
 	@Override
 	public Execution<Void> putValue(byte value, Integer ttl) {
-		return exec(value, ttl, CassandraOperationType.COLUMN_MUTATE);
+		byte[] bytes = new byte[1];
+		bytes[0] = value;
+		return exec(ByteBuffer.wrap(bytes), ttl, CassandraOperationType.COLUMN_MUTATE);
 	}
 
 	@Override
 	public Execution<Void> putValue(short value, Integer ttl) {
-		return exec(value, ttl, CassandraOperationType.COLUMN_MUTATE);
+		return putValue(value, ShortSerializer.get(), ttl);
 	}
 
 	@Override
 	public Execution<Void> putValue(int value, Integer ttl) {
-		return exec(value, ttl, CassandraOperationType.COLUMN_MUTATE);
+		return putValue(value, IntegerSerializer.get(), ttl);
 	}
 
 	@Override
 	public Execution<Void> putValue(long value, Integer ttl) {
-		return exec(value, ttl, CassandraOperationType.COLUMN_MUTATE);
+		return putValue(value, LongSerializer.get(), ttl);
 	}
 
 	@Override
 	public Execution<Void> putValue(boolean value, Integer ttl) {
-		return exec(value, ttl, CassandraOperationType.COLUMN_MUTATE);
+		return putValue(value, BooleanSerializer.get(), ttl);
 	}
 
 	@Override
@@ -108,22 +120,22 @@ public class CqlColumnMutationImpl<K,C> implements ColumnMutation {
 
 	@Override
 	public Execution<Void> putValue(Date value, Integer ttl) {
-		return exec(value, ttl, CassandraOperationType.COLUMN_MUTATE);
+		return putValue(value, DateSerializer.get(), ttl);
 	}
 
 	@Override
 	public Execution<Void> putValue(float value, Integer ttl) {
-		return exec(value, ttl, CassandraOperationType.COLUMN_MUTATE);
+		return putValue(value, FloatSerializer.get(), ttl);
 	}
 
 	@Override
 	public Execution<Void> putValue(double value, Integer ttl) {
-		return exec(value, ttl, CassandraOperationType.COLUMN_MUTATE);
+		return putValue(value, DoubleSerializer.get(), ttl);
 	}
 
 	@Override
 	public Execution<Void> putValue(UUID value, Integer ttl) {
-		return exec(value, ttl, CassandraOperationType.COLUMN_MUTATE);
+		return putValue(value, UUIDSerializer.get(), ttl);
 	}
 
 	@Override
@@ -136,7 +148,7 @@ public class CqlColumnMutationImpl<K,C> implements ColumnMutation {
 		}
 		
 		if (cfContext.getColumnFamily().getDefaultValueSerializer().getComparatorType() == ByteBufferSerializer.get().getComparatorType()) {
-			ByteBuffer valueBytes = serializer.toByteBuffer(value);
+			ByteBuffer valueBytes = ((value instanceof ByteBuffer) ? (ByteBuffer) value : serializer.toByteBuffer(value));
 			return exec(valueBytes, ttl, CassandraOperationType.COLUMN_MUTATE);
 		} else {
 			return exec(value, ttl, CassandraOperationType.COLUMN_MUTATE);
@@ -155,26 +167,29 @@ public class CqlColumnMutationImpl<K,C> implements ColumnMutation {
 	@Override
 	public Execution<Void> incrementCounterColumn(long amount) {
 		this.counterColumn = true;
-		return exec(amount, ttl, CassandraOperationType.COUNTER_MUTATE);
+		return exec(amount, null, CassandraOperationType.COUNTER_MUTATE);
 	}
 
 	@Override
 	public Execution<Void> deleteColumn() {
 		deleteColumn = true;
-		return exec(null, ttl, CassandraOperationType.COLUMN_DELETE);
+		return exec(null, null, CassandraOperationType.COLUMN_DELETE);
 	}
 
 	@Override
 	public Execution<Void> deleteCounterColumn() {
 		deleteColumn = true;
-		return exec(null, ttl, CassandraOperationType.COLUMN_DELETE);
+		return exec(null, null, CassandraOperationType.COLUMN_DELETE);
 	}
 
-	private Execution<Void> exec(Object value, final Integer ttl, final CassandraOperationType opType) {
+	private Execution<Void> exec(final Object value, final Integer overrideTTL, final CassandraOperationType opType) {
 
+		final CqlColumnMutationImpl<?,?> colMutation = this;
 		this.columnValue = value;
-		this.ttl = ttl;
-
+		if (overrideTTL != null) {
+			this.ttl.set(overrideTTL);
+		}
+		
 		return new CqlAbstractExecutionImpl<Void>(ksContext, cfContext) {
 
 			@Override
@@ -184,93 +199,29 @@ public class CqlColumnMutationImpl<K,C> implements ColumnMutation {
 
 			@Override
 			public Query getQuery() {
-
-				StringBuilder sb = new StringBuilder("UPDATE ");
-				sb.append( keyspace + "." + cf.getName());
-
-				appendWriteOpts(sb);
-
-				if (counterColumn) {
-					getCounterColumnUpdate(sb);
-				} else {
-					getRegularColumnUpdate(sb);
-				}
-
-				sb.append(" WHERE key = ?");
-
-				String query = sb.toString();
+				BatchedStatements statements = new BatchedStatements();
+				queryGen.appendQuery(statements, colMutation);
+						
+				String query = statements.getBatchQuery(false);
 				
-				if (LOG.isDebugEnabled()) {
-					LOG.debug("UPDATE query: " + query);
-				}
-
-				PreparedStatement statement = session.prepare(query);
-				BoundStatement boundStatement = new BoundStatement(statement);
-				boundStatement.bind(columnValue, cfContext.getRowKey());
-
-				return boundStatement;
+				PreparedStatement pStmt = ksContext.getSession().prepare(query);
+				BoundStatement bStmt = pStmt.bind(statements.getBatchValues().toArray());
+				return bStmt;
 			}
 
 			@Override
 			public Void parseResultSet(ResultSet resultSet) {
 				return null;
 			}
-
-
-			private void getCounterColumnUpdate(StringBuilder sb) {
-
-				long increment = ((Long)columnValue).longValue();
-
-				if (increment < 0) {
-					sb.append(" SET ").append(columnName).append(" = ").append(columnName).append(" - ?");
-					columnValue = Math.abs(increment);
-				} else {
-					sb.append(" SET ").append(columnName).append(" = ").append(columnName).append(" + ?");
-				}
-			}
-
-			private void getRegularColumnUpdate(StringBuilder sb) {
-				sb.append(" SET ").append(columnName).append(" = ?");
-			}
-
-			private void appendWriteOpts(StringBuilder sb) {
-				appendWriteOptions(sb, timestamp, ttl, consistencyLevel);
-			}
-
 		};
-	}
-
-	public static void appendWriteOptions(StringBuilder sb, Long timestamp, Integer ttl, ConsistencyLevel consistencyLevel) {
-		
-		if (timestamp != null || ttl != null || consistencyLevel != null) {
-			sb.append(" USING ");
-		}
-		
-		if (ttl != null) {
-			sb.append(" TTL " + ttl);
-		}
-		
-		if (timestamp != null) {
-			if (ttl != null) {
-				sb.append(" AND");
-			}
-			sb.append(" TIMESTAMP " + timestamp);
-		}
-		
-		if (consistencyLevel != null) {
-			if (ttl != null || timestamp != null) {
-				sb.append(" AND");
-			}
-			sb.append(" CONSISTENCY " + ConsistencyLevelTransform.getConsistencyLevel(consistencyLevel).name());
-		}
 	}
 	
 	public Integer getTTL() {
-		return ttl;
+		return ttl.get();
 	}
 
 	public Long getTimestamp() {
-		return timestamp;
+		return timestamp.get();
 	}
 	
 	public String toString() {

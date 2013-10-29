@@ -59,7 +59,6 @@ public class CqlColumnListImpl<C> implements ColumnList<C> {
 		int columnNameIndex = numPkCols-1;  
 		
 		for (Row row : rows) {
-
 			Object columnName = CqlTypeMapping.getDynamicColumn(row, cf.getColumnSerializer(), columnNameIndex, cf);
 			int valueIndex = columnNameIndex+1;
 			

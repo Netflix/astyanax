@@ -9,12 +9,12 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select.Builder;
-import com.datastax.driver.core.querybuilder.Select.Selection;
 import com.datastax.driver.core.querybuilder.Select.Where;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.reads.model.CqlColumnImpl;
@@ -126,11 +126,11 @@ public class CqlColumnQueryImpl<C> implements ColumnQuery<C> {
 		}
 
 		@Override
-		public Column<C> parseResultSet(ResultSet rs) {
+		public Column<C> parseResultSet(ResultSet rs) throws NotFoundException {
 
 			Row row = rs.one();
 			if (row == null) {
-				return new CqlColumnImpl<C>();
+				return null;
 			}
 
 			CqlColumnImpl<C> cqlCol = new CqlColumnImpl<C>((C) columnName, row, 0);

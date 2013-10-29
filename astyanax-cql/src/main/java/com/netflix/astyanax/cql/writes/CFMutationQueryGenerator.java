@@ -47,32 +47,35 @@ public class CFMutationQueryGenerator extends CqlStyleMutationQuery {
 		}
 
 		for (CqlColumnMutationImpl<?,?> colMutation : mutationList) {
-
-			Object rowKey = super.cfContext.getRowKey();
-			
-			if (colMutation.deleteColumn) {
-
-				values.add(colMutation.columnName);
-				values.add(rowKey);
-
-			} else if (colMutation.counterColumn) {
-
-				Integer delta = (Integer) colMutation.columnValue;
-				if (delta < 0) {
-					delta = Math.abs(delta);
-				}
-				
-				values.add(colMutation.columnName);
-				values.add(delta);
-				values.add(rowKey);
-			} else {
-				values.add(colMutation.columnValue);
-				values.add(rowKey);
-				values.add(colMutation.columnName);
-			}
+			appendBindValues(values, colMutation);
 		}
 
 		return values;
+	}
+	
+	public void appendBindValues(List<Object> values, CqlColumnMutationImpl<?,?> colMutation) {
+		Object rowKey = super.cfContext.getRowKey();
+		
+		if (colMutation.deleteColumn) {
+
+			values.add(colMutation.columnName);
+			values.add(rowKey);
+
+		} else if (colMutation.counterColumn) {
+
+			Integer delta = (Integer) colMutation.columnValue;
+			if (delta < 0) {
+				delta = Math.abs(delta);
+			}
+			
+			values.add(colMutation.columnName);
+			values.add(delta);
+			values.add(rowKey);
+		} else {
+			values.add(colMutation.columnValue);
+			values.add(rowKey);
+			values.add(colMutation.columnName);
+		}
 	}
 	
 	public BatchedStatements getQuery() {
@@ -86,30 +89,33 @@ public class CFMutationQueryGenerator extends CqlStyleMutationQuery {
 		}
 
 		for (CqlColumnMutationImpl<?,?> colMutation : mutationList) {
-
-			
-			if (colMutation.deleteColumn) {
-
-				statements.addBatchQuery(getDeleteColumnStatement(colMutation));
-				statements.addBatchValues(getDeleteStatementBatchValues(colMutation));
-
-			} else if (colMutation.counterColumn) {
-
-				Integer delta = (Integer) colMutation.columnValue;
-				boolean increment = true;
-				if (delta < 0) {
-					increment = false;
-					delta = Math.abs(delta);
-				}
-				statements.addBatchQuery(getCounterColumnStatement(keyspace, cf.getName(), increment, colMutation));
-				statements.addBatchValues(getBatchValues(colMutation.columnName, delta, rowKey));
-			} else {
-				statements.addBatchQuery(getUpdateColumnStatement(colMutation));
-				statements.addBatchValues(getUpdateStatementBatchValues(colMutation));
-			}
+			appendQuery(statements, colMutation);
 		}
 
 		return statements;
+	}
+	
+	public void appendQuery(BatchedStatements statements, CqlColumnMutationImpl<?,?> colMutation) {
+
+		if (colMutation.deleteColumn) {
+
+			statements.addBatchQuery(getDeleteColumnStatement(colMutation));
+			statements.addBatchValues(getDeleteStatementBatchValues(colMutation));
+
+		} else if (colMutation.counterColumn) {
+
+			Long delta = (Long) colMutation.columnValue;
+			boolean increment = true;
+			if (delta < 0) {
+				increment = false;
+				delta = Math.abs(delta);
+			}
+			statements.addBatchQuery(getCounterColumnStatement(keyspace, cf.getName(), increment, colMutation));
+			statements.addBatchValues(getBatchValues(colMutation.columnName, delta, rowKey));
+		} else {
+			statements.addBatchQuery(getUpdateColumnStatement(colMutation));
+			statements.addBatchValues(getUpdateStatementBatchValues(colMutation));
+		}
 	}
 	
 	
@@ -182,6 +188,9 @@ public class CFMutationQueryGenerator extends CqlStyleMutationQuery {
 		} else {
 			sb = new StringBuilder("DELETE " + colMutation.columnName + " FROM " + keyspace + "." + cf.getName());
 		}
+		if (colMutation.getTimestamp() != null) {
+			sb.append(" USING TIMESTAMP " + colMutation.getTimestamp());
+		}
 		return appendWhereClause(sb).toString();
 	}
 
@@ -202,7 +211,7 @@ public class CFMutationQueryGenerator extends CqlStyleMutationQuery {
 		if (increment) {
 			sb.append("UPDATE " + keyspace + "." + cfName); 
 			super.appendWriteOptions(sb, colMutation.getTTL(), colMutation.getTimestamp());
-			sb.append(" SET " + valueAlias + " = " + valueAlias + " ? ");
+			sb.append(" SET " + valueAlias + " = " + valueAlias + " + ? ");
 		} else {
 			sb.append("UPDATE " + keyspace + "." + cfName);
 			super.appendWriteOptions(sb, colMutation.getTTL(), colMutation.getTimestamp());

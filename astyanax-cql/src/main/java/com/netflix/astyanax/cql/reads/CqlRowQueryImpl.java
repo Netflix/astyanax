@@ -9,7 +9,6 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.lt;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.lte;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -19,7 +18,6 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
-import com.datastax.driver.core.querybuilder.Select.Builder;
 import com.datastax.driver.core.querybuilder.Select.Selection;
 import com.datastax.driver.core.querybuilder.Select.Where;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -169,12 +167,6 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 	@Override
 	public RowQuery<K, C> autoPaginate(boolean enabled) {
 		paginationContext.paginate = enabled;
-		if (enabled) {
-			if (columnSlice.getLimit() != Integer.MAX_VALUE) {
-				// we ask for limit+1 since ranges have overlapping boundaries.
-				this.columnSlice.setLimit(columnSlice.getLimit()+1);
-			}
-		}
 		return this;
 	}
 
@@ -231,6 +223,9 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 			List<Row> rows = rs.all(); 
 
 			if (rows == null || rows.isEmpty()) {
+				if (paginationContext.isPaginating()) {
+					paginationContext.lastPageConsumed = true;
+				}
 				return new CqlColumnListImpl<C>();
 			}
 			if (pkCols.size() == 1 || cfDef.getValueColumnDefinitionList().size() > 1) {
@@ -238,8 +233,8 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 				return columnList;
 			} else {
 				CqlColumnListImpl<C> columnList = new CqlColumnListImpl<C>(rows, cf);
-				ColumnList<C> newColumnList = paginationContext.trackLastColumn(columnList);
-				return newColumnList;
+				paginationContext.trackLastColumn(columnList);
+				return columnList;
 			}
 		}
 
@@ -334,7 +329,18 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 				  .where(eq(keyColumnAlias, rowKey));
 
 			if (columnSlice.getStartColumn() != null) {
-				where.and(gte(pkColName, columnSlice.getStartColumn()));
+				if (!paginationContext.isPaginating()) {
+					where.and(gte(pkColName, columnSlice.getStartColumn()));
+				} else {
+					// IS PAGINATING
+					if (paginationContext.isFirstPage()) {
+						where.and(gte(pkColName, columnSlice.getStartColumn()));
+					} else {
+						// Don't include the first column since it is the last col of the previous page and has already 
+						// been visited / processed by the client
+						where.and(gt(pkColName, columnSlice.getStartColumn()));
+					}
+				}
 			}
 
 			if (columnSlice.getEndColumn() != null) {
@@ -409,22 +415,26 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 		private boolean lastPageConsumed = false; 
 		private boolean paginate = false;
+		private boolean isFirstPage = true;
+		
 		private final CqlColumnSlice<C> columnSlice;
 
 		private PaginationContext(CqlColumnSlice<C> columnSlice) {
 			this.columnSlice = columnSlice;
 		}
 
-		private ColumnList<C> trackLastColumn(ColumnList<C> columnList) {
+		private void trackLastColumn(ColumnList<C> columnList) {
 
 			if (!paginate) {
-				return columnList;
+				return;
 			}
 
 			if (columnList.isEmpty()) {
 				lastPageConsumed = true;
-				return columnList;
+				return;
 			}
+			
+			isFirstPage = false;
 
 			Column<C> lastColumn = columnList.getColumnByIndex(columnList.size()-1);
 
@@ -445,21 +455,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 			this.columnSlice.setCqlRange(newRange);
 
-			// Now remove the first column, since it is repeating
-			ColumnList<C> result = columnList; 
-			if (!lastPageConsumed) {
-				List<Column<C>> newList = new ArrayList<Column<C>>();
-				// skip the first column
-				int index = 0; 
-				while (index < (columnList.size()-1)) {
-					newList.add(columnList.getColumnByIndex(index));
-					index++;
-				}
-
-				result = new CqlColumnListImpl<C>(newList);
-			}
-
-			return result;
+			return;
 		}
 
 		private boolean isPaginating() {
@@ -468,6 +464,10 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 		private boolean lastPageConsumed() {
 			return lastPageConsumed;
+		}
+		
+		private boolean isFirstPage() {
+			return isFirstPage;
 		}
 	}
 }

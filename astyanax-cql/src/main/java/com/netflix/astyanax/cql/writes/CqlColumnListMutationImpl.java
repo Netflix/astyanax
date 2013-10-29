@@ -18,6 +18,7 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 
 	private final KeyspaceContext ksContext;
 	private final ColumnFamilyMutationContext<K,C> cfContext;
+	private final ColumnFamily<K,C> cf;
 	
 	private final List<CqlColumnMutationImpl<?,?>> mutationList = new ArrayList<CqlColumnMutationImpl<?,?>>();
 	private AtomicReference<Boolean> deleteRow = new AtomicReference<Boolean>(false); 
@@ -30,7 +31,7 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 		super(timestamp);
 		this.ksContext = ksCtx;
 		this.cfContext = new ColumnFamilyMutationContext<K,C>(cf, rowKey);
-		
+		this.cf = cf;
 		this.consistencyLevel = level;
 		
 		this.queryGen = new CFMutationQueryGenerator(ksContext, cfContext, mutationList, deleteRow, defaultTTL, defaultTimestamp, consistencyLevel);
@@ -39,10 +40,11 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 	@Override
 	public <V> ColumnListMutation<C> putColumn(C columnName, V value, Serializer<V> valueSerializer, Integer ttl) {
 		
-		Preconditions.checkArgument(columnName != null, "Column Name must not be null");
+		checkColumnName(columnName);
 		
 		CqlColumnMutationImpl<K,C> mutation = new CqlColumnMutationImpl<K,C>(ksContext, cfContext, columnName);
 		mutation.putValue(value, valueSerializer, getActualTTL(ttl));
+		mutation.withTimestamp(this.getTimestamp());
 		
 		mutationList.add(mutation);
 		return this;
@@ -56,6 +58,8 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 	@Override
 	public ColumnListMutation<C> putEmptyColumn(C columnName, Integer ttl) {
 
+		checkColumnName(columnName);
+		
 		Integer theTTL = super.defaultTTL.get();
 		if (ttl != null) {
 			theTTL = ttl;
@@ -63,6 +67,7 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 
 		CqlColumnMutationImpl<K,C> mutation = new CqlColumnMutationImpl<K,C>(ksContext, cfContext, columnName);
 		mutation.putEmptyColumn(theTTL);
+		mutation.withTimestamp(this.getTimestamp());
 		mutationList.add(mutation);
 		
 		return this;
@@ -71,6 +76,8 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 	@Override
 	public ColumnListMutation<C> incrementCounterColumn(C columnName, long amount) {
 		
+		checkColumnName(columnName);
+
 		CqlColumnMutationImpl<K,C> mutation = new CqlColumnMutationImpl<K,C>(ksContext, cfContext, columnName);
 		mutation.incrementCounterColumn(amount);
 		mutationList.add(mutation);
@@ -81,8 +88,11 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 	@Override
 	public ColumnListMutation<C> deleteColumn(C columnName) {
 		
+		checkColumnName(columnName);
+
 		CqlColumnMutationImpl<K,C> mutation = new CqlColumnMutationImpl<K,C>(ksContext, cfContext, columnName);
 		mutation.deleteColumn();
+		mutation.withTimestamp(this.getTimestamp());
 		mutationList.add(mutation);
 		
 		return this;
@@ -144,6 +154,13 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 			theTTL = overrideTTL;
 		}
 		return theTTL;
+	}
+	
+	private void checkColumnName(C columnName) {
+		Preconditions.checkArgument(columnName != null, "Column Name must not be null");
+		if (columnName instanceof String) {
+			Preconditions.checkArgument(!((String)columnName).isEmpty(), "Column Name must not be null");
+		}
 	}
 	
 	public static class ColumnFamilyMutationContext<K,C> {

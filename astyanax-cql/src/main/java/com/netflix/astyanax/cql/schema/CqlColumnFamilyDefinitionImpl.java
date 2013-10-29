@@ -232,7 +232,7 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 			}
 		}
 
-		String keyClass = (String) optionsMap.remove("key_validation_class");
+		String keyClass = (String) optionsMap.get("key_validation_class");
 		keyClass = (keyClass == null) ?	keyClass = "blob" : CqlTypeMapping.getCqlType(keyClass);
 
 		ColumnDefinition col = new CqlColumnDefinitionImpl().setName(keyAlias).setValidationClass(keyClass);
@@ -270,8 +270,6 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		Query query = QueryBuilder.select().from("system", "schema_columns")
 				.where(eq("keyspace_name", keyspaceName))
 				.and(eq("columnfamily_name", cfName));
-		
-		System.out.println("Query: " + query.toString());
 		
 		ResultSet rs = session.execute(query);
 		List<Row> rows = rs.all();

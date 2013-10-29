@@ -160,6 +160,7 @@ public class DirectCqlQueryImpl<K, C> implements CqlQuery<K, C> {
 
 		@Override
 		public CqlResult<K, C> parseResultSet(ResultSet resultSet) {
+			
 			boolean isCountQuery = basicCqlQuery.contains(" count(");
 			if (isCountQuery) {
 				return new DirectCqlResult<K,C>(new Long(resultSet.one().getLong(0)));

@@ -8,24 +8,16 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
-import com.datastax.driver.core.policies.RoundRobinPolicy;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.impl.TokenRangeImpl;
 
 public class CqlRingDescriber {
 
-	private static final Logger Logger = LoggerFactory.getLogger(CqlRingDescriber.class);
-	
 	private final AtomicReference<List<TokenRange>>  cachedReference = new AtomicReference<List<TokenRange>>(null);
 	
 	private static CqlRingDescriber Instance = new CqlRingDescriber();
@@ -66,41 +58,40 @@ public class CqlRingDescriber {
 		Collections.sort(hosts);
 
 		List<TokenRange> ranges = new ArrayList<TokenRange>();
-		
+
 		for (int index = 0; index<hosts.size(); index++) {
-		
+
 			HostInfo thisNode = hosts.get(index);
-			
+
 			List<String> endpoints = new ArrayList<String>();
-			
+
 			if (matchNode(dc, rack, thisNode)) {
 				endpoints.add(thisNode.endpoint); // the primary range owner
 			}
 
 			// secondary node
 			int nextIndex = getNextIndex(index, hosts.size());
-			HostInfo nextNode = hosts.get(nextIndex);
-			if (matchNode(dc, rack, nextNode)) {
-				endpoints.add(nextNode.endpoint);
+			if (nextIndex != index) {
+
+				HostInfo nextNode = hosts.get(nextIndex);
+				if (matchNode(dc, rack, nextNode)) {
+					endpoints.add(nextNode.endpoint);
+				}
+
+				// tertiary node
+				nextIndex = getNextIndex(nextIndex, hosts.size());
+				nextNode = hosts.get(nextIndex);
+				if (matchNode(dc, rack, nextNode)) {
+					endpoints.add(nextNode.endpoint);
+				}
 			}
-			// tertiary node
-			nextIndex = getNextIndex(nextIndex, hosts.size());
-			nextNode = hosts.get(nextIndex);
-			if (matchNode(dc, rack, nextNode)) {
-				endpoints.add(nextNode.endpoint);
-			}
-			
 			int prevIndex = getPrevIndex(index, hosts.size());
 			String startToken = hosts.get(prevIndex).token.toString();
 			String endToken = thisNode.token.toString();
-			
+
 			ranges.add(new TokenRangeImpl(startToken, endToken, endpoints));
 		}
-		
-		for (TokenRange range : ranges) {
-			System.out.println("Range: " + range.getStartToken() + " " + range.getEndToken() + " " + range.getEndpoints());
-		}
-		
+
 		return ranges;
 	}
 	
@@ -212,35 +203,6 @@ public class CqlRingDescriber {
 		@Override
 		public int compareTo(HostInfo o) {
 			return this.token.compareTo(o.token);
-		}
-	}
-	
-	
-	public static void main(String[] args) {
-		
-		Cluster cluster = null;
-		try {
-		System.out.println("Starting ");
-		
-		List<String> contactPoints = new ArrayList<String>();
-		contactPoints.add("ec2-54-225-41-34.compute-1.amazonaws.com");
-		 cluster = Cluster.builder()
-				.addContactPoints(contactPoints.toArray(new String[0]))
-				.withPort(7104)
-				.withLoadBalancingPolicy(new RoundRobinPolicy())
-				.build();
-		
-		Metadata metadata = cluster.getMetadata();
-		Logger.info("Connected to cluster: %s\n", metadata.getClusterName());
-		
-		Session session = cluster.connect("system");
-		new CqlRingDescriber().getTokenRanges(session, null, null);
-		} catch (Throwable t) {
-			t.printStackTrace();
-		} finally {
-			if (cluster != null) {
-				cluster.shutdown();
-			}
 		}
 	}
 }

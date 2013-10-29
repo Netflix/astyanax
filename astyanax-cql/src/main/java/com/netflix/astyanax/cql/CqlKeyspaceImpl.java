@@ -175,7 +175,7 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 	@Override
 	public SerializerPackage getSerializerPackage(String cfName, boolean ignoreErrors) throws ConnectionException, UnknownComparatorException {
 		
-		ColumnFamilyDefinition cfDef = null;
+		ColumnFamilyDefinition cfDef = describeKeyspace().getColumnFamily(cfName);
 		return new SerializerPackageImpl(cfDef, ignoreErrors);
 	}
 

@@ -37,8 +37,6 @@ public class CqlStyleMutationQuery {
 		this.deleteRow = deleteRow;
 		this.defaultTTL = ttl;
 		this.defaultTimestamp = timestamp;
-		
-		System.out.println("defaultTimestamp " + defaultTimestamp);
 		this.consistencyLevel = consistencyLevel;
 	}
 	

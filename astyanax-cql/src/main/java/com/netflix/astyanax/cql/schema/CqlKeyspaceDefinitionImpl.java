@@ -146,7 +146,6 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 				.where(eq("keyspace_name", getName()))
 				.and(eq("columnfamily_name", columnFamilyName.toLowerCase()));
 
-		System.out.println("Query : " + query.toString());
 		Row row = session.execute(query).one();
 		
 		if (row == null) {

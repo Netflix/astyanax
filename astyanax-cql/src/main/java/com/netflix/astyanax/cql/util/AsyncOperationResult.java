@@ -9,6 +9,7 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.ResultSetFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.connectionpool.OperationResult;
+import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 
 public abstract class AsyncOperationResult<V> implements ListenableFuture<OperationResult<V>> {
 

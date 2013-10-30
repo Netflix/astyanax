@@ -32,9 +32,9 @@ import org.apache.commons.lang.builder.ToStringBuilder;
  */
 public class BoundedExponentialBackoff extends ExponentialBackoff {
 
-    private final int maxSleepTimeMs;
+    private final long maxSleepTimeMs;
 
-    public BoundedExponentialBackoff(int baseSleepTimeMs, int maxSleepTimeMs, int max) {
+    public BoundedExponentialBackoff(long baseSleepTimeMs, long maxSleepTimeMs, int max) {
         super(baseSleepTimeMs, max);
         this.maxSleepTimeMs = maxSleepTimeMs;
     }
@@ -48,7 +48,7 @@ public class BoundedExponentialBackoff extends ExponentialBackoff {
         return new BoundedExponentialBackoff(getBaseSleepTimeMs(), maxSleepTimeMs, getMaxAttemptCount());
     }
 
-    public int getMaxSleepTimeMs() {
+    public long getMaxSleepTimeMs() {
         return maxSleepTimeMs;
     }
 

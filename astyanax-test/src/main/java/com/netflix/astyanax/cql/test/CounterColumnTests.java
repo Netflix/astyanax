@@ -8,7 +8,6 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
 import com.netflix.astyanax.MutationBatch;
-import com.netflix.astyanax.cql.test.todo.KeyspaceTests;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.serializers.StringSerializer;

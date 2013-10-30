@@ -15,6 +15,7 @@ import com.netflix.astyanax.KeyspaceTracerFactory;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.IsRetryableException;
+import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.retrypolicies.JavaDriverBasedRetryPolicy;
@@ -118,12 +119,17 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 		if (LOG.isDebugEnabled()) {
 			LOG.debug("Query: " + query);
 		}
-
+		
 		ResultSetFuture rsFuture = session.executeAsync(query);
 		return new AsyncOperationResult<R>(rsFuture) {
 			@Override
 			public OperationResult<R> getOperationResult(ResultSet resultSet) {
-				R result = parseResultSet(resultSet);
+				R result = null;
+				try {
+					result = parseResultSet(resultSet);
+				} catch (NotFoundException e) {
+					e.printStackTrace();
+				}
 				tracer.success();
 				return new CqlOperationResultImpl<R>(resultSet, result);
 			}
@@ -147,5 +153,5 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 	 * @param resultSet
 	 * @return
 	 */
-	public abstract R parseResultSet(ResultSet resultSet);
+	public abstract R parseResultSet(ResultSet resultSet) throws NotFoundException;
 }

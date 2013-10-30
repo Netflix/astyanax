@@ -213,7 +213,7 @@ public class AstyanaxContextFactory {
     	return context;
     }
 
-    public Keyspace getCachedKeyspace() {
+    public static Keyspace getCachedKeyspace() {
     	return keyspaceReference.get();
     }
 }

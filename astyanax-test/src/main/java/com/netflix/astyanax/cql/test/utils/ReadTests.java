@@ -18,7 +18,7 @@ import junit.framework.Assert;
 import org.joda.time.DateTime;
 
 import com.netflix.astyanax.MutationBatch;
-import com.netflix.astyanax.cql.test.todo.KeyspaceTests;
+import com.netflix.astyanax.cql.test.KeyspaceTests;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;

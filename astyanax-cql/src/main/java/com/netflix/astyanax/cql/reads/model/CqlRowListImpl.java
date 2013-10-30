@@ -118,4 +118,11 @@ public class CqlRowListImpl<K, C> implements Rows<K, C> {
 			}
 		});
 	}
+	
+	public void addRows(Rows<K,C> newRows) {
+		for (Row<K,C> row : newRows) {
+			this.rows.add(row);
+			this.lookup.put(row.getKey(), row);
+		}
+	}
 }

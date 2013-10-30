@@ -15,6 +15,7 @@ import com.google.common.collect.ImmutableMap;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.annotations.Component;
+import com.netflix.astyanax.cql.test.KeyspaceTests;
 import com.netflix.astyanax.cql.test.utils.AstyanaxContextFactory;
 import com.netflix.astyanax.cql.test.utils.ClusterConfiguration;
 import com.netflix.astyanax.cql.test.utils.ClusterConfiguration.Driver;

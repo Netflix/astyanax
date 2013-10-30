@@ -106,7 +106,7 @@ public class CqlColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C> {
 
 	@Override
 	public AllRowsQuery<K, C> getAllRows() {
-		throw new UnsupportedOperationException("Operation not supported");
+		return new CqlAllRowsQueryImpl<K, C>(ksContext.getKeyspaceContext(), cfContext.getColumnFamily());
 	}
 
 	@Override

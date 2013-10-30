@@ -60,7 +60,7 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 	
 	private final Clock clock;
 	
-	private volatile Session session;
+	public volatile Session session;
 	
 	private final KeyspaceContext ksContext;
 	private final String keyspaceName;
@@ -72,7 +72,7 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 		this.keyspaceName = ksName.toLowerCase();
 		this.astyanaxConfig = asConfig;
 		this.tracerFactory = tracerFactory;
-		this.ksContext = new KeyspaceContext();
+		this.ksContext = new KeyspaceContext(this);
 		
 		if (asConfig.getClock() != null) {
 			clock = asConfig.getClock();
@@ -320,6 +320,10 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 	public void setHosts(Collection<Host> hosts, int port) {
 
 		try {
+			if (session != null) {
+				Logger.info("Session has already been set, SKIPPING SET HOSTS");
+				return;
+			}
 			List<Host> hostList = Lists.newArrayList(hosts);
 
 			List<String> contactPoints = Lists.transform(hostList, new Function<Host, String>() {
@@ -348,6 +352,11 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 
 	public class KeyspaceContext {
 		
+		private final Keyspace ks; 
+		
+		public KeyspaceContext(Keyspace keyspaceCtx) {
+			this.ks = keyspaceCtx;
+		}
 		public Session getSession() {
 			return session;
 		}
@@ -359,6 +368,10 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 		}
 		public KeyspaceTracerFactory getTracerFactory() {
 			return tracerFactory;
+		}
+		
+		public Keyspace getKeyspaceContext() {
+			return ks;
 		}
 	}
 }

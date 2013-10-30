@@ -7,7 +7,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.netflix.astyanax.connectionpool.TokenRange;
-import com.netflix.astyanax.cql.test.todo.KeyspaceTests;
 
 public class RingDescribeTests extends KeyspaceTests {
 	

@@ -6,7 +6,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.netflix.astyanax.MutationBatch;
-import com.netflix.astyanax.cql.test.todo.KeyspaceTests;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.serializers.LongSerializer;
@@ -105,5 +104,4 @@ public class ColumnTimestampAndTTLTests extends KeyspaceTests {
         Assert.assertNotNull(result.getColumnByName("TTL0"));
         Assert.assertNotNull(result.getColumnByName("TTLNULL"));
     }
-    
 }

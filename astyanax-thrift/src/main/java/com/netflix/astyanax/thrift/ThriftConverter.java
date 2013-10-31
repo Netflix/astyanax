@@ -220,6 +220,8 @@ public class ThriftConverter {
             return org.apache.cassandra.thrift.ConsistencyLevel.ALL;
         case CL_ANY:
             return org.apache.cassandra.thrift.ConsistencyLevel.ANY;
+        case CL_LOCAL_ONE:
+            return org.apache.cassandra.thrift.ConsistencyLevel.LOCAL_ONE;
         default:
             return org.apache.cassandra.thrift.ConsistencyLevel.QUORUM;
         }

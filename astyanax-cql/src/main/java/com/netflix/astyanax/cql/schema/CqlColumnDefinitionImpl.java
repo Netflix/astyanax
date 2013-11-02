@@ -18,13 +18,32 @@ public class CqlColumnDefinitionImpl implements ColumnDefinition {
 
 	Map<String, Object> options = new HashMap<String, Object>();
 
+	private CqlColumnType colType;
+	private int componentIndex; 
+	
+	public enum CqlColumnType {
+		partition_key, clustering_key, regular;
+	}
+	
 	public CqlColumnDefinitionImpl() {
 		
 	}
 	
 	public CqlColumnDefinitionImpl(Row row) {
 		this.setName(row.getString("column_name"));
-		this.setValidationClass(row.getString("validator"));
+		
+		String validationClass = row.getString("validator");
+		if (validationClass.contains("(")) {
+			int start = validationClass.indexOf("(");
+			int end = validationClass.indexOf(")");
+			validationClass = validationClass.substring(start+1, end);
+		}
+		this.setValidationClass(validationClass);
+		
+		colType = CqlColumnType.valueOf(row.getString("type"));
+		if (colType == CqlColumnType.clustering_key) {
+			componentIndex = row.getInt("component_index");
+		}
 	}
 	
 	@Override
@@ -171,5 +190,13 @@ public class CqlColumnDefinitionImpl implements ColumnDefinition {
 
 	public String getCqlType() {
 		return CqlTypeMapping.getCqlType(getValidationClass());
+	}
+	
+	public CqlColumnType getColumnType() {
+		return this.colType;
+	}
+	
+	public int getComponentIndex() {
+		return this.componentIndex;
 	}
 }

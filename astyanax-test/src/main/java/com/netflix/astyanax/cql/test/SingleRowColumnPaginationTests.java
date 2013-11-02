@@ -4,27 +4,36 @@ import java.util.Random;
 
 import junit.framework.Assert;
 
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.netflix.astyanax.cql.test.utils.ReadTests;
 import com.netflix.astyanax.cql.test.utils.TestUtils;
 import com.netflix.astyanax.model.Column;
+import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.util.RangeBuilder;
 
 public class SingleRowColumnPaginationTests extends ReadTests {
 	
+	private static ColumnFamily<String, String> CF_COLUMN_RANGE_TEST = TestUtils.CF_COLUMN_RANGE_TEST;
+
 	@BeforeClass
 	public static void init() throws Exception {
 		initContext();
+		keyspace.createColumnFamily(CF_COLUMN_RANGE_TEST, null);
+		CF_COLUMN_RANGE_TEST.describe(keyspace);
 	}
 	
+	@AfterClass
+	public static void tearDown() throws Exception {
+		keyspace.dropColumnFamily(CF_COLUMN_RANGE_TEST);
+	}
+
 	@Test
 	public void runAllTests() throws Exception {
-		
-		TestUtils.CF_COLUMN_RANGE_TEST.describe(keyspace);
 		
 		boolean rowDeleted = false;
 		

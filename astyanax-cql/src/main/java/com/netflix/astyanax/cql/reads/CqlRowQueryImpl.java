@@ -13,9 +13,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
+import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
 import com.datastax.driver.core.querybuilder.Select.Selection;
@@ -187,19 +187,20 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 	private class InternalRowQueryExecutionImpl extends CqlAbstractExecutionImpl<ColumnList<C>> {
 
 		private final CqlColumnFamilyDefinitionImpl cfDef = (CqlColumnFamilyDefinitionImpl) cf.getColumnFamilyDefinition();
-		private final String keyColumnAlias = cfDef.getPrimaryKeyColumnDefinition().getName();
-		private final String[] allColumnNames = cfDef.getAllPkColNames();
-		private final List<ColumnDefinition> pkCols = cfDef.getPartitionKeyColumnDefinitionList();
-		private final List<ColumnDefinition> valCols = cfDef.getValueColumnDefinitionList();
 
+		private final String partitionKeyCol = cfDef.getPartitionKeyColumnDefinition().getName();
+		private final String[] allPkColumnNames = cfDef.getAllPkColNames();
+		private final List<ColumnDefinition> clusteringKeyCols = cfDef.getClusteringKeyColumnDefinitionList();
+		private final List<ColumnDefinition> regularCols = cfDef.getRegularColumnDefinitionList();
+		
 		public InternalRowQueryExecutionImpl() {
 			super(ksContext, cfContext);
 		}
 
 		@Override
-		public Query getQuery() {
+		public Statement getQuery() {
 
-			Query query; 
+			Statement query; 
 			
 			if (columnSlice.isColumnSelectQuery()) {
 				query = getSelectColumnsQuery();
@@ -228,7 +229,9 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 				}
 				return new CqlColumnListImpl<C>();
 			}
-			if (pkCols.size() == 1 || cfDef.getValueColumnDefinitionList().size() > 1) {
+			
+			if (allPkColumnNames.length == 1 || regularCols.size() > 1) {
+				System.out.println("here");
 				CqlColumnListImpl<C> columnList = new CqlColumnListImpl<C>(rows.get(0), cf);
 				return columnList;
 			} else {
@@ -243,112 +246,110 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 			return CassandraOperationType.GET_ROW;
 		}
 
-		Query getSelectEntireRowQuery() {
+		Statement getSelectEntireRowQuery() {
 			
 			Selection select = QueryBuilder.select();
 			
-			for (int i=0; i<allColumnNames.length; i++) {
-				select.column(allColumnNames[i]);
+			for (int i=0; i<allPkColumnNames.length; i++) {
+				select.column(allPkColumnNames[i]);
 			}
 			
-			for (ColumnDefinition colDef : valCols) {
+			for (ColumnDefinition colDef : regularCols) {
 				String colName = colDef.getName();
 				select.column(colName).ttl(colName).writeTime(colName);
 			}
-			return select.from(keyspace, cf.getName()).where(eq(keyColumnAlias, rowKey));
+			return select.from(keyspace, cf.getName()).where(eq(partitionKeyCol, rowKey));
 		}
 
-		Query getSelectColumnsQuery() {
+		Statement getSelectColumnsQuery() {
 
 			// Make sure that we are not attempting to do a composite range query
 			if (isCompositeRangeQuery()) {
 				throw new RuntimeException("Cannot perform composite column slice using column set");
 			}
 
-			if (pkCols.size() == 1) {
+			if (clusteringKeyCols.size() == 0) {
 
 				// THIS IS A SIMPLE QUERY WHERE THE INDIVIDUAL COLS ARE BEING SELECTED E.G NAME, AGE ETC
 				Select.Selection select = QueryBuilder.select();
-				select.column(keyColumnAlias);
+				select.column(partitionKeyCol);
 
 				for (C col : columnSlice.getColumns()) {
 					String columnName = (String)col;
 					select.column(columnName).ttl(columnName).writeTime(columnName);
 				}
 
-				return select.from(keyspace, cf.getName()).where(eq(keyColumnAlias, rowKey));
+				return select.from(keyspace, cf.getName()).where(eq(partitionKeyCol, rowKey));
 
-			} else if (pkCols.size() == 2) {
+			} else if (clusteringKeyCols.size() > 0) {
 
 				// THIS IS A QUERY WHERE THE COLUMN NAME IS DYNAMIC  E.G TIME SERIES
 				Collection<C> cols = columnSlice.getColumns(); 
 				Object[] columns = cols.toArray(new Object[cols.size()]); 
 
-				String pkColName = pkCols.get(1).getName();
-
 				Selection select = QueryBuilder.select();
 				
-				for (int i=0; i<allColumnNames.length; i++) {
-					select.column(allColumnNames[i]);
+				for (int i=0; i<allPkColumnNames.length; i++) {
+					select.column(allPkColumnNames[i]);
 				}
 				
-				for (ColumnDefinition colDef : valCols) {
+				for (ColumnDefinition colDef : regularCols) {
 					String colName = colDef.getName();
 					select.column(colName).ttl(colName).writeTime(colName);
 				}
 
 				return select
 						.from(keyspace, cf.getName())
-						.where(eq(keyColumnAlias, rowKey))
-						.and(in(pkColName, columns));
+						.where(eq(partitionKeyCol, rowKey))
+						.and(in(clusteringKeyCols.get(0).getName(), columns));
 			} else {
 				throw new RuntimeException("Composite col query - todo");
 			}
 		}
 
-		Query getSelectColumnRangeQuery() {
+		Statement getSelectColumnRangeQuery() {
 
-			if (pkCols.size() != 2) {
+			if (clusteringKeyCols.size() == 0) {
 				throw new RuntimeException("Cannot perform col range query with current schema, missing pk cols");
 			}
 
-			String pkColName = pkCols.get(1).getName();
-
 			Selection select = QueryBuilder.select();
 			
-			for (int i=0; i<allColumnNames.length; i++) {
-				select.column(allColumnNames[i]);
+			for (int i=0; i<allPkColumnNames.length; i++) {
+				select.column(allPkColumnNames[i]);
 			}
 			
-			for (ColumnDefinition colDef : valCols) {
+			for (ColumnDefinition colDef : regularCols) {
 				String colName = colDef.getName();
 				select.column(colName).ttl(colName).writeTime(colName);
 			}
 			
 			Where where = select.from(keyspace, cf.getName())
-				  .where(eq(keyColumnAlias, rowKey));
+				  .where(eq(partitionKeyCol, rowKey));
 
+			String clusterKeyCol = clusteringKeyCols.get(0).getName();
+			
 			if (columnSlice.getStartColumn() != null) {
 				if (!paginationContext.isPaginating()) {
-					where.and(gte(pkColName, columnSlice.getStartColumn()));
+					where.and(gte(clusterKeyCol, columnSlice.getStartColumn()));
 				} else {
 					// IS PAGINATING
 					if (paginationContext.isFirstPage()) {
-						where.and(gte(pkColName, columnSlice.getStartColumn()));
+						where.and(gte(clusterKeyCol, columnSlice.getStartColumn()));
 					} else {
 						// Don't include the first column since it is the last col of the previous page and has already 
 						// been visited / processed by the client
-						where.and(gt(pkColName, columnSlice.getStartColumn()));
+						where.and(gt(clusterKeyCol, columnSlice.getStartColumn()));
 					}
 				}
 			}
 
 			if (columnSlice.getEndColumn() != null) {
-				where.and(lte(pkColName, columnSlice.getEndColumn()));
+				where.and(lte(clusterKeyCol, columnSlice.getEndColumn()));
 			}
 
 			if (columnSlice.getReversed()) {
-				where.orderBy(desc(pkColName));
+				where.orderBy(desc(clusterKeyCol));
 			}
 
 			if (columnSlice.getLimit() != -1) {
@@ -358,32 +359,32 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 			return where;
 		}
 
-		Query getSelectCompositeColumnRangeQuery() {
+		Statement getSelectCompositeColumnRangeQuery() {
 
 			Selection select = QueryBuilder.select();
 			
-			for (int i=0; i<allColumnNames.length; i++) {
-				select.column(allColumnNames[i]);
+			for (int i=0; i<allPkColumnNames.length; i++) {
+				select.column(allPkColumnNames[i]);
 			}
 			
-			for (ColumnDefinition colDef : valCols) {
+			for (ColumnDefinition colDef : regularCols) {
 				String colName = colDef.getName();
 				select.column(colName).ttl(colName).writeTime(colName);
 			}
 
 			Where stmt = select.from(keyspace, cf.getName())
-					.where(eq(keyColumnAlias, rowKey));
+					.where(eq(partitionKeyCol, rowKey));
 
 			List<RangeQueryRecord> records = compositeRange.getRecords();
 
-			int componentIndex = 1; 
+			int componentIndex = 0; 
 
 			for (RangeQueryRecord record : records) {
 
 
 				for (RangeQueryOp op : record.getOps()) {
 
-					String columnName = pkCols.get(componentIndex).getName();
+					String columnName = clusteringKeyCols.get(componentIndex).getName();
 					switch (op.getOperator()) {
 
 					case EQUAL:

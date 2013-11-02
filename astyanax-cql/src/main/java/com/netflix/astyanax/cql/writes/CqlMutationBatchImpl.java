@@ -9,8 +9,8 @@ import java.util.Map.Entry;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Statement;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.Clock;
@@ -57,7 +57,7 @@ public class CqlMutationBatchImpl extends AbstractMutationBatchImpl {
 			}
 
 			@Override
-			public Query getQuery() {
+			public Statement getQuery() {
 				return getCachedPreparedStatement();
 			}
 
@@ -79,7 +79,7 @@ public class CqlMutationBatchImpl extends AbstractMutationBatchImpl {
 			}
 
 			@Override
-			public Query getQuery() {
+			public Statement getQuery() {
 				return getCachedPreparedStatement();
 			}
 

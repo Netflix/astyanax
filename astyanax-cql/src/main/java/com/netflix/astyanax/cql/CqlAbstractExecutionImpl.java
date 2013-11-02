@@ -3,10 +3,10 @@ package com.netflix.astyanax.cql;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.ResultSetFuture;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.Statement;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.CassandraOperationTracer;
 import com.netflix.astyanax.CassandraOperationType;
@@ -91,7 +91,7 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 		}
 		
 		tracer.start();
-		Query query = getQuery();
+		Statement query = getQuery();
 		
 		if (LOG.isDebugEnabled()) {
 			LOG.debug("Query: " + query);
@@ -114,7 +114,7 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 		final CassandraOperationTracer tracer = tracerFactory.newTracer(getOperationType());
 		tracer.start();
 		
-		Query query = getQuery();
+		Statement query = getQuery();
 		
 		if (LOG.isDebugEnabled()) {
 			LOG.debug("Query: " + query);
@@ -146,7 +146,7 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 	 * Get the Query for this operation
 	 * @return Query
 	 */
-	public abstract Query getQuery();
+	public abstract Statement getQuery();
 
 	/**
 	 * Parse the result set to get the required response

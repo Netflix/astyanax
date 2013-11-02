@@ -195,12 +195,12 @@ public class CqlTypeMapping {
 		}
 		
 		CqlColumnFamilyDefinitionImpl cfDef = (CqlColumnFamilyDefinitionImpl) cf.getColumnFamilyDefinition();
-		List<ColumnDefinition> pkList = cfDef.getPartitionKeyColumnDefinitionList();
+		List<ColumnDefinition> cluseringKeyList = cfDef.getClusteringKeyColumnDefinitionList();
 		
-		int componentIndex = 1;
+		int componentIndex = 0;
 		for (ComponentSerializer<?> component : compositeSerializer.getComponents()) {
 			
-			Object value = getDynamicColumn(row, component.getSerializer(), pkList.get(componentIndex).getName(), cf);
+			Object value = getDynamicColumn(row, component.getSerializer(), cluseringKeyList.get(componentIndex).getName(), cf);
 			try {
 				//System.out.println("Value: " + value);
 				component.setFieldValueDirectly(obj, value);

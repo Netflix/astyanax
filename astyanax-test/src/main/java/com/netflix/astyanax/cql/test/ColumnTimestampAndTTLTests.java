@@ -72,6 +72,7 @@ public class ColumnTimestampAndTTLTests extends KeyspaceTests {
         result1 = keyspace.prepareQuery(CF_COL_TIMESTAMP).getRow(1L).execute().getResult();
         Assert.assertEquals(3, result1.size());
         
+        mb = keyspace.prepareMutationBatch();
         mb.withRow(CF_COL_TIMESTAMP,  1L)
             .setTimestamp(result1.getColumnByName(1L).getTimestamp()+1)
             .deleteColumn(1L)

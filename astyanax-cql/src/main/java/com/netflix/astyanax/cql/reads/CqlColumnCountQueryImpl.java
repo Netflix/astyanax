@@ -2,9 +2,9 @@ package com.netflix.astyanax.cql.reads;
 
 import java.util.List;
 
-import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
+import com.datastax.driver.core.Statement;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.connectionpool.OperationResult;
@@ -18,9 +18,9 @@ public class CqlColumnCountQueryImpl implements ColumnCountQuery {
 
 	private final KeyspaceContext ksContext;
 	private final ColumnFamilyMutationContext<?, ?> cfContext;
-	private final Query query;
+	private final Statement query;
 	
-	public CqlColumnCountQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<?,?> cfCtx, Query query) {
+	public CqlColumnCountQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<?,?> cfCtx, Statement query) {
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;
 		this.query = query;
@@ -38,7 +38,7 @@ public class CqlColumnCountQueryImpl implements ColumnCountQuery {
 
 	private class InternalColumnCountExecutionImpl extends CqlAbstractExecutionImpl<Integer> {
 
-		public InternalColumnCountExecutionImpl(Query query) {
+		public InternalColumnCountExecutionImpl(Statement query) {
 			super(ksContext, cfContext);
 		}
 
@@ -48,7 +48,7 @@ public class CqlColumnCountQueryImpl implements ColumnCountQuery {
 		}
 
 		@Override
-		public Query getQuery() {
+		public Statement getQuery() {
 			return query;
 		}
 

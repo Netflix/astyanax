@@ -9,6 +9,7 @@ import java.util.Random;
 
 import junit.framework.Assert;
 
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -24,20 +25,25 @@ import com.netflix.astyanax.serializers.IntegerSerializer;
 
 public class CompositeColumnTests extends KeyspaceTests {
 
-	@BeforeClass
-	public static void init() throws Exception {
-		initContext();
-	}
-	
 	private static AnnotatedCompositeSerializer<Population> compSerializer = new AnnotatedCompositeSerializer<Population>(Population.class);
 
 	private static ColumnFamily<Integer, Population> CF_POPULATION = 
 			new ColumnFamily<Integer, Population>("population", IntegerSerializer.get(), compSerializer, IntegerSerializer.get());
+
+	@BeforeClass
+	public static void init() throws Exception {
+		initContext();
+		keyspace.createColumnFamily(CF_POPULATION,     null);
+		CF_POPULATION.describe(keyspace);
+	}
 	
+	@AfterClass
+	public static void teardown() throws Exception {
+		keyspace.dropColumnFamily(CF_POPULATION);
+	}
+
 	@Test
 	public void runAllTests() throws Exception {
-		
-//		keyspace.createColumnFamily(CF_POPULATION, null);
 		
 		CF_POPULATION.describe(keyspace);
 		boolean rowDeleted = false;
@@ -148,7 +154,7 @@ public class CompositeColumnTests extends KeyspaceTests {
 					.execute().getResult();
 		
 			if (rowDeleted) {
-				Assert.assertFalse(result.hasValue());
+				Assert.assertNull(result);
 				continue;
 			} else {
 				Assert.assertTrue(result.hasValue());

@@ -24,7 +24,6 @@ public class CqlRowListImpl<K, C> implements Rows<K, C> {
 
 	private final ColumnFamily<K,C> cf;
 	private final CqlColumnFamilyDefinitionImpl cfDef; 
-	private final List<ColumnDefinition> pkCols; 
 	
 	public CqlRowListImpl() {
 		this.rows = new ArrayList<Row<K, C>>();
@@ -32,7 +31,6 @@ public class CqlRowListImpl<K, C> implements Rows<K, C> {
 		
 		this.cf = null;
 		this.cfDef = null;
-		this.pkCols = null;
 	}
 	
 	public CqlRowListImpl(List<com.datastax.driver.core.Row> resultRows, ColumnFamily<K,C> cf) {
@@ -42,7 +40,6 @@ public class CqlRowListImpl<K, C> implements Rows<K, C> {
 		
 		this.cf = cf;
 		this.cfDef = (CqlColumnFamilyDefinitionImpl) cf.getColumnFamilyDefinition();
-		this.pkCols = cfDef.getPartitionKeyColumnDefinitionList();
 		
 		Serializer<?> keySerializer = cf.getKeySerializer();
 		K prevKey = null; 
@@ -75,7 +72,7 @@ public class CqlRowListImpl<K, C> implements Rows<K, C> {
 
 	private void addToResultRows(List<com.datastax.driver.core.Row> rowList) {
 
-		if (pkCols.size() == 1 || cfDef.getValueColumnDefinitionList().size() > 1) {
+		if (cfDef.getClusteringKeyColumnDefinitionList().size() == 0 || cfDef.getRegularColumnDefinitionList().size() > 1) {
 			for (com.datastax.driver.core.Row row : rowList) {
 				this.rows.add(new CqlRowImpl<K, C>(row, cf));
 			}

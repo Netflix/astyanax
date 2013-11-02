@@ -6,9 +6,9 @@ import java.util.List;
 import java.util.UUID;
 
 import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.SimpleStatement;
+import com.datastax.driver.core.Statement;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.Serializer;
@@ -141,9 +141,9 @@ public class DirectCqlQueryImpl<K, C> implements CqlQuery<K, C> {
 	
 	private class InternalExecutionImpl extends CqlAbstractExecutionImpl<CqlResult<K, C>> {
 
-		private final Query query;
+		private final Statement query;
 		
-		public InternalExecutionImpl(Query query) {
+		public InternalExecutionImpl(Statement query) {
 			super(ksContext, cfContext);
 			this.query = query;
 		}
@@ -154,7 +154,7 @@ public class DirectCqlQueryImpl<K, C> implements CqlQuery<K, C> {
 		}
 
 		@Override
-		public Query getQuery() {
+		public Statement getQuery() {
 			return query;
 		}
 

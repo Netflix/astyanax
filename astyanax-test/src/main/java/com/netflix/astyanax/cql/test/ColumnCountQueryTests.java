@@ -10,6 +10,7 @@ import java.util.Set;
 
 import junit.framework.Assert;
 
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -22,13 +23,20 @@ import com.netflix.astyanax.model.ColumnFamily;
 
 public class ColumnCountQueryTests extends ReadTests {
 
-	private ColumnFamily<String, String> CF_COLUMN_RANGE_TEST = TestUtils.CF_COLUMN_RANGE_TEST;
+	private static ColumnFamily<String, String> CF_COLUMN_RANGE_TEST = TestUtils.CF_COLUMN_RANGE_TEST;
 
 	@BeforeClass
 	public static void init() throws Exception {
 		initContext();
+		keyspace.createColumnFamily(CF_COLUMN_RANGE_TEST, null);
+		CF_COLUMN_RANGE_TEST.describe(keyspace);
 	}
 	
+	@AfterClass
+	public static void tearDown() throws Exception {
+		keyspace.dropColumnFamily(CF_COLUMN_RANGE_TEST);
+	}
+
 	@Test
 	public void runAllTests() throws Exception {
 		

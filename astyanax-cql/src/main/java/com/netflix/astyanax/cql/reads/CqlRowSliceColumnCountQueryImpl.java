@@ -3,9 +3,9 @@ package com.netflix.astyanax.cql.reads;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
+import com.datastax.driver.core.Statement;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.connectionpool.OperationResult;
@@ -21,9 +21,9 @@ public class CqlRowSliceColumnCountQueryImpl<K> implements RowSliceColumnCountQu
 
 	private final KeyspaceContext ksContext;
 	private final ColumnFamilyMutationContext<?,?> cfContext;
-	private final Query query;
+	private final Statement query;
 	
-	public CqlRowSliceColumnCountQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<?,?> cfCtx, Query query) {
+	public CqlRowSliceColumnCountQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<?,?> cfCtx, Statement query) {
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;
 		this.query = query;
@@ -52,7 +52,7 @@ public class CqlRowSliceColumnCountQueryImpl<K> implements RowSliceColumnCountQu
 		}
 
 		@Override
-		public Query getQuery() {
+		public Statement getQuery() {
 			return query;
 		}
 

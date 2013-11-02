@@ -10,11 +10,10 @@ import java.util.Set;
 
 import junit.framework.Assert;
 
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.netflix.astyanax.ColumnListMutation;
-import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.cql.reads.model.CqlRangeBuilder;
 import com.netflix.astyanax.cql.reads.model.CqlRangeImpl;
 import com.netflix.astyanax.cql.test.utils.ReadTests;
@@ -30,19 +29,23 @@ import com.netflix.astyanax.model.Rows;
 
 public class RowSliceRowRangeQueryTests extends ReadTests {
 
-	private ColumnFamily<String, String> CF_COLUMN_RANGE_TEST = TestUtils.CF_COLUMN_RANGE_TEST;
+	private static ColumnFamily<String, String> CF_COLUMN_RANGE_TEST = TestUtils.CF_COLUMN_RANGE_TEST;
 
 	@BeforeClass
 	public static void init() throws Exception {
-		initReadTests();
+		initContext();
+		keyspace.createColumnFamily(CF_COLUMN_RANGE_TEST, null);
+		CF_COLUMN_RANGE_TEST.describe(keyspace);
 	}
 	
+	@AfterClass
+	public static void tearDown() throws Exception {
+		keyspace.dropColumnFamily(CF_COLUMN_RANGE_TEST);
+	}
+
 	@Test
 	public void runAllTests() throws Exception {
 		
-		keyspace.createColumnFamily(CF_COLUMN_RANGE_TEST, null);
-		
-		CF_COLUMN_RANGE_TEST.describe(keyspace);
 		boolean rowDeleted = false; 
 		
 		TestUtils.populateRowsForColumnRange(keyspace);
@@ -281,33 +284,6 @@ public class RowSliceRowRangeQueryTests extends ReadTests {
 			Assert.assertEquals(testRange.expectedRowKeys, list);
 		}
 	}
-	
-	private void populateRowsForColumnRange() throws Exception {
-		
-        MutationBatch m = keyspace.prepareMutationBatch();
-
-        for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
-        	String rowKey = Character.toString(keyName);
-        	ColumnListMutation<String> colMutation = m.withRow(CF_COLUMN_RANGE_TEST, rowKey);
-              for (char cName = 'a'; cName <= 'z'; cName++) {
-            	  colMutation.putColumn(Character.toString(cName), (int) (cName - 'a') + 1, null);
-              }
-              m.execute();
-        }
-        m.discardMutations();
-	}
-
-	private void deleteRowsForColumnRange() throws Exception {
-		
-        for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
-            MutationBatch m = keyspace.prepareMutationBatch();
-        	String rowKey = Character.toString(keyName);
-        	m.withRow(CF_COLUMN_RANGE_TEST, rowKey).delete();
-        	m.execute();
-        	m.discardMutations();
-        }
-	}
-	
 	
 	private Set<String> getRandomRowKeys() {
 		

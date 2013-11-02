@@ -14,8 +14,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
 import com.datastax.driver.core.querybuilder.Select.Where;
@@ -128,24 +128,25 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 
 	@Override
 	public RowSliceColumnCountQuery<K> getColumnCounts() {
-		Query query = new InternalRowQueryExecutionImpl().getQuery();
+		Statement query = new InternalRowQueryExecutionImpl().getQuery();
 		return new CqlRowSliceColumnCountQueryImpl<K>(ksContext, cfContext, query);
 	}
 	
 	private class InternalRowQueryExecutionImpl extends CqlAbstractExecutionImpl<Rows<K, C>> {
 
 		private final CqlColumnFamilyDefinitionImpl cfDef = (CqlColumnFamilyDefinitionImpl) cf.getColumnFamilyDefinition();
-		private final String keyColumnAlias = cfDef.getPrimaryKeyColumnDefinition().getName();
-		private final String[] allColumnNames = cfDef.getAllPkColNames();
-		private final List<ColumnDefinition> pkCols = cfDef.getPartitionKeyColumnDefinitionList();
-		private final List<ColumnDefinition> valCols = cfDef.getValueColumnDefinitionList();
+		
+		String partitionKeyCol = cfDef.getPartitionKeyColumnDefinition().getName();
+		List<ColumnDefinition> clusteringKeyCols = cfDef.getClusteringKeyColumnDefinitionList();
+		List<ColumnDefinition> regularCols = cfDef.getRegularColumnDefinitionList();
+		String[] allPkColumnNames = cfDef.getAllPkColNames();
 
 		public InternalRowQueryExecutionImpl() {
 			super(ksContext, cfContext);
 		}
 
 		@Override
-		public Query getQuery() {
+		public Statement getQuery() {
 
 			if (rowSlice.isCollectionQuery()) {
 				
@@ -199,72 +200,72 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 		
 		/** ALL ROW RANGE COLLECTION QUERIES HERE */ 
 
-		private Query selectAllColumnsForRowKeys(Collection<K> rowKeys) {
+		private Statement selectAllColumnsForRowKeys(Collection<K> rowKeys) {
 			
 			Select select = selectAllColumnsFromKeyspaceAndCF();
-			return select.where(in(keyColumnAlias, rowKeys.toArray()));
+			return select.where(in(partitionKeyCol, rowKeys.toArray()));
 		}
 			
-		private Query selectColumnRangeForRowKeys(Collection<K> rowKeys, CqlColumnSlice<C> columnSlice) {
+		private Statement selectColumnRangeForRowKeys(Collection<K> rowKeys, CqlColumnSlice<C> columnSlice) {
 
 			Select select = selectAllColumnsFromKeyspaceAndCF();
-			Where where = select.where(in(keyColumnAlias, rowKeys.toArray()));
+			Where where = select.where(in(partitionKeyCol, rowKeys.toArray()));
 			where = addWhereClauseForColumn(where, columnSlice);
 			return where;
 		}
 
-		private Query selectColumnSetForRowKeys(Collection<K> rowKeys, Collection<C> cols) {
+		private Statement selectColumnSetForRowKeys(Collection<K> rowKeys, Collection<C> cols) {
 
-			if (pkCols.size() == 1) {
+			if (clusteringKeyCols.size() == 0) {
 
 				// THIS IS A SIMPLE QUERY WHERE THE INDIVIDUAL COLS ARE BEING SELECTED E.G NAME, AGE ETC
 				Select.Selection select = QueryBuilder.select();
-				select.column(keyColumnAlias);
+				select.column(partitionKeyCol);
 
 				for (C col : cols) {
 					String columnName = (String)col; 
 					select.column(columnName).ttl(columnName).writeTime(columnName);
 				}
 
-				return select.from(keyspace, cf.getName()).where(in(keyColumnAlias, rowKeys.toArray()));
+				return select.from(keyspace, cf.getName()).where(in(partitionKeyCol, rowKeys.toArray()));
 
-			} else if (pkCols.size() == 2) {
+			} else if (clusteringKeyCols.size() > 0) {
 
 				// THIS IS A QUERY WHERE THE COLUMN NAME IS DYNAMIC  E.G TIME SERIES
 				Object[] columns = cols.toArray(new Object[cols.size()]); 
 
-				String pkColName = pkCols.get(1).getName();
+				String clusteringCol = clusteringKeyCols.get(0).getName();
 
 				Select select = selectAllColumnsFromKeyspaceAndCF();
-				return select.where(in(keyColumnAlias, rowKeys.toArray()))
-							 .and(in(pkColName, columns));
+				return select.where(in(partitionKeyCol, rowKeys.toArray()))
+							 .and(in(clusteringCol, columns));
 			} else {
 				throw new RuntimeException("Composite col query - todo");
 			}
 		}
 
-		private Query selectCompositeColumnRangeForRowKeys(Collection<K> rowKeys, CompositeByteBufferRange compositeRange) {
+		private Statement selectCompositeColumnRangeForRowKeys(Collection<K> rowKeys, CompositeByteBufferRange compositeRange) {
 				
 			Select select = selectAllColumnsFromKeyspaceAndCF();
-			Where stmt = select.where(in(keyColumnAlias, rowKeys.toArray()));
+			Where stmt = select.where(in(partitionKeyCol, rowKeys.toArray()));
 			stmt = addWhereClauseForCompositeColumnRange(stmt, compositeRange);
 			return stmt;
 		}
 
 		/** ALL ROW RANGE QUERIES FROM HERE ON */ 
-		private Query selectAllColumnsForRowRange(RowRange<K> range) {
+		private Statement selectAllColumnsForRowRange(RowRange<K> range) {
 
 			Select select = selectAllColumnsFromKeyspaceAndCF();
-			return addWhereClauseForRowKey(keyColumnAlias, select, range);
+			return addWhereClauseForRowKey(partitionKeyCol, select, range);
 		}
 
-		private Query selectColumnSetForRowRange(RowRange<K> range, Collection<C> cols) {
+		private Statement selectColumnSetForRowRange(RowRange<K> range, Collection<C> cols) {
 
-			if (pkCols.size() == 1) {
+			if (clusteringKeyCols.size() == 0) {
 
 				// THIS IS A SIMPLE QUERY WHERE THE INDIVIDUAL COLS ARE BEING SELECTED E.G NAME, AGE ETC
 				Select.Selection select = QueryBuilder.select();
-				select.column(keyColumnAlias);
+				select.column(partitionKeyCol);
 
 				for (C col : cols) {
 					String columnName = (String)col;
@@ -272,14 +273,13 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 				}
 
 				Select selection = select.from(keyspace, cf.getName());
-				Where where = addWhereClauseForRowKey(keyColumnAlias, selection, range);
+				Where where = addWhereClauseForRowKey(partitionKeyCol, selection, range);
 				return where;
 
-			} else if (pkCols.size() == 2) {
+			} else if (clusteringKeyCols.size() > 0) {
 
 				// THIS IS A QUERY WHERE THE COLUMN NAME IS DYNAMIC  E.G TIME SERIES
 
-				String pkColName = pkCols.get(1).getName();
 				Object[] columns = cols.toArray(new Object[cols.size()]); 
 
 				Select select = selectAllColumnsFromKeyspaceAndCF();
@@ -287,8 +287,8 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 				if (columns != null && columns.length > 0) {
 					select.allowFiltering();
 				}
-				Where where = addWhereClauseForRowKey(keyColumnAlias, select, range);
-				where.and(in(pkColName, columns));
+				Where where = addWhereClauseForRowKey(partitionKeyCol, select, range);
+				where.and(in(clusteringKeyCols.get(0).getName(), columns));
 
 				return where;
 			} else {
@@ -296,26 +296,26 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 			}
 		}
 
-		private Query selectColumnRangeForRowRange(RowRange<K> range, CqlColumnSlice<C> columnSlice) {
+		private Statement selectColumnRangeForRowRange(RowRange<K> range, CqlColumnSlice<C> columnSlice) {
 
 			Select select = selectAllColumnsFromKeyspaceAndCF();
 			if (columnSlice != null && columnSlice.isRangeQuery()) {
 				select.allowFiltering();
 			}
 
-			Where where = addWhereClauseForRowKey(keyColumnAlias, select, range);			
+			Where where = addWhereClauseForRowKey(partitionKeyCol, select, range);			
 			where = addWhereClauseForColumn(where, columnSlice);
 			return where;
 		}
 
-		private Query selectCompositeColumnRangeForRowRange(RowRange<K> range, CompositeByteBufferRange compositeRange) {
+		private Statement selectCompositeColumnRangeForRowRange(RowRange<K> range, CompositeByteBufferRange compositeRange) {
 
 			Select select = selectAllColumnsFromKeyspaceAndCF();
 			if (compositeRange != null) {
 				select.allowFiltering();
 			}
 
-			Where where = addWhereClauseForRowKey(keyColumnAlias, select, range);	
+			Where where = addWhereClauseForRowKey(partitionKeyCol, select, range);	
 			where = addWhereClauseForCompositeColumnRange(where, compositeRange);
 			return where;
 		}
@@ -323,11 +323,11 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 		private Select selectAllColumnsFromKeyspaceAndCF() {
 			
 			Select.Selection select = QueryBuilder.select();
-			for (int i=0; i<allColumnNames.length; i++) {
-				select.column(allColumnNames[i]);
+			for (int i=0; i<allPkColumnNames.length; i++) {
+				select.column(allPkColumnNames[i]);
 			}
 
-			for (ColumnDefinition colDef : valCols) {
+			for (ColumnDefinition colDef : regularCols) {
 				String colName = colDef.getName();
 				select.column(colName).ttl(colName).writeTime(colName);
 			}
@@ -336,20 +336,20 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 			
 			private Where addWhereClauseForColumn(Where where, CqlColumnSlice<C> columnSlice) {
 
-				String pkColName = pkCols.get(1).getName();
+				String clusteringKeyCol = clusteringKeyCols.get(0).getName();
 
 				if (!columnSlice.isRangeQuery()) {
 					return where;
 				}
 				if (columnSlice.getStartColumn() != null) {
-					where.and(gte(pkColName, columnSlice.getStartColumn()));
+					where.and(gte(clusteringKeyCol, columnSlice.getStartColumn()));
 				}
 				if (columnSlice.getEndColumn() != null) {
-					where.and(lte(pkColName, columnSlice.getEndColumn()));
+					where.and(lte(clusteringKeyCol, columnSlice.getEndColumn()));
 				}
 
 				if (columnSlice.getReversed()) {
-					where.orderBy(desc(pkColName));
+					where.orderBy(desc(clusteringKeyCol));
 				}
 
 				if (columnSlice.getLimit() != -1) {
@@ -362,13 +362,13 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 			private Where addWhereClauseForCompositeColumnRange(Where stmt, CompositeByteBufferRange compositeRange) {
 
 				List<RangeQueryRecord> records = compositeRange.getRecords();
-				int componentIndex = 1; 
+				int componentIndex = 0; 
 
 				for (RangeQueryRecord record : records) {
 
 					for (RangeQueryOp op : record.getOps()) {
 
-						String columnName = pkCols.get(componentIndex).getName();
+						String columnName = clusteringKeyCols.get(componentIndex).getName();
 
 						switch (op.getOperator()) {
 
@@ -413,7 +413,6 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 				if (keyIsPresent && tokenIsPresent) {
 					throw new RuntimeException("Cannot provide both token and keys for range query");
 				}
-				// TODO this is broken - must use the token func instead of just the actual key
 				if (keyIsPresent) {
 					if (rowRange.getStartKey() != null && rowRange.getEndKey() != null) {
 

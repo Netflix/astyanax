@@ -8,8 +8,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Statement;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.ColumnMutation;
 import com.netflix.astyanax.Execution;
@@ -143,7 +143,7 @@ public class CqlColumnMutationImpl<K,C> implements ColumnMutation {
 		
 		ColumnFamily<K,C> cf = cfContext.getColumnFamily();
 		CqlColumnFamilyDefinitionImpl cfDef = (CqlColumnFamilyDefinitionImpl) cf.getColumnFamilyDefinition();
-		if (cfDef.getPartitionKeyColumnDefinitionList().size() == 1) {
+		if (cfDef.getClusteringKeyColumnDefinitionList().size() == 0) {
 			return exec(value, ttl, CassandraOperationType.COLUMN_MUTATE);
 		}
 		
@@ -198,7 +198,7 @@ public class CqlColumnMutationImpl<K,C> implements ColumnMutation {
 			}
 
 			@Override
-			public Query getQuery() {
+			public Statement getQuery() {
 				BatchedStatements statements = new BatchedStatements();
 				queryGen.appendQuery(statements, colMutation);
 						

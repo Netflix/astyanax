@@ -11,10 +11,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
@@ -109,7 +109,7 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 
 	@Override
 	public String describePartitioner() throws ConnectionException {
-		Query q = QueryBuilder.select("partitioner").from("system", "local");
+		Statement q = QueryBuilder.select("partitioner").from("system", "local");
 		ResultSet result = session.execute(q);
 		com.datastax.driver.core.Row row = result.one();
 		if (row == null) {
@@ -142,7 +142,7 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 	@Override
 	public KeyspaceDefinition describeKeyspace() throws ConnectionException {
 		
-		Query query = QueryBuilder.select().from("system", "schema_keyspaces").where(eq("keyspace_name", keyspaceName));
+		Statement query = QueryBuilder.select().from("system", "schema_keyspaces").where(eq("keyspace_name", keyspaceName));
 		Row row = session.execute(query).one();
 		if (row == null) {
 			throw new RuntimeException("Keyspace not found: " + keyspaceName);

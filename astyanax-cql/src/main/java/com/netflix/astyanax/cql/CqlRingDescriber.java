@@ -8,10 +8,10 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.impl.TokenRangeImpl;
@@ -45,7 +45,7 @@ public class CqlRingDescriber {
 		
 		List<HostInfo> hosts = new ArrayList<HostInfo>();
 
-		Query query = QueryBuilder.select().all().from("system", "local"); 
+		Statement query = QueryBuilder.select().all().from("system", "local"); 
 		ResultSet resultSet = session.execute(query);
 		hosts.add(new HostInfo(resultSet.one(), resultSet));
 		

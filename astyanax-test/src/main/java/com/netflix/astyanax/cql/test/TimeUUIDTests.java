@@ -5,6 +5,7 @@ import java.util.UUID;
 import junit.framework.Assert;
 
 import org.apache.log4j.Logger;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -33,15 +34,19 @@ public class TimeUUIDTests extends KeyspaceTests {
     @BeforeClass
 	public static void init() throws Exception {
 		initContext();
+		keyspace.createColumnFamily(CF_TIME_UUID, null);
+		CF_TIME_UUID.describe(keyspace);
 	}
-
+	
+	@AfterClass
+	public static void tearDown() throws Exception {
+		keyspace.dropColumnFamily(CF_TIME_UUID);
+	}
 
     @Test
     public void testTimeUUID() throws Exception {
     	
-    	CF_TIME_UUID.describe(keyspace);
-        
-        MutationBatch m = keyspace.prepareMutationBatch();
+    	MutationBatch m = keyspace.prepareMutationBatch();
 
         UUID columnName = TimeUUIDUtils.getUniqueTimeUUIDinMillis();
         long columnTime = TimeUUIDUtils.getTimeFromUUID(columnName);

@@ -4,9 +4,9 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 
 import java.util.List;
 
-import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
+import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select.Builder;
 import com.datastax.driver.core.querybuilder.Select.Where;
@@ -36,8 +36,6 @@ public class CqlColumnQueryImpl<C> implements ColumnQuery<C> {
 	private final C columnName;
 
 	private final CqlColumnFamilyDefinitionImpl cfDef;
-	private final List<ColumnDefinition> pkCols;
-	private final String keyColumnAlias;
 
 	CqlColumnQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<?,C> cfCtx, Object rowKey, C colName) {
 		this.ksContext = ksCtx;
@@ -47,8 +45,6 @@ public class CqlColumnQueryImpl<C> implements ColumnQuery<C> {
 		
 		ColumnFamily<?,?> cf = cfCtx.getColumnFamily();
 		cfDef = (CqlColumnFamilyDefinitionImpl) cf.getColumnFamilyDefinition();
-		pkCols = cfDef.getPartitionKeyColumnDefinitionList();
-		keyColumnAlias = pkCols.get(0).getName();
 	}
 
 	@Override
@@ -73,38 +69,39 @@ public class CqlColumnQueryImpl<C> implements ColumnQuery<C> {
 		}
 
 		@Override
-		public Query getQuery() {
+		public Statement getQuery() {
 
 			boolean isCompositeType = cf.getColumnSerializer().getComparatorType() == ComparatorType.COMPOSITETYPE;
 
+			String partitionKeyCol = cfDef.getPartitionKeyColumnDefinition().getName();
+			List<ColumnDefinition> clusteringKeyCols = cfDef.getClusteringKeyColumnDefinitionList();
+			List<ColumnDefinition> regularCols = cfDef.getRegularColumnDefinitionList();
+
 			if (!isCompositeType) {
 
-				if (pkCols.size() == 1) {
+				if (clusteringKeyCols.size() == 0) {
 
 					String columnNameString = (String)columnName;
 					return QueryBuilder.select()
 							.column(columnNameString).ttl(columnNameString).writeTime(columnNameString)
 							.from(keyspace, cf.getName())
-							.where(eq(keyColumnAlias, rowKey));
+							.where(eq(partitionKeyCol, rowKey));
 				} else {
 
-					String pkColName = pkCols.get(1).getName();
-					List<ColumnDefinition> valDef = cfDef.getValueColumnDefinitionList();
-					String valueColName = valDef.get(0).getName();
+					String valueColName = regularCols.get(0).getName();
 
 					return QueryBuilder.select()
 							.column(valueColName).ttl(valueColName).writeTime(valueColName)
 							.from(keyspace, cf.getName())
-							.where(eq(keyColumnAlias, rowKey))
-							.and(eq(pkColName, columnName));
+							.where(eq(partitionKeyCol, rowKey))
+							.and(eq(clusteringKeyCols.get(0).getName(), columnName));
 
 				}
 			} else {
 
 				/**  COMPOSITE COLUMN QUERY */
 
-				List<ColumnDefinition> valDef = cfDef.getValueColumnDefinitionList();
-				String valueColName = valDef.get(0).getName();
+				String valueColName = regularCols.get(0).getName();
 
 				AnnotatedCompositeSerializer<?> compSerializer = (AnnotatedCompositeSerializer<?>) this.cf.getColumnSerializer();
 				List<ComponentSerializer<?>> components = compSerializer.getComponents();
@@ -113,11 +110,11 @@ public class CqlColumnQueryImpl<C> implements ColumnQuery<C> {
 				Builder select = QueryBuilder.select()
 						.column(valueColName).ttl(valueColName).writeTime(valueColName);
 
-				Where where = select.from(keyspace, cf.getName()).where(eq(keyColumnAlias, rowKey));
+				Where where = select.from(keyspace, cf.getName()).where(eq(partitionKeyCol, rowKey));
 
-				int index = 1;
+				int index = 0;
 				for (ComponentSerializer<?> component : components) {
-					where.and(eq(pkCols.get(index).getName(), component.getFieldValueDirectly(columnName)));
+					where.and(eq(clusteringKeyCols.get(index).getName(), component.getFieldValueDirectly(columnName)));
 					index++;
 				}
 

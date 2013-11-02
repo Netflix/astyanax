@@ -11,6 +11,7 @@ import java.util.UUID;
 
 import junit.framework.Assert;
 
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -21,63 +22,54 @@ import com.netflix.astyanax.serializers.BytesArraySerializer;
 
 public class SingleRowQueryTests extends ReadTests {
 
-	private static int TestRowCount = 1; 
-	
+	private int TestRowCount = 1;
+
 	@BeforeClass
 	public static void init() throws Exception {
-		initReadTests();
+		initContext();
+		keyspace.createColumnFamily(CF_USER_INFO, null);
+		CF_USER_INFO.describe(keyspace);
 	}
 	
+	@AfterClass
+	public static void tearDown() throws Exception {
+		keyspace.dropColumnFamily(CF_USER_INFO);
+	}
+
 	@Test
 	public void runAllTests() throws Exception {
-		
-		TestRowCount = 100;
-		
-		try {
-			/** CREATE TABLE */
-			
-			//super.keyspace.createColumnFamily(CF_USER_INFO, null);
-			super.CF_USER_INFO.describe(super.keyspace);
 
-			/** POPULATE ROWS FOR READ TESTS */
+		/** POPULATE ROWS FOR READ TESTS */
 
-			populateRows(TestRowCount);  // NOTE THAT WE ARE UING USER_INFO CF
-			Thread.sleep(1000);
-			boolean rowDeleted = false; 
+		populateRows(TestRowCount);  // NOTE THAT WE ARE UING USER_INFO CF
+		Thread.sleep(1000);
+		boolean rowDeleted = false; 
 
-			/** NOW READ BACK THE COLUMNS FOR EACH ROW */
-			
-			testSingleRowAllColumnsQuery(rowDeleted); 
-			testSingleRowSingleColumnQuery(rowDeleted);
-			testSingleRowColumnSliceQueryWithCollection(rowDeleted);
-			testSingleRowColumnSliceQueryVarArgs(rowDeleted);
-			testSingleRowAllColumnsColumnCountQuery(rowDeleted);
-			testSingleRowColumnSliceCollectionColumnCountQuery(rowDeleted);
-			testSingleRowColumnSliceVarArgsColumnCountQuery(rowDeleted);
+		/** NOW READ BACK THE COLUMNS FOR EACH ROW */
 
-			/** NOW DELETE THE ROWS */ 
+		testSingleRowAllColumnsQuery(rowDeleted); 
+		testSingleRowSingleColumnQuery(rowDeleted);
+		testSingleRowColumnSliceQueryWithCollection(rowDeleted);
+		testSingleRowColumnSliceQueryVarArgs(rowDeleted);
+		testSingleRowAllColumnsColumnCountQuery(rowDeleted);
+		testSingleRowColumnSliceCollectionColumnCountQuery(rowDeleted);
+		testSingleRowColumnSliceVarArgsColumnCountQuery(rowDeleted);
 
-			deleteRows(TestRowCount);
-			Thread.sleep(1000);
-			rowDeleted = true;
-			
-			/** NOW ISSUE THE SAME QUERY BUT VERIFY THAT THE RESULTS ARE EMPTY */
-			
-			testSingleRowAllColumnsQuery(rowDeleted); 
-			testSingleRowSingleColumnQuery(rowDeleted);
-			testSingleRowColumnSliceQueryWithCollection(rowDeleted);
-			testSingleRowColumnSliceQueryVarArgs(rowDeleted);
-			testSingleRowAllColumnsColumnCountQuery(rowDeleted);
-			testSingleRowColumnSliceCollectionColumnCountQuery(rowDeleted);
-			testSingleRowColumnSliceVarArgsColumnCountQuery(rowDeleted);
-			
-			/** DELETE COLUMN FAMILY */
-			//keyspace.dropColumnFamily(CF_USER_INFO);
-			
-		} catch (Exception e) {
-			e.printStackTrace();
-			Assert.fail(e.getMessage());
-		}
+		/** NOW DELETE THE ROWS */ 
+
+		deleteRows(TestRowCount);
+		Thread.sleep(1000);
+		rowDeleted = true;
+
+		/** NOW ISSUE THE SAME QUERY BUT VERIFY THAT THE RESULTS ARE EMPTY */
+
+		testSingleRowAllColumnsQuery(rowDeleted); 
+		testSingleRowSingleColumnQuery(rowDeleted);
+		testSingleRowColumnSliceQueryWithCollection(rowDeleted);
+		testSingleRowColumnSliceQueryVarArgs(rowDeleted);
+		testSingleRowAllColumnsColumnCountQuery(rowDeleted);
+		testSingleRowColumnSliceCollectionColumnCountQuery(rowDeleted);
+		testSingleRowColumnSliceVarArgsColumnCountQuery(rowDeleted);
 	}
 
     private void testSingleRowAllColumnsQuery(boolean rowDeleted) throws Exception {
@@ -147,7 +139,7 @@ public class SingleRowQueryTests extends ReadTests {
         	Column<String> column = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i) .getColumn("firstname").execute().getResult();
         	
         	if (rowDeleted) {
-        		Assert.assertFalse(column.hasValue());
+        		Assert.assertNull(column);
         		continue;
         	} else {
         		Assert.assertTrue(column.hasValue());
@@ -284,11 +276,6 @@ public class SingleRowQueryTests extends ReadTests {
     	// by column name
     	Column<String> column = response.getColumnByName(columnName);
     	Assert.assertEquals(columnName, column.getName());
-    	testColumnValue(column, value);
-    	
-    	// by column index
-    	int index = columnNames.indexOf(columnName);
-    	column = response.getColumnByIndex(index);
     	testColumnValue(column, value);
     }
     

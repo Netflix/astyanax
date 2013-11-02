@@ -5,14 +5,13 @@ import java.util.List;
 
 import junit.framework.Assert;
 
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
-import com.netflix.astyanax.annotations.Component;
-import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
@@ -21,296 +20,280 @@ import com.netflix.astyanax.serializers.StringSerializer;
 
 public class StaticColumnFamilyTests extends KeyspaceTests {
 
-		private static ColumnFamily<String, String> CF_ACCOUNTS = new ColumnFamily<String, String>("accounts", StringSerializer.get(), StringSerializer.get());
+	private static ColumnFamily<String, String> CF_ACCOUNTS = new ColumnFamily<String, String>("accounts", StringSerializer.get(), StringSerializer.get());
 
-		@BeforeClass
-		public static void init() throws Exception {
-			initContext();
-		}
-		
-		public static class Population {
-			
-			@Component(ordinal=0) String state;
-			@Component(ordinal=1) String city;
-			@Component(ordinal=2) Integer zip;
-			
-			  // Must have public default constructor
-			  public Population() {
-			  }
-			  public Population(String s, String c, int z) {
-				  state = s; city = c; zip = z;
-			  }
-			  public String toString() {
-				  return state + ":" + city + ":" + zip;
-			  }
-		}
-	
-		@Test
-		public void testReadWriteOpsWithStaticNamedColumns() throws Exception {
-			
-			//keyspace.createColumnFamily(CF_ACCOUNTS, null);
-			
-			CF_ACCOUNTS.describe(keyspace);
-			 
-			populateRowsForAccountsTable(keyspace);
-			Thread.sleep(1000);
-			boolean rowDeleted = false; 
-			
-			performSimpleRowQuery(rowDeleted);
-			performSimpleRowQueryWithColumnCollection(rowDeleted);
-			performSimpleRowSingleColumnQuery(rowDeleted);
-			performRowSliceQueryWithAllColumns(rowDeleted);
-			performRowSliceQueryWithColumnSlice(rowDeleted);
-			
-			deleteRowsForAccountsTable(keyspace);
-			Thread.sleep(1000);
-			rowDeleted = true; 
+	@BeforeClass
+	public static void init() throws Exception {
+		initContext();
+		keyspace.createColumnFamily(CF_ACCOUNTS, null);
+		CF_ACCOUNTS.describe(keyspace);
+	}
 
-			performSimpleRowQuery(rowDeleted);
-			performSimpleRowQueryWithColumnCollection(rowDeleted);
-			performSimpleRowSingleColumnQuery(rowDeleted);
-			performRowSliceQueryWithAllColumns(rowDeleted);
-			performRowSliceQueryWithColumnSlice(rowDeleted);
+	@AfterClass
+	public static void tearDown() throws Exception {
+		keyspace.dropColumnFamily(CF_ACCOUNTS);
+	}
 
-			//keyspace.dropColumnFamily(CF_ACCOUNTS);
-		}
+	@Test
+	public void testReadWriteOpsWithStaticNamedColumns() throws Exception {
+
+		populateRowsForAccountsTable(keyspace);
+		Thread.sleep(1000);
+		boolean rowDeleted = false; 
+
+		performSimpleRowQuery(rowDeleted);
+		performSimpleRowQueryWithColumnCollection(rowDeleted);
+		performSimpleRowSingleColumnQuery(rowDeleted);
+		performRowSliceQueryWithAllColumns(rowDeleted);
+		performRowSliceQueryWithColumnSlice(rowDeleted);
+
+		deleteRowsForAccountsTable(keyspace);
+		Thread.sleep(1000);
+		rowDeleted = true; 
+
+		performSimpleRowQuery(rowDeleted);
+		performSimpleRowQueryWithColumnCollection(rowDeleted);
+		performSimpleRowSingleColumnQuery(rowDeleted);
+		performRowSliceQueryWithAllColumns(rowDeleted);
+		performRowSliceQueryWithColumnSlice(rowDeleted);
+	}
 
 
-		private void performSimpleRowQuery(boolean rowDeleted) throws Exception {
-	        for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
-	        	String key = Character.toString(keyName);
-	        	performSimpleRowQueryForRow(key, rowDeleted, key);
-	        }
+	private void performSimpleRowQuery(boolean rowDeleted) throws Exception {
+		for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
+			String key = Character.toString(keyName);
+			performSimpleRowQueryForRow(key, rowDeleted, key);
 		}
-		
-		private void performSimpleRowQueryForRow(String rowKey, boolean rowDeleted, String expectedChar) throws Exception {
+	}
 
-			 ColumnList<String> result =  keyspace.prepareQuery(CF_ACCOUNTS).getRow(rowKey).execute().getResult();
-			 
-			 if (rowDeleted) {
-				 Assert.assertTrue(result.isEmpty());
-			 } else {
-				 Assert.assertFalse(result.isEmpty());
-				 Column<String> col = result.getColumnByName("user");
-				 Assert.assertEquals("user" + expectedChar, col.getStringValue());
-				 col = result.getColumnByName("pswd");
-				 Assert.assertEquals("pswd" + expectedChar, col.getStringValue());
-			 }
-		}
-		
-		private void performSimpleRowQueryWithColumnCollection(boolean rowDeleted) throws Exception {
-	        for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
-	        	String key = Character.toString(keyName);
-	        	performSimpleRowQueryWithColumnCollectionForRow(key, rowDeleted, key);
-	        }
-		}
-		
-		private void performSimpleRowQueryWithColumnCollectionForRow(String rowKey, boolean rowDeleted, String expectedChar) throws Exception {
+	private void performSimpleRowQueryForRow(String rowKey, boolean rowDeleted, String expectedChar) throws Exception {
 
-			 ColumnList<String> result =  keyspace.prepareQuery(CF_ACCOUNTS).getRow(rowKey).withColumnSlice("user", "pswd").execute().getResult();
-			 
-			 if (rowDeleted) {
-				 Assert.assertTrue(result.isEmpty());
-			 } else {
-				 Assert.assertFalse(result.isEmpty());
-				 Column<String> col = result.getColumnByName("user");
-				 Assert.assertEquals("user" + expectedChar, col.getStringValue());
-				 col = result.getColumnByName("pswd");
-				 Assert.assertEquals("pswd" + expectedChar, col.getStringValue());
-			 }
-			 
-			 result =  keyspace.prepareQuery(CF_ACCOUNTS).getRow(rowKey).withColumnSlice("user").execute().getResult();
-			 
-			 if (rowDeleted) {
-				 Assert.assertTrue(result.isEmpty());
-			 } else {
-				 Assert.assertFalse(result.isEmpty());
-				 Column<String> col = result.getColumnByName("user");
-				 Assert.assertEquals("user" + expectedChar, col.getStringValue());
-			 }
-			 
-			 result =  keyspace.prepareQuery(CF_ACCOUNTS).getRow(rowKey).withColumnSlice("pswd").execute().getResult();
-			 
-			 if (rowDeleted) {
-				 Assert.assertTrue(result.isEmpty());
-			 } else {
-				 Assert.assertFalse(result.isEmpty());
-				 Column<String> col = result.getColumnByName("pswd");
-				 Assert.assertEquals("pswd" + expectedChar, col.getStringValue());
-			 }
-			 
-			 List<String> cols = new ArrayList<String>();
-			 cols.add("user"); cols.add("pswd");
-			 
-			 result =  keyspace.prepareQuery(CF_ACCOUNTS).getRow(rowKey).withColumnSlice(cols).execute().getResult();
-			 
-			 if (rowDeleted) {
-				 Assert.assertTrue(result.isEmpty());
-			 } else {
-				 Assert.assertFalse(result.isEmpty());
-				 Column<String> col = result.getColumnByName("user");
-				 Assert.assertEquals("user" + expectedChar, col.getStringValue());
-				 col = result.getColumnByName("pswd");
-				 Assert.assertEquals("pswd" + expectedChar, col.getStringValue());
-			 }
-			 
-			 cols.remove("user");
-			 
-			 result =  keyspace.prepareQuery(CF_ACCOUNTS).getRow(rowKey).withColumnSlice(cols).execute().getResult();
-			 
-			 if (rowDeleted) {
-				 Assert.assertTrue(result.isEmpty());
-			 } else {
-				 Assert.assertFalse(result.isEmpty());
-				 Column<String> col = result.getColumnByName("pswd");
-				 Assert.assertEquals("pswd" + expectedChar, col.getStringValue());
-			 }
-		}
-		
-		private void performSimpleRowSingleColumnQuery(boolean rowDeleted) throws Exception {
-	        for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
-	        	String key = Character.toString(keyName);
-	        	performSimpleRowSingleColumnQueryForRow(key, rowDeleted, key);
-	        }
-		}
-		
-		private void performSimpleRowSingleColumnQueryForRow(String rowKey, boolean rowDeleted, String expectedChar) throws Exception {
+		ColumnList<String> result =  keyspace.prepareQuery(CF_ACCOUNTS).getRow(rowKey).execute().getResult();
 
-			Column<String> col =  keyspace.prepareQuery(CF_ACCOUNTS).getRow(rowKey).getColumn("user").execute().getResult();
-			 if (rowDeleted) {
-				 Assert.assertFalse(col.hasValue());
-			 } else {
-				 Assert.assertTrue(col.hasValue());
-				 Assert.assertEquals("user" + expectedChar, col.getStringValue());
-			 }
-			
-			 col =  keyspace.prepareQuery(CF_ACCOUNTS).getRow(rowKey).getColumn("pswd").execute().getResult();
-			 if (rowDeleted) {
-				 Assert.assertFalse(col.hasValue());
-			 } else {
-				 Assert.assertTrue(col.hasValue());
-				 Assert.assertEquals("pswd" + expectedChar, col.getStringValue());
-			 }
+		if (rowDeleted) {
+			Assert.assertTrue(result.isEmpty());
+		} else {
+			Assert.assertFalse(result.isEmpty());
+			Column<String> col = result.getColumnByName("user");
+			Assert.assertEquals("user" + expectedChar, col.getStringValue());
+			col = result.getColumnByName("pswd");
+			Assert.assertEquals("pswd" + expectedChar, col.getStringValue());
 		}
-		
-		private void performRowSliceQueryWithAllColumns(boolean rowDeleted) throws Exception {
+	}
 
-			List<String> keys = new ArrayList<String>();
-	        for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
-	        	keys.add(Character.toString(keyName));
-	        }
-	        
-	        int index = 0;
-			Rows<String, String> rows =  keyspace.prepareQuery(CF_ACCOUNTS).getRowSlice(keys).execute().getResult();
-			 if (rowDeleted) {
-				 Assert.assertTrue(rows.isEmpty());
-			 } else {
-				 Assert.assertFalse(rows.isEmpty());
-				 for (com.netflix.astyanax.model.Row<String, String> row : rows) {
-					 
-					 Assert.assertEquals(keys.get(index),row.getKey());
-					 
-					 ColumnList<String> cols = row.getColumns();
-					 Assert.assertFalse(cols.isEmpty());
-					 Column<String> col = cols.getColumnByName("user");
-					 Assert.assertEquals("user" + keys.get(index), col.getStringValue());
-					 col = cols.getColumnByName("pswd");
-					 Assert.assertEquals("pswd" + keys.get(index), col.getStringValue());
-					 
-					 index++;
-				 }
-			 }
+	private void performSimpleRowQueryWithColumnCollection(boolean rowDeleted) throws Exception {
+		for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
+			String key = Character.toString(keyName);
+			performSimpleRowQueryWithColumnCollectionForRow(key, rowDeleted, key);
+		}
+	}
+
+	private void performSimpleRowQueryWithColumnCollectionForRow(String rowKey, boolean rowDeleted, String expectedChar) throws Exception {
+
+		ColumnList<String> result =  keyspace.prepareQuery(CF_ACCOUNTS).getRow(rowKey).withColumnSlice("user", "pswd").execute().getResult();
+
+		if (rowDeleted) {
+			Assert.assertTrue(result.isEmpty());
+		} else {
+			Assert.assertFalse(result.isEmpty());
+			Column<String> col = result.getColumnByName("user");
+			Assert.assertEquals("user" + expectedChar, col.getStringValue());
+			col = result.getColumnByName("pswd");
+			Assert.assertEquals("pswd" + expectedChar, col.getStringValue());
 		}
 
-		private void performRowSliceQueryWithColumnSlice(boolean rowDeleted) throws Exception {
+		result =  keyspace.prepareQuery(CF_ACCOUNTS).getRow(rowKey).withColumnSlice("user").execute().getResult();
 
-			List<String> keys = new ArrayList<String>();
-			for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
-				keys.add(Character.toString(keyName));
-			}
+		if (rowDeleted) {
+			Assert.assertTrue(result.isEmpty());
+		} else {
+			Assert.assertFalse(result.isEmpty());
+			Column<String> col = result.getColumnByName("user");
+			Assert.assertEquals("user" + expectedChar, col.getStringValue());
+		}
 
-			int index = 0;
-			Rows<String, String> rows =  keyspace.prepareQuery(CF_ACCOUNTS).getRowSlice(keys).withColumnSlice("user", "pswd").execute().getResult();
-			if (rowDeleted) {
-				Assert.assertTrue(rows.isEmpty());
-			} else {
-				Assert.assertFalse(rows.isEmpty());
-				for (com.netflix.astyanax.model.Row<String, String> row : rows) {
+		result =  keyspace.prepareQuery(CF_ACCOUNTS).getRow(rowKey).withColumnSlice("pswd").execute().getResult();
 
-					Assert.assertEquals(keys.get(index),row.getKey());
+		if (rowDeleted) {
+			Assert.assertTrue(result.isEmpty());
+		} else {
+			Assert.assertFalse(result.isEmpty());
+			Column<String> col = result.getColumnByName("pswd");
+			Assert.assertEquals("pswd" + expectedChar, col.getStringValue());
+		}
 
-					ColumnList<String> cols = row.getColumns();
-					Assert.assertFalse(cols.isEmpty());
-					Column<String> col = cols.getColumnByName("user");
-					Assert.assertEquals("user" + keys.get(index), col.getStringValue());
-					col = cols.getColumnByName("pswd");
-					Assert.assertEquals("pswd" + keys.get(index), col.getStringValue());
+		List<String> cols = new ArrayList<String>();
+		cols.add("user"); cols.add("pswd");
 
-					index++;
-				}
-			}
+		result =  keyspace.prepareQuery(CF_ACCOUNTS).getRow(rowKey).withColumnSlice(cols).execute().getResult();
 
-			index=0;
-			rows =  keyspace.prepareQuery(CF_ACCOUNTS).getRowSlice(keys).withColumnSlice("user").execute().getResult();
-			if (rowDeleted) {
-				Assert.assertTrue(rows.isEmpty());
-			} else {
-				Assert.assertFalse(rows.isEmpty());
-				for (com.netflix.astyanax.model.Row<String, String> row : rows) {
+		if (rowDeleted) {
+			Assert.assertTrue(result.isEmpty());
+		} else {
+			Assert.assertFalse(result.isEmpty());
+			Column<String> col = result.getColumnByName("user");
+			Assert.assertEquals("user" + expectedChar, col.getStringValue());
+			col = result.getColumnByName("pswd");
+			Assert.assertEquals("pswd" + expectedChar, col.getStringValue());
+		}
 
-					Assert.assertEquals(keys.get(index),row.getKey());
+		cols.remove("user");
 
-					ColumnList<String> cols = row.getColumns();
-					Assert.assertFalse(cols.isEmpty());
-					Column<String> col = cols.getColumnByName("user");
-					Assert.assertEquals("user" + keys.get(index), col.getStringValue());
+		result =  keyspace.prepareQuery(CF_ACCOUNTS).getRow(rowKey).withColumnSlice(cols).execute().getResult();
 
-					index++;
-				}
-			}
+		if (rowDeleted) {
+			Assert.assertTrue(result.isEmpty());
+		} else {
+			Assert.assertFalse(result.isEmpty());
+			Column<String> col = result.getColumnByName("pswd");
+			Assert.assertEquals("pswd" + expectedChar, col.getStringValue());
+		}
+	}
 
-			index=0;
-			rows =  keyspace.prepareQuery(CF_ACCOUNTS).getRowSlice(keys).withColumnSlice("pswd").execute().getResult();
-			if (rowDeleted) {
-				Assert.assertTrue(rows.isEmpty());
-			} else {
-				Assert.assertFalse(rows.isEmpty());
-				for (com.netflix.astyanax.model.Row<String, String> row : rows) {
+	private void performSimpleRowSingleColumnQuery(boolean rowDeleted) throws Exception {
+		for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
+			String key = Character.toString(keyName);
+			performSimpleRowSingleColumnQueryForRow(key, rowDeleted, key);
+		}
+	}
 
-					Assert.assertEquals(keys.get(index),row.getKey());
+	private void performSimpleRowSingleColumnQueryForRow(String rowKey, boolean rowDeleted, String expectedChar) throws Exception {
 
-					ColumnList<String> cols = row.getColumns();
-					Assert.assertFalse(cols.isEmpty());
-					Column<String> col = cols.getColumnByName("pswd");
-					Assert.assertEquals("pswd" + keys.get(index), col.getStringValue());
+		Column<String> col =  keyspace.prepareQuery(CF_ACCOUNTS).getRow(rowKey).getColumn("user").execute().getResult();
+		if (rowDeleted) {
+			Assert.assertNull(col);
+		} else {
+			Assert.assertTrue(col.hasValue());
+			Assert.assertEquals("user" + expectedChar, col.getStringValue());
+		}
 
-					index++;
-				}
+		col =  keyspace.prepareQuery(CF_ACCOUNTS).getRow(rowKey).getColumn("pswd").execute().getResult();
+		if (rowDeleted) {
+			Assert.assertNull(col);
+		} else {
+			Assert.assertTrue(col.hasValue());
+			Assert.assertEquals("pswd" + expectedChar, col.getStringValue());
+		}
+	}
+
+	private void performRowSliceQueryWithAllColumns(boolean rowDeleted) throws Exception {
+
+		List<String> keys = new ArrayList<String>();
+		for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
+			keys.add(Character.toString(keyName));
+		}
+
+		int index = 0;
+		Rows<String, String> rows =  keyspace.prepareQuery(CF_ACCOUNTS).getRowSlice(keys).execute().getResult();
+		if (rowDeleted) {
+			Assert.assertTrue(rows.isEmpty());
+		} else {
+			Assert.assertFalse(rows.isEmpty());
+			for (com.netflix.astyanax.model.Row<String, String> row : rows) {
+
+				Assert.assertEquals(keys.get(index),row.getKey());
+
+				ColumnList<String> cols = row.getColumns();
+				Assert.assertFalse(cols.isEmpty());
+				Column<String> col = cols.getColumnByName("user");
+				Assert.assertEquals("user" + keys.get(index), col.getStringValue());
+				col = cols.getColumnByName("pswd");
+				Assert.assertEquals("pswd" + keys.get(index), col.getStringValue());
+
+				index++;
 			}
 		}
-    
-    
+	}
+
+	private void performRowSliceQueryWithColumnSlice(boolean rowDeleted) throws Exception {
+
+		List<String> keys = new ArrayList<String>();
+		for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
+			keys.add(Character.toString(keyName));
+		}
+
+		int index = 0;
+		Rows<String, String> rows =  keyspace.prepareQuery(CF_ACCOUNTS).getRowSlice(keys).withColumnSlice("user", "pswd").execute().getResult();
+		if (rowDeleted) {
+			Assert.assertTrue(rows.isEmpty());
+		} else {
+			Assert.assertFalse(rows.isEmpty());
+			for (com.netflix.astyanax.model.Row<String, String> row : rows) {
+
+				Assert.assertEquals(keys.get(index),row.getKey());
+
+				ColumnList<String> cols = row.getColumns();
+				Assert.assertFalse(cols.isEmpty());
+				Column<String> col = cols.getColumnByName("user");
+				Assert.assertEquals("user" + keys.get(index), col.getStringValue());
+				col = cols.getColumnByName("pswd");
+				Assert.assertEquals("pswd" + keys.get(index), col.getStringValue());
+
+				index++;
+			}
+		}
+
+		index=0;
+		rows =  keyspace.prepareQuery(CF_ACCOUNTS).getRowSlice(keys).withColumnSlice("user").execute().getResult();
+		if (rowDeleted) {
+			Assert.assertTrue(rows.isEmpty());
+		} else {
+			Assert.assertFalse(rows.isEmpty());
+			for (com.netflix.astyanax.model.Row<String, String> row : rows) {
+
+				Assert.assertEquals(keys.get(index),row.getKey());
+
+				ColumnList<String> cols = row.getColumns();
+				Assert.assertFalse(cols.isEmpty());
+				Column<String> col = cols.getColumnByName("user");
+				Assert.assertEquals("user" + keys.get(index), col.getStringValue());
+
+				index++;
+			}
+		}
+
+		index=0;
+		rows =  keyspace.prepareQuery(CF_ACCOUNTS).getRowSlice(keys).withColumnSlice("pswd").execute().getResult();
+		if (rowDeleted) {
+			Assert.assertTrue(rows.isEmpty());
+		} else {
+			Assert.assertFalse(rows.isEmpty());
+			for (com.netflix.astyanax.model.Row<String, String> row : rows) {
+
+				Assert.assertEquals(keys.get(index),row.getKey());
+
+				ColumnList<String> cols = row.getColumns();
+				Assert.assertFalse(cols.isEmpty());
+				Column<String> col = cols.getColumnByName("pswd");
+				Assert.assertEquals("pswd" + keys.get(index), col.getStringValue());
+
+				index++;
+			}
+		}
+	}
+
+
 	public static void populateRowsForAccountsTable(Keyspace keyspace) throws Exception {
-		
-        MutationBatch m = keyspace.prepareMutationBatch();
 
-        for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
-        	String character = Character.toString(keyName);
-        	ColumnListMutation<String> colMutation = m.withRow(CF_ACCOUNTS, character);
-        	colMutation.putColumn("user", "user" + character).putColumn("pswd", "pswd" + character);
-        	m.execute();
-        	m.discardMutations();
-        }
+		MutationBatch m = keyspace.prepareMutationBatch();
+
+		for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
+			String character = Character.toString(keyName);
+			ColumnListMutation<String> colMutation = m.withRow(CF_ACCOUNTS, character);
+			colMutation.putColumn("user", "user" + character).putColumn("pswd", "pswd" + character);
+			m.execute();
+			m.discardMutations();
+		}
 	}
 
 	public static void deleteRowsForAccountsTable(Keyspace keyspace) throws Exception {
-		
-        for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
-            MutationBatch m = keyspace.prepareMutationBatch();
-        	String rowKey = Character.toString(keyName);
-        	m.withRow(CF_ACCOUNTS, rowKey).delete();
-        	m.execute();
-        	m.discardMutations();
-        }
+
+		for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
+			MutationBatch m = keyspace.prepareMutationBatch();
+			String rowKey = Character.toString(keyName);
+			m.withRow(CF_ACCOUNTS, rowKey).delete();
+			m.execute();
+			m.discardMutations();
+		}
 	}
 }

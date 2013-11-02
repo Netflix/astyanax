@@ -1,4 +1,4 @@
-package com.netflix.astyanax.cql.test.todo;
+package com.netflix.astyanax.cql.test;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -15,7 +15,6 @@ import com.google.common.collect.ImmutableMap;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.annotations.Component;
-import com.netflix.astyanax.cql.test.KeyspaceTests;
 import com.netflix.astyanax.cql.test.utils.AstyanaxContextFactory;
 import com.netflix.astyanax.cql.test.utils.ClusterConfiguration;
 import com.netflix.astyanax.cql.test.utils.ClusterConfiguration.Driver;
@@ -27,32 +26,14 @@ import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 
-public class CqlKeyspaceImplTests extends KeyspaceTests {
+public class SchemaTests extends KeyspaceTests {
 
-	private static final Driver driver = Driver.JAVA_DRIVER;
-	//private static final Driver driver = Driver.THRIFT;
-	
 	@BeforeClass
 	public static void init() throws Exception {
-		ClusterConfiguration.setDriver(driver);
 		initContext();
 	}
 	
 	@Test
-	public void runAllTests() throws Exception {
-
-		createKeyspaceUsingOptions();
-		createKeyspaceUsingProperties();
-		createKeyspaceAndCFsUsingUsingOptions();
-		createKeyspaceAndCFsDirectly();
-		createKeyspaceWithCompositeCF();
-		alterKeyspaceOptions();
-		alterCFOptions();
-		createAndDeleteCF();
-		createAndDeleteKeyspace();
-		keyspaceDescribePartitioner();
-	}
-	
 	public void createKeyspaceUsingOptions() throws Exception {
 		
 		String keyspaceName = "AstyanaxTestKeyspaceUsingOptions".toLowerCase();
@@ -104,6 +85,7 @@ public class CqlKeyspaceImplTests extends KeyspaceTests {
 		keyspace.dropKeyspace();
 	}
 	
+	@Test
 	public void createKeyspaceUsingProperties() throws Exception {
 		
 		/** SIMPLE STRATEGY */
@@ -191,6 +173,7 @@ public class CqlKeyspaceImplTests extends KeyspaceTests {
 		Assert.assertEquals("3", strategyOptions.get("eu-west"));
 	}
 	
+	@Test
 	public void createKeyspaceAndCFsUsingUsingOptions() throws Exception {
 		
 		String keyspaceName = "AstyanaxTestKeyspaceAndCFsUsingOptions".toLowerCase();
@@ -249,6 +232,7 @@ public class CqlKeyspaceImplTests extends KeyspaceTests {
 		keyspace.dropKeyspace();
 	}
 
+	@Test
 	public void createKeyspaceAndCFsDirectly() throws Exception {
 		
 		String keyspaceName = "AstyanaxTestKeyspaceAndCFsDirect".toLowerCase();
@@ -342,6 +326,7 @@ public class CqlKeyspaceImplTests extends KeyspaceTests {
 		keyspace.dropKeyspace();
 	}
 	
+	@Test
 	public void createKeyspaceWithCompositeCF() throws Exception {
 		
 		// Annotated composite class
@@ -393,14 +378,14 @@ public class CqlKeyspaceImplTests extends KeyspaceTests {
 			Assert.assertEquals("population", cfDef.getName());
 		
 			List<ColumnDefinition> colDefs = cfDef.getColumnDefinitionList();
-			Assert.assertTrue(6 == colDefs.size());
+			Assert.assertTrue(7 == colDefs.size());
 		
 			for (int i=1; i<=5; i++) {
 				ColumnDefinition colDef = colDefs.get(i-1);
 				Assert.assertEquals("column" + i, colDef.getName());
 				Assert.assertNotNull(colDef.getValidationClass());
 			}
-			ColumnDefinition colDef = colDefs.get(5);
+			ColumnDefinition colDef = colDefs.get(6);
 			Assert.assertEquals("value", colDef.getName());
 			Assert.assertNotNull(colDef.getValidationClass());
 			
@@ -408,14 +393,14 @@ public class CqlKeyspaceImplTests extends KeyspaceTests {
 			Assert.assertEquals("population", cfDef.getName());
 			
 			colDefs = cfDef.getColumnDefinitionList();
-			Assert.assertTrue(6 == colDefs.size());
+			Assert.assertTrue(7 == colDefs.size());
 		
 			for (int i=1; i<=5; i++) {
 				colDef = colDefs.get(i-1);
 				Assert.assertEquals("column" + i, colDef.getName());
 				Assert.assertNotNull(colDef.getValidationClass());
 			}
-			colDef = colDefs.get(5);
+			colDef = colDefs.get(6);
 			Assert.assertEquals("value", colDef.getName());
 			Assert.assertNotNull(colDef.getValidationClass());
 		}
@@ -423,6 +408,7 @@ public class CqlKeyspaceImplTests extends KeyspaceTests {
 		keyspace.dropKeyspace();
 	}
 	
+	@Test
 	public void alterKeyspaceOptions() throws Exception {
 		
 		String keyspaceName = "AstyanaxTestKeyspaceAlterOptions".toLowerCase();
@@ -494,6 +480,7 @@ public class CqlKeyspaceImplTests extends KeyspaceTests {
 		keyspace.dropKeyspace();
 	}
 	
+	@Test
 	public void alterCFOptions() throws Exception {
 		
 		String keyspaceName = "AstyanaxTestKeyspaceAlterCFOptions".toLowerCase();
@@ -525,6 +512,7 @@ public class CqlKeyspaceImplTests extends KeyspaceTests {
 		keyspace.dropKeyspace();
 	}
 	
+	@Test
 	public void createAndDeleteCF() throws Exception {
 		
 		String keyspaceName = "AstyanaxTestKeyspaceCreateDeleteCF".toLowerCase();
@@ -558,6 +546,7 @@ public class CqlKeyspaceImplTests extends KeyspaceTests {
 		}
 	}
 	
+	@Test
 	public void createAndDeleteKeyspace() throws Exception {
 		
 		String keyspaceName = "AstyanaxTestKeyspaceCreateDeleteKS".toLowerCase();
@@ -588,6 +577,7 @@ public class CqlKeyspaceImplTests extends KeyspaceTests {
 		}
 	}
 
+	@Test
 	public void keyspaceDescribePartitioner() throws Exception {
 		
 		String keyspaceName = "AstyanaxTestKeyspaceDescribeRing".toLowerCase();

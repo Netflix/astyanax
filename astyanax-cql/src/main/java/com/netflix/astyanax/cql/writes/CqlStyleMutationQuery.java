@@ -44,7 +44,7 @@ public class CqlStyleMutationQuery {
 		ColumnFamily<?,?> cf = cfContext.getColumnFamily();
 		CqlColumnFamilyDefinitionImpl cfDef = (CqlColumnFamilyDefinitionImpl)cf.getColumnFamilyDefinition();
 		return "DELETE FROM " + ksContext.getKeyspace() + "." + cf.getName() + 
-				" WHERE " + cfDef.getPrimaryKeyColumnDefinition().getName() + " = ?;";
+				" WHERE " + cfDef.getPartitionKeyColumnDefinition().getName() + " = ?;";
 	}
 
 	public void appendWriteOptions(StringBuilder sb, Integer overrideTTL, Long overrideTimestamp) {

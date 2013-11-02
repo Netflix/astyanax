@@ -54,13 +54,12 @@ public class CqlColumnListImpl<C> implements ColumnList<C> {
 	public CqlColumnListImpl(List<Row> rows, ColumnFamily<?, ?> cf) {
 		
 		CqlColumnFamilyDefinitionImpl cfDef = (CqlColumnFamilyDefinitionImpl) cf.getColumnFamilyDefinition();
-		int numPkCols = cfDef.getPartitionKeyColumnDefinitionList().size();
 		
-		int columnNameIndex = numPkCols-1;  
+		int columnNameIndex = cfDef.getPartitionKeyColumnDefinitionList().size();  
 		
 		for (Row row : rows) {
 			Object columnName = CqlTypeMapping.getDynamicColumn(row, cf.getColumnSerializer(), columnNameIndex, cf);
-			int valueIndex = columnNameIndex+1;
+			int valueIndex = cfDef.getPartitionKeyColumnDefinitionList().size() + cfDef.getClusteringKeyColumnDefinitionList().size();
 			
 			CqlColumnImpl<C> cqlCol = new CqlColumnImpl<C>((C) columnName, row, valueIndex);
 			columnList.add(cqlCol);

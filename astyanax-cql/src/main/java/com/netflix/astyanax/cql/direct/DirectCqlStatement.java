@@ -1,11 +1,11 @@
 package com.netflix.astyanax.cql.direct;
 
 import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.ResultSetFuture;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.SimpleStatement;
+import com.datastax.driver.core.Statement;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
@@ -43,7 +43,7 @@ public class DirectCqlStatement implements CqlStatement {
 	@Override
 	public OperationResult<CqlStatementResult> execute() throws ConnectionException {
 		
-		Query q = new SimpleStatement(cqlQuery);
+		Statement q = new SimpleStatement(cqlQuery);
 		q.setConsistencyLevel(ConsistencyLevelTransform.getConsistencyLevel(cLevel));
 		
 		ResultSet resultSet = session.execute(q);
@@ -54,7 +54,7 @@ public class DirectCqlStatement implements CqlStatement {
 
 	@Override
 	public ListenableFuture<OperationResult<CqlStatementResult>> executeAsync() throws ConnectionException {
-		Query q = new SimpleStatement(cqlQuery);
+		Statement q = new SimpleStatement(cqlQuery);
 		q.setConsistencyLevel(ConsistencyLevelTransform.getConsistencyLevel(cLevel));
 
 		ResultSetFuture rsFuture = session.executeAsync(q);

@@ -32,7 +32,7 @@ public class CFMutationQueryGenerator extends CqlStyleMutationQuery {
 		keyspace = ksContext.getKeyspace();
 		cf = cfContext.getColumnFamily();
 		cfDef = (CqlColumnFamilyDefinitionImpl)cf.getColumnFamilyDefinition();
-		isCompositeKey = cfDef.getPartitionKeyColumnDefinitionList().size() > 1;
+		isCompositeKey = cfDef.getClusteringKeyColumnDefinitionList().size() > 0;
 		rowKey = cfContext.getRowKey();
 	}
 
@@ -121,43 +121,132 @@ public class CFMutationQueryGenerator extends CqlStyleMutationQuery {
 	
 	private String getUpdateColumnStatement(CqlColumnMutationImpl<?,?> colMutation) {
 
-		StringBuilder sb = new StringBuilder("UPDATE " + keyspace + "." + cf.getName()); 
-		super.appendWriteOptions(sb, colMutation.getTTL(), colMutation.getTimestamp());
-		sb.append(" SET ");
-		if (isCompositeKey) { 
-			String valueAlias = cfDef.getValueColumnDefinitionList().get(0).getName();
-			sb.append(valueAlias).append(" = ? ");
-		} else {
-			sb.append(colMutation.columnName).append(" = ? ");
+		//insert into standard2 (key, column1, value) values ('a', '2' , 'a2') using ttl 86400;
+		
+		int columnCount = 0; 
+		
+		StringBuilder sb = new StringBuilder("INSERT INTO ");
+		sb.append(keyspace + "." + cf.getName());
+		sb.append(" (");
+		
+		Iterator<ColumnDefinition> iter = cfDef.getPartitionKeyColumnDefinitionList().iterator();
+		while (iter.hasNext()) {
+			sb.append(iter.next().getName());
+			columnCount++;
+			if (iter.hasNext()) {
+				sb.append(",");
+			}
 		}
 		
-		return appendWhereClause(sb).toString();
+		iter = cfDef.getClusteringKeyColumnDefinitionList().iterator();
+		if (iter.hasNext()) {
+			sb.append(",");
+			while (iter.hasNext()) {
+				sb.append(iter.next().getName());
+				columnCount++;
+				if (iter.hasNext()) {
+					sb.append(",");
+				}
+			}
+		}
+		
+		iter = cfDef.getRegularColumnDefinitionList().iterator();
+		if (iter.hasNext()) {
+			sb.append(",");
+			while (iter.hasNext()) {
+				sb.append(iter.next().getName());
+				columnCount++;
+				if (iter.hasNext()) {
+					sb.append(",");
+				}
+			}
+		}
+		
+		sb.append(") VALUES (");
+		for (int i=0; i<columnCount; i++) {
+			if (i < (columnCount-1)) {
+				sb.append("?,");
+			} else {
+				sb.append("?");
+			}
+		}
+		sb.append(") ");
+		super.appendWriteOptions(sb, colMutation.getTTL(), colMutation.getTimestamp());
+		
+		return sb.toString();
+		
+//		StringBuilder sb = new StringBuilder("UPDATE " + keyspace + "." + cf.getName()); 
+//		super.appendWriteOptions(sb, colMutation.getTTL(), colMutation.getTimestamp());
+//		sb.append(" SET ");
+//		if (isCompositeKey) { 
+//			String valueAlias = cfDef.getRegularColumnDefinitionList().get(0).getName();
+//			sb.append(valueAlias).append(" = ? ");
+//		} else {
+//			sb.append(colMutation.columnName).append(" = ? ");
+//		}
+//		
+//		return appendWhereClause(sb).toString();
 	}
 	
 	
 	private StringBuilder appendWhereClause(StringBuilder sb) { 
 		
-		List<ColumnDefinition> pkColDefs = cfDef.getPartitionKeyColumnDefinitionList();
-		Iterator<ColumnDefinition> pkIter = pkColDefs.iterator();
+		Iterator<ColumnDefinition> iter = cfDef.getPartitionKeyColumnDefinitionList().iterator();
 		
 		sb.append(" WHERE ");
-		while (pkIter.hasNext()) {
-			sb.append(pkIter.next().getName()).append(" = ? ");
-			if (pkIter.hasNext()) {
+		while (iter.hasNext()) {
+			sb.append(iter.next().getName()).append(" = ? ");
+			if (iter.hasNext()) {
 				sb.append("AND ");
 			}
 		}
+		
+		iter = cfDef.getClusteringKeyColumnDefinitionList().iterator();
+		if (iter.hasNext()) {
+			sb.append("AND ");
+			while (iter.hasNext()) {
+				sb.append(iter.next().getName()).append(" = ? ");
+				if (iter.hasNext()) {
+					sb.append("AND ");
+				}
+			}
+		}
+		
 		return sb;
 	}
 	
 	private Object[] getUpdateStatementBatchValues(CqlColumnMutationImpl<?,?> colMutation) {
-	
+
 		List<Object> objects = new ArrayList<Object>();
-		objects.add(colMutation.columnValue);
+
 		
-		getBatchValuesForWhereClause(colMutation, objects);
+		objects.add(rowKey);
+		
+		Object columnName = colMutation.columnName;
+		
+		if (isCompositeColumn()) {
+			AnnotatedCompositeSerializer<?> compSerializer = (AnnotatedCompositeSerializer<?>) cf.getColumnSerializer();
+			for (ComponentSerializer<?> component : compSerializer.getComponents()) {
+				try {
+					objects.add(component.getFieldValueDirectly(columnName));
+				} catch (Exception e) {
+					throw new RuntimeException(e);
+				}
+			}
+		} else if (isCompositeKey) {
+			objects.add(columnName);
+		}
+
+		objects.add(colMutation.columnValue);
 
 		return objects.toArray();
+
+//		List<Object> objects = new ArrayList<Object>();
+//		objects.add(colMutation.columnValue);
+//		
+//		getBatchValuesForWhereClause(colMutation, objects);
+//
+//		return objects.toArray();
 	}
 	
 	private void getBatchValuesForWhereClause(CqlColumnMutationImpl<?,?> colMutation, List<Object> list) {
@@ -205,7 +294,7 @@ public class CFMutationQueryGenerator extends CqlStyleMutationQuery {
 		
 		ColumnFamily<?,?> cf = cfContext.getColumnFamily();
 		CqlColumnFamilyDefinitionImpl cfDef = (CqlColumnFamilyDefinitionImpl)cf.getColumnFamilyDefinition();
-		String valueAlias = cfDef.getValueColumnDefinitionList().get(0).getName();
+		String valueAlias = cfDef.getRegularColumnDefinitionList().get(0).getName();
 
 		StringBuilder sb = new StringBuilder();
 		if (increment) {

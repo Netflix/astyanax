@@ -9,9 +9,9 @@ import java.util.Map;
 import java.util.Properties;
 
 import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.Query;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
@@ -56,7 +56,7 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostLis
 	@Override
 	public String getVersion() throws ConnectionException {
 		
-		Query query = QueryBuilder.select("release_version")
+		Statement query = QueryBuilder.select("release_version")
 								  .from("system", "local")
 								  .where(eq("key", "local"));
 		
@@ -74,7 +74,7 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostLis
 
 	@Override
 	public String describePartitioner() throws ConnectionException {
-		Query query = QueryBuilder.select("partitioner")
+		Statement query = QueryBuilder.select("partitioner")
 				.from("system", "local")
 				.where(eq("key", "local"));
 
@@ -122,7 +122,7 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostLis
 	@Override
 	public List<KeyspaceDefinition> describeKeyspaces() throws ConnectionException {
 		
-		Query query = QueryBuilder.select().all().from("system", "schema_keyspaces");
+		Statement query = QueryBuilder.select().all().from("system", "schema_keyspaces");
 
 		List<KeyspaceDefinition> ksDefs = new ArrayList<KeyspaceDefinition>();
 		try {

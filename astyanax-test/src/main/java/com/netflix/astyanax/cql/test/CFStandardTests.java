@@ -63,7 +63,7 @@ public class CFStandardTests extends KeyspaceTests {
 
     @BeforeClass
 	public static void init() throws Exception {
-		initContext();
+    	initContext();
 		
 		keyspace.createColumnFamily(CF_STANDARD1, null);
 		keyspace.createColumnFamily(CF_STANDARD2, null);
@@ -89,20 +89,19 @@ public class CFStandardTests extends KeyspaceTests {
     	smo.setFirstName("Eran");
 
     	ByteBuffer bb = ObjectSerializer.get().toByteBuffer(smo);
+    	
     	keyspace.prepareColumnMutation(CF_STANDARD1, "Key_SerializeTest",
     			"Column1").putValue(bb, null).execute();
 
     	UserInfo smo2 = (UserInfo) keyspace.prepareQuery(CF_STANDARD1)
     			.getKey("Key_SerializeTest").getColumn("Column1").execute()
     			.getResult().getValue(ObjectSerializer.get());
-
+    	
     	Assert.assertEquals(smo, smo2);
     }    
 
     @Test
     public void testSingleOps() throws Exception {
-    	
-    	CF_STANDARD1.describe(keyspace);
     	
         String key = "SingleOpsTest";
         Random prng = new Random();

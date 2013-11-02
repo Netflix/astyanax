@@ -18,10 +18,10 @@ import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.Query;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
@@ -123,7 +123,7 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 
 	@Override
 	public List<ColumnFamilyDefinition> getColumnFamilyList() {
-		Query query = QueryBuilder.select().all()
+		Statement query = QueryBuilder.select().all()
 				.from("system", "schema_columnfamilies")
 				.where(eq("keyspace_name", getName()));
 				
@@ -141,7 +141,7 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 	@Override
 	public ColumnFamilyDefinition getColumnFamily(String columnFamilyName) {
 		
-		Query query = QueryBuilder.select().all()
+		Statement query = QueryBuilder.select().all()
 				.from("system", "schema_columnfamilies")
 				.where(eq("keyspace_name", getName()))
 				.and(eq("columnfamily_name", columnFamilyName.toLowerCase()));

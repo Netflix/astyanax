@@ -1,7 +1,7 @@
 package com.netflix.astyanax.cql.retrypolicies;
 
 import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.Query;
+import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.WriteType;
 import com.datastax.driver.core.policies.RetryPolicy.RetryDecision;
 import com.netflix.astyanax.cql.ConsistencyLevelMapping;
@@ -73,7 +73,7 @@ public class ChangeConsistencyLevelRetryPolicy extends JavaDriverBasedRetryPolic
 	private com.datastax.driver.core.policies.RetryPolicy jdRetry = new com.datastax.driver.core.policies.RetryPolicy() {
 
 		@Override
-		public RetryDecision onReadTimeout(Query query, ConsistencyLevel cl, 
+		public RetryDecision onReadTimeout(Statement query, ConsistencyLevel cl, 
 										  int requiredResponses, int receivedResponses,
 										  boolean dataRetrieved, int nbRetry) {
 			
@@ -82,7 +82,7 @@ public class ChangeConsistencyLevelRetryPolicy extends JavaDriverBasedRetryPolic
 		}
 
 		@Override
-		public RetryDecision onWriteTimeout(Query query, ConsistencyLevel cl,
+		public RetryDecision onWriteTimeout(Statement query, ConsistencyLevel cl,
 											WriteType writeType, int requiredAcks, int receivedAcks,
 											int nbRetry) {
 			
@@ -91,7 +91,7 @@ public class ChangeConsistencyLevelRetryPolicy extends JavaDriverBasedRetryPolic
 		}
 
 		@Override
-		public RetryDecision onUnavailable(Query query, ConsistencyLevel cl,
+		public RetryDecision onUnavailable(Statement query, ConsistencyLevel cl,
 										   int requiredReplica, int aliveReplica, int nbRetry) {
 
 			boolean shouldRetry = retryOnAllConditions || retryOnUnavailable;
@@ -104,7 +104,7 @@ public class ChangeConsistencyLevelRetryPolicy extends JavaDriverBasedRetryPolic
 		return jdRetry;
 	}
 
-	private RetryDecision checkRetry(Query query, ConsistencyLevel cl, boolean shouldRetry) {
+	private RetryDecision checkRetry(Statement query, ConsistencyLevel cl, boolean shouldRetry) {
 		
 		if (!shouldRetry || retryCount <= 0) {
 			// We are out of retries. 

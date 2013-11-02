@@ -86,7 +86,7 @@ project(':astyanax-cql') {
     dependencies {
         compile  project(':astyanax-core')
         compile  project(':astyanax-cassandra')
-        compile "com.datastax.cassandra:cassandra-driver-core:1.0.1"
+        compile "com.datastax.cassandra:cassandra-driver-core:2.0.0-beta2"
         compile "junit:junit:$junitVersion"
     }
 }
@@ -152,7 +152,6 @@ project(':astyanax-test') {
         compile  project(':astyanax-cassandra')
         compile  project(':astyanax-thrift')
         compile  project(':astyanax-cql')
-        compile "com.datastax.cassandra:cassandra-driver-core:1.0.1"
         compile "junit:junit:$junitVersion"
     }
 }

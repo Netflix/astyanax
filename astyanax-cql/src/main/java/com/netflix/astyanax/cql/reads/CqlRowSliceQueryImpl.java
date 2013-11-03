@@ -30,6 +30,7 @@ import com.netflix.astyanax.cql.reads.model.CqlColumnSlice;
 import com.netflix.astyanax.cql.reads.model.CqlRangeBuilder;
 import com.netflix.astyanax.cql.reads.model.CqlRangeImpl;
 import com.netflix.astyanax.cql.reads.model.CqlRowListImpl;
+import com.netflix.astyanax.cql.reads.model.CqlRowListIterator;
 import com.netflix.astyanax.cql.reads.model.CqlRowSlice;
 import com.netflix.astyanax.cql.reads.model.CqlRowSlice.RowRange;
 import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
@@ -56,12 +57,19 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 	private CqlColumnSlice<C> columnSlice = new CqlColumnSlice<C>();
 	private CompositeByteBufferRange compositeRange = null;
 	
+	private final boolean isPaginating; 
+	
 	public CqlRowSliceQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<K,C> cfCtx, CqlRowSlice<K> rSlice) {
+		this(ksCtx, cfCtx, rSlice, true);
+	}
+	
+	public CqlRowSliceQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<K,C> cfCtx, CqlRowSlice<K> rSlice, boolean condition) {
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;
 		this.rowSlice = rSlice;
+		this.isPaginating = condition;
 	}
-	
+
 	@Override
 	public OperationResult<Rows<K, C>> execute() throws ConnectionException {
 		return new InternalRowQueryExecutionImpl().execute();
@@ -185,12 +193,18 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 
 		@Override
 		public Rows<K, C> parseResultSet(ResultSet rs) {
-			
-			List<com.datastax.driver.core.Row> rows = rs.all();
-			if (rows == null || rows.isEmpty()) {
-				return new CqlRowListImpl<K, C>();
+			if (!isPaginating) {
+				List<com.datastax.driver.core.Row> rows = rs.all();
+				if (rows == null || rows.isEmpty()) {
+					return new CqlRowListImpl<K, C>();
+				}
+				return new CqlRowListImpl<K, C>(rows, (ColumnFamily<K, C>) cf);
+			} else {
+				if (rs == null) {
+					return new CqlRowListImpl<K, C>();
+				}
+				return new CqlRowListIterator<K, C>(rs, (ColumnFamily<K, C>) cf);
 			}
-			return new CqlRowListImpl<K, C>(rows, (ColumnFamily<K, C>) cf);
 		}
 
 		@Override

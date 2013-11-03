@@ -204,15 +204,16 @@ public class CqlAllRowsQueryImpl<K,C> implements AllRowsQuery<K,C> {
 		
 		final AtomicReference<ConnectionException> reference = new AtomicReference<ConnectionException>(null);
 		
-		final List<Rows<K,C>> list = Collections.synchronizedList(new LinkedList<Rows<K,C>>());
+		final List<Row<K,C>> list = Collections.synchronizedList(new LinkedList<Row<K,C>>());
 		
 		RowCallback<K,C> rowCallback = new RowCallback<K,C>() {
 
 			@Override
 			public void success(Rows<K,C> rows) {
-				
 				if (rows != null && !rows.isEmpty()) {
-					list.add(rows);
+					for (Row<K,C> row : rows) {
+						list.add(row);
+					}
 				}
 			}
 
@@ -229,11 +230,7 @@ public class CqlAllRowsQueryImpl<K,C> implements AllRowsQuery<K,C> {
 			throw reference.get();
 		}
 		
-		CqlRowListImpl<K,C> allRows = new CqlRowListImpl<K,C>();
-		Iterator<Rows<K,C>> iter = list.iterator();
-		while (iter.hasNext()) {
-			allRows.addRows(iter.next());
-		}
+		CqlRowListImpl<K,C> allRows = new CqlRowListImpl<K,C>(list);
 		return new CqlOperationResultImpl<Rows<K,C>>(null, allRows);
 	}
 
@@ -251,16 +248,12 @@ public class CqlAllRowsQueryImpl<K,C> implements AllRowsQuery<K,C> {
         // We are iterating the entire ring using an arbitrary number of threads
         if (this.concurrencyLevel != null || startToken != null || endToken != null) {
 
-        	System.out.println("partitioner: " + partitioner.getClass().toString());
-    		System.out.println("concurrencyLevel: " + concurrencyLevel);
-            
     		List<TokenRange> tokens = partitioner.splitTokenRange(
                     startToken == null ? partitioner.getMinToken() : startToken, 
                     endToken == null   ? partitioner.getMinToken() : endToken, 
                     this.concurrencyLevel == null ? 1 : this.concurrencyLevel);
             
             for (TokenRange range : tokens) {
-            	System.out.println("Adding range m3: " + range.toString());
                 subtasks.add(makeTokenRangeTask(range.getStartToken(), range.getEndToken()));
             }
         }
@@ -340,7 +333,7 @@ public class CqlAllRowsQueryImpl<K,C> implements AllRowsQuery<K,C> {
                         
                         Rows<K, C> rows = query.execute().getResult();
                         if (!rows.isEmpty()) {
-                            try {
+                           try {
                                 if (rowCallback != null) {
                                     try { 
                                     	rowCallback.success(rows);
@@ -384,7 +377,6 @@ public class CqlAllRowsQueryImpl<K,C> implements AllRowsQuery<K,C> {
                                         localPageSize++;
                                     }
                                 } else {
-                                	System.out.println("Setting last token");
                                     currentToken = lastToken;
                                 }
                                 
@@ -417,7 +409,6 @@ public class CqlAllRowsQueryImpl<K,C> implements AllRowsQuery<K,C> {
      * @return
      */
     private List<Future<Boolean>> startTasks(ExecutorService executor, List<Callable<Boolean>> callables) {
-    	System.out.println("Starting tasks");
         List<Future<Boolean>> tasks = Lists.newArrayList();
         for (Callable<Boolean> callable : callables) {
             tasks.add(executor.submit(callable));

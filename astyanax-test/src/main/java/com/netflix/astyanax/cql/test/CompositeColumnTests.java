@@ -96,8 +96,6 @@ public class CompositeColumnTests extends KeyspaceTests {
 		testReadMultipleRowKeysColumnRangeWithColumnCount(rowDeleted);
 		testReadRowRangeAllColumnsWithColumnCount(rowDeleted);
 		testReadRowRangeColumnRangeWithColumnCount(rowDeleted);
-		
-		//keyspace.dropColumnFamily(CF_POPULATION);
 	}
 	
 	private void populateRowsForCFPopulation() throws Exception {
@@ -558,23 +556,23 @@ public class CompositeColumnTests extends KeyspaceTests {
 
 	private void checkRowResult(Rows<Integer, Population> result, Integer startKey, Integer size, Population ... expected) throws Exception {
 		
-		Assert.assertTrue(size == result.size());
 		int rowKey = startKey;
 		for (Row<Integer, Population> row : result) {
 			Assert.assertTrue(rowKey == row.getKey());
 			checkResult(row.getColumns(), expected);
 			rowKey++;
 		}
+		Assert.assertTrue("Result: " + result.size() + ", size: " + size, size == result.size());
 	}
 	
 	private void checkRowResult(Rows<Integer, Population> result, List<Integer> rowKeys, Population ... expected) throws Exception {
 		
-		Assert.assertTrue(rowKeys.size() == result.size());
 		int index = 0;
 		for (Row<Integer, Population> row : result) {
 			Assert.assertEquals(rowKeys.toString() + " " + row.getKey(), rowKeys.get(index++), row.getKey());
 			checkResult(row.getColumns(), expected);
 		}
+		Assert.assertTrue(rowKeys.size() == result.size());
 	}
 	
 	/** TEST CITIES */

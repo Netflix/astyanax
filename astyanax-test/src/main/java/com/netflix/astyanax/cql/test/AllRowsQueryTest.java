@@ -1,5 +1,8 @@
 package com.netflix.astyanax.cql.test;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.AfterClass;
@@ -49,7 +52,6 @@ public class AllRowsQueryTest extends KeyspaceTests {
             m.execute();
             m.discardMutations();
         }
-
     }
 
     @AfterClass
@@ -57,12 +59,7 @@ public class AllRowsQueryTest extends KeyspaceTests {
     	keyspace.dropColumnFamily(CF_ALL_ROWS);
     }
     
-    @Test
-    public void foo() {
-    	
-    }
-
-	//@Test
+	@Test
 	public void getAllWithCallback() throws Exception {
 		
 		final AtomicLong counter = new AtomicLong();
@@ -92,7 +89,7 @@ public class AllRowsQueryTest extends KeyspaceTests {
 		Assert.assertEquals(26,  counter.get());
 	}
 	
-	//@Test
+	@Test
 	public void getAll() throws Exception {
 		AtomicLong counter = new AtomicLong(0);
 

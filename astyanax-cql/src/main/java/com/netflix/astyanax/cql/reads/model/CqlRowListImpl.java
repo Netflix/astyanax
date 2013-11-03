@@ -12,7 +12,6 @@ import com.google.common.collect.Lists;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
 import com.netflix.astyanax.cql.util.CqlTypeMapping;
-import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
@@ -33,6 +32,17 @@ public class CqlRowListImpl<K, C> implements Rows<K, C> {
 		this.cfDef = null;
 	}
 	
+	public CqlRowListImpl(List<Row<K,C>> newRows) {
+		this.rows = new ArrayList<Row<K, C>>();
+		this.rows.addAll(newRows);
+		this.lookup = new HashMap<K, Row<K,C>>();
+		for (Row<K,C> row : this.rows) {
+			this.lookup.put(row.getKey(), row);
+		}
+		this.cf = null;
+		this.cfDef = null;
+	}
+
 	public CqlRowListImpl(List<com.datastax.driver.core.Row> resultRows, ColumnFamily<K,C> cf) {
 		
 		this.rows = new ArrayList<Row<K, C>>();
@@ -114,12 +124,5 @@ public class CqlRowListImpl<K, C> implements Rows<K, C> {
 				return row.getKey();
 			}
 		});
-	}
-	
-	public void addRows(Rows<K,C> newRows) {
-		for (Row<K,C> row : newRows) {
-			this.rows.add(row);
-			this.lookup.put(row.getKey(), row);
-		}
 	}
 }

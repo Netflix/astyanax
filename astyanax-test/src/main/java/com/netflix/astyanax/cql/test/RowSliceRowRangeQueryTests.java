@@ -86,8 +86,8 @@ public class RowSliceRowRangeQueryTests extends ReadTests {
 		}
 		
     	Assert.assertFalse(rows.isEmpty());
-    	Assert.assertEquals(rowKeys.size(), rows.size());
 
+    	int rowKeysSize = rowKeys.size();
     	for (Row<String, String> row : rows) {
     		
     		boolean isPresent = rowKeys.remove(row.getKey());
@@ -101,6 +101,7 @@ public class RowSliceRowRangeQueryTests extends ReadTests {
         		Assert.assertEquals(index + 1, col.getIntegerValue());
         	}
     	}
+    	Assert.assertEquals(rowKeysSize, rows.size());
 	}
 	
 
@@ -120,11 +121,11 @@ public class RowSliceRowRangeQueryTests extends ReadTests {
 		}
 		
     	Assert.assertFalse(rows.isEmpty());
-    	Assert.assertEquals(rowKeys.size(), rows.size());
 
     	List<String> expected = new ArrayList<String>(columns);
     	Collections.sort(expected);
     
+    	int rowKeysSize = rowKeys.size();
     	for (Row<String, String> row : rows) {
     		
     		boolean isPresent = rowKeys.remove(row.getKey());
@@ -139,6 +140,7 @@ public class RowSliceRowRangeQueryTests extends ReadTests {
         	
         	Assert.assertEquals(expected, result);
     	}
+    	Assert.assertEquals(rowKeysSize, rows.size());
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -159,8 +161,9 @@ public class RowSliceRowRangeQueryTests extends ReadTests {
 		}
 		
     	Assert.assertFalse(rows.isEmpty());
-    	Assert.assertEquals(rowKeys.size(), rows.size());
 
+    	int rowKeysSize = rowKeys.size();
+    	
     	for (Row<String, String> row : rows) {
     		
     		boolean isPresent = rowKeys.remove(row.getKey());
@@ -176,6 +179,7 @@ public class RowSliceRowRangeQueryTests extends ReadTests {
         		Assert.assertTrue(col.getName().compareTo(columns.getCqlEnd()) <= 0);
         	}
     	}
+    	Assert.assertEquals(rowKeysSize, rows.size());
 	}
 
 	
@@ -297,7 +301,7 @@ public class RowSliceRowRangeQueryTests extends ReadTests {
 			char ch = (char) ('A' + no);
 			set.add(String.valueOf(ch));
 		}
-		
+		System.out.println("Set: " + set);
 		return set;
 	}
 	

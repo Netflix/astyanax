@@ -20,7 +20,6 @@ import java.math.BigInteger;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -40,6 +39,7 @@ import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnSlice;
+import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.partitioner.BigInteger127Partitioner;
@@ -49,8 +49,6 @@ import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.query.RowSliceQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.shallows.EmptyCheckpointManager;
-import com.netflix.astyanax.util.Callables;
-import com.netflix.astyanax.model.ConsistencyLevel;
 
 /**
  * Recipe that is used to read all rows from a column family.  
@@ -638,9 +636,8 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
      */
     private List<Future<Boolean>> startTasks(ExecutorService executor, List<Callable<Boolean>> callables) {
         List<Future<Boolean>> tasks = Lists.newArrayList();
-        CyclicBarrier barrier = new CyclicBarrier(callables.size());
         for (Callable<Boolean> callable : callables) {
-            tasks.add(executor.submit(Callables.decorateWithBarrier(barrier, callable)));
+            tasks.add(executor.submit(callable));
         }
         return tasks;
     }

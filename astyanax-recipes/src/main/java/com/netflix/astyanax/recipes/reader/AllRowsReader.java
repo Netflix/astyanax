@@ -600,26 +600,35 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
      * @return true if all tasks returned true or false otherwise.  
      */
     private boolean waitForTasksToFinish() throws Exception {
+        
+        Boolean succeeded = true;
+        Exception ex = null;
+        
         for (Future<Boolean> future : futures) {
             try {
                 if (!future.get()) {
                     cancel();
-                    return false;
+                    succeeded = false;
                 }
             }
             catch (Exception e) {
                 error.compareAndSet(null, e);
                 cancel();
-                throw e;
+                succeeded = false;
+                ex = e;
             }
         }
         
         if (this.rowFunction instanceof Flushable) {
             ((Flushable)rowFunction).flush();
         }
-        return true;
+        
+        if (ex != null) {
+            throw ex;
+        }
+        return succeeded;
     }
-    
+
     /**
      * Submit all the callables to the executor by synchronize their execution so they all start
      * AFTER the have all been submitted.

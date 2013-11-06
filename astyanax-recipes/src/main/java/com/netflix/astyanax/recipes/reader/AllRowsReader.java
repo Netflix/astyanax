@@ -17,6 +17,7 @@ package com.netflix.astyanax.recipes.reader;
 
 import java.io.Flushable;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -600,7 +601,11 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
     private boolean waitForTasksToFinish() throws Exception {
         
         Boolean succeeded = true;
-        Exception ex = null;
+        
+        // Tracking state for multiple exceptions, if any
+        List<StackTraceElement> stackTraces = new ArrayList<StackTraceElement>();
+        StringBuilder sb = new StringBuilder();
+        int exCount = 0;
         
         for (Future<Boolean> future : futures) {
             try {
@@ -613,7 +618,17 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
                 error.compareAndSet(null, e);
                 cancel();
                 succeeded = false;
-                ex = e;
+                
+                exCount++;
+                sb.append("ex" + exCount + ": ").append(e.getMessage()).append("\n");
+                StackTraceElement[] stackTrace = e.getStackTrace();
+                if (stackTrace != null && stackTrace.length > 0) {
+                    StackTraceElement delimiterSE = new StackTraceElement("StackTrace: ex" + exCount, "", "", 0);
+                    stackTraces.add(delimiterSE);
+                    for (StackTraceElement se : stackTrace) {
+                        stackTraces.add(se);
+                    }
+                }
             }
         }
         
@@ -621,7 +636,11 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
             ((Flushable)rowFunction).flush();
         }
         
-        if (ex != null) {
+        if (exCount > 0) {
+            String exMessage = sb.toString();
+            StackTraceElement[] seArray = stackTraces.toArray(new StackTraceElement[stackTraces.size()]);
+            Exception ex = new Exception(exMessage);
+            ex.setStackTrace(seArray);
             throw ex;
         }
         return succeeded;

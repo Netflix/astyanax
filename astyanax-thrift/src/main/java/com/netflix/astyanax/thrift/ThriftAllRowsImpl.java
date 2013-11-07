@@ -149,26 +149,26 @@ public class ThriftAllRowsImpl<K, C> implements Rows<K, C> {
 
     @Override
     public Row<K, C> getRow(K key) {
-        throw new NotImplementedException("Use the iterator interface instead");
+        throw new NotImplementedException("Only iterator based access is implemented");
     }
 
     @Override
     public int size() {
-        throw new NotImplementedException("Use the iterator interface instead");
+        throw new NotImplementedException("Only iterator based access is implemented");
     }
 
     @Override
     public boolean isEmpty() {
-        throw new NotImplementedException("Use the iterator interface instead");
+        throw new NotImplementedException("Only iterator based access is implemented");
     }
 
     @Override
     public Row<K, C> getRowByIndex(int i) {
-        throw new NotImplementedException("Use the iterator interface instead");
+        throw new NotImplementedException("Only iterator based access is implemented");
     }
 
     @Override
     public Collection<K> getKeys() {
-        throw new NotImplementedException("Use the iterator interface instead");
+        throw new NotImplementedException("Only iterator based access is implemented");
     }
 }

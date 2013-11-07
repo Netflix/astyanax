@@ -22,13 +22,15 @@ import java.util.List;
 
 import org.apache.cassandra.thrift.KeyRange;
 import org.apache.cassandra.thrift.KeySlice;
+import org.apache.commons.lang.NotImplementedException;
 
 import com.google.common.collect.Iterables;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.partitioner.Partitioner;
-import com.netflix.astyanax.thrift.model.*;
+import com.netflix.astyanax.thrift.model.ThriftColumnOrSuperColumnListImpl;
+import com.netflix.astyanax.thrift.model.ThriftRowImpl;
 
 public class ThriftAllRowsImpl<K, C> implements Rows<K, C> {
     private ColumnFamily<K, C> columnFamily;
@@ -147,26 +149,26 @@ public class ThriftAllRowsImpl<K, C> implements Rows<K, C> {
 
     @Override
     public Row<K, C> getRow(K key) {
-        throw new IllegalStateException();
+        throw new NotImplementedException("Use the iterator interface instead");
     }
 
     @Override
     public int size() {
-        throw new IllegalStateException();
+        throw new NotImplementedException("Use the iterator interface instead");
     }
 
     @Override
     public boolean isEmpty() {
-        throw new IllegalStateException();
+        throw new NotImplementedException("Use the iterator interface instead");
     }
 
     @Override
     public Row<K, C> getRowByIndex(int i) {
-        throw new IllegalStateException();
+        throw new NotImplementedException("Use the iterator interface instead");
     }
 
     @Override
     public Collection<K> getKeys() {
-        throw new IllegalStateException();
+        throw new NotImplementedException("Use the iterator interface instead");
     }
 }

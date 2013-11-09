@@ -74,7 +74,14 @@ public class CqlColumnListImpl<C> implements ColumnList<C> {
 			map.put(column.getName(), column);
 		}
 	}
-
+	
+	public void trimFirstColumn() {
+		if (columnList.size() == 0) {
+			return;
+		}
+		Column<C> firstCol = this.columnList.remove(0);
+		map.remove(firstCol.getName());
+	}
 
 	@Override
 	public Iterator<Column<C>> iterator() {

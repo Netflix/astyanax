@@ -16,6 +16,7 @@
 package com.netflix.astyanax.query;
 
 import com.netflix.astyanax.Execution;
+import com.netflix.astyanax.cql.CqlPreparedStatement;
 import com.netflix.astyanax.model.Column;
 
 /**
@@ -26,4 +27,17 @@ import com.netflix.astyanax.model.Column;
  * @param <C>
  */
 public interface ColumnQuery<C> extends Execution<Column<C>> {
+	
+	/**
+	 * Set the prepared statement to be used for this query. 
+	 * @param preparedStatement
+	 * @return ColumnQuery<C>
+	 */
+	public ColumnQuery<C> withPreparedStatement(CqlPreparedStatement preparedStatement);
+	
+	/**
+	 * Returns the associated prepared statement for this query
+	 * @return CqlPreparedStatement
+	 */
+	public CqlPreparedStatement asPreparedStatement();
 }

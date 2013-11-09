@@ -21,6 +21,7 @@ import java.util.Collection;
 import com.netflix.astyanax.Execution;
 import com.netflix.astyanax.RowCopier;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.cql.CqlPreparedStatement;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
@@ -128,4 +129,17 @@ public interface RowQuery<K, C> extends Execution<ColumnList<C>> {
      * @throws ConnectionException
      */
     ColumnCountQuery getCount();
+    
+    /**
+     * Sets the prepared statement to be used for this query
+     * @param preparedStatement
+     * @return RowQuery<K,C>
+     */
+    RowQuery<K,C> withPreparedStatement(CqlPreparedStatement preparedStatement);
+    
+    /**
+     * Returns the associated prepared statement for this query
+     * @return CqlPreparedStatement
+     */
+    CqlPreparedStatement asPreparedStatement();
 }

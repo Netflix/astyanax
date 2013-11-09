@@ -166,7 +166,6 @@ public class CqlRowListIterator<K,C> implements Rows<K,C> {
 
 	@Override
 	public boolean isEmpty() {
-		System.out.println("isEmpty CALLED "  + stateRef.get());
 		if (stateRef.get() == State.UnSet) {
 			this.iterator(); // init the iterator
 		}
@@ -200,6 +199,7 @@ public class CqlRowListIterator<K,C> implements Rows<K,C> {
 			this.lookup.put(row.getKey(), row);
 		}
 		
+		this.iterRef.set(rows.iterator());
 		stateRef.set(State.PrefetchDone);
 	}
 

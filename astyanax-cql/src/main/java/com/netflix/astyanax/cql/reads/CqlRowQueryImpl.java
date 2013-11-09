@@ -9,12 +9,16 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.lt;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.lte;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import com.datastax.driver.core.PreparedStatement;
+import com.datastax.driver.core.RegularStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
+import com.datastax.driver.core.Session;
 import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
@@ -30,6 +34,8 @@ import com.netflix.astyanax.cql.ConsistencyLevelMapping;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.CqlOperationResultImpl;
+import com.netflix.astyanax.cql.CqlPreparedStatement;
+import com.netflix.astyanax.cql.direct.DirectCqlPreparedStatement;
 import com.netflix.astyanax.cql.reads.model.CqlColumnListImpl;
 import com.netflix.astyanax.cql.reads.model.CqlColumnSlice;
 import com.netflix.astyanax.cql.reads.model.CqlRangeBuilder;
@@ -64,11 +70,14 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 	private com.datastax.driver.core.ConsistencyLevel cl = com.datastax.driver.core.ConsistencyLevel.ONE;
 
+	private DirectCqlPreparedStatement preparedStatement = null; 
+	
 	public CqlRowQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<K,C> cfCtx, K rKey, ConsistencyLevel clLevel) {
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;
 		this.rowKey = rKey;
 		this.cl = ConsistencyLevelMapping.getCL(clLevel);
+		this.paginationContext.initClusteringKeyColumn(cfContext.getColumnFamily());
 	}
 
 	@Override
@@ -200,16 +209,18 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 		@Override
 		public Statement getQuery() {
 
+			boolean pStatementProvided = preparedStatement != null;
+			
 			Statement query; 
 			
 			if (columnSlice.isColumnSelectQuery()) {
-				query = getSelectColumnsQuery();
+				query = pStatementProvided ? bindSelectColumnsQuery() : getSelectColumnsQuery();
 			} else if (columnSlice.isRangeQuery()) {
-				query = getSelectColumnRangeQuery();
+				query = pStatementProvided ? bindSelectColumnRangeQuery() : getSelectColumnRangeQuery();
 			} else if (compositeRange != null) {
-				query = getSelectCompositeColumnRangeQuery();
+				query = pStatementProvided ? bindSelectCompositeColumnRangeQuery() : getSelectCompositeColumnRangeQuery();
 			} else if (columnSlice.isSelectAllQuery()) {
-				query = getSelectEntireRowQuery();
+				query = pStatementProvided ? bindSelectEntireRowQuery() : getSelectEntireRowQuery();
 			} else {
 				throw new IllegalStateException("Undefined query type");
 			}
@@ -217,7 +228,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 			query.setConsistencyLevel(cl);
 			return query;
 		}
-
+		
 		@Override
 		public ColumnList<C> parseResultSet(ResultSet rs) {
 
@@ -231,7 +242,6 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 			}
 			
 			if (allPkColumnNames.length == 1 || regularCols.size() > 1) {
-				System.out.println("here");
 				CqlColumnListImpl<C> columnList = new CqlColumnListImpl<C>(rows.get(0), cf);
 				return columnList;
 			} else {
@@ -259,6 +269,12 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 				select.column(colName).ttl(colName).writeTime(colName);
 			}
 			return select.from(keyspace, cf.getName()).where(eq(partitionKeyCol, rowKey));
+		}
+
+		Statement bindSelectEntireRowQuery() {
+			
+			PreparedStatement pStmt = preparedStatement.getInnerPreparedStatement();
+			return pStmt.bind(rowKey);
 		}
 
 		Statement getSelectColumnsQuery() {
@@ -307,6 +323,39 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 			}
 		}
 
+		Statement bindSelectColumnsQuery() {
+
+			// Make sure that we are not attempting to do a composite range query
+			if (isCompositeRangeQuery()) {
+				throw new RuntimeException("Cannot perform composite column slice using column set");
+			}
+
+			PreparedStatement pStmt = preparedStatement.getInnerPreparedStatement();
+			
+			if (clusteringKeyCols.size() == 0) {
+
+				// THIS IS A SIMPLE QUERY WHERE THE INDIVIDUAL COLS ARE BEING SELECTED E.G NAME, AGE ETC
+				// e.g  Select * from ks.table1 where key = ?
+				// hence we only need to bind the row key here.
+				
+				return pStmt.bind(rowKey);
+
+			} else if (clusteringKeyCols.size() > 0) {
+
+				// THIS IS A QUERY WHERE THE COLUMN NAME IS DYNAMIC  E.G TIME SERIES
+				// e.g   select * from ks.table1 where key = ? and column1 in (?,?,....?)
+				List<Object> objects = new ArrayList<Object>();
+				objects.add(rowKey);
+				for (Object col : columnSlice.getColumns()) {
+					objects.add(col);
+				}
+				return pStmt.bind(objects.toArray(new Object[objects.size()]));
+				
+			} else {
+				throw new RuntimeException("Composite col query - todo");
+			}
+		}
+
 		Statement getSelectColumnRangeQuery() {
 
 			if (clusteringKeyCols.size() == 0) {
@@ -330,18 +379,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 			String clusterKeyCol = clusteringKeyCols.get(0).getName();
 			
 			if (columnSlice.getStartColumn() != null) {
-				if (!paginationContext.isPaginating()) {
-					where.and(gte(clusterKeyCol, columnSlice.getStartColumn()));
-				} else {
-					// IS PAGINATING
-					if (paginationContext.isFirstPage()) {
-						where.and(gte(clusterKeyCol, columnSlice.getStartColumn()));
-					} else {
-						// Don't include the first column since it is the last col of the previous page and has already 
-						// been visited / processed by the client
-						where.and(gt(clusterKeyCol, columnSlice.getStartColumn()));
-					}
-				}
+				where.and(gte(clusterKeyCol, columnSlice.getStartColumn()));
 			}
 
 			if (columnSlice.getEndColumn() != null) {
@@ -357,6 +395,32 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 			}
 
 			return where;
+		}
+
+		Statement bindSelectColumnRangeQuery() {
+
+			if (clusteringKeyCols.size() == 0) {
+				throw new RuntimeException("Cannot perform col range query with current schema, missing pk cols");
+			}
+
+			PreparedStatement pStmt = preparedStatement.getInnerPreparedStatement();
+			
+			List<Object> values = new ArrayList<Object>();
+			values.add(rowKey);
+			
+			if (columnSlice.getStartColumn() != null) {
+				values.add(columnSlice.getStartColumn());
+			}
+
+			if (columnSlice.getEndColumn() != null) {
+				values.add(columnSlice.getEndColumn());
+			}
+
+			if (columnSlice.getLimit() != -1) {
+				values.add(columnSlice.getLimit());
+			}
+
+			return pStmt.bind(values.toArray(new Object[values.size()]));
 		}
 
 		Statement getSelectCompositeColumnRangeQuery() {
@@ -410,6 +474,44 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 			}
 			return stmt;
 		}
+		
+
+		Statement bindSelectCompositeColumnRangeQuery() {
+
+			PreparedStatement pStmt = preparedStatement.getInnerPreparedStatement();
+			List<RangeQueryRecord> records = compositeRange.getRecords();
+			
+			List<Object> values = new ArrayList<Object>();
+			values.add(rowKey);
+
+			for (RangeQueryRecord record : records) {
+
+				for (RangeQueryOp op : record.getOps()) {
+
+					switch (op.getOperator()) {
+
+					case EQUAL:
+						values.add(op.getValue());
+						break;
+					case LESS_THAN :
+						values.add(op.getValue());
+						break;
+					case LESS_THAN_EQUALS:
+						values.add(op.getValue());
+						break;
+					case GREATER_THAN:
+						values.add(op.getValue());
+						break;
+					case GREATER_THAN_EQUALS:
+						values.add(op.getValue());
+						break;
+					default:
+						throw new RuntimeException("Cannot recognize operator: " + op.getOperator().name());
+					}; // end of switch stmt
+				} // end of inner for for ops for each range query record
+			}
+			return pStmt.bind(values.toArray(new Object[values.size()]));
+		}
 	}
 
 	private class PaginationContext {
@@ -417,46 +519,65 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 		private boolean lastPageConsumed = false; 
 		private boolean paginate = false;
 		private boolean isFirstPage = true;
-		
-		private final CqlColumnSlice<C> columnSlice;
+		private String clusteringColName = null; 
 
+		private final CqlColumnSlice<C> columnSlice;
+		
 		private PaginationContext(CqlColumnSlice<C> columnSlice) {
 			this.columnSlice = columnSlice;
 		}
 
+		private void initClusteringKeyColumn(ColumnFamily<?,?> cf) {
+			CqlColumnFamilyDefinitionImpl cfDef = (CqlColumnFamilyDefinitionImpl) cf.getColumnFamilyDefinition();
+			List<ColumnDefinition> clusteringKeyCols = cfDef.getClusteringKeyColumnDefinitionList();
+			if (clusteringKeyCols.size() != 0) {
+				this.clusteringColName = clusteringKeyCols.get(0).getName();
+			} else {
+				this.clusteringColName = null;
+			}
+		}
+		
 		private void trackLastColumn(ColumnList<C> columnList) {
 
 			if (!paginate) {
 				return;
 			}
 
-			if (columnList.isEmpty()) {
-				lastPageConsumed = true;
+			try {
+				if (columnList.isEmpty()) {
+					lastPageConsumed = true;
+					return;
+				}
+				
+				// CHECK IF THIS IS THE LAST PAGE
+				Column<C> lastColumn = columnList.getColumnByIndex(columnList.size()-1);
+
+				if (columnSlice.getEndColumn() != null) {
+					if (lastColumn.getName().equals(columnSlice.getEndColumn())) {
+						// 	this was the last page. Stop paginating. 
+						this.lastPageConsumed = true;
+					}
+				} else {
+					if (columnList.size() < columnSlice.getLimit()) {
+						this.lastPageConsumed = true;
+					}
+				}
+
+				// Set up the new range for the next range query
+				CqlRangeImpl<C> newRange = 
+						new CqlRangeImpl<C>(clusteringColName, lastColumn.getName(), columnSlice.getEndColumn(), columnSlice.getLimit(), columnSlice.getReversed());
+
+				this.columnSlice.setCqlRange(newRange);
+
+				// IN CASE THIS ISN'T THE FIRST PAGE, THEN TRIM THE COLUMNLIST - I.E REMOVE THE FIRST COLUMN
+				// SINCE IT IS THE LAST COLUMN OF THE PREVIOUS PAGE
+				if (!isFirstPage) {
+					((CqlColumnListImpl<C>)columnList).trimFirstColumn();
+				}
 				return;
+			} finally {
+				isFirstPage = false;
 			}
-			
-			isFirstPage = false;
-
-			Column<C> lastColumn = columnList.getColumnByIndex(columnList.size()-1);
-
-			if (columnSlice.getEndColumn() != null) {
-				if (lastColumn.getName().equals(columnSlice.getEndColumn())) {
-					// 	this was the last page. Stop paginating. 
-					this.lastPageConsumed = true;
-				}
-			} else {
-				if (columnList.size() < columnSlice.getLimit()) {
-					this.lastPageConsumed = true;
-				}
-			}
-
-			// Else set up the new range for the next range query
-			CqlRangeImpl<C> newRange = 
-					new CqlRangeImpl<C>("column1", lastColumn.getName(), columnSlice.getEndColumn(), columnSlice.getLimit(), columnSlice.getReversed());
-
-			this.columnSlice.setCqlRange(newRange);
-
-			return;
 		}
 
 		private boolean isPaginating() {
@@ -470,5 +591,21 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 		private boolean isFirstPage() {
 			return isFirstPage;
 		}
+	}
+
+	@Override
+	public RowQuery<K, C> withPreparedStatement(CqlPreparedStatement pStatement) {
+		this.preparedStatement = (DirectCqlPreparedStatement) pStatement;
+		return this;
+	}
+
+	@Override
+	public CqlPreparedStatement asPreparedStatement() {
+		this.preparedStatement = null;
+		RegularStatement stmt = (RegularStatement) new InternalRowQueryExecutionImpl().getQuery();
+		Session session = ksContext.getSession();
+		PreparedStatement pStmt = session.prepare(stmt.getQueryString());
+		this.preparedStatement = new DirectCqlPreparedStatement(session, pStmt);
+		return this.preparedStatement;
 	}
 }

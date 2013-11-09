@@ -120,4 +120,8 @@ public class DirectCqlPreparedStatement implements CqlPreparedStatement {
 		bindValues.add(value);
 		return this;
 	}
+	
+	public PreparedStatement getInnerPreparedStatement() {
+		return pStmt;
+	}
 }

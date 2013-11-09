@@ -119,7 +119,7 @@ public class TimeUUIDTests extends KeyspaceTests {
                     LOG.info("Column is " + column.getName());
                 }
             }
-            Assert.assertTrue("pagination complete ", pageCount == 10);
+            Assert.assertTrue("pagination complete:  " + pageCount, pageCount >= 10);
             Assert.assertTrue("pagination complete ", rowCount <= 100);
         } catch (ConnectionException e) {
             Assert.fail();
@@ -129,10 +129,8 @@ public class TimeUUIDTests extends KeyspaceTests {
 
     }
 
-    //@Test
+    @Test
     public void testTimeUUID2() throws Exception {
-    	
-    	//keyspace.createColumnFamily(CF_TIME_UUID, null);
     	
     	CF_TIME_UUID.describe(keyspace);
     

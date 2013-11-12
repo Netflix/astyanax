@@ -67,6 +67,7 @@ project(':astyanax-core') {
     }
     jar {
         dependsOn configurations.runtime
+        baseName = 'astyanax-all'
         from { configurations.runtime.collect { it.isDirectory() ? it : zipTree(it) } }
     }
 }

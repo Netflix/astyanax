@@ -105,7 +105,9 @@ public class CqlMutationBatchImpl extends AbstractMutationBatchImpl {
 		List<CqlColumnListMutationImpl<?,?>> colListMutation = new ArrayList<CqlColumnListMutationImpl<?,?>>();
 		
 		for (Entry<ByteBuffer, Map<String, ColumnListMutation<?>>> entry : super.getMutationMap().entrySet()) {
-			colListMutation.addAll((Collection<? extends CqlColumnListMutationImpl<?, ?>>) entry.getValue().values());
+			for (ColumnListMutation<?> colMutation : entry.getValue().values()) {
+				colListMutation.add((CqlColumnListMutationImpl<?, ?>) colMutation);
+			}
 		}
 		return colListMutation;
 	}

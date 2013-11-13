@@ -66,7 +66,6 @@ public class AstyanaxContextFactory {
                 .withAstyanaxConfiguration(
                         new AstyanaxConfigurationImpl()
                                 .setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
-                                .setConnectionPoolType(ConnectionPoolType.JAVA_DRIVER)
                                 .setDiscoveryDelayInSeconds(60000))
                 .withConnectionPoolConfiguration(
                         new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME
@@ -156,7 +155,6 @@ public class AstyanaxContextFactory {
                 .withAstyanaxConfiguration(
                         new AstyanaxConfigurationImpl()
                                 .setDiscoveryType(NodeDiscoveryType.DISCOVERY_SERVICE)
-                                .setConnectionPoolType(ConnectionPoolType.JAVA_DRIVER)
                                 .setDiscoveryDelayInSeconds(60000))
                 .withConnectionPoolConfiguration(
                         new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME

@@ -17,7 +17,7 @@ import com.netflix.astyanax.partitioner.Partitioner;
 
 public class JavaDriverConnectionPoolConfigurationImpl implements ConnectionPoolConfiguration {
 
-	private Configuration jdConfig; 
+	private Configuration jdConfig = new Configuration(); 
 	
 	public JavaDriverConnectionPoolConfigurationImpl withJavaDriverConfig(Configuration jdCfg) {
 		jdConfig = jdCfg;
@@ -42,8 +42,7 @@ public class JavaDriverConnectionPoolConfigurationImpl implements ConnectionPool
 
 	@Override
 	public int getPort() {
-		// TODO Auto-generated method stub
-		return 0;
+		return jdConfig.getProtocolOptions().getPort();
 	}
 
 	@Override

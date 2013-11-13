@@ -48,7 +48,8 @@ public class CqlFamilyFactory implements AstyanaxTypeFactory<Cluster> {
 
 		ConnectionPoolProxy<?> cpProxy = (ConnectionPoolProxy<?>)cp; 
 		
-		CqlKeyspaceImpl keyspace = new CqlKeyspaceImpl(ksName, asConfig, tracerFactory, cpProxy.getConnectionPoolConfiguration());
+		ConnectionPoolConfiguration jdConfig = getOrCreateJDConfiguration(asConfig, cpProxy.getConnectionPoolConfiguration());
+		CqlKeyspaceImpl keyspace = new CqlKeyspaceImpl(ksName, asConfig, tracerFactory, jdConfig);
 		cpProxy.addListener(keyspace);
 		
 		return keyspace;
@@ -62,7 +63,8 @@ public class CqlFamilyFactory implements AstyanaxTypeFactory<Cluster> {
 		}
 		
 		ConnectionPoolProxy<?> cpProxy = (ConnectionPoolProxy<?>)cp; 
-		CqlClusterImpl cluster = new CqlClusterImpl(asConfig, tracerFactory, cpProxy.getConnectionPoolConfiguration());
+		ConnectionPoolConfiguration jdConfig = getOrCreateJDConfiguration(asConfig, cpProxy.getConnectionPoolConfiguration());
+		CqlClusterImpl cluster = new CqlClusterImpl(asConfig, tracerFactory, jdConfig);
 		((ConnectionPoolProxy<Cluster>)cp).addListener(cluster);
 		
 		return cluster;
@@ -108,7 +110,7 @@ public class CqlFamilyFactory implements AstyanaxTypeFactory<Cluster> {
 	}
 	
 	
-	private Configuration getOrCreateJDConfiguration(AstyanaxConfiguration asConfig, ConnectionPoolConfiguration cpConfig) {
+	private ConnectionPoolConfiguration getOrCreateJDConfiguration(AstyanaxConfiguration asConfig, ConnectionPoolConfiguration cpConfig) {
 		
 		if (asConfig.getConnectionPoolType() == ConnectionPoolType.BAG) {
 		}
@@ -119,7 +121,9 @@ public class CqlFamilyFactory implements AstyanaxTypeFactory<Cluster> {
 		if (jdConfig != null) {
 			if (jdConfig.getJavaDriverConfig() != null) {
 				actualConfig = jdConfig.getJavaDriverConfig();
-				return actualConfig;
+				if (actualConfig != null) {
+					return jdConfig;
+				}
 			}
 		}
 		
@@ -138,12 +142,14 @@ public class CqlFamilyFactory implements AstyanaxTypeFactory<Cluster> {
 		
 		Policies policies = new Policies(lbPolicy, Policies.defaultReconnectionPolicy(), Policies.defaultRetryPolicy());
 		
-		return new Configuration(
+		actualConfig = new Configuration(
 				policies,
 				new ProtocolOptions(),
 				new PoolingOptions(),
 				new SocketOptions(),
 				new MetricsOptions(),
 				new QueryOptions());
+		
+		return new JavaDriverConnectionPoolConfigurationImpl().withJavaDriverConfig(actualConfig);
 	}
 }

@@ -46,12 +46,6 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostLis
 		this.javaDriverConfig = ((JavaDriverConnectionPoolConfigurationImpl)cpConfig).getJavaDriverConfig();
 	}
 
-//	public CqlClusterImpl(Cluster cluster, AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory) {
-//		this.session = cluster.connect();
-//		this.astyanaxConfig = asConfig;
-//		this.tracerFactory = tracerFactory;
-//	}
-	
 	@Override
 	public String describeClusterName() throws ConnectionException {
 		return cluster.getMetadata().getClusterName();

@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.Configuration;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
@@ -27,7 +28,8 @@ import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.SerializerPackage;
 import com.netflix.astyanax.clock.MicrosecondsAsyncClock;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
-import com.netflix.astyanax.connectionpool.CqlConnectionPoolProxy.SeedHostListener;
+import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
+import com.netflix.astyanax.connectionpool.ConnectionPoolProxy.SeedHostListener;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.OperationResult;
@@ -66,8 +68,21 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 	private final String keyspaceName;
 	private final AstyanaxConfiguration astyanaxConfig;
 	private final KeyspaceTracerFactory tracerFactory; 
+	private final Configuration javaDriverConfig;
 
-	public CqlKeyspaceImpl(Session session, String ksName, AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory) {
+	public CqlKeyspaceImpl(String ksName, AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory, ConnectionPoolConfiguration cpConfig) {
+		this(null, ksName, asConfig, tracerFactory, cpConfig);
+	}
+
+	public CqlKeyspaceImpl(KeyspaceContext ksContext) {
+		this(ksContext.getSession(), ksContext.getKeyspace(), ksContext.getConfig(), ksContext.getTracerFactory(), null);
+	}
+
+	CqlKeyspaceImpl(Session session, String ksName, AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory) {
+		this(session, ksName, asConfig, tracerFactory, null);
+	}
+
+	private CqlKeyspaceImpl(Session session, String ksName, AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory, ConnectionPoolConfiguration cpConfig) {
 		this.session = session;
 		this.keyspaceName = ksName.toLowerCase();
 		this.astyanaxConfig = asConfig;
@@ -79,11 +94,14 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 		} else {
 			clock = new MicrosecondsAsyncClock();
 		}
+		
+		if (cpConfig != null) {
+			javaDriverConfig = ((JavaDriverConnectionPoolConfigurationImpl)cpConfig).getJavaDriverConfig();
+		} else {
+			javaDriverConfig = null;
+		}
 	}
 	
-	public CqlKeyspaceImpl(KeyspaceContext ksContext) {
-		this(ksContext.getSession(), ksContext.getKeyspace(), ksContext.getConfig(), ksContext.getTracerFactory());
-	}
 	
 	@Override
 	public AstyanaxConfiguration getConfig() {
@@ -336,10 +354,27 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 				}
 			});
 
-			Cluster cluster = Cluster.builder()
+			Configuration config = javaDriverConfig;
+			
+			// We really need a mechanism to easily override Configuration on the builder
+			Cluster.Builder builder = Cluster.builder()
 					.addContactPoints(contactPoints.toArray(new String[0]))
 					.withPort(port)
-					.build();
+					.withLoadBalancingPolicy(config.getPolicies().getLoadBalancingPolicy())
+					.withReconnectionPolicy(config.getPolicies().getReconnectionPolicy())
+					.withRetryPolicy(config.getPolicies().getRetryPolicy())
+					.withCompression(config.getProtocolOptions().getCompression())
+					.withPoolingOptions(config.getPoolingOptions())
+					.withSocketOptions(config.getSocketOptions())
+					.withQueryOptions(config.getQueryOptions());
+			
+			if (config.getMetricsOptions() == null) {
+				builder.withoutMetrics();
+			} else if (!config.getMetricsOptions().isJMXReportingEnabled()) {
+				builder.withoutJMXReporting();
+			}
+					
+			Cluster cluster = builder.build();
 			
 			session = cluster.connect();
 

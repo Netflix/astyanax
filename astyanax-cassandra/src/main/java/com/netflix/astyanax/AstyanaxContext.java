@@ -11,7 +11,7 @@ import com.netflix.astyanax.connectionpool.ConnectionFactory;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
 import com.netflix.astyanax.connectionpool.ConnectionPoolMonitor;
-import com.netflix.astyanax.connectionpool.CqlConnectionPoolProxy;
+import com.netflix.astyanax.connectionpool.ConnectionPoolProxy;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.NodeDiscovery;
 import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
@@ -108,10 +108,12 @@ public class AstyanaxContext<T> {
         protected <T> ConnectionPool<T> createConnectionPool(ConnectionFactory<T> connectionFactory) {
             ConnectionPool<T> connectionPool = null;
             
+            // HACK to get the CqlFamilyFactory working with AstyanaxContext
+            if (connectionFactory.getClass().getName().contains("CqlFamilyFactory")) {
+            	return new ConnectionPoolProxy<T>(cpConfig, connectionFactory, monitor);
+            }
+            
             switch (asConfig.getConnectionPoolType()) {
-            case JAVA_DRIVER: 
-            	connectionPool = new CqlConnectionPoolProxy<T>(cpConfig, connectionFactory, monitor);
-            	break;
             	
             case TOKEN_AWARE:
                 connectionPool = new TokenAwareConnectionPoolImpl<T>(cpConfig, connectionFactory, monitor);

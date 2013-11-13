@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Properties;
 
 import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.Configuration;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.Statement;
@@ -18,7 +19,8 @@ import com.google.common.collect.Lists;
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.KeyspaceTracerFactory;
-import com.netflix.astyanax.connectionpool.CqlConnectionPoolProxy.SeedHostListener;
+import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
+import com.netflix.astyanax.connectionpool.ConnectionPoolProxy.SeedHostListener;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
@@ -36,17 +38,19 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostLis
 	private volatile Session session;
 	private final AstyanaxConfiguration astyanaxConfig; 
 	private final KeyspaceTracerFactory tracerFactory; 
+	private final Configuration javaDriverConfig; 
 	
-	public CqlClusterImpl(AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory) {
+	public CqlClusterImpl(AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory, ConnectionPoolConfiguration cpConfig) {
 		this.astyanaxConfig = asConfig;
 		this.tracerFactory = tracerFactory;
+		this.javaDriverConfig = ((JavaDriverConnectionPoolConfigurationImpl)cpConfig).getJavaDriverConfig();
 	}
 
-	public CqlClusterImpl(Cluster cluster, AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory) {
-		this.session = cluster.connect();
-		this.astyanaxConfig = asConfig;
-		this.tracerFactory = tracerFactory;
-	}
+//	public CqlClusterImpl(Cluster cluster, AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory) {
+//		this.session = cluster.connect();
+//		this.astyanaxConfig = asConfig;
+//		this.tracerFactory = tracerFactory;
+//	}
 	
 	@Override
 	public String describeClusterName() throws ConnectionException {
@@ -274,10 +278,27 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostLis
 			}
 		});
 		
-		this.cluster = Cluster.builder()
+		Configuration config = javaDriverConfig;
+		
+		// We really need a mechanism to easily override Configuration on the builder
+		Cluster.Builder builder = Cluster.builder()
 				.addContactPoints(contactPoints.toArray(new String[0]))
 				.withPort(port)
-				.build();
+				.withLoadBalancingPolicy(config.getPolicies().getLoadBalancingPolicy())
+				.withReconnectionPolicy(config.getPolicies().getReconnectionPolicy())
+				.withRetryPolicy(config.getPolicies().getRetryPolicy())
+				.withCompression(config.getProtocolOptions().getCompression())
+				.withPoolingOptions(config.getPoolingOptions())
+				.withSocketOptions(config.getSocketOptions())
+				.withQueryOptions(config.getQueryOptions());
+		
+		if (config.getMetricsOptions() == null) {
+			builder.withoutMetrics();
+		} else if (!config.getMetricsOptions().isJMXReportingEnabled()) {
+			builder.withoutJMXReporting();
+		}
+				
+		this.cluster = builder.build();
 		this.session = cluster.connect();
 	}
 }

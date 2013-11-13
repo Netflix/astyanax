@@ -13,22 +13,23 @@ import com.netflix.astyanax.connectionpool.impl.Topology;
 import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.retry.RetryPolicy;
 
-public class CqlConnectionPoolProxy<T> implements ConnectionPool<T> {
+public class ConnectionPoolProxy<T> implements ConnectionPool<T> {
 
-	private static final Logger Logger = LoggerFactory.getLogger(CqlConnectionPoolProxy.class);
+	private static final Logger Logger = LoggerFactory.getLogger(ConnectionPoolProxy.class);
 	
 	private AtomicReference<SeedHostListener> listener = new AtomicReference<SeedHostListener>(null);
 	private AtomicReference<Collection<Host>> lastHostList = new AtomicReference<Collection<Host>>(null);
-	private int port;
 	
-	public CqlConnectionPoolProxy(ConnectionPoolConfiguration cpConfig,
-			ConnectionFactory<T> connectionFactory,
-			ConnectionPoolMonitor monitor) {
-		
-		this.port = cpConfig.getPort();
+	private final ConnectionPoolConfiguration cpConfig;
+	
+	public ConnectionPoolProxy(ConnectionPoolConfiguration cpConfig, ConnectionFactory<T> connectionFactory, ConnectionPoolMonitor monitor) {
+		this.cpConfig = cpConfig;
 	}
 
-
+	public ConnectionPoolConfiguration getConnectionPoolConfiguration() {
+		return cpConfig;
+	}
+	
 	@Override
 	public void setHosts(Collection<Host> hosts) {
 		
@@ -38,7 +39,7 @@ public class CqlConnectionPoolProxy<T> implements ConnectionPool<T> {
 		
 		if (listener.get() != null) {
 			Logger.info("Setting hosts for listener: " + listener.getClass().getName() +  "   " + hosts);
-			listener.get().setHosts(hosts, port);
+			listener.get().setHosts(hosts, cpConfig.getPort());
 		}
 	}
 	
@@ -53,7 +54,7 @@ public class CqlConnectionPoolProxy<T> implements ConnectionPool<T> {
 	public void addListener(SeedHostListener listener) {
 		this.listener.set(listener);
 		if (this.lastHostList.get() != null) {
-			this.listener.get().setHosts(lastHostList.get(), port);
+			this.listener.get().setHosts(lastHostList.get(), cpConfig.getPort());
 		}
 	}
 
@@ -100,8 +101,7 @@ public class CqlConnectionPoolProxy<T> implements ConnectionPool<T> {
 	}
 
 	@Override
-	public <R> OperationResult<R> executeWithFailover(Operation<T, R> op,
-			RetryPolicy retry) throws ConnectionException, OperationException {
+	public <R> OperationResult<R> executeWithFailover(Operation<T, R> op, RetryPolicy retry) throws ConnectionException, OperationException {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -114,7 +114,6 @@ public class CqlConnectionPoolProxy<T> implements ConnectionPool<T> {
 
 	@Override
 	public void start() {
-		System.out.println("Called start");
 		// TODO Auto-generated method stub
 	}
 

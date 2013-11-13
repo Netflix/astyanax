@@ -5,6 +5,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.Configuration;
+import com.datastax.driver.core.MetricsOptions;
+import com.datastax.driver.core.PoolingOptions;
+import com.datastax.driver.core.ProtocolOptions;
+import com.datastax.driver.core.QueryOptions;
+import com.datastax.driver.core.SocketOptions;
+import com.datastax.driver.core.policies.LoadBalancingPolicy;
+import com.datastax.driver.core.policies.Policies;
+import com.datastax.driver.core.policies.RoundRobinPolicy;
+import com.datastax.driver.core.policies.TokenAwarePolicy;
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.AstyanaxTypeFactory;
 import com.netflix.astyanax.Keyspace;
@@ -14,9 +24,10 @@ import com.netflix.astyanax.connectionpool.ConnectionFactory;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
 import com.netflix.astyanax.connectionpool.ConnectionPoolMonitor;
-import com.netflix.astyanax.connectionpool.CqlConnectionPoolProxy;
+import com.netflix.astyanax.connectionpool.ConnectionPoolProxy;
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
 import com.netflix.astyanax.connectionpool.exceptions.ThrottledException;
+import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 
 public class CqlFamilyFactory implements AstyanaxTypeFactory<Cluster> {
 
@@ -31,12 +42,14 @@ public class CqlFamilyFactory implements AstyanaxTypeFactory<Cluster> {
 	@Override
 	public Keyspace createKeyspace(String ksName, ConnectionPool<Cluster> cp, AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory) {
 		
-		if (!(cp instanceof CqlConnectionPoolProxy)) {
+		if (!(cp instanceof ConnectionPoolProxy)) {
 			throw new RuntimeException("Cannot use CqlFamilyFactory with a connection pool type other than ConnectionPoolType.JAVA_DRIVER");
 		}
 
-		CqlKeyspaceImpl keyspace = new CqlKeyspaceImpl(null, ksName, asConfig, tracerFactory);
-		((CqlConnectionPoolProxy<Cluster>)cp).addListener(keyspace);
+		ConnectionPoolProxy<?> cpProxy = (ConnectionPoolProxy<?>)cp; 
+		
+		CqlKeyspaceImpl keyspace = new CqlKeyspaceImpl(ksName, asConfig, tracerFactory, cpProxy.getConnectionPoolConfiguration());
+		cpProxy.addListener(keyspace);
 		
 		return keyspace;
 	}
@@ -44,12 +57,13 @@ public class CqlFamilyFactory implements AstyanaxTypeFactory<Cluster> {
 	@Override
 	public com.netflix.astyanax.Cluster createCluster(ConnectionPool<Cluster> cp, AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory) {
 		
-		if (!(cp instanceof CqlConnectionPoolProxy)) {
+		if (!(cp instanceof ConnectionPoolProxy)) {
 			throw new RuntimeException("Cannot use CqlFamilyFactory with a connection pool type other than ConnectionPoolType.JAVA_DRIVER");
 		}
 		
-		CqlClusterImpl cluster = new CqlClusterImpl(asConfig, tracerFactory);
-		((CqlConnectionPoolProxy<Cluster>)cp).addListener(cluster);
+		ConnectionPoolProxy<?> cpProxy = (ConnectionPoolProxy<?>)cp; 
+		CqlClusterImpl cluster = new CqlClusterImpl(asConfig, tracerFactory, cpProxy.getConnectionPoolConfiguration());
+		((ConnectionPoolProxy<Cluster>)cp).addListener(cluster);
 		
 		return cluster;
 	}
@@ -91,5 +105,45 @@ public class CqlFamilyFactory implements AstyanaxTypeFactory<Cluster> {
 	
 	public static boolean batchColumnUpdates() {
 		return BatchColumnUpdates.get();
+	}
+	
+	
+	private Configuration getOrCreateJDConfiguration(AstyanaxConfiguration asConfig, ConnectionPoolConfiguration cpConfig) {
+		
+		if (asConfig.getConnectionPoolType() == ConnectionPoolType.BAG) {
+		}
+
+		Configuration actualConfig = null; 
+		
+		JavaDriverConnectionPoolConfigurationImpl jdConfig = (JavaDriverConnectionPoolConfigurationImpl) cpConfig;
+		if (jdConfig != null) {
+			if (jdConfig.getJavaDriverConfig() != null) {
+				actualConfig = jdConfig.getJavaDriverConfig();
+				return actualConfig;
+			}
+		}
+		
+		LoadBalancingPolicy lbPolicy = null;
+		switch (asConfig.getConnectionPoolType()) {
+		case BAG:
+				throw new RuntimeException("Cannot use ConnectionPoolType.BAG with java driver, " +
+					"use TOKEN_AWARE or ROUND_ROBIN or configure java driver directly");
+		case ROUND_ROBIN:
+				lbPolicy = new RoundRobinPolicy();
+				break;
+		case TOKEN_AWARE:
+				lbPolicy = new TokenAwarePolicy(new RoundRobinPolicy());
+				break;
+		};
+		
+		Policies policies = new Policies(lbPolicy, Policies.defaultReconnectionPolicy(), Policies.defaultRetryPolicy());
+		
+		return new Configuration(
+				policies,
+				new ProtocolOptions(),
+				new PoolingOptions(),
+				new SocketOptions(),
+				new MetricsOptions(),
+				new QueryOptions());
 	}
 }

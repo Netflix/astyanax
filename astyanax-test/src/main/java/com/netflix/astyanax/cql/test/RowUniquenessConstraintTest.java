@@ -4,7 +4,6 @@ import java.util.UUID;
 
 import junit.framework.Assert;
 
-import org.apache.avro.reflect.Nullable;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -94,8 +93,7 @@ public class RowUniquenessConstraintTest extends KeyspaceTests {
 				.withConsistencyLevel(ConsistencyLevel.CL_ONE);
 
 		unique.acquireAndApplyMutation(new Function<MutationBatch, Boolean>() {
-			@Nullable
-			public Boolean apply(@Nullable MutationBatch input) {
+			public Boolean apply(MutationBatch input) {
 
 				input.withRow(CF_UNIQUE_CONSTRAINT, 10L).putEmptyColumn("MyCustomColumn", null);
 				return true;

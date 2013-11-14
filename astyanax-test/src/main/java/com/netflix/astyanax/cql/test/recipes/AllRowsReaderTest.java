@@ -4,7 +4,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import junit.framework.Assert;
 
-import org.apache.avro.reflect.Nullable;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -67,7 +66,7 @@ public class AllRowsReaderTest extends KeyspaceTests {
 				.withPartitioner(Murmur3Partitioner.get())
 				.forEachPage(new Function<Rows<String, String>, Boolean>() {
 					@Override
-					public Boolean apply(@Nullable Rows<String, String> rows) {
+					public Boolean apply(Rows<String, String> rows) {
 						// Process the row here ...
 						// This will be called from multiple threads so make sure your code is thread safe
 						for (Row<String, String> row : rows) {

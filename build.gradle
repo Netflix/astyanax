@@ -152,6 +152,8 @@ project(':astyanax-test') {
         compile  project(':astyanax-cassandra')
         compile  project(':astyanax-thrift')
         compile  project(':astyanax-cql')
+        compile  project(':astyanax-recipes')
+        compile  project(':astyanax-entity-mapper')
         compile "junit:junit:$junitVersion"
     }
 }

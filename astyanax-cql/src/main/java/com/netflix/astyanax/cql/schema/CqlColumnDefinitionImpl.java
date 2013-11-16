@@ -22,7 +22,7 @@ public class CqlColumnDefinitionImpl implements ColumnDefinition {
 	private int componentIndex; 
 	
 	public enum CqlColumnType {
-		partition_key, clustering_key, regular;
+		partition_key, clustering_key, regular, compact_value;
 	}
 	
 	public CqlColumnDefinitionImpl() {

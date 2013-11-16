@@ -274,6 +274,10 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 					regularColumnList.add(colDef);
 					allColumnsDefinitionList.add(colDef);
 					break;
+				case compact_value:
+					regularColumnList.add(colDef);
+					allColumnsDefinitionList.add(colDef);
+					break;
 				}
 			}
 

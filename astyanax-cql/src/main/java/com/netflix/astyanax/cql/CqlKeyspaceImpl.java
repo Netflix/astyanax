@@ -357,6 +357,8 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 			Configuration config = javaDriverConfig;
 			
 			// We really need a mechanism to easily override Configuration on the builder
+			Logger.info("Using port: " + port);
+			
 			Cluster.Builder builder = Cluster.builder()
 					.addContactPoints(contactPoints.toArray(new String[0]))
 					.withPort(port)
@@ -376,10 +378,13 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 					
 			Cluster cluster = builder.build();
 			
+			Logger.info("Connecting to cluster");
 			session = cluster.connect();
+			Logger.info("Done connecting to cluster, session object created");
 
 		} catch (RuntimeException e) {
 			Logger.error("Failed to set hosts for keyspace impl", e);
+			
 		} catch (Exception e) {
 			Logger.error("Failed to set hosts for keyspace impl", e);
 		}

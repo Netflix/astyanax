@@ -34,6 +34,7 @@ public class ConnectionPoolProxy<T> implements ConnectionPool<T> {
 	public void setHosts(Collection<Host> hosts) {
 		
 		if (hosts != null) {
+			Logger.info("Setting hosts for listener here: " + listener.getClass().getName() +  "   " + hosts);
 			lastHostList.set(hosts);
 		}
 		

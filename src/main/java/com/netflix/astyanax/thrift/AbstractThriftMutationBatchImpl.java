@@ -221,7 +221,7 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
         args.setMutation_map(mutationMap);
 
         try {
-            args.write(new TBinaryProtocol(transport));
+            args.write(new TBinaryProtocol(transport, false, true));
         }
         catch (TException e) {
             throw ThriftConverter.ToConnectionPoolException(e);
@@ -237,7 +237,7 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
         batch_mutate_args args = new batch_mutate_args();
 
         try {
-            TBinaryProtocol bp = new TBinaryProtocol(transport);
+            TBinaryProtocol bp = new TBinaryProtocol(transport, false, true);
             bp.setReadLength(data.remaining());
             args.read(bp);
             mutationMap = args.getMutation_map();

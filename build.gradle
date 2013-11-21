@@ -86,7 +86,7 @@ project(':astyanax-cql') {
     dependencies {
         compile  project(':astyanax-core')
         compile  project(':astyanax-cassandra')
-        compile "com.datastax.cassandra:cassandra-driver-core:2.0.0-beta2"
+        compile "com.datastax.cassandra:cassandra-driver-core:$javaDriverVersion"
         compile "junit:junit:$junitVersion"
     }
 }
@@ -108,7 +108,7 @@ project(':astyanax-cassandra') {
     dependencies {
         compile "org.apache.cassandra:cassandra-all:$cassandraVersion"
         compile "org.apache.servicemix.bundles:org.apache.servicemix.bundles.commons-csv:$commonsCsvVersion"
-        compile "org.jboss.netty:netty:$nettyVersion"   
+        compile "io.netty:netty:$nettyVersion"   
         compile  project(':astyanax-core')
     }
 }

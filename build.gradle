@@ -43,6 +43,7 @@ subprojects {
         compile "org.codehaus.jackson:jackson-core-asl:$jacksonVersion"
         compile "org.codehaus.jackson:jackson-mapper-asl:$jacksonVersion"
         compile "org.xerial.snappy:snappy-java:$snappyVersion"
+        compile "org.apache.cassandra:cassandra-all:$cassandraVersion"
         testCompile "junit:junit:$junitVersion"
     }
 }
@@ -87,6 +88,7 @@ project(':astyanax-cql') {
         compile  project(':astyanax-core')
         compile  project(':astyanax-cassandra')
         compile "com.datastax.cassandra:cassandra-driver-core:$javaDriverVersion"
+        compile "org.apache.cassandra:cassandra-all:$cassandraVersion"
         compile "junit:junit:$junitVersion"
     }
 }

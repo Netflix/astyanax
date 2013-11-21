@@ -8,8 +8,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-//import org.apache.cassandra.config.ConfigurationException;
 import org.apache.cassandra.db.marshal.CompositeType;
+import org.apache.cassandra.db.marshal.ReversedType;
 import org.apache.cassandra.db.marshal.TypeParser;
 import org.apache.commons.lang.StringUtils;
 
@@ -17,6 +17,7 @@ import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.SerializerPackage;
 import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
+//import org.apache.cassandra.config.ConfigurationException;
 
 /**
  * Basic implementation of SerializerPackage which can be configured either from
@@ -91,7 +92,8 @@ public class SerializerPackageImpl implements SerializerPackage {
         }
     }
 
-    public SerializerPackageImpl setKeyType(String keyType) throws UnknownComparatorException {
+    @SuppressWarnings("rawtypes")
+	public SerializerPackageImpl setKeyType(String keyType) throws UnknownComparatorException {
         String comparatorType = StringUtils.substringBefore(keyType, "(");
         ComparatorType type = ComparatorType.getByClassName(comparatorType);
 
@@ -113,6 +115,16 @@ public class SerializerPackageImpl implements SerializerPackage {
             // TODO
             throw new UnknownComparatorException(keyType);
         }
+        else if (type == ComparatorType.REVERSEDTYPE) {
+            try {
+                this.keySerializer = new SpecificReversedSerializer((ReversedType) TypeParser.parse(keyType));
+                return this;
+            }
+            catch (Exception e) {
+                // Ignore and simply use the default serializer
+            }
+            throw new UnknownComparatorException(keyType);
+        }
         else {
             this.keySerializer = type.getSerializer();
         }
@@ -130,7 +142,8 @@ public class SerializerPackageImpl implements SerializerPackage {
         return setColumnNameType(columnType);
     }
 
-    public SerializerPackageImpl setColumnNameType(String columnType) throws UnknownComparatorException {
+    @SuppressWarnings("rawtypes")
+	public SerializerPackageImpl setColumnNameType(String columnType) throws UnknownComparatorException {
         // Determine the column serializer
         String comparatorType = StringUtils.substringBefore(columnType, "(");
         ComparatorType type = ComparatorType.getByClassName(comparatorType);
@@ -150,6 +163,16 @@ public class SerializerPackageImpl implements SerializerPackage {
         }
         else if (type == ComparatorType.DYNAMICCOMPOSITETYPE) {
             // TODO
+            throw new UnknownComparatorException(columnType);
+        }
+        else if (type == ComparatorType.REVERSEDTYPE) {
+            try {
+                this.columnSerializer = new SpecificReversedSerializer((ReversedType) TypeParser.parse(columnType));
+                return this;
+            }
+            catch (Exception e) {
+                // Ignore and simply use the default serializer
+            }
             throw new UnknownComparatorException(columnType);
         }
         else {

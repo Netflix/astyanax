@@ -38,4 +38,13 @@ public class SerializerPackageImplTest {
 		serializers.setKeyType( "LongType" );
 		Assert.assertTrue(serializers.getKeySerializer() instanceof LongSerializer);
 	}
+	
+	@Test
+	public void testSetReversedColumnType() throws Exception
+	{
+		SerializerPackageImpl serializers = new SerializerPackageImpl();
+		serializers.setColumnNameType("ReversedType(UTF8Type)");
+		Assert.assertTrue(serializers.getColumnNameSerializer() instanceof SpecificReversedSerializer);
+	}
+
 }

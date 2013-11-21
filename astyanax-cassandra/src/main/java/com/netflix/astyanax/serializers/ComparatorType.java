@@ -24,7 +24,8 @@ public enum ComparatorType {
     DOUBLETYPE("org.apache.cassandra.db.marshal.DoubleType", DoubleSerializer.get()), 
     FLOATTYPE("org.apache.cassandra.db.marshal.FloatType", FloatSerializer.get()), 
     BOOLEANTYPE("org.apache.cassandra.db.marshal.BooleanType", BooleanSerializer.get()),
-    DATETYPE("org.apache.cassandra.db.marshal.DateType", DateSerializer.get());
+    DATETYPE("org.apache.cassandra.db.marshal.DateType", DateSerializer.get()),
+    REVERSEDTYPE("org.apache.cassandra.db.marshal.ReversedType", ReversedSerializer.get());
 
     private final String className;
     private final String typeName;

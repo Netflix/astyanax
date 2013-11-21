@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.RegularStatement;
@@ -69,8 +70,9 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 	private final PaginationContext paginationContext = new PaginationContext(columnSlice);
 
 	private com.datastax.driver.core.ConsistencyLevel cl = com.datastax.driver.core.ConsistencyLevel.ONE;
-
-	private DirectCqlPreparedStatement preparedStatement = null; 
+	private AtomicReference<DirectCqlPreparedStatement> preparedStatement = new AtomicReference<DirectCqlPreparedStatement>(null) ;
+	
+	private static final String EMPTY_STRING = "";
 	
 	public CqlRowQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<K,C> cfCtx, K rKey, ConsistencyLevel clLevel) {
 		this.ksContext = ksCtx;
@@ -149,6 +151,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 		return this.withColumnRange(start, end, reversed, limit);
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public RowQuery<K, C> withColumnRange(ByteBufferRange range) {
 
@@ -209,22 +212,50 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 		@Override
 		public Statement getQuery() {
 
-			boolean pStatementProvided = preparedStatement != null;
+			boolean pStatementProvided = preparedStatement.get() != null;
+			
+			if (pStatementProvided) {
+				return getBoundStatement();
+			}
+			
+			RegularStatement query = (RegularStatement) getRegularStatement();
+			asPreparedStatement(query);
+			return getBoundStatement();
+		}
+		
+		private Statement getRegularStatement() {
 			
 			Statement query; 
 			
 			if (columnSlice.isColumnSelectQuery()) {
-				query = pStatementProvided ? bindSelectColumnsQuery() : getSelectColumnsQuery();
+				query = getSelectColumnsQuery();
 			} else if (columnSlice.isRangeQuery()) {
-				query = pStatementProvided ? bindSelectColumnRangeQuery() : getSelectColumnRangeQuery();
+				query = getSelectColumnRangeQuery();
 			} else if (compositeRange != null) {
-				query = pStatementProvided ? bindSelectCompositeColumnRangeQuery() : getSelectCompositeColumnRangeQuery();
+				query = getSelectCompositeColumnRangeQuery();
 			} else if (columnSlice.isSelectAllQuery()) {
-				query = pStatementProvided ? bindSelectEntireRowQuery() : getSelectEntireRowQuery();
+				query = getSelectEntireRowQuery();
 			} else {
 				throw new IllegalStateException("Undefined query type");
 			}
+			return query;
+		}
+		
+		private Statement getBoundStatement() {
 			
+			Statement query; 
+			
+			if (columnSlice.isColumnSelectQuery()) {
+				query = bindSelectColumnsQuery();
+			} else if (columnSlice.isRangeQuery()) {
+				query = bindSelectColumnRangeQuery();
+			} else if (compositeRange != null) {
+				query =  bindSelectCompositeColumnRangeQuery();
+			} else if (columnSlice.isSelectAllQuery()) {
+				query = bindSelectEntireRowQuery();
+			} else {
+				throw new IllegalStateException("Undefined query type");
+			}
 			query.setConsistencyLevel(cl);
 			return query;
 		}
@@ -268,12 +299,14 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 				String colName = colDef.getName();
 				select.column(colName).ttl(colName).writeTime(colName);
 			}
-			return select.from(keyspace, cf.getName()).where(eq(partitionKeyCol, rowKey));
+			
+			RegularStatement stmt = select.from(keyspace, cf.getName()).where(eq(partitionKeyCol, EMPTY_STRING));
+			return stmt; 
 		}
 
 		Statement bindSelectEntireRowQuery() {
 			
-			PreparedStatement pStmt = preparedStatement.getInnerPreparedStatement();
+			PreparedStatement pStmt = preparedStatement.get().getInnerPreparedStatement();
 			return pStmt.bind(rowKey);
 		}
 
@@ -330,7 +363,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 				throw new RuntimeException("Cannot perform composite column slice using column set");
 			}
 
-			PreparedStatement pStmt = preparedStatement.getInnerPreparedStatement();
+			PreparedStatement pStmt = preparedStatement.get().getInnerPreparedStatement();
 			
 			if (clusteringKeyCols.size() == 0) {
 
@@ -403,7 +436,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 				throw new RuntimeException("Cannot perform col range query with current schema, missing pk cols");
 			}
 
-			PreparedStatement pStmt = preparedStatement.getInnerPreparedStatement();
+			PreparedStatement pStmt = preparedStatement.get().getInnerPreparedStatement();
 			
 			List<Object> values = new ArrayList<Object>();
 			values.add(rowKey);
@@ -478,7 +511,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 		Statement bindSelectCompositeColumnRangeQuery() {
 
-			PreparedStatement pStmt = preparedStatement.getInnerPreparedStatement();
+			PreparedStatement pStmt = preparedStatement.get().getInnerPreparedStatement();
 			List<RangeQueryRecord> records = compositeRange.getRecords();
 			
 			List<Object> values = new ArrayList<Object>();
@@ -587,25 +620,24 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 		private boolean lastPageConsumed() {
 			return lastPageConsumed;
 		}
-		
-		private boolean isFirstPage() {
-			return isFirstPage;
-		}
 	}
 
 	@Override
 	public RowQuery<K, C> withPreparedStatement(CqlPreparedStatement pStatement) {
-		this.preparedStatement = (DirectCqlPreparedStatement) pStatement;
+		this.preparedStatement.set((DirectCqlPreparedStatement) pStatement);
 		return this;
 	}
 
 	@Override
 	public CqlPreparedStatement asPreparedStatement() {
-		this.preparedStatement = null;
-		RegularStatement stmt = (RegularStatement) new InternalRowQueryExecutionImpl().getQuery();
+		new InternalRowQueryExecutionImpl().getQuery();
+		return this.preparedStatement.get();
+	}
+
+	private CqlPreparedStatement asPreparedStatement(RegularStatement stmt) {
 		Session session = ksContext.getSession();
 		PreparedStatement pStmt = session.prepare(stmt.getQueryString());
-		this.preparedStatement = new DirectCqlPreparedStatement(session, pStmt);
-		return this.preparedStatement;
+		this.preparedStatement.set(new DirectCqlPreparedStatement(session, pStmt));
+		return this.preparedStatement.get();
 	}
 }

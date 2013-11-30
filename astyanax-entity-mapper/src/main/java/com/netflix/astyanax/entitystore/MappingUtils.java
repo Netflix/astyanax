@@ -6,6 +6,7 @@ import java.lang.reflect.ParameterizedType;
 import java.util.Map;
 import java.util.Set;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 
 import org.apache.commons.lang.StringUtils;
@@ -74,4 +75,17 @@ public class MappingUtils {
         else
             return name;
     }
+	
+	static int countColumnFields(Class<?> clazz){
+		Field[] fields = clazz.getDeclaredFields();
+		
+		int count=0;
+		for(Field field : fields){
+			if(field.isAnnotationPresent(Column.class)){
+				count +=1;
+			}
+		}
+		
+		return count;
+	}
 }

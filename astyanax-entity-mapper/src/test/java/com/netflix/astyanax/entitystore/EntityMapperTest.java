@@ -9,7 +9,10 @@ import javax.persistence.Id;
 
 import junit.framework.Assert;
 
+import org.junit.Ignore;
 import org.junit.Test;
+
+import sun.reflect.Reflection;
 
 public class EntityMapperTest {
 
@@ -21,16 +24,18 @@ public class EntityMapperTest {
 		Field idField = entityMapper.getId();
 		Assert.assertEquals("id", idField.getName());
 
-		// test column number
 		Collection<ColumnMapper> cols = entityMapper.getColumnList();
-		System.out.println(cols);
-		// 19 simple + 1 nested Bar
-		Assert.assertEquals(24, cols.size());
+		// test column number
+		int actualColumnSize = cols.size();
+		int expectedColumnSize = MappingUtils.countColumnFields(SampleEntity.class);
+
+		Assert.assertEquals(expectedColumnSize, actualColumnSize);
 
 		// test field without explicit column name
 		// simple field name is used
 		boolean foundUUID = false;
 		boolean founduuid = false;
+
 		for(ColumnMapper mapper: cols) {
 			if(mapper.getColumnName().equals("UUID"))
 				foundUUID = true;
@@ -61,7 +66,7 @@ public class EntityMapperTest {
 	public void invalidColumnName() {
 		new EntityMapper<InvalidColumnNameEntity, String>(InvalidColumnNameEntity.class, null);
 	}
-
+	
 	@Test
 	public void doubleIdColumnAnnotation() {
 		EntityMapper<DoubleIdColumnEntity, String> entityMapper = new EntityMapper<DoubleIdColumnEntity, String>(DoubleIdColumnEntity.class, null);
@@ -71,9 +76,11 @@ public class EntityMapperTest {
 		Assert.assertEquals("id", idField.getName());
 
 		// test column number
-		Collection<ColumnMapper> cols = entityMapper.getColumnList();
-		System.out.println(cols);
+		int actualColumnSize = entityMapper.getColumnList().size();
+		int expectedColumnSize = MappingUtils.countColumnFields(DoubleIdColumnEntity.class);
+		// test column number
 		// 3 cols: id, num, str
-		Assert.assertEquals(3, cols.size());
+		Assert.assertEquals(expectedColumnSize, actualColumnSize);
 	}
+
 }

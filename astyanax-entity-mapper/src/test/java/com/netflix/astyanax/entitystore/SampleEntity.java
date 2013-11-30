@@ -42,6 +42,15 @@ public class SampleEntity {
 		}
 
 		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + i;
+			result = prime * result + ((s == null) ? 0 : s.hashCode());
+			return result;
+		}
+
+		@Override
 		public boolean equals(Object obj) {
 			if (this == obj)
 				return true;
@@ -50,12 +59,16 @@ public class SampleEntity {
 			if (getClass() != obj.getClass())
 				return false;
 			Foo other = (Foo) obj;
-			if(i == other.i && s.equals(other.s))
-				return true;
-			else
+			if (i != other.i)
 				return false;
+			if (s == null) {
+				if (other.s != null)
+					return false;
+			} else if (!s.equals(other.s))
+				return false;
+			return true;
 		}
-
+		
 		@Override
 		public String toString() {		
 			try {
@@ -282,6 +295,10 @@ public class SampleEntity {
 	@Column
 	private Set<Long> longSet;
 	
+	@Column
+	@Serializer(FooSerializer.class)
+	private Set<Foo> fooSet;
+	
 	public String getId() {
 		return id;
 	}
@@ -500,5 +517,13 @@ public class SampleEntity {
     public void setLongSet(Set<Long> longSet) {
         this.longSet = longSet;
     }
+
+	public Set<Foo> getFooSet() {
+		return fooSet;
+	}
+
+	public void setFooSet(Set<Foo> fooSet) {
+		this.fooSet = fooSet;
+	}
 
 }

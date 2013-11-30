@@ -22,8 +22,8 @@ public class SetColumnMapper extends AbstractColumnMapper {
 
     public SetColumnMapper(Field field) {
         super(field);
-        this.clazz = MappingUtils.getGenericTypeClass(field);
-        this.serializer = MappingUtils.getSerializerForField(field);
+        this.clazz = MappingUtils.getGenericTypeClass(field, 0);
+        this.serializer = MappingUtils.getSerializer(field, clazz);
     }
 
     @Override

@@ -9,10 +9,7 @@ import javax.persistence.Id;
 
 import junit.framework.Assert;
 
-import org.junit.Ignore;
 import org.junit.Test;
-
-import sun.reflect.Reflection;
 
 public class EntityMapperTest {
 

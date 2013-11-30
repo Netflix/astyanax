@@ -170,6 +170,7 @@ public class DefaultEntityManagerTest {
 		Foo foo1 = new Foo(prng.nextInt(), RandomStringUtils.randomAlphanumeric(4));
 		Foo foo2 = new Foo(prng.nextInt(), RandomStringUtils.randomAlphanumeric(4));
 		entity.setFooSet(ImmutableSet.of(foo1, foo2));
+		entity.setFooMap(ImmutableMap.of("K1", foo2, "K2", foo1));
 		return entity;
 	}
 

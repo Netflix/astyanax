@@ -299,6 +299,10 @@ public class SampleEntity {
 	@Serializer(FooSerializer.class)
 	private Set<Foo> fooSet;
 	
+	@Column
+	@Serializer(FooSerializer.class)
+	private Map<String, Foo> fooMap;
+	
 	public String getId() {
 		return id;
 	}
@@ -524,6 +528,14 @@ public class SampleEntity {
 
 	public void setFooSet(Set<Foo> fooSet) {
 		this.fooSet = fooSet;
+	}
+
+	public Map<String, Foo> getFooMap() {
+		return fooMap;
+	}
+
+	public void setFooMap(Map<String, Foo> fooMap) {
+		this.fooMap = fooMap;
 	}
 
 }

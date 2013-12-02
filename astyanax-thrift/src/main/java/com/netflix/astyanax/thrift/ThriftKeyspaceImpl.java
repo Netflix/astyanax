@@ -770,7 +770,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
     @Override
     public OperationResult<SchemaChangeResult> createColumnFamily(final Properties props) throws ConnectionException {
-        if (props.containsKey("keyspace") && props.get("keyspace").equals(getKeyspaceName())) { 
+        if (props.containsKey("keyspace") && !props.get("keyspace").equals(getKeyspaceName())) { 
             throw new RuntimeException(
                     String.format("'keyspace' attribute must match keyspace name. Expected '%s' but got '%s'", 
                                   getKeyspaceName(), props.get("keyspace")));

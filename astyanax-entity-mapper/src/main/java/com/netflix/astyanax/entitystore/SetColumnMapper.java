@@ -41,8 +41,10 @@ public class SetColumnMapper extends AbstractColumnMapper {
                 throw new IllegalArgumentException("cannot write non-nullable column with null value: " + columnName);
         }
         
+        int count = 0;
         for (Object entry : set) {
-            clm.putEmptyColumn(prefix + columnName + "." + entry.toString(), null);
+        	clm.putColumn(prefix + columnName + "." + count, entry.toString());
+        	count++;
         }
         return true;
     }
@@ -54,11 +56,8 @@ public class SetColumnMapper extends AbstractColumnMapper {
             set = Sets.newHashSet();
             field.set(entity,  set);
         }
-        
-        String value = name.next();
-        if (name.hasNext())
-            return false;
-        set.add(serializer.fromByteBuffer(serializer.fromString(value)));
+
+        set.add(serializer.fromByteBuffer(serializer.fromString(column.getStringValue())));
         return true;
     }
 

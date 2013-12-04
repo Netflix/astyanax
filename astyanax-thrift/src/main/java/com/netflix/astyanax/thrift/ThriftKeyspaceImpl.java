@@ -707,10 +707,10 @@ public final class ThriftKeyspaceImpl implements Keyspace {
         if (options != null)
             internalOptions.putAll(options);
         
-        if (options.containsKey("name") && !options.get("name").equals(getKeyspaceName())) {
+        if (internalOptions.containsKey("name") && !internalOptions.get("name").equals(getKeyspaceName())) {
             throw new RuntimeException(
                     String.format("'name' attribute must match keyspace name. Expected '%s' but got '%s'", 
-                                  getKeyspaceName(), options.get("name")));
+                                  getKeyspaceName(), internalOptions.get("name")));
         }
         else {
             internalOptions.put("name", getKeyspaceName());
@@ -723,7 +723,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
     @Override
     public OperationResult<SchemaChangeResult> updateKeyspace(final Properties props) throws ConnectionException {
-        if (props.containsKey("name") && props.get("name").equals(getKeyspaceName())) { 
+        if (props.containsKey("name") && !props.get("name").equals(getKeyspaceName())) {
             throw new RuntimeException(
                     String.format("'name' attribute must match keyspace name. Expected '%s' but got '%s'", 
                                   getKeyspaceName(), props.get("name")));
@@ -770,7 +770,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
     @Override
     public OperationResult<SchemaChangeResult> createColumnFamily(final Properties props) throws ConnectionException {
-        if (props.containsKey("keyspace") && props.get("keyspace").equals(getKeyspaceName())) { 
+        if (props.containsKey("keyspace") && !props.get("keyspace").equals(getKeyspaceName())) { 
             throw new RuntimeException(
                     String.format("'keyspace' attribute must match keyspace name. Expected '%s' but got '%s'", 
                                   getKeyspaceName(), props.get("keyspace")));
@@ -812,16 +812,16 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
     @Override
     public OperationResult<SchemaChangeResult> updateColumnFamily(final Map<String, Object> options) throws ConnectionException  {
-        if (options.containsKey("keyspace") && options.get("keyspace").equals(getKeyspaceName())) { 
+        if (options.containsKey("keyspace") && !options.get("keyspace").equals(getKeyspaceName())) {
             throw new RuntimeException(
                     String.format("'keyspace' attribute must match keyspace name. Expected '%s' but got '%s'", 
-                                  getKeyspaceName(), options.get("name")));
+                                  getKeyspaceName(), options.get("keyspace")));
         }
         
         return connectionPool
                 .executeWithFailover(
                         new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
-                                tracerFactory.newTracer(CassandraOperationType.UPDATE_COLUMN_FAMILY), (String)options.get("keyspace")) {
+                                tracerFactory.newTracer(CassandraOperationType.UPDATE_COLUMN_FAMILY), getKeyspaceName()) {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
                                 ThriftColumnFamilyDefinitionImpl def = new ThriftColumnFamilyDefinitionImpl();
@@ -836,16 +836,16 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     
     @Override
     public OperationResult<SchemaChangeResult> updateColumnFamily(final Properties props) throws ConnectionException {
-        if (props.containsKey("keyspace") && props.get("keyspace").equals(getKeyspaceName())) { 
+        if (props.containsKey("keyspace") && !props.get("keyspace").equals(getKeyspaceName())) {
             throw new RuntimeException(
                     String.format("'keyspace' attribute must match keyspace name. Expected '%s' but got '%s'", 
-                                  getKeyspaceName(), props.get("name")));
+                                  getKeyspaceName(), props.get("keyspace")));
         }
         
         return connectionPool
                 .executeWithFailover(
                         new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
-                                tracerFactory.newTracer(CassandraOperationType.ADD_COLUMN_FAMILY), (String)props.getProperty("name")) {
+                                tracerFactory.newTracer(CassandraOperationType.ADD_COLUMN_FAMILY), getKeyspaceName()) {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
                                 CfDef def = ThriftUtils.getThriftObjectFromProperties(CfDef.class, props);

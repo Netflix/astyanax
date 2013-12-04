@@ -821,7 +821,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
         return connectionPool
                 .executeWithFailover(
                         new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
-                                tracerFactory.newTracer(CassandraOperationType.UPDATE_COLUMN_FAMILY), (String)options.get("keyspace")) {
+                                tracerFactory.newTracer(CassandraOperationType.UPDATE_COLUMN_FAMILY), getKeyspaceName()) {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
                                 ThriftColumnFamilyDefinitionImpl def = new ThriftColumnFamilyDefinitionImpl();
@@ -845,7 +845,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
         return connectionPool
                 .executeWithFailover(
                         new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
-                                tracerFactory.newTracer(CassandraOperationType.ADD_COLUMN_FAMILY), (String)props.getProperty("keyspace")) {
+                                tracerFactory.newTracer(CassandraOperationType.ADD_COLUMN_FAMILY), getKeyspaceName()) {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
                                 CfDef def = ThriftUtils.getThriftObjectFromProperties(CfDef.class, props);

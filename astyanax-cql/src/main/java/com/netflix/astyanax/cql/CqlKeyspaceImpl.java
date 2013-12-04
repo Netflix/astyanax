@@ -62,6 +62,7 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 	
 	private final Clock clock;
 	
+	public volatile Cluster cluster;
 	public volatile Session session;
 	
 	private final KeyspaceContext ksContext;
@@ -376,7 +377,7 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 				builder.withoutJMXReporting();
 			}
 					
-			Cluster cluster = builder.build();
+			cluster = builder.build();
 			
 			Logger.info("Connecting to cluster");
 			session = cluster.connect();
@@ -389,6 +390,12 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 			Logger.error("Failed to set hosts for keyspace impl", e);
 		}
 	}
+	
+	@Override
+	public void shutdown() {
+		cluster.shutdown();
+	}
+
 
 	public class KeyspaceContext {
 		

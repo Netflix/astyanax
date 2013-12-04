@@ -79,9 +79,10 @@ public class TestUtils {
               for (char cName = 'a'; cName <= 'z'; cName++) {
             	  colMutation.putColumn(Character.toString(cName), (int) (cName - 'a') + 1, null);
               }
+              m.withCaching(true);
               m.execute();
+              m.discardMutations();
         }
-        m.discardMutations();
 	}
 
 	public static void deleteRowsForColumnRange(Keyspace keyspace) throws Exception {

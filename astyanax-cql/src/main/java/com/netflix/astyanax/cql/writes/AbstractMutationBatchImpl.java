@@ -21,9 +21,9 @@ import com.netflix.astyanax.retry.RetryPolicy;
 
 public abstract class AbstractMutationBatchImpl implements MutationBatch {
 
-	private static final long UNSET_TIMESTAMP = -1;
+	//private static final long UNSET_TIMESTAMP = -1;
 
-	protected long              timestamp;
+	protected Long              timestamp = null; // UNSET_TIMESTAMP 
 	protected ConsistencyLevel    consistencyLevel;
 	protected Clock               clock;
 	protected Host                pinnedHost;
@@ -90,7 +90,7 @@ public abstract class AbstractMutationBatchImpl implements MutationBatch {
 
 	public AbstractMutationBatchImpl(Clock clock, ConsistencyLevel consistencyLevel, RetryPolicy retry) {
 		this.clock            = clock;
-		this.timestamp        = UNSET_TIMESTAMP;
+		this.timestamp        = null; //UNSET_TIMESTAMP;
 		this.consistencyLevel = consistencyLevel;
 		this.retry            = retry;
 	}
@@ -99,10 +99,6 @@ public abstract class AbstractMutationBatchImpl implements MutationBatch {
 	public <K, C> ColumnListMutation<C> withRow(ColumnFamily<K, C> columnFamily, K rowKey) {
 		Preconditions.checkNotNull(columnFamily, "columnFamily cannot be null");
 		Preconditions.checkNotNull(rowKey, "Row key cannot be null");
-
-		// Upon adding the first row into the mutation get the latest time from the clock
-		if (timestamp == UNSET_TIMESTAMP)
-			timestamp = clock.getCurrentTime();
 
 		ByteBuffer bbKey = columnFamily.getKeySerializer().toByteBuffer(rowKey);
 		if (!bbKey.hasRemaining()) {
@@ -120,7 +116,7 @@ public abstract class AbstractMutationBatchImpl implements MutationBatch {
 
 			ColumnListMutation<?> innerMutationList = innerMutationMap.get(columnFamily.getName());
 			if (innerMutationList == null) {
-				innerMutationList = createColumnMutation(keyspace, columnFamily, rowKey);
+				innerMutationList = createColumnListMutation(keyspace, columnFamily, rowKey);
 				innerMutationMap.put(columnFamily.getName(), innerMutationList);
 			}
 
@@ -130,13 +126,14 @@ public abstract class AbstractMutationBatchImpl implements MutationBatch {
 		return clm;
 	}
 
-	public abstract <K,C> ColumnListMutation<C> createColumnMutation(String keyspace, ColumnFamily<K,C> cf, K rowKey); 
+	public abstract <K,C> ColumnListMutation<C> createColumnListMutation(String keyspace, ColumnFamily<K,C> cf, K rowKey); 
 
 	@Override
 	public void discardMutations() {
-		this.timestamp = UNSET_TIMESTAMP;
+		this.timestamp = null; //UNSET_TIMESTAMP;
 		this.mutationMap.clear();
 		this.rowLookup.clear();
+		this.withCaching(false); // TURN Caching off.
 	}
 
 	@Override

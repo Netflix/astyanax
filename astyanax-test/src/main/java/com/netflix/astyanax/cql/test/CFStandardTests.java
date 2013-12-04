@@ -402,13 +402,14 @@ public class CFStandardTests extends KeyspaceTests {
 
         for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
             String rowKey = Character.toString(keyName);
-            ColumnListMutation<String> cfmStandard = m.withRow(
-                    CF_STANDARD1, rowKey);
+            ColumnListMutation<String> cfmStandard = m.withRow(CF_STANDARD1, rowKey);
             for (char cName = 'a'; cName <= 'z'; cName++) {
                 cfmStandard.putColumn(Character.toString(cName),
                         (int) (cName - 'a') + 1, null);
             }
+            m.withCaching(true);
             m.execute();
+            m.discardMutations();
         }
         
         OperationResult<ColumnList<String>> r1 = keyspace

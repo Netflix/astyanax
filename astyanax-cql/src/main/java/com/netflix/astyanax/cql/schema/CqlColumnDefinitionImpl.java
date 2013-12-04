@@ -14,12 +14,12 @@ import com.netflix.astyanax.cql.util.CqlTypeMapping;
 import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.FieldMetadata;
 
-public class CqlColumnDefinitionImpl implements ColumnDefinition {
+public class CqlColumnDefinitionImpl implements ColumnDefinition, Comparable<CqlColumnDefinitionImpl> {
 
 	Map<String, Object> options = new HashMap<String, Object>();
 
 	private CqlColumnType colType;
-	private int componentIndex; 
+	private Integer componentIndex; 
 	
 	public enum CqlColumnType {
 		partition_key, clustering_key, regular, compact_value;
@@ -199,4 +199,10 @@ public class CqlColumnDefinitionImpl implements ColumnDefinition {
 	public int getComponentIndex() {
 		return this.componentIndex;
 	}
+
+	@Override
+	public int compareTo(CqlColumnDefinitionImpl o) {
+		return this.componentIndex.compareTo(o.componentIndex);
+	}
+
 }

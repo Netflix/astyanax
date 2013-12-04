@@ -29,9 +29,9 @@ import com.netflix.astyanax.serializers.UUIDSerializer;
 public abstract class AbstractColumnListMutationImpl<C> implements ColumnListMutation<C> {
     
 	protected final AtomicReference<Long> defaultTimestamp = new AtomicReference<Long>(null);
-    protected final AtomicReference<Integer> defaultTTL = new AtomicReference<Integer>(null);
+	protected final AtomicReference<Integer> defaultTTL = new AtomicReference<Integer>(null);
 
-    public AbstractColumnListMutationImpl(long newTimestamp) {
+    public AbstractColumnListMutationImpl(Long newTimestamp) {
         this.defaultTimestamp.set(newTimestamp);
     }
     

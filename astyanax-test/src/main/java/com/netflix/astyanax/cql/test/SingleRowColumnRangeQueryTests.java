@@ -47,9 +47,6 @@ public class SingleRowColumnRangeQueryTests extends ReadTests {
 		/** PERFORM READ TESTS FOR MISSING DATA */
 		readColumnRangeForAllRows(rowDeleted);
 		getColumnCountForAllRows(rowDeleted); 
-		
-		/** DELETE COLUMN FAMILY */
-		//keyspace.dropColumnFamily(CF_COLUMN_RANGE_TEST);
 	}
 	
 	public void readColumnRangeForAllRows(boolean rowDeleted) throws Exception {

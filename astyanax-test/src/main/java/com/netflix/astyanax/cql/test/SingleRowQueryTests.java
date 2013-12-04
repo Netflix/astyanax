@@ -22,7 +22,7 @@ import com.netflix.astyanax.serializers.BytesArraySerializer;
 
 public class SingleRowQueryTests extends ReadTests {
 
-	private int TestRowCount = 1;
+	private int TestRowCount = 10;
 
 	@BeforeClass
 	public static void init() throws Exception {

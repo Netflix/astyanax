@@ -10,6 +10,13 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.log4j.PropertyConfigurator;
 
+import com.datastax.driver.core.Configuration;
+import com.datastax.driver.core.MetricsOptions;
+import com.datastax.driver.core.PoolingOptions;
+import com.datastax.driver.core.ProtocolOptions;
+import com.datastax.driver.core.QueryOptions;
+import com.datastax.driver.core.SocketOptions;
+import com.datastax.driver.core.policies.Policies;
 import com.google.common.base.Supplier;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Cluster;
@@ -20,6 +27,7 @@ import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
 import com.netflix.astyanax.cql.CqlFamilyFactory;
+import com.netflix.astyanax.cql.JavaDriverConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.cql.test.utils.ClusterConfiguration.Driver;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
@@ -149,26 +157,23 @@ public class AstyanaxContextFactory {
 			}
     	};
     	
-    	AstyanaxContext<Keyspace> context = new AstyanaxContext.Builder()
-                .forCluster(TEST_CLUSTER_NAME)
-                .forKeyspace(keyspaceName)
-                .withAstyanaxConfiguration(
-                        new AstyanaxConfigurationImpl()
-                                .setDiscoveryType(NodeDiscoveryType.DISCOVERY_SERVICE)
-                                .setDiscoveryDelayInSeconds(60000))
-                .withConnectionPoolConfiguration(
-                        new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME
-                                + "_" + TEST_KEYSPACE_NAME)
-                                .setSocketTimeout(30000)
-                                .setMaxTimeoutWhenExhausted(2000)
-                                .setMaxConnsPerHost(20)
-                                .setInitConnsPerHost(10)
-                                .setSeeds(SEEDS)
-                                .setPort(9042)
-                                )
-                .withHostSupplier(HostSupplier)
-                .withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
-                .buildKeyspace(CqlFamilyFactory.getInstance());
+    	ProtocolOptions protocolOptions = new ProtocolOptions(9042);
+		
+		Configuration jdConfig = new Configuration(new Policies(),
+	             protocolOptions,
+	             new PoolingOptions(),
+	             new SocketOptions(),
+	             new MetricsOptions(),
+	             new QueryOptions());
+
+		AstyanaxContext<Keyspace> context = new AstyanaxContext.Builder()
+		.forKeyspace(keyspaceName)
+		.withHostSupplier(HostSupplier)
+		.withAstyanaxConfiguration(new AstyanaxConfigurationImpl())
+		.withConnectionPoolConfiguration(new JavaDriverConnectionPoolConfigurationImpl()
+										.withJavaDriverConfig(jdConfig)
+										)
+		.buildKeyspace(CqlFamilyFactory.getInstance());
 
     	return context;
     }
@@ -194,7 +199,7 @@ public class AstyanaxContextFactory {
                                 .setDiscoveryType(NodeDiscoveryType.DISCOVERY_SERVICE)
                                 .setConnectionPoolType(ConnectionPoolType.ROUND_ROBIN)
                                 .setDiscoveryDelayInSeconds(60000))
-                .withConnectionPoolConfiguration(
+                                .withConnectionPoolConfiguration(
                         new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME
                                 + "_" + TEST_KEYSPACE_NAME)
                                 .setSocketTimeout(30000)

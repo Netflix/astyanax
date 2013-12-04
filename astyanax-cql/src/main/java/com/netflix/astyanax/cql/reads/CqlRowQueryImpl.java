@@ -215,15 +215,15 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 			boolean pStatementProvided = preparedStatement.get() != null;
 			
 			if (pStatementProvided) {
-				return getBoundStatement();
+				return getBoundStatement(preparedStatement.get().getInnerPreparedStatement());
 			}
 			
 			RegularStatement query = (RegularStatement) getRegularStatement();
-			asPreparedStatement(query);
-			return getBoundStatement();
+			PreparedStatement pStatement = asPreparedStatement(query);
+			return getBoundStatement(pStatement);
 		}
 		
-		private Statement getRegularStatement() {
+		public Statement getRegularStatement() {
 			
 			Statement query; 
 			
@@ -241,18 +241,18 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 			return query;
 		}
 		
-		private Statement getBoundStatement() {
+		private Statement getBoundStatement(PreparedStatement pStatement) {
 			
 			Statement query; 
 			
 			if (columnSlice.isColumnSelectQuery()) {
-				query = bindSelectColumnsQuery();
+				query = bindSelectColumnsQuery(pStatement);
 			} else if (columnSlice.isRangeQuery()) {
-				query = bindSelectColumnRangeQuery();
+				query = bindSelectColumnRangeQuery(pStatement);
 			} else if (compositeRange != null) {
-				query =  bindSelectCompositeColumnRangeQuery();
+				query =  bindSelectCompositeColumnRangeQuery(pStatement);
 			} else if (columnSlice.isSelectAllQuery()) {
-				query = bindSelectEntireRowQuery();
+				query = bindSelectEntireRowQuery(pStatement);
 			} else {
 				throw new IllegalStateException("Undefined query type");
 			}
@@ -304,9 +304,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 			return stmt; 
 		}
 
-		Statement bindSelectEntireRowQuery() {
-			
-			PreparedStatement pStmt = preparedStatement.get().getInnerPreparedStatement();
+		Statement bindSelectEntireRowQuery(PreparedStatement pStmt) {			
 			return pStmt.bind(rowKey);
 		}
 
@@ -328,7 +326,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 					select.column(columnName).ttl(columnName).writeTime(columnName);
 				}
 
-				return select.from(keyspace, cf.getName()).where(eq(partitionKeyCol, rowKey));
+				return select.from(keyspace, cf.getName()).where(eq(partitionKeyCol, EMPTY_STRING));
 
 			} else if (clusteringKeyCols.size() > 0) {
 
@@ -349,22 +347,20 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 				return select
 						.from(keyspace, cf.getName())
-						.where(eq(partitionKeyCol, rowKey))
+						.where(eq(partitionKeyCol, EMPTY_STRING))
 						.and(in(clusteringKeyCols.get(0).getName(), columns));
 			} else {
 				throw new RuntimeException("Composite col query - todo");
 			}
 		}
 
-		Statement bindSelectColumnsQuery() {
+		Statement bindSelectColumnsQuery(PreparedStatement pStmt) {
 
 			// Make sure that we are not attempting to do a composite range query
 			if (isCompositeRangeQuery()) {
 				throw new RuntimeException("Cannot perform composite column slice using column set");
 			}
 
-			PreparedStatement pStmt = preparedStatement.get().getInnerPreparedStatement();
-			
 			if (clusteringKeyCols.size() == 0) {
 
 				// THIS IS A SIMPLE QUERY WHERE THE INDIVIDUAL COLS ARE BEING SELECTED E.G NAME, AGE ETC
@@ -407,16 +403,16 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 			}
 			
 			Where where = select.from(keyspace, cf.getName())
-				  .where(eq(partitionKeyCol, rowKey));
+				  .where(eq(partitionKeyCol, EMPTY_STRING));
 
 			String clusterKeyCol = clusteringKeyCols.get(0).getName();
 			
 			if (columnSlice.getStartColumn() != null) {
-				where.and(gte(clusterKeyCol, columnSlice.getStartColumn()));
+				where.and(gte(clusterKeyCol, EMPTY_STRING));
 			}
 
 			if (columnSlice.getEndColumn() != null) {
-				where.and(lte(clusterKeyCol, columnSlice.getEndColumn()));
+				where.and(lte(clusterKeyCol, EMPTY_STRING));
 			}
 
 			if (columnSlice.getReversed()) {
@@ -430,14 +426,12 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 			return where;
 		}
 
-		Statement bindSelectColumnRangeQuery() {
+		Statement bindSelectColumnRangeQuery(PreparedStatement pStmt) {
 
 			if (clusteringKeyCols.size() == 0) {
 				throw new RuntimeException("Cannot perform col range query with current schema, missing pk cols");
 			}
 
-			PreparedStatement pStmt = preparedStatement.get().getInnerPreparedStatement();
-			
 			List<Object> values = new ArrayList<Object>();
 			values.add(rowKey);
 			
@@ -447,10 +441,6 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 			if (columnSlice.getEndColumn() != null) {
 				values.add(columnSlice.getEndColumn());
-			}
-
-			if (columnSlice.getLimit() != -1) {
-				values.add(columnSlice.getLimit());
 			}
 
 			return pStmt.bind(values.toArray(new Object[values.size()]));
@@ -470,7 +460,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 			}
 
 			Where stmt = select.from(keyspace, cf.getName())
-					.where(eq(partitionKeyCol, rowKey));
+					.where(eq(partitionKeyCol, EMPTY_STRING));
 
 			List<RangeQueryRecord> records = compositeRange.getRecords();
 
@@ -485,20 +475,20 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 					switch (op.getOperator()) {
 
 					case EQUAL:
-						stmt.and(eq(columnName, op.getValue()));
+						stmt.and(eq(columnName, EMPTY_STRING));
 						componentIndex++;
 						break;
 					case LESS_THAN :
-						stmt.and(lt(columnName, op.getValue()));
+						stmt.and(lt(columnName, EMPTY_STRING));
 						break;
 					case LESS_THAN_EQUALS:
-						stmt.and(lte(columnName, op.getValue()));
+						stmt.and(lte(columnName, EMPTY_STRING));
 						break;
 					case GREATER_THAN:
-						stmt.and(gt(columnName, op.getValue()));
+						stmt.and(gt(columnName, EMPTY_STRING));
 						break;
 					case GREATER_THAN_EQUALS:
-						stmt.and(gte(columnName, op.getValue()));
+						stmt.and(gte(columnName, EMPTY_STRING));
 						break;
 					default:
 						throw new RuntimeException("Cannot recognize operator: " + op.getOperator().name());
@@ -509,9 +499,8 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 		}
 		
 
-		Statement bindSelectCompositeColumnRangeQuery() {
+		Statement bindSelectCompositeColumnRangeQuery(PreparedStatement pStmt) {
 
-			PreparedStatement pStmt = preparedStatement.get().getInnerPreparedStatement();
 			List<RangeQueryRecord> records = compositeRange.getRecords();
 			
 			List<Object> values = new ArrayList<Object>();
@@ -630,14 +619,16 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 	@Override
 	public CqlPreparedStatement asPreparedStatement() {
-		new InternalRowQueryExecutionImpl().getQuery();
+		RegularStatement statement = (RegularStatement) new InternalRowQueryExecutionImpl().getRegularStatement();
+		PreparedStatement pStatement = asPreparedStatement(statement);
+		DirectCqlPreparedStatement cqlStatement = new DirectCqlPreparedStatement(ksContext.getSession(), pStatement);
+		this.preparedStatement.set(cqlStatement);
 		return this.preparedStatement.get();
 	}
 
-	private CqlPreparedStatement asPreparedStatement(RegularStatement stmt) {
+	private PreparedStatement asPreparedStatement(RegularStatement stmt) {
 		Session session = ksContext.getSession();
 		PreparedStatement pStmt = session.prepare(stmt.getQueryString());
-		this.preparedStatement.set(new DirectCqlPreparedStatement(session, pStmt));
-		return this.preparedStatement.get();
+		return pStmt;
 	}
 }

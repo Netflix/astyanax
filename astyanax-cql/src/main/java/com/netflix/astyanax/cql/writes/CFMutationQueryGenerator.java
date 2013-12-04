@@ -6,10 +6,12 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.base.Preconditions;
+import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
 import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.ddl.ColumnDefinition;
+import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
@@ -174,18 +176,6 @@ public class CFMutationQueryGenerator extends CqlStyleMutationQuery {
 		super.appendWriteOptions(sb, colMutation.getTTL(), colMutation.getTimestamp());
 		
 		return sb.toString();
-		
-//		StringBuilder sb = new StringBuilder("UPDATE " + keyspace + "." + cf.getName()); 
-//		super.appendWriteOptions(sb, colMutation.getTTL(), colMutation.getTimestamp());
-//		sb.append(" SET ");
-//		if (isCompositeKey) { 
-//			String valueAlias = cfDef.getRegularColumnDefinitionList().get(0).getName();
-//			sb.append(valueAlias).append(" = ? ");
-//		} else {
-//			sb.append(colMutation.columnName).append(" = ? ");
-//		}
-//		
-//		return appendWhereClause(sb).toString();
 	}
 	
 	

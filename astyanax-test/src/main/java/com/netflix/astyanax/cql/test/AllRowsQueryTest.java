@@ -46,6 +46,7 @@ public class AllRowsQueryTest extends KeyspaceTests {
             for (char cName = 'a'; cName <= 'z'; cName++) {
                 cfmStandard.putColumn(Character.toString(cName), (int) (cName - 'a') + 1, null);
             }
+            m.withCaching(true);
             m.execute();
             m.discardMutations();
         }

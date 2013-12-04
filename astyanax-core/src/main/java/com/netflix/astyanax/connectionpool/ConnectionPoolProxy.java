@@ -50,6 +50,7 @@ public class ConnectionPoolProxy<T> implements ConnectionPool<T> {
 
 	public interface SeedHostListener {
 		public void setHosts(Collection<Host> hosts, int port);
+		public void shutdown();
 	}
 	
 	public void addListener(SeedHostListener listener) {

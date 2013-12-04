@@ -2,23 +2,25 @@ package com.netflix.astyanax.cql.writes;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.PreparedStatement;
+import com.datastax.driver.core.BatchStatement;
+import com.datastax.driver.core.BatchStatement.Type;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Statement;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.Clock;
 import com.netflix.astyanax.ColumnListMutation;
+import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.cql.ConsistencyLevelMapping;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
+import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColListMutationType;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
@@ -27,13 +29,16 @@ public class CqlMutationBatchImpl extends AbstractMutationBatchImpl {
 
 	private final KeyspaceContext ksContext; 
 	
+	// Control to turn use of prepared statement caching ON/OFF
+	private boolean useCaching = false;
+	
 	public CqlMutationBatchImpl(KeyspaceContext ksCtx, Clock clock, ConsistencyLevel consistencyLevel, RetryPolicy retry) {
 		super(clock, consistencyLevel, retry);
 		this.ksContext = ksCtx;
 	}
 
 	@Override
-	public <K, C> ColumnListMutation<C> createColumnMutation(String keyspace, ColumnFamily<K, C> cf, K rowKey) {
+	public <K, C> ColumnListMutation<C> createColumnListMutation(String keyspace, ColumnFamily<K, C> cf, K rowKey) {
 		return new CqlColumnListMutationImpl<K, C>(ksContext, cf, rowKey, getConsistencyLevel(), timestamp);
 	}
 
@@ -89,16 +94,6 @@ public class CqlMutationBatchImpl extends AbstractMutationBatchImpl {
 			}
 		}.executeAsync();
 	}
-	
-//	private BoundStatement getTotalStatement() {
-//		BatchedStatements statements = new BatchedStatements();
-//		
-//		for (CqlColumnFamilyMutationImpl<?, ?> cfMutation : rowLookup.values()) {
-//			statements.addBatch(cfMutation.getBatch());
-//		}
-//		
-//		return statements.getBoundStatement(session, useAtomicBatch);
-//	}
 
 	private List<CqlColumnListMutationImpl<?, ?>> getColumnMutations() {
 		
@@ -112,42 +107,37 @@ public class CqlMutationBatchImpl extends AbstractMutationBatchImpl {
 		return colListMutation;
 	}
 
-	private BoundStatement getCachedPreparedStatement() {
+	private BatchStatement getCachedPreparedStatement() {
 		
-		//Integer id = CqlColumnListMutationImpl.class.getName().hashCode();
 		final List<CqlColumnListMutationImpl<?, ?>> colListMutations = getColumnMutations();
-		final List<Object> bindValues = new ArrayList<Object>();
-		
-//		PreparedStatement pStmt = StatementCache.getInstance().getStatement(id, new Callable<PreparedStatement>() {
-//
-//			@Override
-//			public PreparedStatement call() throws Exception {
-//				BatchedStatements statements = new BatchedStatements();
-//				for (CqlColumnListMutationImpl<?, ?> cfMutation : colListMutations) {
-//					statements.addBatch(cfMutation.getBatch());
-//				}
-//				bindValues.addAll(statements.getBatchValues());
-//				
-//				PreparedStatement preparedStmt = ksContext.getSession().prepare(statements.getBatchQuery(false));
-//				return preparedStmt;
-//			}
-//		});
-		
-		BatchedStatements statements = new BatchedStatements();
-		for (CqlColumnListMutationImpl<?, ?> cfMutation : colListMutations) {
-			statements.addBatch(cfMutation.getBatch());
-		}
-		bindValues.addAll(statements.getBatchValues());
-		
-		PreparedStatement pStmt = ksContext.getSession().prepare(statements.getBatchQuery(false));
 
-		if (bindValues.size() == 0) {
-			for (CqlColumnListMutationImpl<?, ?> cfMutation : colListMutations) {
-				bindValues.addAll(cfMutation.getBindValues());
-			}
+		if (colListMutations == null || colListMutations.size() == 0) {
+			return new BatchStatement(Type.UNLOGGED);
 		}
 		
-		BoundStatement bStmt = pStmt.bind(bindValues.toArray());
-		return bStmt;
+		ColListMutationType mutationType = colListMutations.get(0).getType();
+
+		BatchStatement batch = new BatchStatement(Type.UNLOGGED);
+		if (mutationType == ColListMutationType.CounterColumnsUpdate) {
+			batch = new BatchStatement(Type.COUNTER);
+		} else if (useAtomicBatch()) {
+			batch = new BatchStatement(Type.LOGGED);
+		}
+		
+		for (CqlColumnListMutationImpl<?, ?> colListMutation : colListMutations) {
+			
+			CFMutationQueryGen queryGen = colListMutation.getMutationQueryGen();
+			queryGen.addColumnListMutationToBatch(batch, colListMutation, useCaching);
+		}
+		
+		batch.setConsistencyLevel(ConsistencyLevelMapping.getCL(this.getConsistencyLevel()));
+		
+		return batch;
+	}
+
+	@Override
+	public MutationBatch withCaching(boolean condition) {
+		useCaching = condition;
+		return this;
 	}
 }

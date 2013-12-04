@@ -5,6 +5,7 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -31,6 +32,7 @@ import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.cql.CqlOperationResultImpl;
 import com.netflix.astyanax.cql.util.CqlTypeMapping;
 import com.netflix.astyanax.cql.util.DataTypeMapping;
+import com.netflix.astyanax.cql.writes.CFMutationQueryGen;
 import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.FieldMetadata;
@@ -60,6 +62,8 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	
 	private boolean alterTable = false;
 
+	private CFMutationQueryGen mutationQueryGen = null;
+	
 	public CqlColumnFamilyDefinitionImpl(Session session) {
 		this.session = session;
 	}
@@ -80,6 +84,7 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	
 	public CqlColumnFamilyDefinitionImpl(Session session, Row row) {
 		initFromResultSet(session, row);
+		mutationQueryGen = new CFMutationQueryGen(session, keyspaceName, this);
 	}
 
 	public CqlColumnFamilyDefinitionImpl(Session session, String keyspace, ColumnFamily<?, ?> columnFamily, Map<String, Object> options) {
@@ -152,39 +157,6 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 			 Object value = DataTypeMapping.getDynamicColumn(row, colName, dataType);
 			 optionsMap.put(colName, value);
 		 }
-//		optionsMap.put("keyspace_name", row.getString("keyspace_name")); 
-//		optionsMap.put("columnfamily_name", row.getString("columnfamily_name")); 
-//		optionsMap.put("bloom_filter_fp_chance", row.getDouble("bloom_filter_fp_chance")); 
-//		optionsMap.put("caching", row.getString("caching")); 
-//		optionsMap.put("column_aliases", row.getString("column_aliases")); 
-//		optionsMap.put("comment", row.getString("comment")); 
-//		optionsMap.put("compaction_strategy_class", row.getString("compaction_strategy_class")); 
-//		optionsMap.put("compaction_strategy_options", row.getString("compaction_strategy_options")); 
-//		optionsMap.put("comparator_type", row.getString("comparator")); 
-//		optionsMap.put("compression_parameters", row.getString("compression_parameters")); 
-//		optionsMap.put("default_read_consistency", row.getString("default_read_consistency")); 
-//		optionsMap.put("default_validation_class", row.getString("default_validator")); 
-//		optionsMap.put("default_write_consistency", row.getString("default_write_consistency")); 
-//		optionsMap.put("gc_grace_seconds", row.getInt("gc_grace_seconds")); 
-//		optionsMap.put("id", row.getInt("id")); 
-//		optionsMap.put("key_alias", row.getString("key_alias")); 
-//		optionsMap.put("key_aliases", row.getString("key_aliases")); 
-//		optionsMap.put("key_validation_class", row.getString("key_validator")); 
-//		optionsMap.put("local_read_repair_chance", row.getDouble("local_read_repair_chance")); 
-//		optionsMap.put("max_compaction_threshold", row.getInt("max_compaction_threshold")); 
-//		optionsMap.put("min_compaction_threshold", row.getInt("min_compaction_threshold")); 
-//		optionsMap.put("populate_io_cache_on_flush", row.getBool("populate_io_cache_on_flush")); 
-//		optionsMap.put("read_repair_chance", row.getDouble("read_repair_chance")); 
-//		optionsMap.put("replicate_on_write", row.getBool("replicate_on_write")); 
-//		optionsMap.put("subcomparator", row.getString("subcomparator")); 
-//		optionsMap.put("type", row.getString("type")); 
-//		optionsMap.put("value_alias", row.getString("value_alias")); 
-		
-		// init the primary key column definition
-		 
-//		 for (String key : optionsMap.keySet()) {
-//			 System.out.println("KEY -> " + key + " = " + optionsMap.get(key));
-//		 }
 		readColDefinitions();
 	}
 
@@ -258,6 +230,7 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		List<Row> rows = rs.all();
 		if (rows != null && rows.size() > 0) {
 			
+			List<CqlColumnDefinitionImpl> tmpList = new ArrayList<CqlColumnDefinitionImpl>();
 			
 			for (Row row : rows) {
 				CqlColumnDefinitionImpl colDef = new CqlColumnDefinitionImpl(row);
@@ -267,7 +240,7 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 					allColumnsDefinitionList.add(colDef);
 					break;
 				case clustering_key:
-					clusteringKeyList.add(colDef.getComponentIndex(), colDef);
+					tmpList.add(colDef);
 					allColumnsDefinitionList.add(colDef);
 					break;
 				case regular:
@@ -281,6 +254,10 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 				}
 			}
 
+			Collections.sort(tmpList);
+			clusteringKeyList.addAll(tmpList);
+			tmpList = null;
+			
 			List<String> allPrimaryKeyColNames = new ArrayList<String>();
 			for (ColumnDefinition colDef : partitionKeyList) {
 				allPrimaryKeyColNames.add(colDef.getName());
@@ -291,139 +268,7 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 			
 			allPkColNames = allPrimaryKeyColNames.toArray(new String[allPrimaryKeyColNames.size()]);
 		}
-		
-		/**
-		// PRIMARY KEY
-		String keyAlias = (String)optionsMap.get("key_alias");
-		if (keyAlias == null) {
-			String aliases = (String)optionsMap.get("key_aliases");
-			if  (aliases == null) {
-				keyAlias = "key";
-			} else {
-				List<String> aliasList = parseAliasSpec(aliases);
-				if (aliasList != null && aliasList.size() > 0) {
-					keyAlias = aliasList.get(0);
-				} else {
-					keyAlias = "key";
-				}
-			}
-		}
-
-		String keyClass = (String) optionsMap.get("key_validator");
-		keyClass = (keyClass == null) ?	keyClass = "blob" : CqlTypeMapping.getCqlType(keyClass);
-
-		ColumnDefinition col = new CqlColumnDefinitionImpl().setName(keyAlias).setValidationClass(keyClass);
-		this.colDefList.add(col);
-		this.primaryKeyList.add(col);
-		
-		// COMPARATOR - MAY BE COMPOSITE e.g  CompositeType(UTF8Type, LongType, UTF8Type)
-		String comparatorSpec = (String)optionsMap.get("comparator");
-		
-		List<String> compList = parseComparatorSpec(comparatorSpec);
-		if (compList != null && compList.size() > 0) {
-			
-			String colAliasSpec = (String)optionsMap.get("column_aliases");
-			List<String> colAliasList = parseAliasSpec(colAliasSpec);
-			
-			if (colAliasList == null || colAliasList.size() == 0) {
-				colAliasList = new ArrayList<String>();
-				if (compList.size() > 1) {
-					for (int i=0; i<compList.size(); i++) {
-						colAliasList.add("column" + i+1);
-					}
-				}
-			}
-			
-			for (int i=0; i<colAliasList.size(); i++) {
-				String name = colAliasList.get(i);
-				String type = CqlTypeMapping.getCqlType(compList.get(i));
-				ColumnDefinition column = new CqlColumnDefinitionImpl().setName(name).setValidationClass(type);
-				colDefList.add(column);
-				primaryKeyList.add(column);
-			}
-		}
-		
-		for (ColumnDefinition colDef : primaryKeyList) {
-			System.out.println("Pk ColDef: " + colDef.getName());
-		}
-		for (ColumnDefinition colDef : colDefList) {
-			System.out.println("ColDef: " + colDef.getName());
-		}
-
-		
-		// VALUE COLUMNS AND COLUMNS THAT ARE NOT PART OF THE PRIMARY KEY
-		Statement query = QueryBuilder.select().from("system", "schema_columns")
-				.where(eq("keyspace_name", keyspaceName))
-				.and(eq("columnfamily_name", cfName));
-		
-		System.out.println("Query: " + query);
-		
-		ResultSet rs = session.execute(query);
-		List<Row> rows = rs.all();
-		if (rows != null && rows.size() > 0) {
-			for (Row row : rows) {
-				CqlColumnDefinitionImpl colDef = new CqlColumnDefinitionImpl(row);
-				colDefList.add(colDef);
-				valDefList.add(colDef);
-				
-				System.out.println("Adding: " + colDef.getName());
-			}
-		} else {
-			String name = (String)optionsMap.get("value_alias");
-			if (name == null) {
-				name = "value";
-			}
-			String type = CqlTypeMapping.getCqlType(getDefaultValidationClass());
-			ColumnDefinition colDef = new CqlColumnDefinitionImpl().setName(name).setValidationClass(type);
-			colDefList.add(colDef);
-			valDefList.add(colDef);
-		}
-		
-		List<String> allColumnNamesList = new ArrayList<String>();
-		for (ColumnDefinition colDef : primaryKeyList) {
-			allColumnNamesList.add(colDef.getName());
-		}
-		allPkColNames = allColumnNamesList.toArray(new String[allColumnNamesList.size()]);
-		*/
 	}
-	
-//	private List<String> parseComparatorSpec(String comparatorSpec) {
-//		
-//		System.out.println("comparatorSpec: " + comparatorSpec);
-//		if (!comparatorSpec.contains("CompositeType(")) {
-//			return null;
-//		}
-//
-//		List<String> list = new ArrayList<String>();
-//		String regex = "[\\(,\\)]";
-//		Pattern pattern = Pattern.compile(regex);
-//		String[] parts = pattern.split(comparatorSpec);
-//
-//		for (int i=1; i<parts.length; i++) {
-//			String componentTypeString = parts[i].trim();
-//			list.add(componentTypeString);
-//		}
-//		return list;
-//	}
-//
-//	private List<String> parseAliasSpec(String aliasSpec) {
-//		
-//		if (aliasSpec == null) {
-//			return null;
-//		}
-//		
-//		String nameRegex = "[\\[\",\\]]";
-//		Pattern namePattern = Pattern.compile(nameRegex);
-//		String[] alias_parts = namePattern.split(aliasSpec);
-//		List<String> list = new ArrayList<String>();
-//		for (int i=0; i<alias_parts.length; i++) {
-//			String part = alias_parts[i].trim();
-//			if (part.length() > 0) {
-//				list.add(part);
-//			}
-//		}
-//		return list;
-//	}
 
 	public CqlColumnFamilyDefinitionImpl alterTable() {
 		alterTable = true;
@@ -743,39 +588,6 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	public String[] getAllPkColNames() {
 		return allPkColNames;
 	}
-	
-
-//	private void processColumnComparator() {
-//		
-//		String comparator = getComparatorType();
-//		if (!comparator.contains("CompositeType(")) {
-//			return;
-//		}
-//		
-//		String nameRegex = "[\\[\",\\]]";
-//		Pattern namePattern = Pattern.compile(nameRegex);
-//		String[] name_parts = namePattern.split((String)optionsMap.get("column_aliases"));
-//		
-//		String typeRegex = "[\\(,\\)]";
-//		Pattern typePattern = Pattern.compile(typeRegex);
-//		String[] type_parts = typePattern.split((String)optionsMap.get("comparator"));
-//		
-//		String[] name_parts_clean = new String[type_parts.length];
-//		int index = 1;
-//		for (int i=0; i<name_parts.length; i++) {
-//			String name = name_parts[i].trim();
-//			if (name.length() > 0) {
-//				name_parts_clean[index++] = name;
-//			}
-//		}
-//		
-//		for (int i=1; i<type_parts.length-1; i++) {
-//
-//			CqlColumnDefinitionImpl colDef = new CqlColumnDefinitionImpl();
-//			colDef.setName(name_parts_clean[i]).setValidationClass(type_parts[i]);
-//			colDefList.add(colDef);
-//		}
-//	}
 
 	@Override
 	public ColumnFamilyDefinition addColumnDefinition(ColumnDefinition def) {
@@ -1039,5 +851,9 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	@Override
 	public List<ColumnDefinition> getColumnDefinitionList() {
 		return allColumnsDefinitionList;
+	}
+	
+	public CFMutationQueryGen getMutationQueryGenerator() {
+		return mutationQueryGen;
 	}
 }

@@ -309,9 +309,10 @@ public class ColumnCountQueryTests extends ReadTests {
               for (char cName = 'a'; cName <= 'z'; cName++) {
             	  colMutation.putColumn(Character.toString(cName), (int) (cName - 'a') + 1, null);
               }
+              m.withCaching(true);
               m.execute();
+              m.discardMutations();
         }
-        m.discardMutations();
 	}
 
 	private void deleteRowsForColumnRange() throws Exception {

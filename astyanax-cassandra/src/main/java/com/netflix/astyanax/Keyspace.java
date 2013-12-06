@@ -26,6 +26,8 @@ import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.cql.CqlStatement;
+import com.netflix.astyanax.ddl.ColumnDefinition;
+import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
 import com.netflix.astyanax.model.ColumnFamily;
@@ -125,7 +127,7 @@ public interface Keyspace {
      * a call to the Cassandra cluster and is therefore cached to reduce load on
      * Cassandra and since this data rarely changes.
      * 
-     * @param columnFamily
+     * @param cfName
      * @param ignoreErrors
      * @throws ConnectionException
      */
@@ -203,6 +205,33 @@ public interface Keyspace {
     OperationResult<Void> testOperation(Operation<?, ?> operation, RetryPolicy retry) throws ConnectionException;
 
     /**
+     * Prepare a column family definition. Invoke addColumnFamily or updateColumnFamily
+     * and provide the ColumnFamilyDefinition.
+     */
+    ColumnFamilyDefinition makeColumnFamilyDefinition();
+
+    /**
+     * Make a column definition to be added to a ColumnFamilyDefinition
+     */
+    ColumnDefinition makeColumnDefinition();
+
+    /**
+     * Add a column family to an existing keyspace
+     *
+     * @param def - Created by calling makeColumnFamilyDefinition();
+     * @throws ConnectionException
+     */
+    OperationResult<SchemaChangeResult> addColumnFamily(ColumnFamilyDefinition def) throws ConnectionException;
+
+    /**
+     * Update an existing column family
+     *
+     * @param def - Created by calling makeColumnFamilyDefinition();
+     * @throws ConnectionException
+     */
+    OperationResult<SchemaChangeResult> updateColumnFamily(ColumnFamilyDefinition def) throws ConnectionException;
+
+    /**
      * Create a column family in this keyspace
      * 
      * @param columnFamily
@@ -242,7 +271,7 @@ public interface Keyspace {
     
     /**
      * Update the column family definition from a map of string to object
-     * @param props
+     * @param options
      * @throws ConnectionException
      */
     OperationResult<SchemaChangeResult> updateColumnFamily(Map<String, Object> options) throws ConnectionException;
@@ -258,7 +287,34 @@ public interface Keyspace {
      * @param columnFamily
      */
     <K, C>  OperationResult<SchemaChangeResult> dropColumnFamily(ColumnFamily<K, C> columnFamily) throws ConnectionException ;
-    
+
+    /**
+     * Prepare a keyspace definition. Invoke addKeyspace or updateKeyspace and provide the KeyspaceDefinition.
+     *
+     * Note that column families can be added the keyspace definition here
+     * instead of calling makeColumnFamilyDefinition separately.
+     */
+    KeyspaceDefinition makeKeyspaceDefinition();
+
+    /**
+     * Add a new keyspace to the cluster. The keyspace object may include column
+     * families as well. Create a KeyspaceDefinition object by calling
+     * makeKeyspaceDefinition().
+     *
+     * @param def
+     * @return
+     */
+    OperationResult<SchemaChangeResult> addKeyspace(KeyspaceDefinition def) throws ConnectionException;
+
+    /**
+     * Update a new keyspace in the cluster. The keyspace object may include
+     * column families as well. Create a KeyspaceDefinition object by calling
+     * makeKeyspaceDefinition().
+     *
+     * @param def
+     */
+    OperationResult<SchemaChangeResult> updateKeyspace(KeyspaceDefinition def) throws ConnectionException;
+
     /**
      * Create the keyspace in cassandra.  This call will only create the keyspace and not 
      * any column families.  Once the keyspace has been created then call createColumnFamily

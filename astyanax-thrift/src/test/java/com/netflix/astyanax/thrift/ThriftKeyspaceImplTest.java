@@ -74,7 +74,6 @@ import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.model.Equality;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
-import com.netflix.astyanax.query.AllRowsQuery;
 import com.netflix.astyanax.query.ColumnQuery;
 import com.netflix.astyanax.query.IndexQuery;
 import com.netflix.astyanax.query.PreparedIndexExpression;
@@ -82,6 +81,7 @@ import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.retry.ExponentialBackoff;
 import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
+import com.netflix.astyanax.serializers.ComparatorType;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.ObjectSerializer;
 import com.netflix.astyanax.serializers.PrefixedSerializer;
@@ -2786,6 +2786,89 @@ public class ThriftKeyspaceImplTest {
         
         LOG.info(props.toString());
         LOG.info(props1.toString());
+    }
+
+    @Test
+    public void testDDLWithDefinitions() throws Exception {
+        String keyspaceName = "DDLDefinitionsKeyspace";
+
+        AstyanaxContext<Keyspace> kc = new AstyanaxContext.Builder()
+                .forCluster(TEST_CLUSTER_NAME)
+                .forKeyspace(keyspaceName)
+                .withAstyanaxConfiguration(
+                        new AstyanaxConfigurationImpl()
+                                .setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
+                                .setConnectionPoolType(ConnectionPoolType.ROUND_ROBIN)
+                                .setDiscoveryDelayInSeconds(60000))
+                .withConnectionPoolConfiguration(
+                        new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME + "_" + keyspaceName)
+                                .setSocketTimeout(30000)
+                                .setMaxTimeoutWhenExhausted(2000)
+                                .setMaxConnsPerHost(20)
+                                .setInitConnsPerHost(10)
+                                .setSeeds(SEEDS)
+                )
+                .withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
+                .buildKeyspace(ThriftFamilyFactory.getInstance());
+
+        kc.start();
+
+        Keyspace ks = kc.getClient();
+
+        KeyspaceDefinition ksDef = ks.makeKeyspaceDefinition()
+                .setName(keyspaceName + "_wrong")
+                .setStrategyClass("SimpleStrategy")
+                .addStrategyOption("replication_factor", "1");
+
+        try {
+            ks.addKeyspace(ksDef);
+            Assert.fail("Should have gotten name mismatch error");
+        }
+        catch (RuntimeException e) {
+            LOG.info(e.getMessage());
+        }
+
+        ksDef.setName(null); // getKeyspaceName() is expected to be used
+        ks.addKeyspace(ksDef);
+
+        KeyspaceDefinition ksDef1 = ks.describeKeyspace();
+        Assert.assertTrue(ksDef.getStrategyClass().endsWith("SimpleStrategy"));
+        Assert.assertEquals("1", ksDef1.getStrategyOptions().get("replication_factor"));
+        LOG.info(ksDef.getProperties().toString());
+
+        ColumnFamilyDefinition cfDef = ks.makeColumnFamilyDefinition()
+                .setKeyspace(keyspaceName + "_wrong")
+                .setName("DDLDefinitionsColumnFamily")
+                .setKeyValidationClass(ComparatorType.UTF8TYPE.getClassName())
+                .setComparatorType(ComparatorType.LONGTYPE.getClassName())
+                .setGcGraceSeconds(108000);
+
+        try {
+            ks.addColumnFamily(cfDef);
+            Assert.fail("Should have gotten name mismatch error");
+        } catch (RuntimeException e) {
+            LOG.info(e.getMessage());
+        }
+
+        cfDef.setKeyspace(keyspaceName)
+             .setKeyValidationClass("wrong");
+
+        try {
+            ks.addColumnFamily(cfDef);
+            Assert.fail("Should have gotten key validation class error");
+        } catch (BadRequestException e) {
+            LOG.info(e.getMessage());
+        }
+
+        cfDef.setKeyValidationClass(ComparatorType.UTF8TYPE.getClassName()); // definition is ok now
+        ks.addColumnFamily(cfDef);
+
+        ColumnFamilyDefinition cfDef1 = ks.describeKeyspace().getColumnFamily("DDLDefinitionsColumnFamily");
+        Assert.assertEquals(cfDef.getKeyValidationClass(), cfDef1.getKeyValidationClass());
+        Assert.assertEquals(cfDef.getComparatorType(), cfDef1.getComparatorType());
+        Assert.assertEquals(cfDef.getGcGraceSeconds(), cfDef1.getGcGraceSeconds());
+
+        LOG.info(cfDef.getProperties().toString());
     }
     
     private boolean deleteColumn(ColumnFamily<String, String> cf,

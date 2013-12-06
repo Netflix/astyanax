@@ -549,12 +549,20 @@ public class ThriftKeyspaceImplTest {
         ctx.start();
         
         try {
-            KeyspaceDefinition keyspaceDef = ctx.getEntity().describeKeyspace();
-            Assert.fail();
-        } catch (ConnectionException e) {
+            KeyspaceDefinition keyspaceDef = ctx.getClient().describeKeyspace();
+            Assert.fail("BadRequestException was expected");
+        } catch (BadRequestException e) {
             LOG.info(e.getMessage());
+        } catch (ConnectionException e) {
+            Assert.fail();
         }
-        
+
+        try {
+            KeyspaceDefinition keyspaceDef = ctx.getClient().describeKeyspaceDefinition();
+            Assert.assertNull(keyspaceDef);
+        } catch (ConnectionException e) {
+            Assert.fail();
+        }
     }
     
     @Test

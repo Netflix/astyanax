@@ -240,7 +240,8 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     }
 
     @Override
-    public KeyspaceDefinition describeKeyspace() throws ConnectionException {
+    @Deprecated
+    public KeyspaceDefinition describeKeyspace() throws BadRequestException, ConnectionException {
         return executeOperation(
                 new AbstractKeyspaceOperationImpl<KeyspaceDefinition>(
                         tracerFactory.newTracer(CassandraOperationType.DESCRIBE_KEYSPACE), getKeyspaceName()) {
@@ -249,6 +250,24 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                         return new ThriftKeyspaceDefinitionImpl(client.describe_keyspace(getKeyspaceName()));
                     }
                 }, getConfig().getRetryPolicy().duplicate()).getResult();
+    }
+
+    @Override
+    public KeyspaceDefinition describeKeyspaceDefinition() throws ConnectionException {
+        return connectionPool.executeWithFailover(
+                new AbstractOperationImpl<KeyspaceDefinition>(
+                        tracerFactory.newTracer(CassandraOperationType.DESCRIBE_KEYSPACES)) {
+                    @Override
+                    public KeyspaceDefinition internalExecute(Client client, ConnectionContext context) throws Exception {
+                        List<KsDef> ksDefs = client.describe_keyspaces();
+                        for (KsDef ksDef : ksDefs) {
+                            if (ksDef.getName().equals(getKeyspaceName())) {
+                                return new ThriftKeyspaceDefinitionImpl(ksDef);
+                            }
+                        }
+                        return null;
+                    }
+                }, config.getRetryPolicy().duplicate()).getResult();
     }
 
     @Override

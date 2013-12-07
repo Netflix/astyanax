@@ -305,11 +305,11 @@ public abstract class AbstractComposite extends AbstractList<Object> implements 
             return UUIDSerializer.get();
         }
 
-        Serializer<?> s = SERIALIZERS.getInstance(serializerToComparatorMapping.inverse().get(c));
-        if (s != null) {
-            return s;
+        Class<? extends Serializer> cl = serializerToComparatorMapping.inverse().get(c);
+        if(cl == null) {
+            cl = ByteBufferSerializer.class;
         }
-        return ByteBufferSerializer.get();
+        return SERIALIZERS.getInstance(cl);
     }
 
     private Serializer<?> serializerForPosition(int i) {

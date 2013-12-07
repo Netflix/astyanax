@@ -710,6 +710,23 @@ public class SerializersTest {
     }
 
     @Test
+    public void testCompositeSerializer() {
+        // we are expecting CompositeSerializer.fromByteBuffer returns composite
+        // with all ByteBuffer elements and ByteBufferSerializer serializers
+        Serializer<Composite> cs = CompositeSerializer.get();
+
+        Composite c1 = new Composite("one", 2, 3L, 4.0);
+        Composite c2 = cs.fromByteBuffer(cs.toByteBuffer(c1));
+
+        Assert.assertEquals(c1.size(), c2.size());
+        for (int i = 0; i < c2.size(); i++) {
+            Assert.assertTrue(c2.get(i) instanceof ByteBuffer);
+            Assert.assertTrue(c2.getComponent(i).getSerializer() instanceof ByteBufferSerializer);
+            Assert.assertEquals(c1.getComponent(i).getBytes(), c2.getComponent(i).getBytes());
+        }
+    }
+
+    @Test
     public void testCompositeType() {
         String comparatorType = "CompositeType(UTF8Type,UTF8Type)";
         String columnName = "(abc,1234)";

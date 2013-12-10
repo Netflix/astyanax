@@ -10,6 +10,7 @@ import java.util.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.codahale.metrics.MetricRegistryListener;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Configuration;
 import com.datastax.driver.core.ResultSet;
@@ -30,6 +31,7 @@ import com.netflix.astyanax.clock.MicrosecondsAsyncClock;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
 import com.netflix.astyanax.connectionpool.ConnectionPoolProxy.SeedHostListener;
+import com.netflix.astyanax.connectionpool.ConnectionPoolMonitor;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.OperationResult;
@@ -55,6 +57,7 @@ import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.serializers.SerializerPackageImpl;
 import com.netflix.astyanax.serializers.UnknownComparatorException;
+import com.yammer.metrics.core.MetricsRegistryListener;
 
 public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 
@@ -70,24 +73,28 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 	private final AstyanaxConfiguration astyanaxConfig;
 	private final KeyspaceTracerFactory tracerFactory; 
 	private final Configuration javaDriverConfig;
+	private final ConnectionPoolMonitor cpMonitor;
+	private final MetricsRegistryListener metricsRegListener;
 
-	public CqlKeyspaceImpl(String ksName, AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory, ConnectionPoolConfiguration cpConfig) {
-		this(null, ksName, asConfig, tracerFactory, cpConfig);
+	public CqlKeyspaceImpl(String ksName, AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory, ConnectionPoolConfiguration cpConfig, ConnectionPoolMonitor cpMonitor) {
+		this(null, ksName, asConfig, tracerFactory, cpConfig,cpMonitor);
 	}
 
 	public CqlKeyspaceImpl(KeyspaceContext ksContext) {
-		this(ksContext.getSession(), ksContext.getKeyspace(), ksContext.getConfig(), ksContext.getTracerFactory(), null);
+		this(ksContext.getSession(), ksContext.getKeyspace(), ksContext.getConfig(), ksContext.getTracerFactory(), null, ksContext.getConnectionPoolMonitor());
 	}
 
-	CqlKeyspaceImpl(Session session, String ksName, AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory) {
-		this(session, ksName, asConfig, tracerFactory, null);
+	CqlKeyspaceImpl(Session session, String ksName, AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory, ConnectionPoolMonitor cpMonitor) {
+		this(session, ksName, asConfig, tracerFactory, null,cpMonitor);
 	}
 
-	private CqlKeyspaceImpl(Session session, String ksName, AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory, ConnectionPoolConfiguration cpConfig) {
+	private CqlKeyspaceImpl(Session session, String ksName, AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory, ConnectionPoolConfiguration cpConfig, ConnectionPoolMonitor cpMonitor) {
 		this.session = session;
 		this.keyspaceName = ksName.toLowerCase();
 		this.astyanaxConfig = asConfig;
 		this.tracerFactory = tracerFactory;
+		this.cpMonitor = cpMonitor;
+		this.metricsRegListener = ((JavaDriverConnectionPoolMonitorImpl)cpMonitor).getMetricsRegistryListener();
 		this.ksContext = new KeyspaceContext(this);
 		
 		if (asConfig.getClock() != null) {
@@ -378,6 +385,8 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 			}
 					
 			cluster = builder.build();
+			if (!(this.cpMonitor instanceof JavaDriverConnectionPoolMonitorImpl))
+				this.cluster.getMetrics().getRegistry().addListener((MetricRegistryListener) this.metricsRegListener);
 			
 			Logger.info("Connecting to cluster");
 			session = cluster.connect();
@@ -419,6 +428,9 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 		
 		public Keyspace getKeyspaceContext() {
 			return ks;
+		}
+		public ConnectionPoolMonitor getConnectionPoolMonitor(){
+			return cpMonitor;
 		}
 	}
 }

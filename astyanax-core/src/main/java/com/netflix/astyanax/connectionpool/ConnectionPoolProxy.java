@@ -21,15 +21,21 @@ public class ConnectionPoolProxy<T> implements ConnectionPool<T> {
 	private AtomicReference<Collection<Host>> lastHostList = new AtomicReference<Collection<Host>>(null);
 	
 	private final ConnectionPoolConfiguration cpConfig;
+	private final ConnectionPoolMonitor monitor;
 	
 	public ConnectionPoolProxy(ConnectionPoolConfiguration cpConfig, ConnectionFactory<T> connectionFactory, ConnectionPoolMonitor monitor) {
 		this.cpConfig = cpConfig;
+		this.monitor = monitor;
 	}
 
 	public ConnectionPoolConfiguration getConnectionPoolConfiguration() {
 		return cpConfig;
 	}
-	
+
+	public ConnectionPoolMonitor getConnectionPoolMonitor() {
+		return monitor;
+	}
+
 	@Override
 	public void setHosts(Collection<Host> hosts) {
 		

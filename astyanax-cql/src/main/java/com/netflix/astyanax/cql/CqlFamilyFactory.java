@@ -28,6 +28,7 @@ import com.netflix.astyanax.connectionpool.ConnectionPoolProxy;
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
 import com.netflix.astyanax.connectionpool.exceptions.ThrottledException;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
+import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
 
 public class CqlFamilyFactory implements AstyanaxTypeFactory<Cluster> {
 
@@ -49,7 +50,10 @@ public class CqlFamilyFactory implements AstyanaxTypeFactory<Cluster> {
 		ConnectionPoolProxy<?> cpProxy = (ConnectionPoolProxy<?>)cp; 
 		
 		ConnectionPoolConfiguration jdConfig = getOrCreateJDConfiguration(asConfig, cpProxy.getConnectionPoolConfiguration());
-		CqlKeyspaceImpl keyspace = new CqlKeyspaceImpl(ksName, asConfig, tracerFactory, jdConfig);
+		ConnectionPoolMonitor monitor = cpProxy.getConnectionPoolMonitor();
+		if (monitor != null && (monitor instanceof CountingConnectionPoolMonitor))
+			monitor = new JavaDriverConnectionPoolMonitorImpl();
+		CqlKeyspaceImpl keyspace = new CqlKeyspaceImpl(ksName, asConfig, tracerFactory, jdConfig, monitor);
 		cpProxy.addListener(keyspace);
 		
 		return keyspace;
@@ -64,7 +68,10 @@ public class CqlFamilyFactory implements AstyanaxTypeFactory<Cluster> {
 		
 		ConnectionPoolProxy<?> cpProxy = (ConnectionPoolProxy<?>)cp; 
 		ConnectionPoolConfiguration jdConfig = getOrCreateJDConfiguration(asConfig, cpProxy.getConnectionPoolConfiguration());
-		CqlClusterImpl cluster = new CqlClusterImpl(asConfig, tracerFactory, jdConfig);
+		ConnectionPoolMonitor monitor = cpProxy.getConnectionPoolMonitor();
+		if (monitor != null && (monitor instanceof CountingConnectionPoolMonitor))
+			monitor = new JavaDriverConnectionPoolMonitorImpl();
+		CqlClusterImpl cluster = new CqlClusterImpl(asConfig, tracerFactory, jdConfig, monitor);
 		((ConnectionPoolProxy<Cluster>)cp).addListener(cluster);
 		
 		return cluster;

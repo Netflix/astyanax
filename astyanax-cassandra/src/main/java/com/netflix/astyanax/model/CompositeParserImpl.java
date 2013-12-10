@@ -19,6 +19,12 @@ import java.nio.ByteBuffer;
 import java.util.UUID;
 
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.serializers.BooleanSerializer;
+import com.netflix.astyanax.serializers.IntegerSerializer;
+import com.netflix.astyanax.serializers.LongSerializer;
+import com.netflix.astyanax.serializers.StringSerializer;
+import com.netflix.astyanax.serializers.UUIDSerializer;
+
 
 public class CompositeParserImpl implements CompositeParser {
     private final Composite composite;
@@ -30,33 +36,27 @@ public class CompositeParserImpl implements CompositeParser {
 
     @Override
     public String readString() {
-
-        // TODO Auto-generated method stub
-        return null;
+        return read( StringSerializer.get() );
     }
 
     @Override
     public Long readLong() {
-        // TODO Auto-generated method stub
-        return null;
+        return read( LongSerializer.get() );
     }
 
     @Override
     public Integer readInteger() {
-        // TODO Auto-generated method stub
-        return null;
+        return read( IntegerSerializer.get() );
     }
 
     @Override
     public Boolean readBoolean() {
-        // TODO Auto-generated method stub
-        return null;
+        return read( BooleanSerializer.get() );
     }
 
     @Override
     public UUID readUUID() {
-        // TODO Auto-generated method stub
-        return null;
+        return read( UUIDSerializer.get() );
     }
 
     @SuppressWarnings("unchecked")

@@ -32,6 +32,9 @@ public class CompositeTest {
     }
 
 
+    /**
+     * Test the I/O of using a static composite works correctly
+     */
     @Test
     public void compositeSerializesPrimitives() {
         final CompositeBuilder builder = Composites.newCompositeBuilder();
@@ -58,6 +61,26 @@ public class CompositeTest {
         assertEquals( bool, parser.readBoolean() );
         assertEquals( integer, parser.readInteger() );
         assertEquals( longval, parser.readLong() );
-        assertEquals( string, parser.readString() );
     }
+
+    /**
+        * Test the index out of bounds on the read
+        */
+       @Test(expected = IndexOutOfBoundsException.class)
+       public void compositeOutofBounds() {
+           final CompositeBuilder builder = Composites.newCompositeBuilder();
+
+           final String string = "test";
+
+           builder.addString( string );
+
+
+           final CompositeParser parser = Composites.newCompositeParser( builder.build() );
+
+           //now read back
+           assertEquals( string, parser.readString() );
+
+           //read beyond available elements.  Should throw IndexOutOfBoundsException
+           parser.readString();
+       }
 }

@@ -25,6 +25,8 @@ public class CqlColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C> {
 	private final ColumnFamilyMutationContext<K,C> cfContext;
 	private ConsistencyLevel consistencyLevel = ConsistencyLevel.CL_ONE;
 	
+	private boolean useCaching = false;
+	
 	public CqlColumnFamilyQueryImpl(KeyspaceContext ksCtx, ColumnFamily<K,C> cf) {
 		this.ksContext = ksCtx;
 		this.cfContext = new ColumnFamilyMutationContext<K,C>(cf, null);
@@ -49,12 +51,12 @@ public class CqlColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C> {
 
 	@Override
 	public RowQuery<K, C> getKey(K rowKey) {
-		return new CqlRowQueryImpl<K, C>(ksContext, cfContext, rowKey, consistencyLevel);
+		return new CqlRowQueryImpl<K, C>(ksContext, cfContext, rowKey, consistencyLevel, useCaching);
 	}
 
 	@Override
 	public RowQuery<K, C> getRow(K rowKey) {
-		return new CqlRowQueryImpl<K, C>(ksContext, cfContext, rowKey, consistencyLevel);
+		return new CqlRowQueryImpl<K, C>(ksContext, cfContext, rowKey, consistencyLevel, useCaching);
 	}
 
 	@Override
@@ -65,7 +67,7 @@ public class CqlColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C> {
 	@Override
 	public RowSliceQuery<K, C> getRowRange(K startKey, K endKey, String startToken, String endToken, int count) {
 		CqlRowSlice<K> rowSlice = new CqlRowSlice<K>(startKey, endKey, startToken, endToken, count);
-		return new CqlRowSliceQueryImpl<K, C>(ksContext, cfContext, rowSlice);
+		return new CqlRowSliceQueryImpl<K, C>(ksContext, cfContext, rowSlice, useCaching);
 	}
 
 	@Override
@@ -87,7 +89,7 @@ public class CqlColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C> {
 	@Override
 	public RowSliceQuery<K, C> getRowSlice(Collection<K> keys) {
 		CqlRowSlice<K> rowSlice = new CqlRowSlice<K>(keys);
-		return new CqlRowSliceQueryImpl<K, C>(ksContext, cfContext, rowSlice);
+		return new CqlRowSliceQueryImpl<K, C>(ksContext, cfContext, rowSlice, useCaching);
 	}
 
 	@Override
@@ -117,5 +119,11 @@ public class CqlColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C> {
 	@Override
 	public IndexQuery<K, C> searchWithIndex() {
 		throw new UnsupportedOperationException("Operation not supported");
+	}
+
+	@Override
+	public ColumnFamilyQuery<K, C> withCaching(boolean condition) {
+		this.useCaching = condition;
+		return this;
 	}
 }

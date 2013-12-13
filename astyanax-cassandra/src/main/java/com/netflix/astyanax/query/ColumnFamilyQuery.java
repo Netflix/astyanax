@@ -154,5 +154,8 @@ public interface ColumnFamilyQuery<K, C> {
      * @param indexClause
      */
     IndexQuery<K, C> searchWithIndex();
+    
+    
+    ColumnFamilyQuery<K, C> withCaching(boolean condition);
 
 }

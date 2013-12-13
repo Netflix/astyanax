@@ -52,13 +52,10 @@ public class PreparedStatementTests extends ReadTests {
 	@Test
 	public void testSingleRowAllColumnsQuery() throws Exception {
 
-		// First get the prepared statement; 
-		RowQuery<String, String> query  = keyspace.prepareQuery(CF_USER_INFO).getRow("some key"); 
-		CqlPreparedStatement pStatement = query.asPreparedStatement();
-
 		for (int i=0; i<TestRowCount; i++) {
-			ColumnList<String> result = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i)
-					.withPreparedStatement(pStatement)
+			ColumnList<String> result = keyspace.prepareQuery(CF_USER_INFO)
+					.withCaching(true)
+					.getRow("acct_" + i)
 					.execute()
 					.getResult();
 			super.testAllColumnsForRow(result, i);
@@ -68,14 +65,11 @@ public class PreparedStatementTests extends ReadTests {
 	@Test
 	public void testSingleRowSingleColumnQuery() throws Exception {
 
-		// First get the prepared statement; 
-		ColumnQuery<String> query  = keyspace.prepareQuery(CF_USER_INFO).getRow("some key").getColumn("address"); 
-		CqlPreparedStatement pStatement = query.asPreparedStatement();
-
 		for (int i=0; i<TestRowCount; i++) {
-			Column<String> result = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i)
+			Column<String> result = keyspace.prepareQuery(CF_USER_INFO)
+					.withCaching(true)
+					.getRow("acct_" + i)
 					.getColumn("address")
-					.withPreparedStatement(pStatement)
 					.execute()
 					.getResult();
 			
@@ -89,15 +83,11 @@ public class PreparedStatementTests extends ReadTests {
 	@Test
 	public void testSingleRowColumnSliceQueryWithCollection() throws Exception {
 
-		// First get the prepared statement; 
-		RowQuery<String, String> query  = keyspace.prepareQuery(CF_USER_INFO).getRow("some key")
-				.withColumnSlice("firstname", "lastname", "address", "age");
-		CqlPreparedStatement pStatement = query.asPreparedStatement();
-
 		for (int i=0; i<TestRowCount; i++) {
-			ColumnList<String> result = keyspace.prepareQuery(CF_USER_INFO).getRow("acct_" + i)
+			ColumnList<String> result = keyspace.prepareQuery(CF_USER_INFO)
+					.withCaching(true)
+					.getRow("acct_" + i)
 					.withColumnSlice("firstname", "lastname", "address", "age")
-					.withPreparedStatement(pStatement)
 					.execute()
 					.getResult();
 			
@@ -113,14 +103,14 @@ public class PreparedStatementTests extends ReadTests {
 	@Test
 	public void testRowKeysAllColumnsQuery() throws Exception {
 
-		// First get the prepared statement; 
-		RowSliceQuery<String, String> query  = keyspace.prepareQuery(CF_USER_INFO)
-				.getRowSlice("acct_0", "acct_1", "acct_2", "acct_3");
-		CqlPreparedStatement pStatement = query.asPreparedStatement();
-
+		keyspace.prepareQuery(CF_USER_INFO)
+				.withCaching(true)
+				.getRowSlice("acct_0", "acct_1", "acct_2", "acct_3")
+				.execute();
+		
 		Rows<String, String> result = keyspace.prepareQuery(CF_USER_INFO)
+				.withCaching(true)
 				.getRowSlice("acct_4", "acct_5", "acct_6", "acct_7")
-				.withPreparedStatement(pStatement)
 				.execute()
 				.getResult();
 
@@ -137,15 +127,16 @@ public class PreparedStatementTests extends ReadTests {
 	@Test
 	public void testRowKeysColumnSetQuery() throws Exception {
 
-		RowSliceQuery<String, String> query  = keyspace.prepareQuery(CF_USER_INFO)
+		keyspace.prepareQuery(CF_USER_INFO)
+				.withCaching(true)
 				.getRowSlice("acct_0", "acct_1", "acct_2", "acct_3")
-				.withColumnSlice("firstname", "lastname", "age");
-		CqlPreparedStatement pStatement = query.asPreparedStatement();
+				.withColumnSlice("firstname", "lastname", "age")
+				.execute();
 
 		Rows<String, String> result = keyspace.prepareQuery(CF_USER_INFO)
+				.withCaching(true)
 				.getRowSlice("acct_4", "acct_5", "acct_6", "acct_7")
 				.withColumnSlice("firstname", "lastname", "age")
-				.withPreparedStatement(pStatement)
 				.execute()
 				.getResult();
 
@@ -162,21 +153,22 @@ public class PreparedStatementTests extends ReadTests {
 	@Test
 	public void testRowKeysColumnRangeQuery() throws Exception {
 
-		RowSliceQuery<String, String> query  = keyspace.prepareQuery(CF_ROW_RANGE)
+		keyspace.prepareQuery(CF_ROW_RANGE)
+				.withCaching(true)
 				.getRowSlice("A", "B", "C", "D")
 				.withColumnRange(new CqlRangeBuilder<String>()
 						.setStart("a")
 						.setEnd("c")
-						.build());
-		CqlPreparedStatement pStatement = query.asPreparedStatement();
-
+						.build())
+						.execute();
+		
 		Rows<String, String> result = keyspace.prepareQuery(CF_ROW_RANGE)
+				.withCaching(true)
 				.getRowSlice("E", "F", "G", "H")
 				.withColumnRange(new CqlRangeBuilder<String>()
 						.setStart("d")
 						.setEnd("h")
 						.build())
-				.withPreparedStatement(pStatement)
 				.execute()
 				.getResult();
 
@@ -196,14 +188,14 @@ public class PreparedStatementTests extends ReadTests {
 		String startToken = Murmur3Partitioner.get().getTokenForKey(StringSerializer.get().fromString("A"));
 		String endToken = Murmur3Partitioner.get().getTokenForKey(StringSerializer.get().fromString("G"));
 		
-		RowSliceQuery<String, String> query  = 
-				keyspace.prepareQuery(CF_ROW_RANGE)
-				.getRowRange(null, null, startToken, endToken, 10);
-		CqlPreparedStatement pStatement = query.asPreparedStatement();
+		keyspace.prepareQuery(CF_ROW_RANGE)
+				.withCaching(true)
+				.getRowRange(null, null, startToken, endToken, 10)
+				.execute();
 
 		Rows<String, String> result = keyspace.prepareQuery(CF_ROW_RANGE)
+				.withCaching(true)
 				.getRowRange(null, null, startToken, endToken, 10)
-				.withPreparedStatement(pStatement)
 				.execute()
 				.getResult();
 
@@ -220,16 +212,16 @@ public class PreparedStatementTests extends ReadTests {
 		String startToken = Murmur3Partitioner.get().getTokenForKey(StringSerializer.get().fromString("A"));
 		String endToken = Murmur3Partitioner.get().getTokenForKey(StringSerializer.get().fromString("G"));
 		
-		RowSliceQuery<String, String> query  = 
-				keyspace.prepareQuery(CF_ROW_RANGE)
-				.getRowRange(null, null, startToken, endToken, 10)
-				.withColumnSlice("a", "s", "d", "f");
-		CqlPreparedStatement pStatement = query.asPreparedStatement();
-
-		Rows<String, String> result = keyspace.prepareQuery(CF_ROW_RANGE)
+		keyspace.prepareQuery(CF_ROW_RANGE)
+				.withCaching(true)
 				.getRowRange(null, null, startToken, endToken, 10)
 				.withColumnSlice("a", "s", "d", "f")
-				.withPreparedStatement(pStatement)
+				.execute();
+		
+		Rows<String, String> result = keyspace.prepareQuery(CF_ROW_RANGE)
+				.withCaching(true)
+				.getRowRange(null, null, startToken, endToken, 10)
+				.withColumnSlice("a", "s", "d", "f")
 				.execute()
 				.getResult();
 
@@ -246,22 +238,22 @@ public class PreparedStatementTests extends ReadTests {
 		String startToken = Murmur3Partitioner.get().getTokenForKey(StringSerializer.get().fromString("A"));
 		String endToken = Murmur3Partitioner.get().getTokenForKey(StringSerializer.get().fromString("G"));
 		
-		RowSliceQuery<String, String> query  = 
-				keyspace.prepareQuery(CF_ROW_RANGE)
-				.getRowRange(null, null, startToken, endToken, 10)
-				.withColumnRange(new CqlRangeBuilder<String>()
-						.setStart("d")
-						.setEnd("h")
-						.build());
-		CqlPreparedStatement pStatement = query.asPreparedStatement();
-
-		Rows<String, String> result = keyspace.prepareQuery(CF_ROW_RANGE)
+		keyspace.prepareQuery(CF_ROW_RANGE)
+				.withCaching(true)
 				.getRowRange(null, null, startToken, endToken, 10)
 				.withColumnRange(new CqlRangeBuilder<String>()
 						.setStart("d")
 						.setEnd("h")
 						.build())
-				.withPreparedStatement(pStatement)
+						.execute();
+
+		Rows<String, String> result = keyspace.prepareQuery(CF_ROW_RANGE)
+				.withCaching(true)
+				.getRowRange(null, null, startToken, endToken, 10)
+				.withColumnRange(new CqlRangeBuilder<String>()
+						.setStart("d")
+						.setEnd("h")
+						.build())
 				.execute()
 				.getResult();
 

@@ -70,8 +70,6 @@ public class RowSliceRowRangeQueryTests extends ReadTests {
 		testRowRangeWithAllColumns(rowDeleted);
 		testRowRangeWithColumnSet(rowDeleted);
 		testRowRangeWithColumnRange(rowDeleted);
-		
-		//keyspace.dropColumnFamily(CF_COLUMN_RANGE_TEST);
 	}
 	
 	private void testRowKeysWithAllColumns(boolean rowDeleted) throws Exception {

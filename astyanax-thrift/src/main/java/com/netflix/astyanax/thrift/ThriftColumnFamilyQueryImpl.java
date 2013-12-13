@@ -783,4 +783,10 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
     public RowSliceQuery<K, C> getRowSlice(Iterable<K> keys) {
         return getKeySlice(keys);
     }
+
+	@Override
+	public ColumnFamilyQuery<K, C> withCaching(boolean condition) {
+		// do nothing
+		return this;
+	}
 }

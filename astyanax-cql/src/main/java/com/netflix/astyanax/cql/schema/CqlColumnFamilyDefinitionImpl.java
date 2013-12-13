@@ -30,6 +30,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.cql.CqlOperationResultImpl;
+import com.netflix.astyanax.cql.reads.CFRowQueryGen;
 import com.netflix.astyanax.cql.util.CqlTypeMapping;
 import com.netflix.astyanax.cql.util.DataTypeMapping;
 import com.netflix.astyanax.cql.writes.CFMutationQueryGen;
@@ -63,6 +64,7 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	private boolean alterTable = false;
 
 	private CFMutationQueryGen mutationQueryGen = null;
+	private CFRowQueryGen rowQueryGen = null;
 	
 	public CqlColumnFamilyDefinitionImpl(Session session) {
 		this.session = session;
@@ -85,6 +87,7 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	public CqlColumnFamilyDefinitionImpl(Session session, Row row) {
 		initFromResultSet(session, row);
 		mutationQueryGen = new CFMutationQueryGen(session, keyspaceName, this);
+		rowQueryGen = new CFRowQueryGen(session, keyspaceName, this);
 	}
 
 	public CqlColumnFamilyDefinitionImpl(Session session, String keyspace, ColumnFamily<?, ?> columnFamily, Map<String, Object> options) {
@@ -855,5 +858,9 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	
 	public CFMutationQueryGen getMutationQueryGenerator() {
 		return mutationQueryGen;
+	}
+	
+	public CFRowQueryGen getRowQueryGenerator() {
+		return rowQueryGen;
 	}
 }

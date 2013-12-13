@@ -28,6 +28,7 @@ import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.CqlPreparedStatement;
@@ -61,51 +62,71 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 
 	private final CqlRowSlice<K> rowSlice;
 	private CqlColumnSlice<C> columnSlice = new CqlColumnSlice<C>();
+	
 	private CompositeByteBufferRange compositeRange = null;
+
 	private DirectCqlPreparedStatement preparedStatement = null; 
 
 	private final boolean isPaginating; 
-
-	public CqlRowSliceQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<K,C> cfCtx, CqlRowSlice<K> rSlice) {
-		this(ksCtx, cfCtx, rSlice, true);
+	private boolean useCaching = false;
+	
+	public enum RowSliceQueryType {
+		RowKeys, RowRange
 	}
 
-	public CqlRowSliceQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<K,C> cfCtx, CqlRowSlice<K> rSlice, boolean condition) {
+	public enum ColumnSliceQueryType {
+		AllColumns, ColumnSet, ColumnRange; 
+	}
+	
+	private final RowSliceQueryType rowQueryType;
+	private ColumnSliceQueryType colQueryType = ColumnSliceQueryType.AllColumns;
+	
+	public CqlRowSliceQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<K,C> cfCtx, CqlRowSlice<K> rSlice, boolean useCaching) {
+		this(ksCtx, cfCtx, rSlice, true, useCaching);
+	}
+
+	public CqlRowSliceQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<K,C> cfCtx, CqlRowSlice<K> rSlice, boolean condition, boolean useCaching) {
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;
 		this.rowSlice = rSlice;
 		this.isPaginating = condition;
+		this.rowQueryType = (rowSlice.isRangeQuery()) ? RowSliceQueryType.RowRange : RowSliceQueryType.RowKeys;
+		this.useCaching = useCaching;
 	}
 
 	@Override
 	public OperationResult<Rows<K, C>> execute() throws ConnectionException {
-		return new InternalRowQueryExecutionImpl().execute();
+		return new InternalRowQueryExecutionImpl(this).execute();
 	}
 
 	@Override
 	public ListenableFuture<OperationResult<Rows<K, C>>> executeAsync() throws ConnectionException {
-		return new InternalRowQueryExecutionImpl().executeAsync();
+		return new InternalRowQueryExecutionImpl(this).executeAsync();
 	}
 
 	@Override
 	public RowSliceQuery<K, C> withColumnSlice(C... columns) {
+		colQueryType = ColumnSliceQueryType.ColumnSet;
 		return withColumnSlice(Arrays.asList(columns));
 	}
 
 	@Override
 	public RowSliceQuery<K, C> withColumnSlice(Collection<C> columns) {
+		colQueryType = ColumnSliceQueryType.ColumnSet;
 		this.columnSlice = new CqlColumnSlice<C>(columns);
 		return this;
 	}
 
 	@Override
 	public RowSliceQuery<K, C> withColumnSlice(ColumnSlice<C> columns) {
+		colQueryType = ColumnSliceQueryType.ColumnSet;
 		this.columnSlice = new CqlColumnSlice<C>(columns);
 		return this;
 	}
 
 	@Override
 	public RowSliceQuery<K, C> withColumnRange(C startColumn, C endColumn, boolean reversed, int count) {
+		colQueryType = ColumnSliceQueryType.ColumnRange;
 		this.columnSlice = new CqlColumnSlice<C>(new CqlRangeBuilder<C>()
 				.setColumn("column1")
 				.setStart(startColumn)
@@ -118,6 +139,7 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 
 	@Override
 	public RowSliceQuery<K, C> withColumnRange(ByteBuffer startColumn, ByteBuffer endColumn, boolean reversed, int limit) {
+		colQueryType = ColumnSliceQueryType.ColumnRange;
 		Serializer<C> colSerializer = cfContext.getColumnFamily().getColumnSerializer();
 		C start = (startColumn != null && startColumn.capacity() > 0) ? colSerializer.fromByteBuffer(startColumn) : null;
 		C end = (endColumn != null && endColumn.capacity() > 0) ? colSerializer.fromByteBuffer(endColumn) : null;
@@ -126,6 +148,8 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 
 	@Override
 	public RowSliceQuery<K, C> withColumnRange(ByteBufferRange range) {
+
+		colQueryType = ColumnSliceQueryType.ColumnRange;
 
 		if (range instanceof CompositeByteBufferRange) {
 			this.compositeRange = (CompositeByteBufferRange) range;
@@ -143,11 +167,53 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 
 	@Override
 	public RowSliceColumnCountQuery<K> getColumnCounts() {
-		Statement query = new InternalRowQueryExecutionImpl().getQuery();
+		Statement query = new InternalRowQueryExecutionImpl(this).getQuery();
 		return new CqlRowSliceColumnCountQueryImpl<K>(ksContext, cfContext, query);
 	}
 
 	private class InternalRowQueryExecutionImpl extends CqlAbstractExecutionImpl<Rows<K, C>> {
+
+		private final CqlColumnFamilyDefinitionImpl cfDef = (CqlColumnFamilyDefinitionImpl) cf.getColumnFamilyDefinition();
+		private final CqlRowSliceQueryImpl<K, C> rowSliceQuery; 
+		
+		public InternalRowQueryExecutionImpl(CqlRowSliceQueryImpl<K, C> rSliceQuery) {
+			super(ksContext, cfContext);
+			this.rowSliceQuery = rSliceQuery;
+		}
+		
+		public InternalRowQueryExecutionImpl(KeyspaceContext ksContext, ColumnFamilyMutationContext<?, ?> cfContext) {
+			super(ksContext, cfContext);
+			this.rowSliceQuery = null;
+		}
+
+		@Override
+		public Statement getQuery() {
+			return cfDef.getRowQueryGenerator().getQueryStatement(rowSliceQuery, useCaching);
+		}
+
+		@Override
+		public Rows<K, C> parseResultSet(ResultSet rs) throws NotFoundException {
+			if (!isPaginating) {
+				List<com.datastax.driver.core.Row> rows = rs.all();
+				if (rows == null || rows.isEmpty()) {
+					return new CqlRowListImpl<K, C>();
+				}
+				return new CqlRowListImpl<K, C>(rows, (ColumnFamily<K, C>) cf);
+			} else {
+				if (rs == null) {
+					return new CqlRowListImpl<K, C>();
+				}
+				return new CqlRowListIterator<K, C>(rs, (ColumnFamily<K, C>) cf);
+			}
+		}
+
+		@Override
+		public CassandraOperationType getOperationType() {
+			return CassandraOperationType.GET_ROW;
+		}
+		
+	}
+		private class InternalRowQueryExecutionImpl2 extends CqlAbstractExecutionImpl<Rows<K, C>> {
 
 		private final CqlColumnFamilyDefinitionImpl cfDef = (CqlColumnFamilyDefinitionImpl) cf.getColumnFamilyDefinition();
 
@@ -158,11 +224,11 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 		
 		private boolean prepareStatement = false; 
 		
-		public InternalRowQueryExecutionImpl() {
+		public InternalRowQueryExecutionImpl2() {
 			super(ksContext, cfContext);
 		}
 
-		public InternalRowQueryExecutionImpl(boolean condition) {
+		public InternalRowQueryExecutionImpl2(boolean condition) {
 			super(ksContext, cfContext);
 			this.prepareStatement = condition;
 		}
@@ -708,11 +774,32 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 	@Override
 	public CqlPreparedStatement asPreparedStatement() {
 		this.preparedStatement = null;
-		RegularStatement stmt = (RegularStatement) new InternalRowQueryExecutionImpl(true).getQuery();
+		RegularStatement stmt = (RegularStatement) new InternalRowQueryExecutionImpl(this).getQuery();
 		Session session = ksContext.getSession();
 		PreparedStatement pStmt = session.prepare(stmt.getQueryString());
 		this.preparedStatement = new DirectCqlPreparedStatement(session, pStmt);
 		return this.preparedStatement;
+	}
+	
+	
+	public CqlRowSlice<K> getRowSlice() {
+		return rowSlice;
+	}
+	
+	public CqlColumnSlice<C> getColumnSlice() {
+		return columnSlice;
+	}
+
+	public CompositeByteBufferRange getCompositeRange() {
+		return compositeRange;
+	}
+	
+	public ColumnSliceQueryType getColQueryType() {
+		return colQueryType;
+	}
+
+	public RowSliceQueryType getRowQueryType() {
+		return rowQueryType;
 	}
 }
 

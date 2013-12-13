@@ -1,24 +1,22 @@
 package com.netflix.astyanax.cql.writes;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Statement;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.ColumnMutation;
 import com.netflix.astyanax.Execution;
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.cql.ConsistencyLevelMapping;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
 import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
-import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.serializers.BooleanSerializer;
@@ -36,26 +34,29 @@ public class CqlColumnMutationImpl<K,C> implements ColumnMutation {
 
 	protected final KeyspaceContext ksContext;
 	protected final ColumnFamilyMutationContext<K,C> cfContext;
+	protected final CqlColumnFamilyDefinitionImpl cfDef;
+	
 	protected final Object columnName;
+	protected Object columnValue;
 
 	// Tracking state
-	protected Object columnValue;
-	protected boolean counterColumn = false;
-	protected boolean deleteColumn = false;
-	
+	public enum ColMutationType {
+		UpdateColumn, CounterColumn, DeleteColumn;
+	}
+	private ColMutationType type = ColMutationType.UpdateColumn;
+
 	private ConsistencyLevel consistencyLevel;
 	private final AtomicReference<Long> timestamp = new AtomicReference<Long>(null);
 	private final AtomicReference<Integer> ttl = new AtomicReference<Integer>(null);
 	
-	private final CFMutationQueryGenerator queryGen; 
+	private final CFMutationQueryGen queryGen; 
 	
 	public CqlColumnMutationImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<K,C> cfCtx, Object cName) {
 		this.ksContext = ksCtx;
-		this.cfContext = cfCtx;
 		this.columnName = cName;
-		
-		this.queryGen = new CFMutationQueryGenerator(ksContext, cfContext, new ArrayList<CqlColumnMutationImpl<?,?>>(), 
-				new AtomicReference<Boolean>(false), ttl, timestamp, consistencyLevel);
+		this.cfContext = cfCtx;
+		this.cfDef = (CqlColumnFamilyDefinitionImpl) cfContext.getColumnFamily().getColumnFamilyDefinition();
+		this.queryGen = cfDef.getMutationQueryGenerator();
 	}
 
 	@Override
@@ -66,7 +67,7 @@ public class CqlColumnMutationImpl<K,C> implements ColumnMutation {
 
 	@Override
 	public ColumnMutation withRetryPolicy(RetryPolicy retry) {
-		this.cfContext.setRetryPolicy(retry.duplicate());
+		this.cfContext.setRetryPolicy(retry);
 		return this;
 	}
 
@@ -141,8 +142,6 @@ public class CqlColumnMutationImpl<K,C> implements ColumnMutation {
 	@Override
 	public <T> Execution<Void> putValue(T value, Serializer<T> serializer, Integer ttl) {
 		
-		ColumnFamily<K,C> cf = cfContext.getColumnFamily();
-		CqlColumnFamilyDefinitionImpl cfDef = (CqlColumnFamilyDefinitionImpl) cf.getColumnFamilyDefinition();
 		if (cfDef.getClusteringKeyColumnDefinitionList().size() == 0) {
 			return exec(value, ttl, CassandraOperationType.COLUMN_MUTATE);
 		}
@@ -166,25 +165,25 @@ public class CqlColumnMutationImpl<K,C> implements ColumnMutation {
 
 	@Override
 	public Execution<Void> incrementCounterColumn(long amount) {
-		this.counterColumn = true;
+		type = ColMutationType.CounterColumn;
 		return exec(amount, null, CassandraOperationType.COUNTER_MUTATE);
 	}
 
 	@Override
 	public Execution<Void> deleteColumn() {
-		deleteColumn = true;
+		type = ColMutationType.DeleteColumn;
 		return exec(null, null, CassandraOperationType.COLUMN_DELETE);
 	}
 
 	@Override
 	public Execution<Void> deleteCounterColumn() {
-		deleteColumn = true;
+		type = ColMutationType.DeleteColumn;
 		return exec(null, null, CassandraOperationType.COLUMN_DELETE);
 	}
 
 	private Execution<Void> exec(final Object value, final Integer overrideTTL, final CassandraOperationType opType) {
 
-		final CqlColumnMutationImpl<?,?> colMutation = this;
+		final CqlColumnMutationImpl<K, C> thisMutation = this;
 		this.columnValue = value;
 		if (overrideTTL != null) {
 			this.ttl.set(overrideTTL);
@@ -199,13 +198,10 @@ public class CqlColumnMutationImpl<K,C> implements ColumnMutation {
 
 			@Override
 			public Statement getQuery() {
-				BatchedStatements statements = new BatchedStatements();
-				queryGen.appendQuery(statements, colMutation);
-						
-				String query = statements.getBatchQuery(false);
-				
-				PreparedStatement pStmt = ksContext.getSession().prepare(query);
-				BoundStatement bStmt = pStmt.bind(statements.getBatchValues().toArray());
+				BoundStatement bStmt = queryGen.getColumnMutationStatement(thisMutation, false);
+				if (thisMutation.getConsistencyLevel() != null) {
+					bStmt.setConsistencyLevel(ConsistencyLevelMapping.getCL(getConsistencyLevel()));
+				}
 				return bStmt;
 			}
 
@@ -226,5 +222,17 @@ public class CqlColumnMutationImpl<K,C> implements ColumnMutation {
 	
 	public String toString() {
 		return columnName.toString();
+	}
+
+	public ColMutationType getType() {
+		return type;
+	}
+	
+	public K getRowKey() {
+		return cfContext.getRowKey();
+	}
+	
+	public ConsistencyLevel getConsistencyLevel() {
+		return this.consistencyLevel;
 	}
 }

@@ -4,6 +4,7 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.PreparedStatement;
@@ -18,7 +19,7 @@ import com.netflix.astyanax.ddl.ColumnDefinition;
 
 public class FlatTableRowQueryGen {
 	
-	private Session session;
+	private AtomicReference<Session> sessionRef = new AtomicReference<Session>(null);
 	private final String keyspace; 
 	private final CqlColumnFamilyDefinitionImpl cfDef;
 
@@ -33,14 +34,16 @@ public class FlatTableRowQueryGen {
 
 		this.keyspace = keyspaceName;
 		this.cfDef = cfDefinition;
-		this.session = session;
+		this.sessionRef.set(session);
+		
+		System.out.println("FlatTable The session: " + session);
 
 		partitionKeyCol = cfDef.getPartitionKeyColumnDefinition().getName();
 		allPrimayKeyCols = cfDef.getAllPkColNames();
 		regularCols = cfDef.getRegularColumnDefinitionList();
 	}
 	
-	private QueryGenCache<CqlRowQueryImpl<?,?>> SelectEntireRow = new QueryGenCache<CqlRowQueryImpl<?,?>>(session) {
+	private QueryGenCache<CqlRowQueryImpl<?,?>> SelectEntireRow = new QueryGenCache<CqlRowQueryImpl<?,?>>(sessionRef) {
 
 		@Override
 		public Callable<RegularStatement> getQueryGen(CqlRowQueryImpl<?, ?> rowQuery) {
@@ -72,7 +75,7 @@ public class FlatTableRowQueryGen {
 		}
 	};
 
-	private QueryGenCache<CqlRowQueryImpl<?,?>> SelectColumnSlice = new QueryGenCache<CqlRowQueryImpl<?,?>>(session) {
+	private QueryGenCache<CqlRowQueryImpl<?,?>> SelectColumnSlice = new QueryGenCache<CqlRowQueryImpl<?,?>>(sessionRef) {
 
 		@Override
 		public Callable<RegularStatement> getQueryGen(final CqlRowQueryImpl<?, ?> rowQuery) {
@@ -101,7 +104,7 @@ public class FlatTableRowQueryGen {
 		}
 	};
 
-	private QueryGenCache<CqlRowQueryImpl<?,?>> SelectColumnRange = new QueryGenCache<CqlRowQueryImpl<?,?>>(session) {
+	private QueryGenCache<CqlRowQueryImpl<?,?>> SelectColumnRange = new QueryGenCache<CqlRowQueryImpl<?,?>>(sessionRef) {
 
 		@Override
 		public Callable<RegularStatement> getQueryGen(final CqlRowQueryImpl<?, ?> rowQuery) {
@@ -134,6 +137,4 @@ public class FlatTableRowQueryGen {
 			throw new RuntimeException("RowQuery use case not supported. Fix this!!");
 		}
 	}
-
-
 }

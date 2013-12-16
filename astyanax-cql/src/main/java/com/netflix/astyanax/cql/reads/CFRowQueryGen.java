@@ -29,7 +29,7 @@ import com.netflix.astyanax.serializers.CompositeRangeBuilder.RangeQueryRecord;
 
 public class CFRowQueryGen {
 
-	private final Session session;
+	private final AtomicReference<Session> sessionRef = new AtomicReference<Session>(null);
 	private final String keyspace; 
 	private final CqlColumnFamilyDefinitionImpl cfDef;
 
@@ -52,7 +52,7 @@ public class CFRowQueryGen {
 
 		this.keyspace = keyspaceName;
 		this.cfDef = cfDefinition;
-		this.session = session;
+		this.sessionRef.set(session);
 
 		partitionKeyCol = cfDef.getPartitionKeyColumnDefinition().getName();
 		allPrimayKeyCols = cfDef.getAllPkColNames();
@@ -68,49 +68,7 @@ public class CFRowQueryGen {
 		flatTableRowSliceQueryGen = new FlatTableRowSliceQueryGen(session, keyspaceName, cfDefinition);
 	}
 
-	abstract class RowQueryCache {
-
-		private final AtomicReference<PreparedStatement> cachedStatement = new AtomicReference<PreparedStatement>(null);
-
-		public abstract Callable<RegularStatement> getQueryGen(CqlRowQueryImpl<?,?> rowQuery);
-
-		public BoundStatement getBoundStatement(CqlRowQueryImpl<?,?> rowQuery, boolean useCaching) {
-
-			PreparedStatement pStatement = getPreparedStatement(rowQuery, useCaching);
-			return bindValues(pStatement, rowQuery);
-		}
-
-		public abstract BoundStatement bindValues(PreparedStatement pStatement, CqlRowQueryImpl<?,?> rowQuery);
-
-		public PreparedStatement getPreparedStatement(CqlRowQueryImpl<?,?> rowQuery, boolean useCaching) {
-
-			PreparedStatement pStatement = null;
-
-			if (useCaching) {
-				pStatement = cachedStatement.get();
-			}
-
-			if (pStatement == null) {
-				try {
-					RegularStatement query = getQueryGen(rowQuery).call();
-					//System.out.println("Query: " + query.getQueryString());
-					System.out.println("query " + query.getQueryString());
-					pStatement = session.prepare(query.getQueryString());
-					System.out.println("pStatement " + pStatement.getQueryString());
-				} catch (Exception e) {
-					throw new RuntimeException(e);
-				}
-			}
-
-			if (useCaching && cachedStatement.get() == null) {
-				cachedStatement.set(pStatement);
-			}
-			return pStatement;
-		}
-	}
-
-
-	private RowQueryCache SelectEntireRow = new RowQueryCache() {
+	private QueryGenCache<CqlRowQueryImpl<?,?>> SelectEntireRow = new QueryGenCache<CqlRowQueryImpl<?,?>>(sessionRef) {
 
 		@Override
 		public Callable<RegularStatement> getQueryGen(CqlRowQueryImpl<?, ?> rowQuery) {
@@ -143,7 +101,7 @@ public class CFRowQueryGen {
 		}
 	};
 
-	private RowQueryCache SelectColumnSliceWithClusteringKey = new RowQueryCache() {
+	private QueryGenCache<CqlRowQueryImpl<?,?>> SelectColumnSliceWithClusteringKey = new QueryGenCache<CqlRowQueryImpl<?,?>>(sessionRef) {
 
 		@Override
 		public Callable<RegularStatement> getQueryGen(final CqlRowQueryImpl<?, ?> rowQuery) {
@@ -197,7 +155,7 @@ public class CFRowQueryGen {
 		}
 	};
 
-	private RowQueryCache SelectColumnRangeWithClusteringKey = new RowQueryCache() {
+	private QueryGenCache<CqlRowQueryImpl<?,?>> SelectColumnRangeWithClusteringKey = new QueryGenCache<CqlRowQueryImpl<?,?>>(sessionRef) {
 
 		@Override
 		public Callable<RegularStatement> getQueryGen(final CqlRowQueryImpl<?, ?> rowQuery) {
@@ -271,7 +229,7 @@ public class CFRowQueryGen {
 		}
 	};
 
-	private RowQueryCache SelectWithCompositeColumn = new RowQueryCache() {
+	private QueryGenCache<CqlRowQueryImpl<?,?>> SelectWithCompositeColumn = new QueryGenCache<CqlRowQueryImpl<?,?>>(sessionRef) {
 
 		@Override
 		public Callable<RegularStatement> getQueryGen(final CqlRowQueryImpl<?, ?> rowQuery) {

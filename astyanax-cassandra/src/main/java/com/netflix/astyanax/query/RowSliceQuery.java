@@ -19,7 +19,6 @@ import java.nio.ByteBuffer;
 import java.util.Collection;
 
 import com.netflix.astyanax.Execution;
-import com.netflix.astyanax.cql.CqlPreparedStatement;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.ColumnSlice;
 import com.netflix.astyanax.model.Rows;
@@ -95,17 +94,4 @@ public interface RowSliceQuery<K, C> extends Execution<Rows<K, C>> {
      * @return
      */
     RowSliceColumnCountQuery<K> getColumnCounts();
-    
-    /**
-     * Init the query with the provided prepared statement
-     * @param preparedStatement
-     * @return RowSliceQuery<K, C>
-     */
-    RowSliceQuery<K, C> withPreparedStatement(CqlPreparedStatement preparedStatement);
-
-    /**
-     * Return the associated prepared statement for this query
-     * @return CqlPreparedStatement
-     */
-    CqlPreparedStatement asPreparedStatement();
 }

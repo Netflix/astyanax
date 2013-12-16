@@ -8,6 +8,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.PreparedStatement;
@@ -22,7 +23,7 @@ import com.netflix.astyanax.ddl.ColumnDefinition;
 
 public class FlatTableRowSliceQueryGen {
 
-	protected Session session;
+	protected AtomicReference<Session> sessionRef = new AtomicReference<Session>(null);
 	protected final String keyspace; 
 	protected final CqlColumnFamilyDefinitionImpl cfDef;
 
@@ -36,7 +37,7 @@ public class FlatTableRowSliceQueryGen {
 
 		this.keyspace = keyspaceName;
 		this.cfDef = cfDefinition;
-		this.session = session;
+		this.sessionRef.set(session);
 
 		partitionKeyCol = cfDef.getPartitionKeyColumnDefinition().getName();
 		allPrimayKeyCols = cfDef.getAllPkColNames();
@@ -62,7 +63,7 @@ public class FlatTableRowSliceQueryGen {
 		return select.from(keyspace, cfDef.getName());
 	}
 
-	private QueryGenCache<CqlRowSliceQueryImpl<?,?>> SelectAllColumnsForRowKeys = new QueryGenCache<CqlRowSliceQueryImpl<?,?>>(session) {
+	private QueryGenCache<CqlRowSliceQueryImpl<?,?>> SelectAllColumnsForRowKeys = new QueryGenCache<CqlRowSliceQueryImpl<?,?>>(sessionRef) {
 
 		@Override
 		public Callable<RegularStatement> getQueryGen(final CqlRowSliceQueryImpl<?, ?> rowSliceQuery) {
@@ -83,7 +84,7 @@ public class FlatTableRowSliceQueryGen {
 		}
 	};
 	
-	private QueryGenCache<CqlRowSliceQueryImpl<?,?>> SelectColumnSetForRowKeys = new QueryGenCache<CqlRowSliceQueryImpl<?,?>>(session) {
+	private QueryGenCache<CqlRowSliceQueryImpl<?,?>> SelectColumnSetForRowKeys = new QueryGenCache<CqlRowSliceQueryImpl<?,?>>(sessionRef) {
 
 		@Override
 		public Callable<RegularStatement> getQueryGen(final CqlRowSliceQueryImpl<?, ?> rowSliceQuery) {
@@ -111,25 +112,6 @@ public class FlatTableRowSliceQueryGen {
 			List<Object> values = new ArrayList<Object>();
 			values.addAll(rowSliceQuery.getRowSlice().getKeys());
 			return pStatement.bind(values.toArray());		
-		}
-	};
-	
-	private QueryGenCache<CqlRowSliceQueryImpl<?,?>> SelectColumnRangeForRowKeys = new QueryGenCache<CqlRowSliceQueryImpl<?,?>>(session) {
-
-		@Override
-		public Callable<RegularStatement> getQueryGen(final CqlRowSliceQueryImpl<?, ?> rowSliceQuery) {
-			return new Callable<RegularStatement>() {
-
-				@Override
-				public RegularStatement call() throws Exception {
-					throw new RuntimeException("Cannot perform col range query with current schema, missing pk cols");
-				}
-			};
-		}
-
-		@Override
-		public BoundStatement bindValues(PreparedStatement pStatement, CqlRowSliceQueryImpl<?, ?> rowSliceQuery) {
-			throw new RuntimeException("Cannot perform col range query with current schema, missing pk cols");
 		}
 	};
 	
@@ -239,7 +221,7 @@ public class FlatTableRowSliceQueryGen {
 	}
 
 
-	private QueryGenCache<CqlRowSliceQueryImpl<?,?>> SelectAllColumnsForRowRange = new QueryGenCache<CqlRowSliceQueryImpl<?,?>>(session) {
+	private QueryGenCache<CqlRowSliceQueryImpl<?,?>> SelectAllColumnsForRowRange = new QueryGenCache<CqlRowSliceQueryImpl<?,?>>(sessionRef) {
 
 		@Override
 		public Callable<RegularStatement> getQueryGen(final CqlRowSliceQueryImpl<?, ?> rowSliceQuery) {
@@ -262,7 +244,7 @@ public class FlatTableRowSliceQueryGen {
 		}
 	};
 	
-	private QueryGenCache<CqlRowSliceQueryImpl<?,?>> SelectColumnSetForRowRange = new QueryGenCache<CqlRowSliceQueryImpl<?,?>>(session) {
+	private QueryGenCache<CqlRowSliceQueryImpl<?,?>> SelectColumnSetForRowRange = new QueryGenCache<CqlRowSliceQueryImpl<?,?>>(sessionRef) {
 
 		@Override
 		public Callable<RegularStatement> getQueryGen(final CqlRowSliceQueryImpl<?, ?> rowSliceQuery) {

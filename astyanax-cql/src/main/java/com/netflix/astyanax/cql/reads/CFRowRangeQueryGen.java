@@ -133,7 +133,7 @@ public class CFRowRangeQueryGen extends CFRowSliceQueryGen {
 	}
 
 
-	private RowSliceQueryCache SelectAllColumnsForRowRange = new RowSliceQueryCache() {
+	private QueryGenCache<CqlRowSliceQueryImpl<?,?>> SelectAllColumnsForRowRange = new QueryGenCache<CqlRowSliceQueryImpl<?,?>>(sessionRef) {
 
 		@Override
 		public Callable<RegularStatement> getQueryGen(final CqlRowSliceQueryImpl<?, ?> rowSliceQuery) {
@@ -156,7 +156,7 @@ public class CFRowRangeQueryGen extends CFRowSliceQueryGen {
 		}
 	};
 	
-	private RowSliceQueryCache SelectColumnSetForRowRange = new RowSliceQueryCache() {
+	private QueryGenCache<CqlRowSliceQueryImpl<?,?>> SelectColumnSetForRowRange = new QueryGenCache<CqlRowSliceQueryImpl<?,?>>(sessionRef) {
 
 		@Override
 		public Callable<RegularStatement> getQueryGen(final CqlRowSliceQueryImpl<?, ?> rowSliceQuery) {
@@ -195,7 +195,7 @@ public class CFRowRangeQueryGen extends CFRowSliceQueryGen {
 		}
 	};
 
-	private RowSliceQueryCache SelectColumnRangeForRowRange = new RowSliceQueryCache() {
+	private QueryGenCache<CqlRowSliceQueryImpl<?,?>> SelectColumnRangeForRowRange = new QueryGenCache<CqlRowSliceQueryImpl<?,?>>(sessionRef) {
 
 		@Override
 		public Callable<RegularStatement> getQueryGen(final CqlRowSliceQueryImpl<?, ?> rowSliceQuery) {
@@ -231,7 +231,7 @@ public class CFRowRangeQueryGen extends CFRowSliceQueryGen {
 		}
 	};
 	
-	private RowSliceQueryCache SelectCompositeColumnRangeForRowRange = new RowSliceQueryCache() {
+	private QueryGenCache<CqlRowSliceQueryImpl<?,?>> SelectCompositeColumnRangeForRowRange = new QueryGenCache<CqlRowSliceQueryImpl<?,?>>(sessionRef) {
 
 		@Override
 		public Callable<RegularStatement> getQueryGen(final CqlRowSliceQueryImpl<?, ?> rowSliceQuery) {

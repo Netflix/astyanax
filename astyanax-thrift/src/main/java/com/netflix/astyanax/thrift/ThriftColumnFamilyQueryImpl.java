@@ -391,16 +391,6 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                     }
                 };
             }
-            
-        	@Override
-        	public RowQuery<K, C> withPreparedStatement(CqlPreparedStatement pStatement) {
-				throw new UnsupportedOperationException("Cannot use PreparedStatement with RowQuery");
-        	}
-
-			@Override
-			public CqlPreparedStatement asPreparedStatement() {
-				throw new UnsupportedOperationException("Cannot use PreparedStatement with RowQuery");
-			}
         };
     }
 
@@ -462,16 +452,6 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
             public RowSliceColumnCountQuery<K> getColumnCounts() {
                 throw new RuntimeException("Not supported yet");
             }
-
-			@Override
-			public RowSliceQuery<K, C> withPreparedStatement(CqlPreparedStatement preparedStatement) {
-				throw new UnsupportedOperationException("Cannot use PreparedStatement with RowSliceQuery");
-			}
-
-			@Override
-			public CqlPreparedStatement asPreparedStatement() {
-				throw new UnsupportedOperationException("Cannot use PreparedStatement with RowSliceQuery");
-			}
         };
     }
 
@@ -548,16 +528,6 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                     }
                 };
             }
-
-			@Override
-			public RowSliceQuery<K, C> withPreparedStatement(CqlPreparedStatement preparedStatement) {
-				throw new UnsupportedOperationException("Cannot use PreparedStatement with RowSliceQuery");
-			}
-
-			@Override
-			public CqlPreparedStatement asPreparedStatement() {
-				throw new UnsupportedOperationException("Cannot use PreparedStatement with RowSliceQuery");
-			}
         };
     }
 
@@ -652,16 +622,6 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                     }
                 };
             }
-
-			@Override
-			public RowSliceQuery<K, C> withPreparedStatement(CqlPreparedStatement preparedStatement) {
-				throw new UnsupportedOperationException("Cannot use PreparedStatement with RowSliceQuery");
-			}
-
-			@Override
-			public CqlPreparedStatement asPreparedStatement() {
-				throw new UnsupportedOperationException("Cannot use PreparedStatement with RowSliceQuery");
-			}
         };
     }
 

@@ -8,12 +8,8 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.lt;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.lte;
 
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.RegularStatement;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
@@ -28,7 +24,7 @@ import com.netflix.astyanax.serializers.CompositeRangeBuilder.RangeQueryRecord;
 
 public class CFRowSliceQueryGen {
 
-	protected final Session session;
+	protected final AtomicReference<Session> sessionRef = new AtomicReference<Session>(null);
 	protected final String keyspace; 
 	protected final CqlColumnFamilyDefinitionImpl cfDef;
 
@@ -45,7 +41,7 @@ public class CFRowSliceQueryGen {
 
 		this.keyspace = keyspaceName;
 		this.cfDef = cfDefinition;
-		this.session = session;
+		this.sessionRef.set(session);
 
 		partitionKeyCol = cfDef.getPartitionKeyColumnDefinition().getName();
 		allPrimayKeyCols = cfDef.getAllPkColNames();
@@ -53,46 +49,6 @@ public class CFRowSliceQueryGen {
 		regularCols = cfDef.getRegularColumnDefinitionList();
 
 		isCompositeColumn = (clusteringKeyCols.size() > 1);
-	}
-
-	protected abstract class RowSliceQueryCache {
-
-		private final AtomicReference<PreparedStatement> cachedStatement = new AtomicReference<PreparedStatement>(null);
-
-		public abstract Callable<RegularStatement> getQueryGen(CqlRowSliceQueryImpl<?,?> rowSliceQuery);
-
-		public BoundStatement getBoundStatement(CqlRowSliceQueryImpl<?,?> rowSliceQuery, boolean useCaching) {
-
-			PreparedStatement pStatement = getPreparedStatement(rowSliceQuery, useCaching);
-			return bindValues(pStatement, rowSliceQuery);
-		}
-
-		public abstract BoundStatement bindValues(PreparedStatement pStatement, CqlRowSliceQueryImpl<?,?> rowSliceQuery);
-
-		public PreparedStatement getPreparedStatement(CqlRowSliceQueryImpl<?,?> rowSliceQuery, boolean useCaching) {
-
-			PreparedStatement pStatement = null;
-
-			if (useCaching) {
-				pStatement = cachedStatement.get();
-			}
-
-			if (pStatement == null) {
-				try {
-					RegularStatement query = getQueryGen(rowSliceQuery).call();
-					System.out.println("query " + query.getQueryString());
-					pStatement = session.prepare(query.getQueryString());
-					System.out.println("pStatement " + pStatement.getQueryString());
-				} catch (Exception e) {
-					throw new RuntimeException(e);
-				}
-			}
-
-			if (useCaching && cachedStatement.get() == null) {
-				cachedStatement.set(pStatement);
-			}
-			return pStatement;
-		}
 	}
 	
 	/**
@@ -173,20 +129,20 @@ public class CFRowSliceQueryGen {
 				switch (op.getOperator()) {
 
 				case EQUAL:
-					stmt.and(eq(columnName, op.getValue()));
+					stmt.and(eq(columnName, BIND_MARKER));
 					componentIndex++;
 					break;
 				case LESS_THAN :
-					stmt.and(lt(columnName, op.getValue()));
+					stmt.and(lt(columnName, BIND_MARKER));
 					break;
 				case LESS_THAN_EQUALS:
-					stmt.and(lte(columnName, op.getValue()));
+					stmt.and(lte(columnName, BIND_MARKER));
 					break;
 				case GREATER_THAN:
-					stmt.and(gt(columnName, op.getValue()));
+					stmt.and(gt(columnName, BIND_MARKER));
 					break;
 				case GREATER_THAN_EQUALS:
-					stmt.and(gte(columnName, op.getValue()));
+					stmt.and(gte(columnName, BIND_MARKER));
 					break;
 				default:
 					throw new RuntimeException("Cannot recognize operator: " + op.getOperator().name());
@@ -206,6 +162,15 @@ public class CFRowSliceQueryGen {
 			}
 		}
 		return;
+	}
+	
+	protected Object[] bindMarkerArray(int n) {
+		
+		Object[] arr = new Object[n];
+		for (int i=0; i<n; i++) {
+			arr[i] = BIND_MARKER;
+		}
+		return arr;
 	}
 	
 }

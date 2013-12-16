@@ -10,11 +10,12 @@ import com.datastax.driver.core.Session;
 
 public abstract class QueryGenCache<Q> {
 
-	private final Session session; 
+	private AtomicReference<Session> sessionRef = new AtomicReference<Session>(null); 
 	private final AtomicReference<PreparedStatement> cachedStatement = new AtomicReference<PreparedStatement>(null);
 
-	public QueryGenCache(Session session) {
-		this.session = session;
+	public QueryGenCache(AtomicReference<Session> sessionR) {
+		this.sessionRef = sessionR;
+		System.out.println("The session: " + sessionRef.get());
 	}
 
 	public abstract Callable<RegularStatement> getQueryGen(Q query);
@@ -40,7 +41,7 @@ public abstract class QueryGenCache<Q> {
 				RegularStatement stmt = getQueryGen(query).call();
 				//System.out.println("Query: " + query.getQueryString());
 				System.out.println("query " + stmt.getQueryString());
-				pStatement = session.prepare(stmt.getQueryString());
+				pStatement = sessionRef.get().prepare(stmt.getQueryString());
 				System.out.println("pStatement " + pStatement.getQueryString());
 			} catch (Exception e) {
 				throw new RuntimeException(e);

@@ -1,30 +1,13 @@
 package com.netflix.astyanax.cql.reads;
 
-import static com.datastax.driver.core.querybuilder.QueryBuilder.desc;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.gt;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.gte;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.in;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.lt;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.lte;
-
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.RegularStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
-import com.datastax.driver.core.Session;
 import com.datastax.driver.core.Statement;
-import com.datastax.driver.core.querybuilder.QueryBuilder;
-import com.datastax.driver.core.querybuilder.Select;
-import com.datastax.driver.core.querybuilder.Select.Selection;
-import com.datastax.driver.core.querybuilder.Select.Where;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.RowCopier;
@@ -32,12 +15,9 @@ import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
-import com.netflix.astyanax.cql.ConsistencyLevelMapping;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.CqlOperationResultImpl;
-import com.netflix.astyanax.cql.CqlPreparedStatement;
-import com.netflix.astyanax.cql.direct.DirectCqlPreparedStatement;
 import com.netflix.astyanax.cql.reads.model.CqlColumnListImpl;
 import com.netflix.astyanax.cql.reads.model.CqlColumnSlice;
 import com.netflix.astyanax.cql.reads.model.CqlRangeBuilder;
@@ -57,8 +37,6 @@ import com.netflix.astyanax.query.ColumnQuery;
 import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.serializers.CompositeRangeBuilder;
 import com.netflix.astyanax.serializers.CompositeRangeBuilder.CompositeByteBufferRange;
-import com.netflix.astyanax.serializers.CompositeRangeBuilder.RangeQueryOp;
-import com.netflix.astyanax.serializers.CompositeRangeBuilder.RangeQueryRecord;
 
 public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
@@ -70,11 +48,6 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 	private CompositeByteBufferRange compositeRange;
 	private final PaginationContext paginationContext = new PaginationContext(columnSlice);
 
-	private com.datastax.driver.core.ConsistencyLevel cl = com.datastax.driver.core.ConsistencyLevel.ONE;
-	private AtomicReference<DirectCqlPreparedStatement> preparedStatement = new AtomicReference<DirectCqlPreparedStatement>(null) ;
-	
-	private static final String EMPTY_STRING = "";
-	
 	public enum RowQueryType {
 		AllColumns, ColumnSlice, ColumnRange, SingleColumn; 
 	}
@@ -86,7 +59,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;
 		this.rowKey = rKey;
-		this.cl = ConsistencyLevelMapping.getCL(clLevel);
+		//this.cl = ConsistencyLevelMapping.getCL(clLevel);
 		this.paginationContext.initClusteringKeyColumn(cfContext.getColumnFamily());
 		this.useCaching = useCaching;
 	}
@@ -211,17 +184,11 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 		return new CqlColumnCountQueryImpl(ksContext, cfContext, new InternalRowQueryExecutionImpl(this).getQuery());
 	}
 
-	private boolean isCompositeRangeQuery() {
-		return this.compositeRange != null;
-	}
-	
 	private class InternalRowQueryExecutionImpl extends CqlAbstractExecutionImpl<ColumnList<C>> {
 
 		private final CqlColumnFamilyDefinitionImpl cfDef = (CqlColumnFamilyDefinitionImpl) cf.getColumnFamilyDefinition();
 
-		private final String partitionKeyCol = cfDef.getPartitionKeyColumnDefinition().getName();
 		private final String[] allPkColumnNames = cfDef.getAllPkColNames();
-		private final List<ColumnDefinition> clusteringKeyCols = cfDef.getClusteringKeyColumnDefinitionList();
 		private final List<ColumnDefinition> regularCols = cfDef.getRegularColumnDefinitionList();
 
 		private final CqlRowQueryImpl<?,?> rowQuery; 
@@ -265,346 +232,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 
 	}
-	private class InternalRowQueryExecutionImpl2 extends CqlAbstractExecutionImpl<ColumnList<C>> {
-
-		private final CqlColumnFamilyDefinitionImpl cfDef = (CqlColumnFamilyDefinitionImpl) cf.getColumnFamilyDefinition();
-
-		private final String partitionKeyCol = cfDef.getPartitionKeyColumnDefinition().getName();
-		private final String[] allPkColumnNames = cfDef.getAllPkColNames();
-		private final List<ColumnDefinition> clusteringKeyCols = cfDef.getClusteringKeyColumnDefinitionList();
-		private final List<ColumnDefinition> regularCols = cfDef.getRegularColumnDefinitionList();
-		
-		public InternalRowQueryExecutionImpl2() {
-			super(ksContext, cfContext);
-		}
-
-		@Override
-		public Statement getQuery() {
-
-			boolean pStatementProvided = preparedStatement.get() != null;
-			
-			if (pStatementProvided) {
-				return getBoundStatement(preparedStatement.get().getInnerPreparedStatement());
-			}
-			
-			RegularStatement query = (RegularStatement) getRegularStatement();
-			PreparedStatement pStatement = asPreparedStatement(query);
-			return getBoundStatement(pStatement);
-		}
-		
-		public Statement getRegularStatement() {
-			
-			Statement query; 
-			
-			if (columnSlice.isColumnSelectQuery()) {
-				query = getSelectColumnsQuery();
-			} else if (columnSlice.isRangeQuery()) {
-				query = getSelectColumnRangeQuery();
-			} else if (compositeRange != null) {
-				query = getSelectCompositeColumnRangeQuery();
-			} else if (columnSlice.isSelectAllQuery()) {
-				query = getSelectEntireRowQuery();
-			} else {
-				throw new IllegalStateException("Undefined query type");
-			}
-			return query;
-		}
-		
-		private Statement getBoundStatement(PreparedStatement pStatement) {
-			
-			Statement query; 
-			
-			if (columnSlice.isColumnSelectQuery()) {
-				query = bindSelectColumnsQuery(pStatement);
-			} else if (columnSlice.isRangeQuery()) {
-				query = bindSelectColumnRangeQuery(pStatement);
-			} else if (compositeRange != null) {
-				query =  bindSelectCompositeColumnRangeQuery(pStatement);
-			} else if (columnSlice.isSelectAllQuery()) {
-				query = bindSelectEntireRowQuery(pStatement);
-			} else {
-				throw new IllegalStateException("Undefined query type");
-			}
-			query.setConsistencyLevel(cl);
-			return query;
-		}
-		
-		@Override
-		public ColumnList<C> parseResultSet(ResultSet rs) {
-
-			List<Row> rows = rs.all(); 
-
-			if (rows == null || rows.isEmpty()) {
-				if (paginationContext.isPaginating()) {
-					paginationContext.lastPageConsumed = true;
-				}
-				return new CqlColumnListImpl<C>();
-			}
-			
-			if (allPkColumnNames.length == 1 || regularCols.size() > 1) {
-				CqlColumnListImpl<C> columnList = new CqlColumnListImpl<C>(rows.get(0), cf);
-				return columnList;
-			} else {
-				CqlColumnListImpl<C> columnList = new CqlColumnListImpl<C>(rows, cf);
-				paginationContext.trackLastColumn(columnList);
-				return columnList;
-			}
-		}
-
-		@Override
-		public CassandraOperationType getOperationType() {
-			return CassandraOperationType.GET_ROW;
-		}
-
-		Statement getSelectEntireRowQuery() {
-			
-			Selection select = QueryBuilder.select();
-			
-			for (int i=0; i<allPkColumnNames.length; i++) {
-				select.column(allPkColumnNames[i]);
-			}
-			
-			for (ColumnDefinition colDef : regularCols) {
-				String colName = colDef.getName();
-				select.column(colName).ttl(colName).writeTime(colName);
-			}
-			
-			RegularStatement stmt = select.from(keyspace, cf.getName()).where(eq(partitionKeyCol, EMPTY_STRING));
-			return stmt; 
-		}
-
-		Statement bindSelectEntireRowQuery(PreparedStatement pStmt) {			
-			return pStmt.bind(rowKey);
-		}
-
-		Statement getSelectColumnsQuery() {
-
-			// Make sure that we are not attempting to do a composite range query
-			if (isCompositeRangeQuery()) {
-				throw new RuntimeException("Cannot perform composite column slice using column set");
-			}
-
-			if (clusteringKeyCols.size() == 0) {
-
-				// THIS IS A SIMPLE QUERY WHERE THE INDIVIDUAL COLS ARE BEING SELECTED E.G NAME, AGE ETC
-				Select.Selection select = QueryBuilder.select();
-				select.column(partitionKeyCol);
-
-				for (C col : columnSlice.getColumns()) {
-					String columnName = (String)col;
-					select.column(columnName).ttl(columnName).writeTime(columnName);
-				}
-
-				return select.from(keyspace, cf.getName()).where(eq(partitionKeyCol, EMPTY_STRING));
-
-			} else if (clusteringKeyCols.size() > 0) {
-
-				// THIS IS A QUERY WHERE THE COLUMN NAME IS DYNAMIC  E.G TIME SERIES
-				Collection<C> cols = columnSlice.getColumns(); 
-				Object[] columns = cols.toArray(new Object[cols.size()]); 
-
-				Selection select = QueryBuilder.select();
-				
-				for (int i=0; i<allPkColumnNames.length; i++) {
-					select.column(allPkColumnNames[i]);
-				}
-				
-				for (ColumnDefinition colDef : regularCols) {
-					String colName = colDef.getName();
-					select.column(colName).ttl(colName).writeTime(colName);
-				}
-
-				return select
-						.from(keyspace, cf.getName())
-						.where(eq(partitionKeyCol, EMPTY_STRING))
-						.and(in(clusteringKeyCols.get(0).getName(), columns));
-			} else {
-				throw new RuntimeException("Composite col query - todo");
-			}
-		}
-
-		Statement bindSelectColumnsQuery(PreparedStatement pStmt) {
-
-			// Make sure that we are not attempting to do a composite range query
-			if (isCompositeRangeQuery()) {
-				throw new RuntimeException("Cannot perform composite column slice using column set");
-			}
-
-			if (clusteringKeyCols.size() == 0) {
-
-				// THIS IS A SIMPLE QUERY WHERE THE INDIVIDUAL COLS ARE BEING SELECTED E.G NAME, AGE ETC
-				// e.g  Select * from ks.table1 where key = ?
-				// hence we only need to bind the row key here.
-				
-				return pStmt.bind(rowKey);
-
-			} else if (clusteringKeyCols.size() > 0) {
-
-				// THIS IS A QUERY WHERE THE COLUMN NAME IS DYNAMIC  E.G TIME SERIES
-				// e.g   select * from ks.table1 where key = ? and column1 in (?,?,....?)
-				List<Object> objects = new ArrayList<Object>();
-				objects.add(rowKey);
-				for (Object col : columnSlice.getColumns()) {
-					objects.add(col);
-				}
-				return pStmt.bind(objects.toArray(new Object[objects.size()]));
-				
-			} else {
-				throw new RuntimeException("Composite col query - todo");
-			}
-		}
-
-		Statement getSelectColumnRangeQuery() {
-
-			if (clusteringKeyCols.size() == 0) {
-				throw new RuntimeException("Cannot perform col range query with current schema, missing pk cols");
-			}
-
-			Selection select = QueryBuilder.select();
-			
-			for (int i=0; i<allPkColumnNames.length; i++) {
-				select.column(allPkColumnNames[i]);
-			}
-			
-			for (ColumnDefinition colDef : regularCols) {
-				String colName = colDef.getName();
-				select.column(colName).ttl(colName).writeTime(colName);
-			}
-			
-			Where where = select.from(keyspace, cf.getName())
-				  .where(eq(partitionKeyCol, EMPTY_STRING));
-
-			String clusterKeyCol = clusteringKeyCols.get(0).getName();
-			
-			if (columnSlice.getStartColumn() != null) {
-				where.and(gte(clusterKeyCol, EMPTY_STRING));
-			}
-
-			if (columnSlice.getEndColumn() != null) {
-				where.and(lte(clusterKeyCol, EMPTY_STRING));
-			}
-
-			if (columnSlice.getReversed()) {
-				where.orderBy(desc(clusterKeyCol));
-			}
-
-			if (columnSlice.getLimit() != -1) {
-				where.limit(columnSlice.getLimit());
-			}
-
-			return where;
-		}
-
-		Statement bindSelectColumnRangeQuery(PreparedStatement pStmt) {
-
-			if (clusteringKeyCols.size() == 0) {
-				throw new RuntimeException("Cannot perform col range query with current schema, missing pk cols");
-			}
-
-			List<Object> values = new ArrayList<Object>();
-			values.add(rowKey);
-			
-			if (columnSlice.getStartColumn() != null) {
-				values.add(columnSlice.getStartColumn());
-			}
-
-			if (columnSlice.getEndColumn() != null) {
-				values.add(columnSlice.getEndColumn());
-			}
-
-			return pStmt.bind(values.toArray(new Object[values.size()]));
-		}
-
-		Statement getSelectCompositeColumnRangeQuery() {
-
-			Selection select = QueryBuilder.select();
-			
-			for (int i=0; i<allPkColumnNames.length; i++) {
-				select.column(allPkColumnNames[i]);
-			}
-			
-			for (ColumnDefinition colDef : regularCols) {
-				String colName = colDef.getName();
-				select.column(colName).ttl(colName).writeTime(colName);
-			}
-
-			Where stmt = select.from(keyspace, cf.getName())
-					.where(eq(partitionKeyCol, EMPTY_STRING));
-
-			List<RangeQueryRecord> records = compositeRange.getRecords();
-
-			int componentIndex = 0; 
-
-			for (RangeQueryRecord record : records) {
-
-
-				for (RangeQueryOp op : record.getOps()) {
-
-					String columnName = clusteringKeyCols.get(componentIndex).getName();
-					switch (op.getOperator()) {
-
-					case EQUAL:
-						stmt.and(eq(columnName, EMPTY_STRING));
-						componentIndex++;
-						break;
-					case LESS_THAN :
-						stmt.and(lt(columnName, EMPTY_STRING));
-						break;
-					case LESS_THAN_EQUALS:
-						stmt.and(lte(columnName, EMPTY_STRING));
-						break;
-					case GREATER_THAN:
-						stmt.and(gt(columnName, EMPTY_STRING));
-						break;
-					case GREATER_THAN_EQUALS:
-						stmt.and(gte(columnName, EMPTY_STRING));
-						break;
-					default:
-						throw new RuntimeException("Cannot recognize operator: " + op.getOperator().name());
-					}; // end of switch stmt
-				} // end of inner for for ops for each range query record
-			}
-			return stmt;
-		}
-		
-
-		Statement bindSelectCompositeColumnRangeQuery(PreparedStatement pStmt) {
-
-			List<RangeQueryRecord> records = compositeRange.getRecords();
-			
-			List<Object> values = new ArrayList<Object>();
-			values.add(rowKey);
-
-			for (RangeQueryRecord record : records) {
-
-				for (RangeQueryOp op : record.getOps()) {
-
-					switch (op.getOperator()) {
-
-					case EQUAL:
-						values.add(op.getValue());
-						break;
-					case LESS_THAN :
-						values.add(op.getValue());
-						break;
-					case LESS_THAN_EQUALS:
-						values.add(op.getValue());
-						break;
-					case GREATER_THAN:
-						values.add(op.getValue());
-						break;
-					case GREATER_THAN_EQUALS:
-						values.add(op.getValue());
-						break;
-					default:
-						throw new RuntimeException("Cannot recognize operator: " + op.getOperator().name());
-					}; // end of switch stmt
-				} // end of inner for for ops for each range query record
-			}
-			return pStmt.bind(values.toArray(new Object[values.size()]));
-		}
-	}
-
+	
 	private class PaginationContext {
 
 		private boolean lastPageConsumed = false; 
@@ -680,27 +308,6 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 		}
 	}
 
-	@Override
-	public RowQuery<K, C> withPreparedStatement(CqlPreparedStatement pStatement) {
-		this.preparedStatement.set((DirectCqlPreparedStatement) pStatement);
-		return this;
-	}
-
-	@Override
-	public CqlPreparedStatement asPreparedStatement() {
-		RegularStatement statement = (RegularStatement) new InternalRowQueryExecutionImpl2().getRegularStatement();
-		PreparedStatement pStatement = asPreparedStatement(statement);
-		DirectCqlPreparedStatement cqlStatement = new DirectCqlPreparedStatement(ksContext.getSession(), pStatement);
-		this.preparedStatement.set(cqlStatement);
-		return this.preparedStatement.get();
-	}
-
-	private PreparedStatement asPreparedStatement(RegularStatement stmt) {
-		Session session = ksContext.getSession();
-		PreparedStatement pStmt = session.prepare(stmt.getQueryString());
-		return pStmt;
-	}
-	
 	public K getRowKey() {
 		return rowKey;
 	}

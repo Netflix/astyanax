@@ -45,7 +45,6 @@ public class CompositeColumnTests extends KeyspaceTests {
 	@Test
 	public void runAllTests() throws Exception {
 		
-		CF_POPULATION.describe(keyspace);
 		boolean rowDeleted = false;
 		
 		populateRowsForCFPopulation();

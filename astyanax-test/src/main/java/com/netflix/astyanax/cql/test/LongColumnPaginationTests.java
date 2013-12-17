@@ -8,13 +8,13 @@ import org.junit.Test;
 
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.cql.reads.model.CqlRangeBuilder;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
-import com.netflix.astyanax.util.RangeBuilder;
 
 public class LongColumnPaginationTests extends KeyspaceTests {
 	
@@ -51,15 +51,15 @@ public class LongColumnPaginationTests extends KeyspaceTests {
         // READ BACK WITH PAGINATION
         Long column = Long.MIN_VALUE;
         ColumnList<Long> columns;
-        int pageize = 10;
+        int pageSize = 10;
         RowQuery<String, Long> query = keyspace
         		.prepareQuery(CF_LONGCOLUMN)
         		.getKey("A")
         		.autoPaginate(true)
         		.withColumnRange(
-        				new RangeBuilder()
+        				new CqlRangeBuilder<Long>()
         				.setStart(column)
-        				.setLimit(pageize).build());
+        				.setFetchSize(pageSize).build());
 
         int pageCount = 0;
         int colCount = 0;
@@ -70,7 +70,7 @@ public class LongColumnPaginationTests extends KeyspaceTests {
         	pageCount++;
         }
 
-        Assert.assertTrue(pageCount == 3);
+        Assert.assertTrue("PageCount: " + pageCount, pageCount == 3);
         Assert.assertTrue("colCount = " + colCount,colCount == 21);
 
         query = keyspace
@@ -78,10 +78,10 @@ public class LongColumnPaginationTests extends KeyspaceTests {
         		.getKey("A")
         		.autoPaginate(true)
         		.withColumnRange(
-        				new RangeBuilder()
+        				new CqlRangeBuilder<Long>()
         				.setStart(-5L)
         				.setEnd(11L)
-        				.setLimit(pageize).build());
+        				.setFetchSize(pageSize).build());
 
         pageCount = 0;
         colCount = 0;
@@ -94,6 +94,5 @@ public class LongColumnPaginationTests extends KeyspaceTests {
 
         Assert.assertTrue(pageCount == 2);
         Assert.assertTrue("colCount = " + colCount,colCount == 15);
-
     }
 }

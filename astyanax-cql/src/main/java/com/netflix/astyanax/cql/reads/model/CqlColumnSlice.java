@@ -127,6 +127,10 @@ public class CqlColumnSlice<C> extends ColumnSlice<C> {
 		return (cqlRange != null ) ? cqlRange.getLimit() : -1;
 	}
 	
+	public int getFetchSize() {
+		return (cqlRange != null ) ? cqlRange.getFetchSize() : -1;
+	}
+
 	public boolean isColumnSelectQuery() {
 		return (this.cqlColumns != null);
 	}

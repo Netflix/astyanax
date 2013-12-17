@@ -198,9 +198,12 @@ public class CFRowQueryGen {
 					if (columnSlice.getReversed()) {
 						where.orderBy(desc(clusterKeyCol));
 					}
-
-					if (columnSlice.getLimit() != -1) {
-						where.limit(columnSlice.getLimit());
+					
+					if (!rowQuery.isPaginating()) {
+						// Column limits are applicable only when we are not paginating
+						if (columnSlice.getLimit() != -1) {
+							where.limit(columnSlice.getLimit());
+						}
 					}
 
 					return where;

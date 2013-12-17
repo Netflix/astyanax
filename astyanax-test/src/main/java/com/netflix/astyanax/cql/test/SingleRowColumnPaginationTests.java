@@ -8,13 +8,13 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.netflix.astyanax.cql.reads.model.CqlRangeBuilder;
 import com.netflix.astyanax.cql.test.utils.ReadTests;
 import com.netflix.astyanax.cql.test.utils.TestUtils;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.query.RowQuery;
-import com.netflix.astyanax.util.RangeBuilder;
 
 public class SingleRowColumnPaginationTests extends ReadTests {
 	
@@ -72,8 +72,8 @@ public class SingleRowColumnPaginationTests extends ReadTests {
 				.getKey(rowKey)
 				.autoPaginate(true)
 				.withColumnRange(
-						new RangeBuilder().setStart("a")
-						.setLimit(pageSize).build());
+						new CqlRangeBuilder<String>().setStart("a")
+						.setFetchSize(pageSize).build());
 
 		int count = 1; 
 		while (!(columns = query.execute().getResult()).isEmpty()) {

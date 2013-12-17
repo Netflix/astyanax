@@ -13,6 +13,7 @@ public class CqlRangeBuilder<T> {
     private T end = null;
     private int limit = -1;
     private boolean reversed = false;
+    private int fetchSize = -1;
 
     private String columnName = "column1";
 
@@ -22,6 +23,7 @@ public class CqlRangeBuilder<T> {
     		this.end = oldRange.getCqlEnd();
     		this.limit = oldRange.getLimit();
     		this.reversed = oldRange.isReversed();
+    		this.fetchSize = oldRange.getFetchSize();
     	}
         return this;
     }
@@ -71,7 +73,16 @@ public class CqlRangeBuilder<T> {
     	return this.columnName;
     }
     
+    public CqlRangeBuilder<T> setFetchSize(int count) {
+        this.fetchSize = count;
+        return this;
+    }
+
+    public int getFetchSize() {
+    	return this.fetchSize;
+    }
+
     public CqlRangeImpl<T> build() {
-    	return new CqlRangeImpl<T>(columnName, start, end, limit, reversed);
+    	return new CqlRangeImpl<T>(columnName, start, end, limit, reversed, fetchSize);
     }
 }

@@ -23,13 +23,15 @@ public class CqlRangeImpl<T> implements ByteBufferRange {
     private final T end;
     private final int limit;
     private final boolean reversed;
+    private int fetchSize = -1;
 
-    public CqlRangeImpl(String columnName, T start, T end, int limit, boolean reversed) {
+    public CqlRangeImpl(String columnName, T start, T end, int limit, boolean reversed, int fetchSize) {
     	this.columnName = columnName;
         this.start = start;
         this.end = end;
         this.limit = limit;
         this.reversed = reversed;
+        this.fetchSize = fetchSize;
     }
 
     @Override
@@ -63,5 +65,12 @@ public class CqlRangeImpl<T> implements ByteBufferRange {
     public int getLimit() {
         return limit;
     }
-
+    
+    public int getFetchSize() {
+    	return fetchSize;
+    }
+    
+    public void setFetchSize(int size) {
+    	fetchSize = size;
+    }
 }

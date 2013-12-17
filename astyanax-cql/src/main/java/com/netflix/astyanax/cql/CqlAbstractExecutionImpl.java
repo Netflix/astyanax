@@ -57,7 +57,8 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 		this.tracerFactory = ksContext.getTracerFactory();
 		
 		// process the override retry policy first
-		retry = getRetryPolicy(cfContext.getRetryPolicy()); 
+		RetryPolicy retryPolicy = ksContext.getConfig().getRetryPolicy();
+		retry = (retryPolicy != null) ? retryPolicy : getRetryPolicy(cfContext.getRetryPolicy()); 
 	}
 
 	public CqlAbstractExecutionImpl(KeyspaceContext ksContext, RetryPolicy retryPolicy) {

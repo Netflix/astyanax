@@ -1,8 +1,10 @@
 package com.netflix.astyanax.cql.reads;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
 import com.datastax.driver.core.ResultSet;
@@ -23,11 +25,9 @@ import com.netflix.astyanax.cql.reads.model.CqlColumnSlice;
 import com.netflix.astyanax.cql.reads.model.CqlRangeBuilder;
 import com.netflix.astyanax.cql.reads.model.CqlRangeImpl;
 import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
-import com.netflix.astyanax.cql.util.AsyncOperationResult;
 import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.model.ByteBufferRange;
-import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ColumnSlice;
@@ -58,7 +58,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 	private final K rowKey;
 	private final CqlColumnSlice<C> columnSlice = new CqlColumnSlice<C>();
 	private CompositeByteBufferRange compositeRange;
-	private final PaginationContext paginationContext = new PaginationContext(columnSlice);
+	private final PaginationContext paginationContext = new PaginationContext();
 
 	public enum RowQueryType {
 		AllColumns, ColumnSlice, ColumnRange, SingleColumn; 
@@ -71,15 +71,18 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;
 		this.rowKey = rKey;
-		this.paginationContext.initClusteringKeyColumn(cfContext.getColumnFamily());
 		this.useCaching = useCaching;
 	}
 
 	@Override
 	public OperationResult<ColumnList<C>> execute() throws ConnectionException {
 
-		if (paginationContext.isPaginating() && paginationContext.lastPageConsumed()) {
-			return new CqlOperationResultImpl<ColumnList<C>>(null, new CqlColumnListImpl<C>());
+		if (paginationContext.isPaginating()) {
+			if (!paginationContext.isFirstPage()) {
+				return new CqlOperationResultImpl<ColumnList<C>>(paginationContext.getResultSet(), paginationContext.getNextColumns());
+			}
+			// Note that if we are paginating, and if this is the first time / page, 
+			// then we will just execute the query normally, and then init the pagination context
 		}
 
 		return new InternalRowQueryExecutionImpl(this).execute();
@@ -87,14 +90,6 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 	@Override
 	public ListenableFuture<OperationResult<ColumnList<C>>> executeAsync() throws ConnectionException {
-		if (paginationContext.isPaginating() && paginationContext.lastPageConsumed()) {
-			return new AsyncOperationResult<ColumnList<C>>(null) {
-				@Override
-				public OperationResult<ColumnList<C>> getOperationResult(ResultSet resultSet) {
-					return new CqlOperationResultImpl<ColumnList<C>>(resultSet, new CqlColumnListImpl<C>());
-				}
-			};
-		}
 		return new InternalRowQueryExecutionImpl(this).executeAsync();
 	}
 
@@ -181,7 +176,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 	@Override
 	public RowQuery<K, C> autoPaginate(boolean enabled) {
-		paginationContext.paginate = enabled;
+		paginationContext.setPaginating(enabled);
 		return this;
 	}
 
@@ -217,108 +212,131 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 		@Override
 		public Statement getQuery() {
 			
-			return cfDef.getRowQueryGenerator().getQueryStatement(rowQuery, useCaching);
+			Statement stmt = cfDef.getRowQueryGenerator().getQueryStatement(rowQuery, useCaching);
+			// Translate the column limit to the fetch size. This is useful for pagination
+			if (paginationContext.isPaginating() && columnSlice.isRangeQuery()) {
+//				if (columnSlice.getFetchSize() > 0) {
+//					stmt.setFetchSize(columnSlice.getFetchSize() + 1);
+//				}
+			}
+			return stmt;
 		}
 
 		@Override
 		public ColumnList<C> parseResultSet(ResultSet resultSet) throws NotFoundException {
-			List<Row> rows = resultSet.all(); 
 
-			if (rows == null || rows.isEmpty()) {
-				if (paginationContext.isPaginating()) {
-					paginationContext.lastPageConsumed = true;
+			// Use case when the schema is just a flat table. Note that there is no pagination support here.
+			if (allPkColumnNames.length == 1 || regularCols.size() > 1) {
+				List<Row> rows = resultSet.all(); 
+				if (rows == null || rows.isEmpty()) {
+					return new CqlColumnListImpl<C>();
+				} else {
+					return new CqlColumnListImpl<C>(rows.get(0), cf);
 				}
-				return new CqlColumnListImpl<C>();
 			}
 			
-			if (allPkColumnNames.length == 1 || regularCols.size() > 1) {
-				CqlColumnListImpl<C> columnList = new CqlColumnListImpl<C>(rows.get(0), cf);
-				return columnList;
+			// There is a clustering key for this schema. Check whether we are paginating for this row query
+			if (paginationContext.isPaginating()) {
+				
+				paginationContext.init(resultSet, columnSlice.getFetchSize());
+				return paginationContext.getNextColumns();
+				
 			} else {
-				CqlColumnListImpl<C> columnList = new CqlColumnListImpl<C>(rows, cf);
-				paginationContext.trackLastColumn(columnList);
-				return columnList;
+				
+				List<Row> rows = resultSet.all(); 
+				if (rows == null || rows.isEmpty()) {
+					return new CqlColumnListImpl<C>();
+				} else {
+					return new CqlColumnListImpl<C>(rows, cf);
+				}
 			}
+			
+			
+//			List<Row> rows = resultSet.all(); 
+//
+//			if (rows == null || rows.isEmpty()) {
+//				if (paginationContext.isPaginating()) {
+//					paginationContext.lastPageConsumed = true;
+//				}
+//				return new CqlColumnListImpl<C>();
+//			}
+//			
+//			if (allPkColumnNames.length == 1 || regularCols.size() > 1) {
+//				CqlColumnListImpl<C> columnList = new CqlColumnListImpl<C>(rows.get(0), cf);
+//				return columnList;
+//			} else {
+//				CqlColumnListImpl<C> columnList = new CqlColumnListImpl<C>(rows, cf);
+//				paginationContext.trackLastColumn(columnList);
+//				return columnList;
+//			}
 		}
 
 
 	}
 	
+	
 	private class PaginationContext {
-
-		private boolean lastPageConsumed = false; 
+		
+		// How many rows to fetch at a time
+		private int fetchSize = Integer.MAX_VALUE; 
+		
+		// Turn pagination ON/OFF
 		private boolean paginate = false;
+		// Indicate whether the first page has been consumed. 
 		private boolean isFirstPage = true;
-		private String clusteringColName = null; 
-
-		private final CqlColumnSlice<C> columnSlice;
+		// Track the result set
+		private ResultSet resultSet = null;
+		// State for all rows
+		private Iterator<Row> rowIter = null;
 		
-		private PaginationContext(CqlColumnSlice<C> columnSlice) {
-			this.columnSlice = columnSlice;
-		}
-
-		private void initClusteringKeyColumn(ColumnFamily<?,?> cf) {
-			CqlColumnFamilyDefinitionImpl cfDef = (CqlColumnFamilyDefinitionImpl) cf.getColumnFamilyDefinition();
-			List<ColumnDefinition> clusteringKeyCols = cfDef.getClusteringKeyColumnDefinitionList();
-			if (clusteringKeyCols.size() != 0) {
-				this.clusteringColName = clusteringKeyCols.get(0).getName();
-			} else {
-				this.clusteringColName = null;
-			}
+		private PaginationContext() {
 		}
 		
-		private void trackLastColumn(ColumnList<C> columnList) {
-
-			if (!paginate) {
-				return;
-			}
-
-			try {
-				if (columnList.isEmpty()) {
-					lastPageConsumed = true;
-					return;
-				}
-				
-				// CHECK IF THIS IS THE LAST PAGE
-				Column<C> lastColumn = columnList.getColumnByIndex(columnList.size()-1);
-
-				if (columnSlice.getEndColumn() != null) {
-					if (lastColumn.getName().equals(columnSlice.getEndColumn())) {
-						// 	this was the last page. Stop paginating. 
-						this.lastPageConsumed = true;
-					}
-				} else {
-					if (columnList.size() < columnSlice.getLimit()) {
-						this.lastPageConsumed = true;
-					}
-				}
-
-				// Set up the new range for the next range query
-				CqlRangeImpl<C> newRange = 
-						new CqlRangeImpl<C>(clusteringColName, lastColumn.getName(), columnSlice.getEndColumn(), columnSlice.getLimit(), columnSlice.getReversed());
-
-				this.columnSlice.setCqlRange(newRange);
-
-				// IN CASE THIS ISN'T THE FIRST PAGE, THEN TRIM THE COLUMNLIST - I.E REMOVE THE FIRST COLUMN
-				// SINCE IT IS THE LAST COLUMN OF THE PREVIOUS PAGE
-				if (!isFirstPage) {
-					((CqlColumnListImpl<C>)columnList).trimFirstColumn();
-				}
-				return;
-			} finally {
-				isFirstPage = false;
-			}
+		private void setPaginating(boolean condition) {
+			paginate = condition;
 		}
-
+		
 		private boolean isPaginating() {
 			return paginate;
 		}
+		
+		private boolean isFirstPage() {
+			return isFirstPage;
+		}
+		
+		private void firstPageConsumed() {
+			isFirstPage = false;
+		}
 
-		private boolean lastPageConsumed() {
-			return lastPageConsumed;
+		private CqlColumnListImpl<C> getNextColumns() {
+			
+			try { 
+				int count = 0;
+				List<Row> rows = new ArrayList<Row>();
+				while ((count < fetchSize) && rowIter.hasNext()) {
+					rows.add(rowIter.next());
+					count++;
+				}
+				return new CqlColumnListImpl<C>(rows, cfContext.getColumnFamily());
+			} finally {
+				firstPageConsumed();
+			}
+		}
+		
+		private void init(ResultSet rs, int size) {
+			this.resultSet = rs;
+			this.rowIter = resultSet.iterator();
+			if (size > 0) {
+				fetchSize = size;
+			}
+
+		}
+		
+		private ResultSet getResultSet() {
+			return this.resultSet;
 		}
 	}
-
+	
 	public K getRowKey() {
 		return rowKey;
 	}
@@ -333,5 +351,9 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 	
 	public RowQueryType getQueryType() {
 		return queryType;
+	}
+	
+	public boolean isPaginating() {
+		return paginationContext.isPaginating();
 	}
  }

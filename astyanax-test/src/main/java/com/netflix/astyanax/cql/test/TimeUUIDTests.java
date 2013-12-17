@@ -12,6 +12,7 @@ import org.junit.Test;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.cql.reads.model.CqlRangeBuilder;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
@@ -98,8 +99,8 @@ public class TimeUUIDTests extends KeyspaceTests {
                 .prepareQuery(CF_TIME_UUID)
                 .getKey(rowKey)
                 .withColumnRange(
-                        new RangeBuilder()
-                                .setLimit(10)
+                        new CqlRangeBuilder<UUID>()
+                                .setFetchSize(10)
                                 .setStart(
                                         TimeUUIDUtils.getTimeUUID(columnTime
                                                 + startTime))

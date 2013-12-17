@@ -33,16 +33,13 @@ import com.netflix.astyanax.partitioner.BigInteger127Partitioner;
 import com.netflix.astyanax.partitioner.Murmur3Partitioner;
 import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.retry.RetryPolicy;
-import com.netflix.astyanax.retry.RetryPolicy.RetryPolicyFactory;
 import com.netflix.astyanax.retry.RunOnce;
-import com.netflix.astyanax.retry.RunOnceRetryPolicyFactory;
 
 public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
     private ConsistencyLevel   defaultReadConsistencyLevel  = ConsistencyLevel.CL_ONE;
     private ConsistencyLevel   defaultWriteConsistencyLevel = ConsistencyLevel.CL_ONE;
     private Clock              clock                        = new MicrosecondsSyncClock();
     private RetryPolicy        retryPolicy                  = RunOnce.get();
-    private RetryPolicyFactory retryPolicyFactory           = new RunOnceRetryPolicyFactory();
     private ExecutorService    asyncExecutor                = Executors.newFixedThreadPool(5, 
             new ThreadFactoryBuilder().setDaemon(true)
                 .setNameFormat("AstyanaxAsync-%d")
@@ -120,19 +117,9 @@ public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
         return retryPolicy;
     }
 
-    @Override
-    public RetryPolicyFactory getRetryPolicyFactory() {
-        return retryPolicyFactory;
-    }
-
     public AstyanaxConfigurationImpl setRetryPolicy(RetryPolicy retryPolicy) {
         this.retryPolicy = retryPolicy;
         return this;
-    }
-
-    public AstyanaxConfigurationImpl setRetryPolicyFactory(RetryPolicyFactory factory) {
-    	this.retryPolicyFactory = factory;
-    	return this;
     }
 
     public String toString() {

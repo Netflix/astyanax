@@ -3,8 +3,22 @@ package com.netflix.astyanax.cql.reads.model;
 import java.util.Collection;
 
 import com.netflix.astyanax.model.ColumnSlice;
+import com.netflix.astyanax.query.RowQuery;
 
-@SuppressWarnings("unchecked")
+/**
+ * Impl for {@link ColumnSlice}. 
+ * 
+ * See {@link RowQuery} for where ColumnSlice can be used. There are essentially 2 components to a ColumnSLice
+ * 1. Collection of Columns.
+ * 2. Column range specification
+ * 
+ * This class encapsulates data structures for both types of ColumnSlice(s). It also maintains state that helps identify
+ * the type of query being performed.
+ * 
+ * @author poberai
+ *
+ * @param <C>
+ */
 public class CqlColumnSlice<C> extends ColumnSlice<C> {
 	
 	private CqlRangeImpl<C> cqlRange;

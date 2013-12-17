@@ -14,6 +14,11 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 
+/**
+ * Simple class that reads the schema versions from the system local and peers table. 
+ * 
+ * @author poberai
+ */
 public class CqlSchemaVersionReader {
 
 	private static final Logger Logger = LoggerFactory.getLogger(CqlSchemaVersionReader.class);

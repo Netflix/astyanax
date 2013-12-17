@@ -13,7 +13,25 @@ import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.query.ColumnCountQuery;
+import com.netflix.astyanax.query.RowQuery;
 
+/**
+ * Impl for {@link ColumnCountQuery}
+ * 
+ * Note that since this query essentially derives itself from the {@link RowQuery} interface, it also uses the statement
+ * constructed by the {@link CqlRowQueryImpl} class. The difference in functionality is in how the records form the result set 
+ * are parsed. Here we look at the number of rows returned for the same row key. 
+ * 
+ * Note that since CQL3 can treat columns as rows
+ * (depending on the schema), we look for multiple rows with the same row keys. If there are multiple rows, then we count the number 
+ * of rows for each unique row key. If there is just one row and the schema definition is like a flat table, then we just count the actual no of data columns returned 
+ * in the result set.
+ * 
+ * See {@link CqlRowQueryImpl} for more details on how the query is actually constructed
+ * 
+ * @author poberai
+ *
+ */
 public class CqlColumnCountQueryImpl implements ColumnCountQuery {
 
 	private final KeyspaceContext ksContext;

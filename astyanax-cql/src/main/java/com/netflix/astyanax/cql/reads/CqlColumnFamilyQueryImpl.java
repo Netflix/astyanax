@@ -19,6 +19,22 @@ import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.query.RowSliceQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
 
+/**
+ * Base impl for {@link ColumnFamilyQuery} interface. This class is the root for all read operations in Astyanax.
+ * From this class, we can branch into either {@link RowQuery} or {@link RowSliceQuery}. 
+ *  
+ * The current class manages the column family context, retry policy and the consistency level for the read queries underneath.
+ *  
+ *  Important classes to see are
+ *  {@link CqlRowQueryImpl}
+ *  {@link CqlRowSliceQueryImpl}
+ *  {@link CqlAllRowsQueryImpl}
+ *  
+ * @author poberai
+ *
+ * @param <K>
+ * @param <C>
+ */
 public class CqlColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C> {
 
 	private final KeyspaceContext ksContext;

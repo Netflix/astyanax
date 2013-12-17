@@ -19,6 +19,13 @@ import com.netflix.astyanax.cql.CqlPreparedStatement;
 import com.netflix.astyanax.cql.CqlStatementResult;
 import com.netflix.astyanax.cql.util.AsyncOperationResult;
 
+/**
+ * Impl of {@link CqlPreparedStatement} using java driver.
+ * it manages a {@link Session} object that is used when actually performing the real query with the 
+ * driver underneath. 
+ * 
+ * @author poberai
+ */
 public class DirectCqlPreparedStatement implements CqlPreparedStatement {
 
 	private final Session session;

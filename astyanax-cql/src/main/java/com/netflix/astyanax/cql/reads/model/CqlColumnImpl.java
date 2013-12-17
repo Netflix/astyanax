@@ -8,6 +8,7 @@ import org.apache.cassandra.cql3.CQL3Type;
 
 import com.datastax.driver.core.ColumnDefinitions.Definition;
 import com.datastax.driver.core.DataType;
+import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.cql.util.CqlTypeMapping;
@@ -24,6 +25,19 @@ import com.netflix.astyanax.serializers.ShortSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.UUIDSerializer;
 
+/**
+ * Class that implements the {@link Column} interface. 
+ * 
+ * Note that since columns can be rows in CQL3, this class needs access to the java driver {@link Row}
+ * within the java driver {@link ResultSet}
+ * 
+ * The index provided within the row indicates where to start parsing the Column data. 
+ * Also this class handles reading the TTL and Timestamp on the Column as well. 
+ * 
+ * @author poberai
+ *
+ * @param <C>
+ */
 public class CqlColumnImpl<C> implements Column<C> {
 
 	private Row row; 

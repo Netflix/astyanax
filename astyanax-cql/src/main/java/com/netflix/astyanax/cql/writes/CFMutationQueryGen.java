@@ -103,8 +103,11 @@ public class CFMutationQueryGen {
 			if (pStatement == null) {
 				try {
 					String query = getQueryGen(mutation).call();
-					System.out.println("Query: " + query);
 					pStatement = session.prepare(query);
+					
+					if (Logger.isDebugEnabled()) {
+						Logger.debug("Query: " + pStatement.getQueryString());
+					}
 				} catch (Exception e) {
 					throw new RuntimeException(e);
 				}

@@ -49,7 +49,6 @@ import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.cql.CqlPreparedStatement;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
@@ -174,16 +173,6 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
                             }
                         });
                     }
-
-					@Override
-					public ColumnQuery<C> withPreparedStatement(CqlPreparedStatement preparedStatement) {
-						throw new UnsupportedOperationException("Cannot use PreparedStatement with ColumnQuery");
-					}
-
-					@Override
-					public CqlPreparedStatement asPreparedStatement() {
-						throw new UnsupportedOperationException("Cannot use PreparedStatement with ColumnQuery");
-					}
                 };
             }
 

@@ -5,7 +5,6 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -48,11 +47,20 @@ import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.query.RowSliceQuery;
 import com.netflix.astyanax.shallows.EmptyCheckpointManager;
 
+/**
+ * Impl for {@link AllRowsQuery} that uses the java driver underneath. 
+ * Note that it is easier and more intuitive to just use the AllRowsReader recipe instead. 
+ * See https://github.com/Netflix/astyanax/wiki/AllRowsReader-All-rows-query for details on how to use the recipe. 
+ * 
+ * @author poberai
+ *
+ * @param <K>
+ * @param <C>
+ */
 public class CqlAllRowsQueryImpl<K,C> implements AllRowsQuery<K,C> {
 
     private static final Logger LOG = LoggerFactory.getLogger(CqlAllRowsQueryImpl.class);
     
-    //private static final Partitioner DEFAULT_PARTITIONER = BigInteger127Partitioner.get();
     private static final Partitioner DEFAULT_PARTITIONER = Murmur3Partitioner.get();
     private final static int DEFAULT_PAGE_SIZE = 100;
     

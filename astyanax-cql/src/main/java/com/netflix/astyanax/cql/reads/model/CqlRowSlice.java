@@ -2,6 +2,23 @@ package com.netflix.astyanax.cql.reads.model;
 
 import java.util.Collection;
 
+import com.netflix.astyanax.query.RowSliceQuery;
+
+/**
+ * Helper class that encapsulates a row slice for a {@link RowSliceQuery}
+ * 
+ * Note that there are 2 essential components for a row slice
+ * 
+ * 1. Collection of individual row keys
+ * 2. Row range specification. 
+ * 
+ * The class has data structures to represent both these components and also has helpful methods to identify
+ * the type of row slice query.
+ * 
+ * @author poberai
+ *
+ * @param <K>
+ */
 public class CqlRowSlice<K> {
 
 	// Stuff needed for the direct query using the in() clause

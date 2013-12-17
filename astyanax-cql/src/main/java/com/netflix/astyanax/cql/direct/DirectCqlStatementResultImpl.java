@@ -9,6 +9,11 @@ import com.netflix.astyanax.cql.reads.model.CqlRowListImpl;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.Rows;
 
+/**
+ * Impl of {@link CqlStatementResult} that parses the result set from java driver query operations. 
+ * 
+ * @author poberai
+ */
 public class DirectCqlStatementResultImpl implements CqlStatementResult {
 	
 	private final ResultSet rs; 

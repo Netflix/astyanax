@@ -17,6 +17,23 @@ import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 
+/**
+ * Impl for {@link Rows} that parses the {@link ResultSet} from java driver and translates back to Astyanax Rows. 
+ * Note that if your schema has a clustering key, then each individual row from the result set is a unique column, 
+ * and all result set rows with the same partition key map to a unique Astyanax row. 
+ * 
+ * Note that this class leverages the cursor support from java driver and expects the user to use the iterator based 
+ * approach when reading through results which contain multiple rows. 
+ * 
+ * Some users may want to read all the data instead of using an iterator approach. To handle this situation,
+ * the class maintains some state that indicates how the object is first accessed in order to avoid iterating twice
+ * over the same result set.
+ * 
+ * @author poberai
+ *
+ * @param <K>
+ * @param <C>
+ */
 public class CqlRowListIterator<K,C> implements Rows<K,C> {
 
 	private enum State {
@@ -67,7 +84,6 @@ public class CqlRowListIterator<K,C> implements Rows<K,C> {
 				if (!isClusteringKey) {
 					return rsIter.hasNext();
 				} else {
-					System.out.println("hasNext: " + (rsIter.hasNext() || !currentList.isEmpty()));
 					return rsIter.hasNext() || !currentList.isEmpty();
 				}
 			}
@@ -80,7 +96,6 @@ public class CqlRowListIterator<K,C> implements Rows<K,C> {
 //				}
 
 				if (isClusteringKey) {
-					System.out.println("isClusteringKey");
 					
 					// Keep reading rows till we find a new rowKey, and then return the prefecthed list as a single row
 					while (rsIter.hasNext()) {
@@ -104,8 +119,6 @@ public class CqlRowListIterator<K,C> implements Rows<K,C> {
 						}
 					}
 					
-					System.out.println("Directly returning " + currentList.size());
-
 					// In case we got here, then we have exhausted the rsIter and can just return the last row
 					List<com.datastax.driver.core.Row> newList = new ArrayList<com.datastax.driver.core.Row>();
 					newList.addAll(currentList);

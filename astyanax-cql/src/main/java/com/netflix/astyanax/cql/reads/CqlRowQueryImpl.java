@@ -38,6 +38,18 @@ import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.serializers.CompositeRangeBuilder;
 import com.netflix.astyanax.serializers.CompositeRangeBuilder.CompositeByteBufferRange;
 
+/**
+ * Impl for {@link RowQuery} that uses java driver. It manages all single row queries and also has support for pagination. 
+ * All {@link ColumnQuery} and {@link ColumnCountQuery}(s) originate from this class. 
+ * 
+ * Note that the class acts more like a placeholder for the structure query context. The actual query construction 
+ * is done by other classes like {@link CFRowQueryGen} and {@link CFColumnQueryGen}
+ * 
+ * @author poberai
+ *
+ * @param <K>
+ * @param <C>
+ */
 public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 	private final KeyspaceContext ksContext;
@@ -59,7 +71,6 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;
 		this.rowKey = rKey;
-		//this.cl = ConsistencyLevelMapping.getCL(clLevel);
 		this.paginationContext.initClusteringKeyColumn(cfContext.getColumnFamily());
 		this.useCaching = useCaching;
 	}
@@ -90,7 +101,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 	@Override
 	public ColumnQuery<C> getColumn(C column) {
 		queryType = RowQueryType.SingleColumn;
-		return new CqlColumnQueryImpl<C>(ksContext, cfContext, rowKey, column);
+		return new CqlColumnQueryImpl<C>(ksContext, cfContext, rowKey, column, useCaching);
 	}
 
 	@Override

@@ -2,6 +2,11 @@ package com.netflix.astyanax.cql;
 
 import com.netflix.astyanax.model.ConsistencyLevel;
 
+/**
+ * Helper class for translating Astyanax consistency level to java driver consistency level
+ * 
+ * @author poberai
+ */
 public class ConsistencyLevelMapping {
 
 	public static com.datastax.driver.core.ConsistencyLevel getCL(ConsistencyLevel cl) {

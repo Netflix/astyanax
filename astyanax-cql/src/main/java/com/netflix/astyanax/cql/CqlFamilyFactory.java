@@ -16,6 +16,7 @@ import com.datastax.driver.core.policies.Policies;
 import com.datastax.driver.core.policies.RoundRobinPolicy;
 import com.datastax.driver.core.policies.TokenAwarePolicy;
 import com.netflix.astyanax.AstyanaxConfiguration;
+import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.AstyanaxTypeFactory;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.KeyspaceTracerFactory;
@@ -30,6 +31,25 @@ import com.netflix.astyanax.connectionpool.exceptions.ThrottledException;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
 
+/**
+ * Simple impl of {@link AstyanaxTypeFactory} that acts as the bridge between the AstyanaxContext setup and all the java driver setup.
+ * The main link is the {@link ConnectionPoolProxy} class which gives us access to the {@link ConnectionPoolConfiguration} object. 
+ * The class expects a {@link JavaDriverConnectionPoolConfigurationImpl} based impl which encapsulates all the config that is required
+ * by java driver. 
+ * 
+ * Thus this bridge is built with the intention to let the outside caller to directly use the {@link Configuration} object and inject it 
+ * using {@link AstyanaxContext}. 
+ * 
+ * Restating, the simple flow that enables the bridge is
+ * 1. Construct the {@link Configuration} object with all the desired options for configuring the java driver.
+ * 2. Construct the {@link JavaDriverConnectionPoolConfigurationImpl} object and pass the java driver configuration object to it. 
+ * 3. Set the {@link ConnectionPoolConfiguration} created in step 2. on the {@link AstyanaxContext} builder object when creating the Astyanax {@link Keyspace}  
+ * 
+ * See {@link AstyanaxContext} for more details on how to do this. 
+ * 
+ * @author poberai
+ *
+ */
 public class CqlFamilyFactory implements AstyanaxTypeFactory<Cluster> {
 
 	private static CqlFamilyFactory Instance = new CqlFamilyFactory(); 

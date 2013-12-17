@@ -3,24 +3,43 @@ package com.netflix.astyanax.cql;
 import java.net.InetAddress;
 import java.util.concurrent.TimeUnit;
 
+import com.datastax.driver.core.ExecutionInfo;
+import com.datastax.driver.core.QueryTrace;
 import com.datastax.driver.core.ResultSet;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.OperationResult;
 
+/**
+ * Simple impl of {@link OperationResult} that tracks some basic info for every operation execution, such as
+ * 1. The host that was used for the operation
+ * 2. The operation attempt count
+ * 3. The encapsulated result
+ * 4. The overall latency for the operation. 
+ * 
+ * @author poberai
+ *
+ * @param <R>
+ */
 public class CqlOperationResultImpl<R> implements OperationResult<R> {
 
 	private Host host;
 	private R result; 
+	private int attemptCount = 0;
+	private long durationMicros = 0L;
 	
 	public CqlOperationResultImpl(ResultSet rs, R result) {
-		if (rs != null) {
-			this.host = parseHostInfo(rs.getExecutionInfo().getQueriedHost());
-		}
+		this.host = parseHostInfo(rs);
 		this.result = result;
+		this.durationMicros = parseDuration(rs);
 	}
 	
-	private Host parseHostInfo(com.datastax.driver.core.Host fromHost) {
+	private Host parseHostInfo(ResultSet rs) {
 		
+		if (rs == null) {
+			return null;
+		}
+		
+		com.datastax.driver.core.Host fromHost = rs.getExecutionInfo().getQueriedHost();
 		InetAddress add = fromHost.getAddress();
 		
 		Host toHost = new Host(add.getHostAddress(), -1);
@@ -28,6 +47,19 @@ public class CqlOperationResultImpl<R> implements OperationResult<R> {
 		return toHost;
 	}
 	
+	private long parseDuration(ResultSet rs) {
+		if (rs != null) {
+			ExecutionInfo info = rs.getExecutionInfo();
+			if (info !=null) {
+				QueryTrace qt = info.getQueryTrace();
+				if (qt != null) {
+					return qt.getDurationMicros();
+				}
+			}
+		}
+		return 0L;
+	}
+
 	@Override
 	public Host getHost() {
 		return host;
@@ -40,21 +72,22 @@ public class CqlOperationResultImpl<R> implements OperationResult<R> {
 
 	@Override
 	public long getLatency() {
-		return 0;
+		return durationMicros;
 	}
 
 	@Override
 	public long getLatency(TimeUnit units) {
-		return 0;
+		return units.convert(durationMicros, TimeUnit.MICROSECONDS);
 	}
 
 	@Override
 	public int getAttemptsCount() {
-		return 0;
+		return attemptCount;
 	}
 
 	@Override
 	public void setAttemptsCount(int count) {
+		attemptCount = count;
 	}
 
 }

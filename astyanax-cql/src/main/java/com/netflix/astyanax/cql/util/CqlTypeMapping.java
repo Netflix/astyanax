@@ -18,7 +18,12 @@ import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
 import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer.ComponentSerializer;
 import com.netflix.astyanax.serializers.ComparatorType;
 
-
+/**
+ * Helpful utility that maps the different data types and helps translate to and from Astyanax and java driver objects.
+ * 
+ * @author poberai
+ *
+ */
 public class CqlTypeMapping {
 
 	private static Map<String, CQL3Type> directTypeMap = new HashMap<String, CQL3Type>();
@@ -202,7 +207,6 @@ public class CqlTypeMapping {
 			
 			Object value = getDynamicColumn(row, component.getSerializer(), cluseringKeyList.get(componentIndex).getName(), cf);
 			try {
-				//System.out.println("Value: " + value);
 				component.setFieldValueDirectly(obj, value);
 				componentIndex++;
 			} catch (Exception e) {

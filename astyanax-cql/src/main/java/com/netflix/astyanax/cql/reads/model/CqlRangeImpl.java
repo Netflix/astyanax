@@ -3,7 +3,19 @@ package com.netflix.astyanax.cql.reads.model;
 import java.nio.ByteBuffer;
 
 import com.netflix.astyanax.model.ByteBufferRange;
+import com.netflix.astyanax.model.ColumnSlice;
+import com.netflix.astyanax.query.RowQuery;
 
+/**
+ * Impl for {@link ByteBufferRange} that tracks the individual components of a {@link ColumnSlice} when using a column range
+ * specification. 
+ * 
+ * Users of such queries (columns slices with column ranges) can use this class when performing using the {@link RowQuery}
+ * 
+ * @author poberai
+ *
+ * @param <T>
+ */
 public class CqlRangeImpl<T> implements ByteBufferRange {
 	
 	private final String columnName;

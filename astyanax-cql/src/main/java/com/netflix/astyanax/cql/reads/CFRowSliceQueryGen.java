@@ -17,24 +17,41 @@ import com.datastax.driver.core.querybuilder.Select.Where;
 import com.netflix.astyanax.cql.reads.model.CqlColumnSlice;
 import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
 import com.netflix.astyanax.ddl.ColumnDefinition;
+import com.netflix.astyanax.query.RowSliceQuery;
 import com.netflix.astyanax.serializers.CompositeRangeBuilder.CompositeByteBufferRange;
 import com.netflix.astyanax.serializers.CompositeRangeBuilder.RangeQueryOp;
 import com.netflix.astyanax.serializers.CompositeRangeBuilder.RangeQueryRecord;
 
-
+/**
+ * Base class that contains the utilities for generating queries for read operations via the 
+ * {@link RowSliceQuery} class. 
+ * 
+ * Note that this class is just a place holder for some useful generic utilities. 
+ * See {@link CFRowKeysQueryGen} and {@link CFRowRangeQueryGen} which are the 2 extending classes 
+ * for functionality that actually supports the queries. 
+ * 
+ * @author poberai
+ */
 public class CFRowSliceQueryGen {
 
+	// Thread safe reference to the underlying session object. We need the session object to be able to "prepare" query statements
 	protected final AtomicReference<Session> sessionRef = new AtomicReference<Session>(null);
+	// the keyspace being queried. Used for all the underlying queries being generated
 	protected final String keyspace; 
+	// the cf definition which helps extending classes construct the right query as per the schema
 	protected final CqlColumnFamilyDefinitionImpl cfDef;
 
+	// Other useful derivatives of the cf definition that are frequently used by query generators
 	protected final String partitionKeyCol;
 	protected final String[] allPrimayKeyCols;
 	protected final List<ColumnDefinition> clusteringKeyCols;
 	protected final List<ColumnDefinition> regularCols;
 	
+	// Condition tracking whether the underlying schema uses composite columns. This is imp since it influences how 
+	// a single Column (composite column) can be decomposed into it's individual components that form different parts of the query.
 	protected boolean isCompositeColumn; 
 	
+	// bind marker for generating the prepared statements
 	protected static final String BIND_MARKER = "?";
 	
 	public CFRowSliceQueryGen(Session session, String keyspaceName, CqlColumnFamilyDefinitionImpl cfDefinition) {
@@ -172,5 +189,4 @@ public class CFRowSliceQueryGen {
 		}
 		return arr;
 	}
-	
 }

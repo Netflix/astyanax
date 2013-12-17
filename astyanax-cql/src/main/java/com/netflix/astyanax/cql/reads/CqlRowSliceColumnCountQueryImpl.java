@@ -14,9 +14,22 @@ import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.util.CqlTypeMapping;
 import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
+import com.netflix.astyanax.query.ColumnCountQuery;
 import com.netflix.astyanax.query.RowSliceColumnCountQuery;
 
-@SuppressWarnings("unchecked")
+/**
+ * Impl for {@link RowSliceColumnCountQuery} interface. 
+ * Just like {@link ColumnCountQuery}, this class only manages the context for the query. 
+ * The actual query statement is supplied from the {@link CqlRowSliceQueryImpl} class.
+ * 
+ * Note that CQL3 treats columns as rows for certain schemas that contain clustering keys. 
+ * Hence this class collapses all {@link ResultSet} rows with the same partition key into a single row
+ * when counting all unique rows. 
+ *  
+ * @author poberai
+ *
+ * @param <K>
+ */
 public class CqlRowSliceColumnCountQueryImpl<K> implements RowSliceColumnCountQuery<K> {
 
 	private final KeyspaceContext ksContext;
@@ -56,6 +69,7 @@ public class CqlRowSliceColumnCountQueryImpl<K> implements RowSliceColumnCountQu
 			return query;
 		}
 
+		@SuppressWarnings("unchecked")
 		@Override
 		public Map<K, Integer> parseResultSet(ResultSet resultSet) {
 			

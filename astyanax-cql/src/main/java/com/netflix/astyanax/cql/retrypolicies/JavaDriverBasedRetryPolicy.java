@@ -2,6 +2,11 @@ package com.netflix.astyanax.cql.retrypolicies;
 
 import com.netflix.astyanax.retry.RetryPolicy;
 
+/**
+ * Abstract base for all {@link RetryPolicy} implementation that want to use the retry policy from java driver.
+ * @author poberai
+ *
+ */
 public abstract class JavaDriverBasedRetryPolicy implements RetryPolicy {
 
 	@Override

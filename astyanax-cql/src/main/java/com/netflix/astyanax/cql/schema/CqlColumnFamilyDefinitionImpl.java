@@ -42,7 +42,12 @@ import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
 import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer.ComponentSerializer;
 
-
+/**
+ * Impl for {@link ColumnFamilyDefinition} interface that constructs it's state from the java driver {@link ResultSet}
+ * 
+ * @author poberai
+ *
+ */
 public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 
 	private Session session; 
@@ -193,18 +198,14 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 
 	private void createColumnDefinitions() {
 
-		System.out.println("OptionsMap: " + optionsMap.toString());
 		String keyClass = (String) optionsMap.remove("key_validator");
 		keyClass = (keyClass == null) ?	keyClass = "blob" : keyClass;
 		
-		System.out.println("Keyclass: " + keyClass);
 		String comparatorClass = (String) optionsMap.remove("comparator");
 		comparatorClass = (comparatorClass == null) ?	comparatorClass = "blob" : comparatorClass;
-		System.out.println("comparatorClass: " + comparatorClass);
 		
 		String dataValidationClass = (String) optionsMap.remove("default_validator");
 		dataValidationClass = (dataValidationClass == null) ?	dataValidationClass = "blob" : dataValidationClass;
-		System.out.println("dataValidationClass: " + dataValidationClass);
 
 		ColumnDefinition key = new CqlColumnDefinitionImpl().setName("key").setValidationClass(keyClass);
 		partitionKeyList.add(key);

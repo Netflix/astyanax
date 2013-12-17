@@ -56,6 +56,16 @@ import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.serializers.SerializerPackageImpl;
 import com.netflix.astyanax.serializers.UnknownComparatorException;
 
+/**
+ * Java Driver based impl of {@link Keyspace} that implements ddl operations as well as row queries and mutation batches.
+ * The class encapsulates a java driver cluster and session object to provide all the functionality. 
+ *  
+ * Note that due to the way the object is setup via AstyanaxContext and CqlFamilyFactory, it needs to implements 
+ * a {@link SeedHostListener} so that it can construct the cluster and session object appropriately once the seed hosts
+ * have been provided by the {@link HostSupplier} object.
+ *  
+ * @author poberai
+ */
 public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 
 	private static final Logger Logger = LoggerFactory.getLogger(CqlKeyspaceImpl.class);

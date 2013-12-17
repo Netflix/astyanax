@@ -32,7 +32,12 @@ import com.netflix.astyanax.ddl.FieldMetadata;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
 
-
+/**
+ * Impl for {@link KeyspaceDefinition} using the java driver. 
+ * 
+ * @author poberai
+ *
+ */
 public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 
 	private static final Logger Log = LoggerFactory.getLogger(CqlKeyspaceDefinitionImpl.class);

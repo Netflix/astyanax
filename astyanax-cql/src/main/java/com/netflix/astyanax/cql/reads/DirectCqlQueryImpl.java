@@ -23,6 +23,14 @@ import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.query.CqlQuery;
 import com.netflix.astyanax.query.PreparedCqlQuery;
 
+/**
+ * 
+ * Impl for {@link CqlQuery} that allows users to directly send CQL3 over java driver
+ * @author poberai
+ *
+ * @param <K>
+ * @param <C>
+ */
 public class DirectCqlQueryImpl<K, C> implements CqlQuery<K, C> {
 
 	private final KeyspaceContext ksContext;

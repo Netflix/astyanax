@@ -17,6 +17,13 @@ import com.netflix.astyanax.cql.util.AsyncOperationResult;
 import com.netflix.astyanax.cql.util.ConsistencyLevelTransform;
 import com.netflix.astyanax.model.ConsistencyLevel;
 
+/**
+ * Impl of {@link CqlStatement} using java driver.
+ * it manages a {@link Session} object that is used when actually performing the real query with the 
+ * driver underneath. 
+ * 
+ * @author poberai
+ */
 public class DirectCqlStatement implements CqlStatement {
 
 	private final Session session; 

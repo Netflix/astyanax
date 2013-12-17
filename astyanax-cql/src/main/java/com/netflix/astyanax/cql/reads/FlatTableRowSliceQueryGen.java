@@ -20,7 +20,28 @@ import com.datastax.driver.core.querybuilder.Select.Where;
 import com.netflix.astyanax.cql.reads.model.CqlRowSlice.RowRange;
 import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
 import com.netflix.astyanax.ddl.ColumnDefinition;
+import com.netflix.astyanax.query.RowSliceQuery;
 
+/**
+ * Just like {@link FlatTableRowQueryGen} this class encapsulates the functionality for row query generation for 
+ * Astyanax {@link RowSliceQuery}(s). 
+ * 
+ * The class uses a collection of query generators to handle all sort of RowSliceQuery permutations like
+ * 1. Selecting all columns for a row collection
+ * 2. Selecting a column set for a row collection
+ * 3. Selecting all columns for a row range
+ * 4. Selecting a column set for a row range
+ * 
+ * Note that this class supports query generation for flat tables only. 
+ * For tables with clustering keys see {@link CFRowKeysQueryGen} and {@link CFRowRangeQueryGen}.
+ * 
+ * Also, just like the other query generators, use this with caution when using caching of {@link PreparedStatement}
+ * See {@link FlatTableRowQueryGen} for a detailed explanation of why PreparedStatement caching will not work for queries
+ * that do not have the same signatures. 
+ * 
+ * @author poberai
+ *
+ */
 public class FlatTableRowSliceQueryGen {
 
 	protected AtomicReference<Session> sessionRef = new AtomicReference<Session>(null);

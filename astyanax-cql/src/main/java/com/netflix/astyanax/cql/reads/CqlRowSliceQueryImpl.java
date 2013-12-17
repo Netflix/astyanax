@@ -32,7 +32,18 @@ import com.netflix.astyanax.query.RowSliceQuery;
 import com.netflix.astyanax.serializers.CompositeRangeBuilder;
 import com.netflix.astyanax.serializers.CompositeRangeBuilder.CompositeByteBufferRange;
 
-@SuppressWarnings("unchecked")
+/**
+ * Impl for {@link RowSliceQuery} interface. 
+ * 
+ * Just like {@link CqlRowQueryImpl} this class only manages the context for the row slice query, but does not construct the actual
+ * CQL query itself. For more details on how the actual query is constructed see classes 
+ * {@link CFRowKeysQueryGen} and {@link CFRowRangeQueryGen}
+ * 
+ * @author poberai
+ *
+ * @param <K>
+ * @param <C>
+ */
 public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 
 	private final KeyspaceContext ksContext;
@@ -122,6 +133,7 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 		return this.withColumnRange(start, end, reversed, limit);
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public RowSliceQuery<K, C> withColumnRange(ByteBufferRange range) {
 
@@ -147,6 +159,7 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 		return new CqlRowSliceColumnCountQueryImpl<K>(ksContext, cfContext, query);
 	}
 
+	@SuppressWarnings("unchecked")
 	private class InternalRowQueryExecutionImpl extends CqlAbstractExecutionImpl<Rows<K, C>> {
 
 		private final CqlColumnFamilyDefinitionImpl cfDef = (CqlColumnFamilyDefinitionImpl) cf.getColumnFamilyDefinition();

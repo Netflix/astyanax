@@ -47,6 +47,7 @@ public class CFRowQueryGen {
 	private final CFRowRangeQueryGen rowRangeQueryGen; 
 	private final FlatTableRowQueryGen flatTableRowQueryGen; 
 	private final FlatTableRowSliceQueryGen flatTableRowSliceQueryGen; 
+	private final CFColumnQueryGen columnQueryGen; 
 	
 	public CFRowQueryGen(Session session, String keyspaceName, CqlColumnFamilyDefinitionImpl cfDefinition) {
 
@@ -66,6 +67,7 @@ public class CFRowQueryGen {
 		rowRangeQueryGen = new CFRowRangeQueryGen(session, keyspaceName, cfDefinition);
 		flatTableRowQueryGen = new FlatTableRowQueryGen(session, keyspaceName, cfDefinition);
 		flatTableRowSliceQueryGen = new FlatTableRowSliceQueryGen(session, keyspaceName, cfDefinition);
+		columnQueryGen = new CFColumnQueryGen(session, keyspaceName, cfDefinition);
 	}
 
 	private QueryGenCache<CqlRowQueryImpl<?,?>> SelectEntireRow = new QueryGenCache<CqlRowQueryImpl<?,?>>(sessionRef) {
@@ -369,4 +371,8 @@ public class CFRowQueryGen {
 		}
 	}
 
+	public Statement getQueryStatement(final CqlColumnQueryImpl<?> columnQuery, boolean useCaching)  {
+		
+		return columnQueryGen.getQueryStatement(columnQuery, useCaching);
+	}
 }

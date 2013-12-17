@@ -24,14 +24,29 @@ import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMut
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.retry.RetryPolicy;
 
+/**
+ * Abstract class that encapsulates the functionality for executing an operations using the native protocol based java driver
+ * Note that class provides only the operation agnostic functionality such as retries, tracking metrics etc. 
+ * The actual logic for constructing the query for the operation and then parsing the result set of the operation is left
+ * to the implementation of the extending class. 
+ * 
+ * @author poberai
+ *
+ * @param <R>
+ */
 public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(CqlAbstractExecutionImpl.class);
 	
+	// The session for executing the query
 	protected final Session session;
+	// The keyspace being operated on
 	protected final String keyspace;
+	// The CF being operated on
 	protected final ColumnFamily<?, ?> cf;
+	// Factory for vending operation metrics
 	protected final KeyspaceTracerFactory tracerFactory;
+	// Retry policy
 	protected final RetryPolicy retry;
 	
 	public CqlAbstractExecutionImpl(KeyspaceContext ksContext, ColumnFamilyMutationContext<?,?> cfContext) {
@@ -42,8 +57,7 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 		this.tracerFactory = ksContext.getTracerFactory();
 		
 		// process the override retry policy first
-		retry = (cfContext != null && cfContext.getRetryPolicy() != null) ? 
-				cfContext.getRetryPolicy() : ksContext.getConfig().getRetryPolicyFactory().createRetryPolicy();
+		retry = getRetryPolicy(cfContext.getRetryPolicy()); 
 	}
 
 	public CqlAbstractExecutionImpl(KeyspaceContext ksContext, RetryPolicy retryPolicy) {
@@ -54,7 +68,7 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 		this.tracerFactory = ksContext.getTracerFactory();
 		
 		// process the override retry policy first
-		retry = (retryPolicy != null) ? retryPolicy : ksContext.getConfig().getRetryPolicyFactory().createRetryPolicy();
+		retry = (retryPolicy != null) ? retryPolicy : getRetryPolicy(ksContext.getConfig().getRetryPolicy());
 	}
 
 	@Override
@@ -105,6 +119,7 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 		ResultSet resultSet = session.execute(query);
 		R result = parseResultSet(resultSet);
 		OperationResult<R> opResult = new CqlOperationResultImpl<R>(resultSet, result);
+		opResult.setAttemptsCount(retry.getAttemptCount());
 		tracer.success();
 		return opResult;
 	}
@@ -131,9 +146,19 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 					e.printStackTrace();
 				}
 				tracer.success();
-				return new CqlOperationResultImpl<R>(resultSet, result);
+				OperationResult<R> opResult = new CqlOperationResultImpl<R>(resultSet, result);
+				opResult.setAttemptsCount(retry.getAttemptCount());
+				return opResult;
 			}
 		};
+	}
+	
+	private RetryPolicy getRetryPolicy(RetryPolicy policy) {
+		if (policy != null) {
+			return policy.duplicate();
+		} else {
+			return null;
+		}
 	}
 	
 	/**

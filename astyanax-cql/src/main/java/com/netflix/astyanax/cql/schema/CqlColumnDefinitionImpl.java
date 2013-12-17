@@ -9,11 +9,19 @@ import java.util.Map;
 
 import org.apache.cassandra.db.marshal.UTF8Type;
 
+import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.netflix.astyanax.cql.util.CqlTypeMapping;
 import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.FieldMetadata;
 
+/**
+ * Impl for {@link ColumnDefinition} interface that constructs the state from a {@link Row} object 
+ * retrieved from the java driver {@link ResultSet}. 
+ * 
+ * @author poberai
+ *
+ */
 public class CqlColumnDefinitionImpl implements ColumnDefinition, Comparable<CqlColumnDefinitionImpl> {
 
 	Map<String, Object> options = new HashMap<String, Object>();

@@ -18,6 +18,17 @@ import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 
+/**
+ * Class that implements the {@link ColumnList} interface. Note that this class handles the case where the table schema
+ * could contain a clustering key or just regular columns for a flat table. 
+ * 
+ * In the case of a flat table, each row has a unique set of columns. In the case of a clustering key, each row is a unique column.
+ * There are 2 separate constructors to this class in order to handle each of these cases. 
+ * 
+ * @author poberai
+ *
+ * @param <C>
+ */
 @SuppressWarnings("unchecked")
 public class CqlColumnListImpl<C> implements ColumnList<C> {
 

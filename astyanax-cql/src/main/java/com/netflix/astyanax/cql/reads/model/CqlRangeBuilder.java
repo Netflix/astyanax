@@ -1,6 +1,12 @@
 package com.netflix.astyanax.cql.reads.model;
 
-
+/**
+ * Helpful class that tracks the state for building a {@link ColumnSlice} query using column range specification. 
+ * 
+ * @author poberai
+ *
+ * @param <T>
+ */
 public class CqlRangeBuilder<T> {
 	
     private T start = null;

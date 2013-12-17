@@ -32,6 +32,16 @@ import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
 
+/**
+ * Java Driver based impl of {@link Cluster} that implements ddl operations.
+ * The class encapsulates a java driver cluster and session object to provide all the functionality. 
+ *  
+ * Note that due to the way the object is setup via AstyanaxContext and CqlFamilyFactory, it needs to implements 
+ * a {@link SeedHostListener} so that it can construct the cluster and session object appropriately once the seed hosts
+ * have been provided by the {@link HostSupplier} object
+ *  
+ * @author poberai
+ */
 public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostListener {
 
 	public volatile Cluster cluster;

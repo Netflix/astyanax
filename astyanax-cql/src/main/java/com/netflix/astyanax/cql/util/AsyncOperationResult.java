@@ -9,8 +9,14 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.ResultSetFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.connectionpool.OperationResult;
-import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 
+/**
+ * Impl for istenableFuture<OperationResult<V>> that wraps the {@link ResultSetFuture} from java driver for async operations. 
+ * 
+ * @author poberai
+ *
+ * @param <V>
+ */
 public abstract class AsyncOperationResult<V> implements ListenableFuture<OperationResult<V>> {
 
 	private ResultSetFuture rsFuture; 

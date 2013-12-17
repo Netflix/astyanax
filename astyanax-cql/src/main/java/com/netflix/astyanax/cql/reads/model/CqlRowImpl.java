@@ -3,11 +3,22 @@ package com.netflix.astyanax.cql.reads.model;
 import java.nio.ByteBuffer;
 import java.util.List;
 
+import com.datastax.driver.core.ResultSet;
 import com.netflix.astyanax.cql.util.CqlTypeMapping;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.Row;
 
+/**
+ * Impl for {@link Row} that parses the {@link ResultSet} from java driver and translates back to Astyanax Row. 
+ * Note that if your schema has a clustering key, then each individual row from the result set is a unique column, 
+ * and all result set rows with the same partition key map to a unique Astyanax row. 
+ * 
+ * @author poberai
+ *
+ * @param <K>
+ * @param <C>
+ */
 @SuppressWarnings("unchecked")
 public class CqlRowImpl<K, C> implements Row<K, C> {
 

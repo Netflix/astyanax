@@ -16,6 +16,14 @@ import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.query.RowQuery;
 
+/**
+ * Impl for {@link RowCopier}
+ * 
+ * @author poberai
+ *
+ * @param <K>
+ * @param <C>
+ */
 public class CqlRowCopier<K,C> implements RowCopier<K,C> {
 
 	private boolean useOriginalTimestamp = false;

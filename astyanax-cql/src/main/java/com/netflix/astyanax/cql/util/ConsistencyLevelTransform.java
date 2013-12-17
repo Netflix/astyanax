@@ -2,6 +2,12 @@ package com.netflix.astyanax.cql.util;
 
 import com.datastax.driver.core.ConsistencyLevel;
 
+/**
+ * Utility class for transforming Astyanx consistency level to java driver consistency level.
+ * 
+ * @author poberai
+ *
+ */
 public class ConsistencyLevelTransform {
 
 	public static ConsistencyLevel getConsistencyLevel(com.netflix.astyanax.model.ConsistencyLevel level) {

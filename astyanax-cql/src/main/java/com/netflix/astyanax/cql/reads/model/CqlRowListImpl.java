@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.datastax.driver.core.ResultSet;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.Serializer;
@@ -16,6 +17,16 @@ import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 
+/**
+ * Impl for {@link Rows} that parses the {@link ResultSet} from java driver and translates back to Astyanax Rows. 
+ * Note that if your schema has a clustering key, then each individual row from the result set is a unique column, 
+ * and all result set rows with the same partition key map to a unique Astyanax row. 
+ * 
+ * @author poberai
+ *
+ * @param <K>
+ * @param <C>
+ */
 public class CqlRowListImpl<K, C> implements Rows<K, C> {
 
 	private final List<Row<K,C>>   rows;

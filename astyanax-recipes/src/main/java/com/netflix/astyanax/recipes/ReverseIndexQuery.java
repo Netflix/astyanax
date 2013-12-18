@@ -59,6 +59,11 @@ public class ReverseIndexQuery<K, C, V> {
         return new ReverseIndexQuery<K, C, V>(ks, cf, indexCf, valSerializer);
     }
 
+    public static <K, C, V> ReverseIndexQuery<K, C, V> newQuery(Keyspace ks, ColumnFamily<K, C> cf, ColumnFamily<ByteBuffer, ByteBuffer> indexCf,
+            Serializer<V> valSerializer) {
+        return new ReverseIndexQuery<K, C, V>(ks, cf, indexCf, valSerializer);
+    }
+
     public static interface IndexEntryCallback<K, V> {
         boolean handleEntry(K key, V value, ByteBuffer meta);
     }
@@ -89,6 +94,15 @@ public class ReverseIndexQuery<K, C, V> {
         this.startValue = null;
         this.endValue = null;
         this.cfIndex = ColumnFamily.newColumnFamily(indexCf, ByteBufferSerializer.get(), ByteBufferSerializer.get());
+    }
+
+    public ReverseIndexQuery(Keyspace ks, ColumnFamily<K, C> cfData, ColumnFamily<ByteBuffer, ByteBuffer> indexCf, Serializer<V> valSerializer) {
+        this.ks = ks;
+        this.cfData = cfData;
+        this.valSerializer = valSerializer;
+        this.startValue = null;
+        this.endValue = null;
+        this.cfIndex = indexCf;
     }
 
     public ReverseIndexQuery<K, C, V> useExecutor(ExecutorService executor) {
@@ -216,7 +230,7 @@ public class ReverseIndexQuery<K, C, V> {
             @Override
             protected void internalRun() {
                 // Get the first range in the index
-                RangeBuilder range = new RangeBuilder();
+            	RangeBuilder range = new RangeBuilder();
                 if (startValue != null) {
                     range.setStart(Composites.newCompositeBuilder().greaterThanEquals().add(startValue, valSerializer)
                             .build());

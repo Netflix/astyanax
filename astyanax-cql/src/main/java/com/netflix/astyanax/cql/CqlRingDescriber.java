@@ -15,7 +15,14 @@ import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.impl.TokenRangeImpl;
+import com.netflix.astyanax.partitioner.Murmur3Partitioner;
 
+/**
+ * Helper class that parses the ring information from the system and peers table. 
+ * Note that it maintains a cached reference and allows the user to either reuse the cache or refresh the cahe.
+ *  
+ * @author poberai
+ */
 public class CqlRingDescriber {
 
 	private final AtomicReference<List<TokenRange>>  cachedReference = new AtomicReference<List<TokenRange>>(null);
@@ -89,6 +96,12 @@ public class CqlRingDescriber {
 			String startToken = hosts.get(prevIndex).token.toString();
 			String endToken = thisNode.token.toString();
 
+			if (startToken.equals(endToken)) {
+				// TOKENS are the same. This happens during testing. 
+				startToken = Murmur3Partitioner.get().getMinToken();
+				endToken = Murmur3Partitioner.get().getMinToken();
+				
+			}
 			ranges.add(new TokenRangeImpl(startToken, endToken, endpoints));
 		}
 

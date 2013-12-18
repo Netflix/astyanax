@@ -25,13 +25,13 @@ public class StaticColumnFamilyTests extends KeyspaceTests {
 	@BeforeClass
 	public static void init() throws Exception {
 		initContext();
-		keyspace.createColumnFamily(CF_ACCOUNTS, null);
+		//keyspace.createColumnFamily(CF_ACCOUNTS, null);
 		CF_ACCOUNTS.describe(keyspace);
 	}
 
 	@AfterClass
 	public static void tearDown() throws Exception {
-		keyspace.dropColumnFamily(CF_ACCOUNTS);
+		//keyspace.dropColumnFamily(CF_ACCOUNTS);
 	}
 
 	@Test

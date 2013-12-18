@@ -8,6 +8,7 @@ import com.datastax.driver.core.ResultSetFuture;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.Statement;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.netflix.astyanax.CassandraOperationCategory;
 import com.netflix.astyanax.CassandraOperationTracer;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.Execution;
@@ -20,8 +21,9 @@ import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.retrypolicies.JavaDriverBasedRetryPolicy;
 import com.netflix.astyanax.cql.util.AsyncOperationResult;
-import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
+import com.netflix.astyanax.cql.util.CFQueryContext;
 import com.netflix.astyanax.model.ColumnFamily;
+import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
 
 /**
@@ -48,8 +50,10 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 	protected final KeyspaceTracerFactory tracerFactory;
 	// Retry policy
 	protected final RetryPolicy retry;
+	// ConsistencyLevel
+	protected final com.datastax.driver.core.ConsistencyLevel clLevel; 
 	
-	public CqlAbstractExecutionImpl(KeyspaceContext ksContext, ColumnFamilyMutationContext<?,?> cfContext) {
+	public CqlAbstractExecutionImpl(KeyspaceContext ksContext, CFQueryContext<?,?> cfContext) {
 		
 		this.session = ksContext.getSession();
 		this.keyspace = ksContext.getKeyspace();
@@ -59,6 +63,8 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 		// process the override retry policy first
 		RetryPolicy retryPolicy = ksContext.getConfig().getRetryPolicy();
 		retry = (retryPolicy != null) ? retryPolicy : getRetryPolicy(cfContext.getRetryPolicy()); 
+		
+		clLevel = resolveConsistencyLevel(ksContext, cfContext);
 	}
 
 	public CqlAbstractExecutionImpl(KeyspaceContext ksContext, RetryPolicy retryPolicy) {
@@ -70,6 +76,7 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 		
 		// process the override retry policy first
 		retry = (retryPolicy != null) ? retryPolicy : getRetryPolicy(ksContext.getConfig().getRetryPolicy());
+		clLevel = resolveConsistencyLevel(ksContext, null);
 	}
 
 	@Override
@@ -112,6 +119,10 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 			LOG.debug("Query: " + query);
 		}
 		
+        // Set the consistency level on the query
+        query.setConsistencyLevel(clLevel);
+
+        // Set the retry policy on the query
         if (retry instanceof JavaDriverBasedRetryPolicy) {
         	JavaDriverBasedRetryPolicy jdRetryPolicy = (JavaDriverBasedRetryPolicy) retry;
         	query.setRetryPolicy(jdRetryPolicy.getJDRetryPolicy());
@@ -160,6 +171,35 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 		} else {
 			return null;
 		}
+	}
+	
+	private ConsistencyLevel getDefaultCL(KeyspaceContext ksContext) {
+		
+		ConsistencyLevel clLevel = ksContext.getConfig().getDefaultReadConsistencyLevel(); 
+		
+		CassandraOperationCategory op = getOperationType().getCategory();
+		switch (op) {
+		case READ:
+			clLevel = ksContext.getConfig().getDefaultReadConsistencyLevel(); 
+			break;
+		case WRITE:
+			clLevel = ksContext.getConfig().getDefaultWriteConsistencyLevel();
+		default:
+			clLevel = ksContext.getConfig().getDefaultReadConsistencyLevel(); 
+		}
+		
+		return clLevel;
+	}
+	
+	private com.datastax.driver.core.ConsistencyLevel resolveConsistencyLevel(KeyspaceContext ksContext, CFQueryContext<?,?> cfContext) {
+		ConsistencyLevel clLevel = null; 
+		if (cfContext != null) {
+			clLevel = cfContext.getConsistencyLevel();
+		}
+		if (clLevel == null) {
+			clLevel = getDefaultCL(ksContext);
+		}
+		return ConsistencyLevelMapping.getCL(clLevel);
 	}
 	
 	/**

@@ -12,8 +12,8 @@ import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
+import com.netflix.astyanax.cql.util.CFQueryContext;
 import com.netflix.astyanax.cql.util.CqlTypeMapping;
-import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
 import com.netflix.astyanax.query.ColumnCountQuery;
 import com.netflix.astyanax.query.RowSliceColumnCountQuery;
 
@@ -33,10 +33,10 @@ import com.netflix.astyanax.query.RowSliceColumnCountQuery;
 public class CqlRowSliceColumnCountQueryImpl<K> implements RowSliceColumnCountQuery<K> {
 
 	private final KeyspaceContext ksContext;
-	private final ColumnFamilyMutationContext<?,?> cfContext;
+	private final CFQueryContext<?,?> cfContext;
 	private final Statement query;
 	
-	public CqlRowSliceColumnCountQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<?,?> cfCtx, Statement query) {
+	public CqlRowSliceColumnCountQueryImpl(KeyspaceContext ksCtx, CFQueryContext<?,?> cfCtx, Statement query) {
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;
 		this.query = query;

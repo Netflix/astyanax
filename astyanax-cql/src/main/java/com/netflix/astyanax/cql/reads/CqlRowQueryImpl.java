@@ -25,7 +25,7 @@ import com.netflix.astyanax.cql.reads.model.CqlColumnSlice;
 import com.netflix.astyanax.cql.reads.model.CqlRangeBuilder;
 import com.netflix.astyanax.cql.reads.model.CqlRangeImpl;
 import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
-import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
+import com.netflix.astyanax.cql.util.CFQueryContext;
 import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.ColumnFamily;
@@ -53,7 +53,7 @@ import com.netflix.astyanax.serializers.CompositeRangeBuilder.CompositeByteBuffe
 public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 
 	private final KeyspaceContext ksContext;
-	private final ColumnFamilyMutationContext<K,C> cfContext;
+	private final CFQueryContext<K,C> cfContext;
 
 	private final K rowKey;
 	private final CqlColumnSlice<C> columnSlice = new CqlColumnSlice<C>();
@@ -67,7 +67,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 	private RowQueryType queryType = RowQueryType.AllColumns;  // The default
 	private boolean useCaching = false;
 	
-	public CqlRowQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<K,C> cfCtx, K rKey, ConsistencyLevel clLevel, boolean useCaching) {
+	public CqlRowQueryImpl(KeyspaceContext ksCtx, CFQueryContext<K,C> cfCtx, K rKey, boolean useCaching) {
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;
 		this.rowKey = rKey;

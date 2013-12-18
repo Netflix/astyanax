@@ -5,14 +5,14 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
-import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
+import com.netflix.astyanax.cql.util.CFQueryContext;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 
 public class CqlStyleMutationQuery {
 
 	protected final KeyspaceContext ksContext;
-	protected final ColumnFamilyMutationContext<?,?> cfContext;
+	protected final CFQueryContext<?,?> cfContext;
 	protected final List<CqlColumnMutationImpl<?,?>> mutationList;
 	
 	protected AtomicReference<Boolean> deleteRow;
@@ -26,7 +26,7 @@ public class CqlStyleMutationQuery {
 	private static final String AND = " AND";
 	private static final String TIMESTAMP = " TIMESTAMP ";
 	
-	public CqlStyleMutationQuery(KeyspaceContext ksCtx, ColumnFamilyMutationContext<?,?> cfCtx, 
+	public CqlStyleMutationQuery(KeyspaceContext ksCtx, CFQueryContext<?,?> cfCtx, 
 								 List<CqlColumnMutationImpl<?,?>> mutationList, AtomicReference<Boolean> deleteRow, 
 								 AtomicReference<Integer> ttl, AtomicReference<Long> timestamp, ConsistencyLevel consistencyLevel) {
 		
@@ -38,6 +38,10 @@ public class CqlStyleMutationQuery {
 		this.defaultTTL = ttl;
 		this.defaultTimestamp = timestamp;
 		this.consistencyLevel = consistencyLevel;
+		
+		if (this.consistencyLevel != null) {
+			cfContext.setConsistencyLevel(consistencyLevel);
+		}
 	}
 	
 	public String getDeleteEntireRowQuery() {

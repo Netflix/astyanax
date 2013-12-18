@@ -155,7 +155,11 @@ public interface ColumnFamilyQuery<K, C> {
      */
     IndexQuery<K, C> searchWithIndex();
     
-    
+    /**
+     * Enable/disable prepared statement caching for the query. Note that this interface is not applicable to the 
+     * thrift implementation. It is mainly meant for driver impls that make use of PreparedStatements
+     * @param condition
+     * @return
+     */
     ColumnFamilyQuery<K, C> withCaching(boolean condition);
-
 }

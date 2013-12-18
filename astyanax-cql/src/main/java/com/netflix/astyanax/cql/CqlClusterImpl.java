@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import com.codahale.metrics.MetricRegistryListener;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Configuration;
 import com.datastax.driver.core.Row;
@@ -20,6 +21,7 @@ import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.KeyspaceTracerFactory;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
+import com.netflix.astyanax.connectionpool.ConnectionPoolMonitor;
 import com.netflix.astyanax.connectionpool.ConnectionPoolProxy.SeedHostListener;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.OperationResult;
@@ -31,6 +33,7 @@ import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
+import com.yammer.metrics.core.MetricsRegistryListener;
 
 /**
  * Java Driver based impl of {@link Cluster} that implements ddl operations.
@@ -49,11 +52,15 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostLis
 	private final AstyanaxConfiguration astyanaxConfig; 
 	private final KeyspaceTracerFactory tracerFactory; 
 	private final Configuration javaDriverConfig; 
+	private final ConnectionPoolMonitor cpMonitor;
+	private final MetricsRegistryListener metricsRegListener;
 	
-	public CqlClusterImpl(AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory, ConnectionPoolConfiguration cpConfig) {
+	public CqlClusterImpl(AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory, ConnectionPoolConfiguration cpConfig, ConnectionPoolMonitor cpMonitor) {
 		this.astyanaxConfig = asConfig;
 		this.tracerFactory = tracerFactory;
 		this.javaDriverConfig = ((JavaDriverConnectionPoolConfigurationImpl)cpConfig).getJavaDriverConfig();
+		this.cpMonitor = cpMonitor;
+		this.metricsRegListener = ((JavaDriverConnectionPoolMonitorImpl)cpMonitor).getMetricsRegistryListener();
 	}
 
 	@Override
@@ -149,17 +156,17 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostLis
 
 	@Override
 	public KeyspaceDefinition describeKeyspace(String ksName) throws ConnectionException {
-		return new CqlKeyspaceImpl(session, ksName, astyanaxConfig, tracerFactory).describeKeyspace();
+		return new CqlKeyspaceImpl(session, ksName, astyanaxConfig, tracerFactory,cpMonitor).describeKeyspace();
 	}
 
 	@Override
 	public Keyspace getKeyspace(String keyspace) throws ConnectionException {
-		return new CqlKeyspaceImpl(session, keyspace, astyanaxConfig, tracerFactory);
+		return new CqlKeyspaceImpl(session, keyspace, astyanaxConfig, tracerFactory,cpMonitor);
 	}
 
 	@Override
 	public OperationResult<SchemaChangeResult> dropKeyspace(String keyspaceName) throws ConnectionException {
-		return new CqlKeyspaceImpl(session, keyspaceName.toLowerCase(), astyanaxConfig, tracerFactory).dropKeyspace();
+		return new CqlKeyspaceImpl(session, keyspaceName.toLowerCase(), astyanaxConfig, tracerFactory,cpMonitor).dropKeyspace();
 	}
 
 	@Override
@@ -254,7 +261,7 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostLis
 
 	@Override
 	public OperationResult<SchemaChangeResult> dropColumnFamily(String keyspaceName, String columnFamilyName) throws ConnectionException {
-		return new CqlKeyspaceImpl(session, keyspaceName, astyanaxConfig, tracerFactory).dropColumnFamily(columnFamilyName);
+		return new CqlKeyspaceImpl(session, keyspaceName, astyanaxConfig, tracerFactory,cpMonitor).dropColumnFamily(columnFamilyName);
 	}
 
 	@Override
@@ -302,7 +309,9 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostLis
 			builder.withoutJMXReporting();
 		}
 				
-		this.cluster = builder.build();
+		this.cluster = builder.build(); 
+		if (!(this.cpMonitor instanceof JavaDriverConnectionPoolMonitorImpl))
+			this.cluster.getMetrics().getRegistry().addListener((MetricRegistryListener) this.metricsRegListener);
 		this.session = cluster.connect();
 	}
 }

@@ -16,7 +16,7 @@ import com.netflix.astyanax.cql.ConsistencyLevelMapping;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
-import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
+import com.netflix.astyanax.cql.util.CFQueryContext;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.serializers.BooleanSerializer;
@@ -33,7 +33,7 @@ import com.netflix.astyanax.serializers.UUIDSerializer;
 public class CqlColumnMutationImpl<K,C> implements ColumnMutation {
 
 	protected final KeyspaceContext ksContext;
-	protected final ColumnFamilyMutationContext<K,C> cfContext;
+	protected final CFQueryContext<K,C> cfContext;
 	protected final CqlColumnFamilyDefinitionImpl cfDef;
 	
 	protected final Object columnName;
@@ -51,7 +51,7 @@ public class CqlColumnMutationImpl<K,C> implements ColumnMutation {
 	
 	private final CFMutationQueryGen queryGen; 
 	
-	public CqlColumnMutationImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<K,C> cfCtx, Object cName) {
+	public CqlColumnMutationImpl(KeyspaceContext ksCtx, CFQueryContext<K,C> cfCtx, Object cName) {
 		this.ksContext = ksCtx;
 		this.columnName = cName;
 		this.cfContext = cfCtx;

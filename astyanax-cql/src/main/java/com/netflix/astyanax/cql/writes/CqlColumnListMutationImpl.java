@@ -9,10 +9,10 @@ import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
+import com.netflix.astyanax.cql.util.CFQueryContext;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnPath;
 import com.netflix.astyanax.model.ConsistencyLevel;
-import com.netflix.astyanax.retry.RetryPolicy;
 
 @SuppressWarnings("deprecation")
 public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationImpl<C> {
@@ -24,7 +24,7 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 	private ColListMutationType type = ColListMutationType.ColumnsUpdate;
 	
 	private final KeyspaceContext ksContext;
-	private final ColumnFamilyMutationContext<K,C> cfContext;
+	private final CFQueryContext<K,C> cfContext;
 	
 	private final CqlColumnFamilyDefinitionImpl cfDef;
 	
@@ -35,7 +35,7 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 		
 		super(timestamp);
 		this.ksContext = ksCtx;
-		this.cfContext = new ColumnFamilyMutationContext<K,C>(cf, rowKey);
+		this.cfContext = new CFQueryContext<K,C>(cf, rowKey, null, level);
 		this.cfDef = (CqlColumnFamilyDefinitionImpl) cf.getColumnFamilyDefinition();
 	}
 	
@@ -162,48 +162,6 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 		Preconditions.checkArgument(columnName != null, "Column Name must not be null");
 		if (columnName instanceof String) {
 			Preconditions.checkArgument(!((String)columnName).isEmpty(), "Column Name must not be null");
-		}
-	}
-	
-	public static class ColumnFamilyMutationContext<K,C> {
-		
-		private final ColumnFamily<K,C> columnFamily;
-		private final K rowKey;
-		private RetryPolicy retryPolicy;
-		
-		public ColumnFamilyMutationContext(ColumnFamily<K,C> cf, K rKey) {
-			this.columnFamily = cf;
-			this.rowKey = rKey;
-			this.retryPolicy = null;
-		}
-		
-		public ColumnFamilyMutationContext(ColumnFamily<K,C> cf, K rKey, RetryPolicy retry) {
-			this.columnFamily = cf;
-			this.rowKey = rKey;
-			this.retryPolicy = retry;
-		}
-
-		public ColumnFamily<K, C> getColumnFamily() {
-			return columnFamily;
-		}
-
-		public K getRowKey() {
-			return rowKey;
-		}
-
-		public void setRetryPolicy(RetryPolicy retry) {
-			this.retryPolicy = retry;
-		}
-		
-		public RetryPolicy getRetryPolicy() {
-			return retryPolicy;
-		}
-
-		public String toString() {
-			StringBuilder sb = new StringBuilder();
-			sb.append("CF=").append(columnFamily.getName());
-			sb.append(" RowKey: ").append(rowKey.toString());
-			return sb.toString();
 		}
 	}
 	

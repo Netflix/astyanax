@@ -8,7 +8,7 @@ import java.util.List;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.reads.model.CqlRowSlice;
-import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
+import com.netflix.astyanax.cql.util.CFQueryContext;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.query.AllRowsQuery;
@@ -38,19 +38,19 @@ import com.netflix.astyanax.retry.RetryPolicy;
 public class CqlColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C> {
 
 	private final KeyspaceContext ksContext;
-	private final ColumnFamilyMutationContext<K,C> cfContext;
-	private ConsistencyLevel consistencyLevel = ConsistencyLevel.CL_ONE;
+	private final CFQueryContext<K,C> cfContext;
 	
 	private boolean useCaching = false;
 	
 	public CqlColumnFamilyQueryImpl(KeyspaceContext ksCtx, ColumnFamily<K,C> cf) {
 		this.ksContext = ksCtx;
-		this.cfContext = new ColumnFamilyMutationContext<K,C>(cf, null);
+		this.cfContext = new CFQueryContext<K,C>(cf, null);
+		this.cfContext.setConsistencyLevel(ConsistencyLevel.CL_ONE);
 	}
 	
 	@Override
 	public ColumnFamilyQuery<K, C> setConsistencyLevel(ConsistencyLevel clLevel) {
-		this.consistencyLevel = clLevel;
+		this.cfContext.setConsistencyLevel(clLevel);
 		return this;
 	}
 
@@ -67,12 +67,12 @@ public class CqlColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C> {
 
 	@Override
 	public RowQuery<K, C> getKey(K rowKey) {
-		return new CqlRowQueryImpl<K, C>(ksContext, cfContext, rowKey, consistencyLevel, useCaching);
+		return new CqlRowQueryImpl<K, C>(ksContext, cfContext, rowKey, useCaching);
 	}
 
 	@Override
 	public RowQuery<K, C> getRow(K rowKey) {
-		return new CqlRowQueryImpl<K, C>(ksContext, cfContext, rowKey, consistencyLevel, useCaching);
+		return new CqlRowQueryImpl<K, C>(ksContext, cfContext, rowKey, useCaching);
 	}
 
 	@Override

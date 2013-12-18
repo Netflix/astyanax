@@ -12,7 +12,7 @@ import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.reads.model.CqlColumnImpl;
 import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
-import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
+import com.netflix.astyanax.cql.util.CFQueryContext;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.query.ColumnQuery;
@@ -31,7 +31,7 @@ import com.netflix.astyanax.query.ColumnQuery;
 public class CqlColumnQueryImpl<C> implements ColumnQuery<C> {
 
 	private final KeyspaceContext ksContext;
-	private final ColumnFamilyMutationContext<?,C> cfContext;
+	private final CFQueryContext<?,C> cfContext;
 	private final Object rowKey;
 	private final C columnName;
 
@@ -39,7 +39,7 @@ public class CqlColumnQueryImpl<C> implements ColumnQuery<C> {
 	
 	private final CqlColumnFamilyDefinitionImpl cfDef;
 
-	CqlColumnQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<?,C> cfCtx, Object rowKey, C colName, boolean caching) {
+	CqlColumnQueryImpl(KeyspaceContext ksCtx, CFQueryContext<?,C> cfCtx, Object rowKey, C colName, boolean caching) {
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;
 		this.rowKey = rowKey;

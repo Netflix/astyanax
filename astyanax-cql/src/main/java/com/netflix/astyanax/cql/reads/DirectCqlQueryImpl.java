@@ -17,7 +17,7 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.cql.CqlAbstractExecutionImpl;
 import com.netflix.astyanax.cql.CqlKeyspaceImpl.KeyspaceContext;
 import com.netflix.astyanax.cql.reads.model.DirectCqlResult;
-import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
+import com.netflix.astyanax.cql.util.CFQueryContext;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.query.CqlQuery;
@@ -34,10 +34,10 @@ import com.netflix.astyanax.query.PreparedCqlQuery;
 public class DirectCqlQueryImpl<K, C> implements CqlQuery<K, C> {
 
 	private final KeyspaceContext ksContext;
-	private final ColumnFamilyMutationContext<K,C> cfContext;
+	private final CFQueryContext<K,C> cfContext;
 	private final String basicCqlQuery; 
 	
-	public DirectCqlQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<K,C> cfCtx, String basicCqlQuery) {
+	public DirectCqlQueryImpl(KeyspaceContext ksCtx, CFQueryContext<K,C> cfCtx, String basicCqlQuery) {
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;
 		this.basicCqlQuery = basicCqlQuery;

@@ -22,7 +22,7 @@ import com.netflix.astyanax.cql.reads.model.CqlRowListImpl;
 import com.netflix.astyanax.cql.reads.model.CqlRowListIterator;
 import com.netflix.astyanax.cql.reads.model.CqlRowSlice;
 import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
-import com.netflix.astyanax.cql.writes.CqlColumnListMutationImpl.ColumnFamilyMutationContext;
+import com.netflix.astyanax.cql.util.CFQueryContext;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnSlice;
@@ -47,7 +47,7 @@ import com.netflix.astyanax.serializers.CompositeRangeBuilder.CompositeByteBuffe
 public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 
 	private final KeyspaceContext ksContext;
-	private final ColumnFamilyMutationContext<K,C> cfContext;
+	private final CFQueryContext<K,C> cfContext;
 
 	private final CqlRowSlice<K> rowSlice;
 	private CqlColumnSlice<C> columnSlice = new CqlColumnSlice<C>();
@@ -68,11 +68,11 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 	private final RowSliceQueryType rowQueryType;
 	private ColumnSliceQueryType colQueryType = ColumnSliceQueryType.AllColumns;
 	
-	public CqlRowSliceQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<K,C> cfCtx, CqlRowSlice<K> rSlice, boolean useCaching) {
+	public CqlRowSliceQueryImpl(KeyspaceContext ksCtx, CFQueryContext<K,C> cfCtx, CqlRowSlice<K> rSlice, boolean useCaching) {
 		this(ksCtx, cfCtx, rSlice, true, useCaching);
 	}
 
-	public CqlRowSliceQueryImpl(KeyspaceContext ksCtx, ColumnFamilyMutationContext<K,C> cfCtx, CqlRowSlice<K> rSlice, boolean condition, boolean useCaching) {
+	public CqlRowSliceQueryImpl(KeyspaceContext ksCtx, CFQueryContext<K,C> cfCtx, CqlRowSlice<K> rSlice, boolean condition, boolean useCaching) {
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;
 		this.rowSlice = rSlice;
@@ -170,7 +170,7 @@ public class CqlRowSliceQueryImpl<K, C> implements RowSliceQuery<K, C> {
 			this.rowSliceQuery = rSliceQuery;
 		}
 		
-		public InternalRowQueryExecutionImpl(KeyspaceContext ksContext, ColumnFamilyMutationContext<?, ?> cfContext) {
+		public InternalRowQueryExecutionImpl(KeyspaceContext ksContext, CFQueryContext<?, ?> cfContext) {
 			super(ksContext, cfContext);
 			this.rowSliceQuery = null;
 		}

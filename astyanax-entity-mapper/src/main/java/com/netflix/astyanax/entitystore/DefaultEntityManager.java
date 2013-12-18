@@ -20,6 +20,7 @@ import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
+import com.netflix.astyanax.partitioner.Murmur3Partitioner;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.recipes.reader.AllRowsReader;
 import com.netflix.astyanax.retry.RetryPolicy;
@@ -378,6 +379,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
         try {
             new AllRowsReader.Builder<K, String>(keyspace, columnFamily)
                     .withIncludeEmptyRows(false)
+                    .withPartitioner(Murmur3Partitioner.get())
                     .forEachRow(new Function<Row<K,String>, Boolean>() {
                         @Override
                         public Boolean apply(Row<K, String> row) {

@@ -117,6 +117,7 @@ public class ObjectReader implements Callable<ObjectMetadata> {
 
             final AtomicReference<Exception> exception = new AtomicReference<Exception>();
             final AtomicLong totalBytesRead = new AtomicLong();
+            final AtomicLong totalBytesRead2 = new AtomicLong();
 
             // Iterate sequentially building up the batches. Once a complete
             // batch of ids is ready
@@ -147,7 +148,7 @@ public class ObjectReader implements Callable<ObjectMetadata> {
                                     while (exception.get() == null) {
                                         try {
                                             ByteBuffer chunk = provider.readChunk(objectName, chunkId);
-                                            totalBytesRead.addAndGet(chunk.limit());
+                                            totalBytesRead.addAndGet(chunk.remaining());
                                             chunks.set(chunkId - firstBlockId, chunk);
                                             callback.onChunk(chunkId, chunk);
                                             break;
@@ -174,13 +175,19 @@ public class ObjectReader implements Callable<ObjectMetadata> {
                         throw exception.get();
 
                     for (int i = 0; i < chunks.length(); i++) {
-                        os.write(chunks.get(i).array());
+                    	
+                        ByteBuffer bb = chunks.get(i);
+                        byte[] bytes = new byte[bb.remaining()];
+                        bb.get(bytes, 0, bytes.length);
+                        os.write(bytes);
+                        
+                        //os.write(chunks.get(i).array());
                         os.flush();
                     }
                     idsToRead.clear();
                 }
             }
-
+            
             if (totalBytesRead.get() != attributes.getObjectSize()) {
                 throw new Exception("Bytes read (" + totalBytesRead.get() + ") does not match object size ("
                         + attributes.getObjectSize() + ") for object " + objectName);

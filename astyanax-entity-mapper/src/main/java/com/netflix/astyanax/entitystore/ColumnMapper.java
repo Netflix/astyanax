@@ -6,7 +6,7 @@ import java.util.Iterator;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.model.Column;
 
-interface ColumnMapper {
+public interface ColumnMapper {
 	
 	public String getColumnName();
 

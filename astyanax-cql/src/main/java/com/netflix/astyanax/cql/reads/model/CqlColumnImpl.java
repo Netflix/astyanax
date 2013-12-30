@@ -59,6 +59,14 @@ public class CqlColumnImpl<C> implements Column<C> {
 		Definition colDefinition  = row.getColumnDefinitions().asList().get(index);
 		isBlob = colDefinition.getType() == DataType.blob();
 	}
+	
+	public CqlColumnImpl(C colName, Row row, int index, Definition colDefinition) {
+		this.columnName = colName;
+		this.row = row;
+		this.index = index;
+
+		isBlob = colDefinition.getType() == DataType.blob();
+	}
 
 	@Override
 	public C getName() {

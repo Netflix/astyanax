@@ -38,6 +38,12 @@ public class CqlRowImpl<K, C> implements Row<K, C> {
 		this.cf = cf;
 	}
 	
+	public CqlRowImpl(K rKey, CqlColumnListImpl<C> colList, ColumnFamily<K, C> columnFamily) {
+		this.rowKey = rKey;
+		this.cqlColumnList = colList;
+		this.cf = columnFamily;
+	}
+	
 	@Override
 	public K getKey() {
 		return rowKey;

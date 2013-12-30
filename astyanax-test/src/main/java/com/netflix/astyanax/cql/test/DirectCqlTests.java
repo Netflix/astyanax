@@ -2,80 +2,89 @@ package com.netflix.astyanax.cql.test;
 
 import junit.framework.Assert;
 
-import org.apache.log4j.Logger;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.netflix.astyanax.ColumnListMutation;
-import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.model.Row;
+import com.netflix.astyanax.query.CqlQuery;
+import com.netflix.astyanax.query.PreparedCqlQuery;
+import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 
 public class DirectCqlTests extends KeyspaceTests {
 	
-	private static final Logger LOG = Logger.getLogger(DirectCqlTests.class);
-	
-    public static ColumnFamily<String, String> CF_DIRECT = ColumnFamily
+    public static ColumnFamily<Integer, String> CF_DIRECT = ColumnFamily
             .newColumnFamily(
                     "cfdirect", 
-                    StringSerializer.get(),
+                    IntegerSerializer.get(),
                     StringSerializer.get());
 
     @BeforeClass
 	public static void init() throws Exception {
 		initContext();
-		keyspace.createColumnFamily(CF_DIRECT, null);
-    	CF_DIRECT.describe(keyspace);
+		
+		keyspace.prepareQuery(CF_DIRECT)
+		        .withCql("CREATE TABLE astyanaxunittests.cfdirect ( key int, column1 text, value bigint, PRIMARY KEY (key) )")
+		        .execute();
 	}
 
     @AfterClass
 	public static void tearDown() throws Exception {
-    	keyspace.dropColumnFamily(CF_DIRECT);
+		keyspace.prepareQuery(CF_DIRECT)
+        .withCql("DROP TABLE astyanaxunittests.cfdirect")
+        .execute();
 	}
 
     @Test
     public void testCql() throws Exception {
     	
-        MutationBatch m = keyspace.prepareMutationBatch();
-
-        for (char keyName = 'A'; keyName <= 'F'; keyName++) {
-            String rowKey = Character.toString(keyName);
-            ColumnListMutation<String> cfmStandard = m.withRow(CF_DIRECT, rowKey);
-            for (char cName = 'a'; cName <= 'z'; cName++) {
-                cfmStandard.putColumn(Character.toString(cName), (int) (cName - 'a') + 1, null);
-            }
-            m.execute();
-        }
-
-    	System.out.println("testCQL");
-    	LOG.info("CQL Test");
-    	OperationResult<CqlResult<String, String>> result = keyspace
+    	// INSERT VALUES 
+    	CqlQuery<Integer, String> cqlQuery = keyspace
+    	.prepareQuery(CF_DIRECT)
+    	.withCql("INSERT INTO astyanaxunittests.cfdirect (key, column1, value) VALUES (?,?,?)");
+    	
+    	for (int i=0; i<10; i++) {
+    		PreparedCqlQuery<Integer, String> pStatement = cqlQuery.asPreparedStatement();
+    		pStatement.withIntegerValue(i).withStringValue(""+i).withLongValue(Long.valueOf(""+i)).execute();
+    	}
+    	
+    	// TEST REGULAR CQL
+    	OperationResult<CqlResult<Integer, String>> result = keyspace
     			.prepareQuery(CF_DIRECT)
     			.withCql("SELECT * FROM astyanaxunittests.cfdirect;").execute();
     	Assert.assertTrue(result.getResult().hasRows());
 
-    	Assert.assertEquals(6, result.getResult().getRows().size());
+    	Assert.assertEquals(10, result.getResult().getRows().size());
     	Assert.assertFalse(result.getResult().hasNumber());
     	
-    	Row<String, String> row;
+    	for (int i=0; i<10; i++) {
+    		
+    		Row<Integer, String> row = result.getResult().getRows().getRow(i);
+        	Assert.assertTrue(i == row.getKey());
+        	Assert.assertEquals(3, row.getColumns().size());
+        	
+        	Integer key = row.getColumns().getIntegerValue("key", null);
+        	Assert.assertTrue(Integer.valueOf(""+i) == key);
 
-    	row = result.getResult().getRows().getRow("A");
-    	Assert.assertEquals("A", row.getKey());
-    	Assert.assertEquals(26, row.getColumns().size());
-    	
-    	row = result.getResult().getRows().getRow("B");
-    	Assert.assertEquals("B", row.getKey());
-    	Assert.assertEquals(26, row.getColumns().size());
-
-    	row = result.getResult().getRows().getRow("NonExistent");
-    	Assert.assertNull(row);
-
-    	for (Row<String, String> row1 : result.getResult().getRows()) {
-    		LOG.info("KEY***: " + row1.getKey()); 
+        	String column1 = row.getColumns().getStringValue("column1", null);
+        	Assert.assertEquals(""+i, column1);
+        	
+        	Long value = row.getColumns().getLongValue("value", null);
+        	Assert.assertTrue(Long.valueOf(""+i) == value);
     	}
+    	
+    	//  TEST CQL COUNT
+
+    	result = keyspace
+    			.prepareQuery(CF_DIRECT)
+    			.withCql("SELECT count(*) FROM astyanaxunittests.cfdirect;").execute();
+    	Assert.assertFalse(result.getResult().hasRows());
+    	Assert.assertTrue(result.getResult().hasNumber());
+
+    	Assert.assertTrue(10 == result.getResult().getNumber());
     }
 }

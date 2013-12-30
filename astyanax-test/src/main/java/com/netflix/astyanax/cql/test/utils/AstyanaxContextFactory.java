@@ -186,7 +186,7 @@ public class AstyanaxContextFactory {
 
 			@Override
 			public List<Host> get() {
-				Host host = new Host(SEEDS, -1);
+				Host host = new Host(SEEDS, 9160);
 				return Collections.singletonList(host);
 			}
     	};

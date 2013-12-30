@@ -78,7 +78,7 @@ public class CqlColumnListImpl<C> implements ColumnList<C> {
 		}
 	}
 	
-	public CqlColumnListImpl(List<Column<C>> newColumnList) {
+	public CqlColumnListImpl(List<CqlColumnImpl<C>> newColumnList) {
 		this.columnList.clear();
 		for (Column<C> column : newColumnList) {
 			columnList.add(column);

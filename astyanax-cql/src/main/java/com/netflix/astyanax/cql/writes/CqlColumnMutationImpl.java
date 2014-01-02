@@ -228,7 +228,7 @@ public class CqlColumnMutationImpl<K,C> implements ColumnMutation {
 		return type;
 	}
 	
-	public K getRowKey() {
+	public Object getRowKey() {
 		return cfContext.getRowKey();
 	}
 	

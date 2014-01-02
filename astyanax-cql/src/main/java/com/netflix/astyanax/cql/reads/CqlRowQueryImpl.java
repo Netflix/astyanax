@@ -31,7 +31,6 @@ import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ColumnSlice;
-import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.query.ColumnCountQuery;
 import com.netflix.astyanax.query.ColumnQuery;
 import com.netflix.astyanax.query.RowQuery;
@@ -55,7 +54,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 	private final KeyspaceContext ksContext;
 	private final CFQueryContext<K,C> cfContext;
 
-	private final K rowKey;
+	private final Object rowKey;
 	private final CqlColumnSlice<C> columnSlice = new CqlColumnSlice<C>();
 	private CompositeByteBufferRange compositeRange;
 	private final PaginationContext paginationContext = new PaginationContext();
@@ -70,7 +69,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 	public CqlRowQueryImpl(KeyspaceContext ksCtx, CFQueryContext<K,C> cfCtx, K rKey, boolean useCaching) {
 		this.ksContext = ksCtx;
 		this.cfContext = cfCtx;
-		this.rowKey = rKey;
+		this.rowKey = cfCtx.checkRowKey(rKey);
 		this.useCaching = useCaching;
 	}
 
@@ -337,7 +336,7 @@ public class CqlRowQueryImpl<K, C> implements RowQuery<K, C> {
 		}
 	}
 	
-	public K getRowKey() {
+	public Object getRowKey() {
 		return rowKey;
 	}
 	

@@ -1,5 +1,8 @@
 package com.netflix.astyanax.cql.util;
 
+import java.nio.ByteBuffer;
+
+import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
@@ -7,21 +10,21 @@ import com.netflix.astyanax.retry.RetryPolicy;
 public class CFQueryContext<K,C> {
 
 	private final ColumnFamily<K,C> columnFamily;
-	private final K rowKey;
+	private final Object rowKey;
 	private RetryPolicy retryPolicy;
 	private ConsistencyLevel clLevel; 
+
+	public CFQueryContext(ColumnFamily<K,C> cf) {
+		this(cf, null, null, null);
+	}
 
 	public CFQueryContext(ColumnFamily<K,C> cf, K rKey) {
 		this(cf, rKey, null, null);
 	}
 
-	public CFQueryContext(ColumnFamily<K,C> cf, K rKey, RetryPolicy retry) {
-		this(cf, rKey, retry, null);
-	}
-
 	public CFQueryContext(ColumnFamily<K,C> cf, K rKey, RetryPolicy retry, ConsistencyLevel cl) {
 		this.columnFamily = cf;
-		this.rowKey = rKey;
+		this.rowKey = checkRowKey(rKey);
 		this.retryPolicy = retry;
 		this.clLevel = cl;
 	}
@@ -30,7 +33,7 @@ public class CFQueryContext<K,C> {
 		return columnFamily;
 	}
 
-	public K getRowKey() {
+	public Object getRowKey() {
 		return rowKey;
 	}
 
@@ -48,6 +51,28 @@ public class CFQueryContext<K,C> {
 
 	public ConsistencyLevel getConsistencyLevel() {
 		return clLevel;
+	}
+	
+	public Object checkRowKey(K rKey) {
+		
+		if (rKey == null) {
+			return null;
+		}
+		
+		CqlColumnFamilyDefinitionImpl cfDef = (CqlColumnFamilyDefinitionImpl) columnFamily.getColumnFamilyDefinition();
+		
+		if (cfDef.getKeyValidationClass().contains("BytesType")) {
+			
+			// Row key is of type bytes. Convert row key to bytebuffer if needed
+			if (rKey instanceof ByteBuffer) {
+				return rKey;
+			}
+			
+			return columnFamily.getKeySerializer().toByteBuffer(rKey);
+		}
+		
+		// else just return the row key as is
+		return rKey;
 	}
 
 	public String toString() {

@@ -180,7 +180,7 @@ public class CqlColumnListMutationImpl<K, C> extends AbstractColumnListMutationI
 		return type;
 	}
 
-	public K getRowKey() {
+	public Object getRowKey() {
 		return cfContext.getRowKey();
 	}
 }

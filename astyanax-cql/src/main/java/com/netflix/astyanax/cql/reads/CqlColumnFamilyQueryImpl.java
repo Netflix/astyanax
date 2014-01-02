@@ -44,7 +44,7 @@ public class CqlColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C> {
 	
 	public CqlColumnFamilyQueryImpl(KeyspaceContext ksCtx, ColumnFamily<K,C> cf) {
 		this.ksContext = ksCtx;
-		this.cfContext = new CFQueryContext<K,C>(cf, null);
+		this.cfContext = new CFQueryContext<K,C>(cf);
 		this.cfContext.setConsistencyLevel(ConsistencyLevel.CL_ONE);
 	}
 	

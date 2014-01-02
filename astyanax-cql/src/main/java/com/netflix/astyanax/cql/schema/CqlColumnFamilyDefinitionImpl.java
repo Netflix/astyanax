@@ -501,24 +501,24 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 
 	@Override
 	public ColumnFamilyDefinition setComparatorType(String value) {
-		optionsMap.put("comparator_type", value);
+		optionsMap.put("comparator", value);
 		return this;
 	}
 
 	@Override
 	public String getComparatorType() {
-		return (String) optionsMap.get("comparator_type");
+		return (String) optionsMap.get("comparator");
 	}
 
 	@Override
 	public ColumnFamilyDefinition setDefaultValidationClass(String value) {
-		optionsMap.put("default_validation_class", value);
+		optionsMap.put("default_validator", value);
 		return this;
 	}
 
 	@Override
 	public String getDefaultValidationClass() {
-		return (String) optionsMap.get("default_validation_class");
+		return (String) optionsMap.get("default_validator");
 	}
 
 	@Override
@@ -564,13 +564,13 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 
 	@Override
 	public ColumnFamilyDefinition setKeyValidationClass(String keyValidationClass) {
-		optionsMap.put("key_validation_class", keyValidationClass);
+		optionsMap.put("key_validator", keyValidationClass);
 		return this;
 	}
 	
 	@Override
 	public String getKeyValidationClass() {
-		return (String) optionsMap.get("key_validation_class");
+		return (String) optionsMap.get("key_validator");
 	}
 
 	public ColumnDefinition getPartitionKeyColumnDefinition() {
@@ -863,5 +863,11 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 	
 	public CFRowQueryGen getRowQueryGenerator() {
 		return rowQueryGen;
+	}
+	
+	public void printOptionsMap() {
+		for (String key : optionsMap.keySet()) {
+			System.out.println(key + " " +  optionsMap.get(key));
+		}
 	}
 }

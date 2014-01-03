@@ -78,18 +78,10 @@ public class CqlTypeMapping {
 		}
 		return type.toString();
 	}
-	
+
 	public static ComparatorType getComparatorType(CQL3Type cqlType) {
 		return cql3ToComparatorTypeMap.get(cqlType);
 	}
-	
-//	public static <T> Object getDynamicColumn(Row row, Serializer<T> serializer) {
-//		int numCols = row.getColumnDefinitions().size();
-//		if (numCols < 2) {
-//			throw new RuntimeException("Not enough columns for in row for parsing the column name");
-//		}
-//		return getDynamicColumn(row, serializer, numCols-2);
-//	}
 	
 	private static <T> Object getDynamicColumn(Row row, Serializer<T> serializer, String columnName, ColumnFamily<?,?> cf) {
 		

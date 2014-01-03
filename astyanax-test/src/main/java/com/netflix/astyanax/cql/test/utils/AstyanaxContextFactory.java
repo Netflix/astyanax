@@ -198,7 +198,9 @@ public class AstyanaxContextFactory {
                         new AstyanaxConfigurationImpl()
                                 .setDiscoveryType(NodeDiscoveryType.DISCOVERY_SERVICE)
                                 .setConnectionPoolType(ConnectionPoolType.ROUND_ROBIN)
-                                .setDiscoveryDelayInSeconds(60000))
+                                .setDiscoveryDelayInSeconds(60000)
+                                .setTargetCassandraVersion("1.2")
+                                )
                                 .withConnectionPoolConfiguration(
                         new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME
                                 + "_" + TEST_KEYSPACE_NAME)

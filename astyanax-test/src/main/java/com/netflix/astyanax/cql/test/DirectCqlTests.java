@@ -22,20 +22,34 @@ public class DirectCqlTests extends KeyspaceTests {
                     "cfdirect", 
                     IntegerSerializer.get(),
                     StringSerializer.get());
+    
+    public static ColumnFamily<String, String> CF_EMPTY_TABLE = ColumnFamily
+            .newColumnFamily(
+                    "empty_table", 
+                    StringSerializer.get(),
+                    StringSerializer.get(),
+                    StringSerializer.get());
+
 
     @BeforeClass
 	public static void init() throws Exception {
 		initContext();
 		
 		keyspace.prepareQuery(CF_DIRECT)
-		        .withCql("CREATE TABLE astyanaxunittests.cfdirect ( key int, column1 text, value bigint, PRIMARY KEY (key) )")
-		        .execute();
+        .withCql("CREATE TABLE astyanaxunittests.cfdirect ( key int, column1 text, value bigint, PRIMARY KEY (key) )")
+        .execute();
+		keyspace.prepareQuery(CF_EMPTY_TABLE)
+        .withCql("CREATE TABLE astyanaxunittests.empty_table ( key text, column1 text, value text, PRIMARY KEY (key) )")
+        .execute();
 	}
 
     @AfterClass
 	public static void tearDown() throws Exception {
 		keyspace.prepareQuery(CF_DIRECT)
         .withCql("DROP TABLE astyanaxunittests.cfdirect")
+        .execute();
+		keyspace.prepareQuery(CF_EMPTY_TABLE)
+        .withCql("DROP TABLE astyanaxunittests.empty_table")
         .execute();
 	}
 
@@ -86,5 +100,19 @@ public class DirectCqlTests extends KeyspaceTests {
     	Assert.assertTrue(result.getResult().hasNumber());
 
     	Assert.assertTrue(10 == result.getResult().getNumber());
+    }
+    
+    
+    @Test 
+    public void testEmptyTable() throws Exception {
+
+    	CqlResult<String, String> result = keyspace.prepareQuery(CF_EMPTY_TABLE)
+    	.withCql("select * from astyanaxunittests.empty_table where  key = 'blah'")
+    	.execute()
+    	.getResult();
+    	
+    	Assert.assertFalse(result.hasRows());
+    	Assert.assertFalse(result.hasNumber());
+    	Assert.assertTrue(0 == result.getRows().size());
     }
 }

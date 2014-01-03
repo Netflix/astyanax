@@ -54,7 +54,7 @@ public class DirectCqlResult<K, C> implements CqlResult<K, C> {
 
 	@Override
 	public boolean hasRows() {
-		return rows != null;
+		return rows != null && rows.size() > 0;
 	}
 
 	@Override

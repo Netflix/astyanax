@@ -25,20 +25,22 @@ public class StaticColumnFamilyTests extends KeyspaceTests {
 	@BeforeClass
 	public static void init() throws Exception {
 		initContext();
-		//keyspace.createColumnFamily(CF_ACCOUNTS, null);
+		keyspace.prepareQuery(CF_ACCOUNTS)
+				.withCql("CREATE TABLE astyanaxunittests.accounts (userid text PRIMARY KEY, user text, pswd text)")
+				.execute();
 		CF_ACCOUNTS.describe(keyspace);
 	}
 
 	@AfterClass
 	public static void tearDown() throws Exception {
-		//keyspace.dropColumnFamily(CF_ACCOUNTS);
+		keyspace.dropColumnFamily(CF_ACCOUNTS);
 	}
 
 	@Test
 	public void testReadWriteOpsWithStaticNamedColumns() throws Exception {
 
 		populateRowsForAccountsTable(keyspace);
-		Thread.sleep(1000);
+		Thread.sleep(200);
 		boolean rowDeleted = false; 
 
 		performSimpleRowQuery(rowDeleted);
@@ -48,7 +50,7 @@ public class StaticColumnFamilyTests extends KeyspaceTests {
 		performRowSliceQueryWithColumnSlice(rowDeleted);
 
 		deleteRowsForAccountsTable(keyspace);
-		Thread.sleep(1000);
+		Thread.sleep(200);
 		rowDeleted = true; 
 
 		performSimpleRowQuery(rowDeleted);

@@ -121,15 +121,25 @@ public class ColumnFamily<K, C> implements Comparable<ColumnFamily<K,C>>{
     public int compareTo(ColumnFamily<K, C> other) {
         return getName().compareTo(other.getName());
     }
-    
+
     @Override
     public boolean equals(Object obj) {
-        ColumnFamily p = (ColumnFamily)obj;
-        return this.getName().equals(p.getName());
+        
+        if (this == obj) return true;
+        if (obj == null) return false;
+        
+        if (!(obj instanceof ColumnFamily))
+            return false;
+        
+        ColumnFamily other = (ColumnFamily) obj;
+        return (getName() == null) ? other.getName() == null : getName().equals(other.getName());
     }
-     
+    
     @Override
     public int hashCode() {
-        return this.getName().hashCode();
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((getName() == null) ? 0 : getName().hashCode());
+        return result;
     }
 }

@@ -29,7 +29,7 @@ import com.google.common.collect.Maps.EntryTransformer;
 
 import org.apache.cassandra.thrift.Cassandra.batch_mutate_args;
 import org.apache.cassandra.thrift.Mutation;
-import org.apache.cassandra.thrift.TBinaryProtocol;
+import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.thrift.TException;
 import org.apache.thrift.transport.TIOStreamTransport;

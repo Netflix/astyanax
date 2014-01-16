@@ -101,7 +101,7 @@ project(':astyanax-cassandra') {
     dependencies {
         compile "org.apache.cassandra:cassandra-all:$cassandraVersion"
         compile "org.apache.servicemix.bundles:org.apache.servicemix.bundles.commons-csv:$commonsCsvVersion"
-        compile "org.jboss.netty:netty:$nettyVersion"   
+        compile "io.netty:netty:$nettyVersion"   
         compile  project(':astyanax-core')
     }
 }

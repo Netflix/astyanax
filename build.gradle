@@ -69,11 +69,6 @@ project(':astyanax-core') {
     dependencies {
         testCompile "junit:junit:$junitVersion"
     }
-    jar {
-        dependsOn configurations.runtime
-        baseName = 'astyanax-all'
-        from { configurations.runtime.collect { it.isDirectory() ? it : zipTree(it) } }
-    }
 }
 
 project(':astyanax-thrift') {

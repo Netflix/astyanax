@@ -39,6 +39,12 @@ public class BoundedExponentialBackoff extends ExponentialBackoff {
         this.maxSleepTimeMs = maxSleepTimeMs;
     }
 
+    @Deprecated
+    public BoundedExponentialBackoff(long baseSleepTimeMs, int maxSleepTimeMs, int max) {
+        super(baseSleepTimeMs, max);
+        this.maxSleepTimeMs = maxSleepTimeMs;
+    }
+
     public long getSleepTimeMs() {
         return Math.min(maxSleepTimeMs, super.getSleepTimeMs());
     }

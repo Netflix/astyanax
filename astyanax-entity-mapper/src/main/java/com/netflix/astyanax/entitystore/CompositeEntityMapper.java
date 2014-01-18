@@ -103,7 +103,7 @@ public class CompositeEntityMapper<T, K> {
         // clazz should be annotated with @Entity
         Entity entityAnnotation = clazz.getAnnotation(Entity.class);
         if(entityAnnotation == null)
-            throw new IllegalArgumentException("class is NOT annotated with @java.persistence.Entity: " + clazz.getName());
+            throw new IllegalArgumentException("class is NOT annotated with @javax.persistence.Entity: " + clazz.getName());
         
         entityName = MappingUtils.getEntityName(entityAnnotation, clazz);
         

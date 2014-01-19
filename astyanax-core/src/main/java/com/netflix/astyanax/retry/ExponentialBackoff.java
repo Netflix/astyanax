@@ -37,6 +37,12 @@ public class ExponentialBackoff extends SleepingRetryPolicy {
         this.baseSleepTimeMs = baseSleepTimeMs;
     }
 
+    @Deprecated
+    public ExponentialBackoff(int baseSleepTimeMs, int maxAttempts) {
+        super(maxAttempts);
+        this.baseSleepTimeMs = baseSleepTimeMs;
+    }
+
     @Override
     public long getSleepTimeMs() {
         int attempt = this.getAttemptCount() + 1;

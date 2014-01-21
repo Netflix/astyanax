@@ -40,7 +40,7 @@ import com.netflix.astyanax.connectionpool.impl.SimpleRateLimiterImpl;
 
 import org.apache.cassandra.thrift.AuthenticationRequest;
 import org.apache.cassandra.thrift.Cassandra;
-import org.apache.cassandra.thrift.TBinaryProtocol;
+import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TSSLTransportFactory;
 import org.apache.thrift.transport.TSSLTransportFactory.TSSLTransportParameters;
@@ -192,7 +192,7 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
                 if(!transport.isOpen())
                     transport.open();
 
-                cassandraClient = new Cassandra.Client(new TBinaryProtocol(transport));
+                cassandraClient = new Cassandra.Client(new TBinaryProtocol.Factory().getProtocol(transport));
                 monitor.incConnectionCreated(getHost());
 
                 AuthenticationCredentials credentials = cpConfig.getAuthenticationCredentials();

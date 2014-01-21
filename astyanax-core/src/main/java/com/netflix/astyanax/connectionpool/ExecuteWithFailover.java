@@ -16,7 +16,23 @@
 package com.netflix.astyanax.connectionpool;
 
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.connectionpool.impl.AbstractHostPartitionConnectionPool;
 
+/**
+ * Interface that encapsulates functionality to execute an {@link Operation} with a failover strategy as well. 
+ * 
+ * This class is used when attempting to find a healthy {@link Connection} from a set of {@link HostConnectionPool}(s) for a set of {@link Host}(s)
+ * This can be used by an extending class of the {@link AbstractHostPartitionConnectionPool} which reliably tries to execute an {@link Operation} 
+ * within the {@link AbstractHostPartitionConnectionPool#executeWithFailover(Operation, com.netflix.astyanax.retry.RetryPolicy)} method for the 
+ * given host partitions.
+ * 
+ * @see {@link AbstractHostPartitionConnectionPool} for references to this class. 
+ * 
+ * @author elandau
+ *
+ * @param <CL>
+ * @param <R>
+ */
 public interface ExecuteWithFailover<CL, R> {
     OperationResult<R> tryOperation(Operation<CL, R> operation) throws ConnectionException;
 }

@@ -17,10 +17,10 @@ package com.netflix.astyanax.recipes.reader;
 
 import java.io.Flushable;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -40,6 +40,7 @@ import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnSlice;
+import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.partitioner.BigInteger127Partitioner;
@@ -49,8 +50,6 @@ import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.query.RowSliceQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.shallows.EmptyCheckpointManager;
-import com.netflix.astyanax.util.Callables;
-import com.netflix.astyanax.model.ConsistencyLevel;
 
 /**
  * Recipe that is used to read all rows from a column family.  
@@ -217,6 +216,21 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
         public Builder<K, C> withConcurrencyLevel(int concurrencyLevel) {
             Preconditions.checkArgument(concurrencyLevel >= 1, "Concurrency level must be >= 1");
             this.concurrencyLevel = concurrencyLevel;
+            return this;
+        }
+        
+        /**
+         * Use the specific executor for executing the tasks. Note that this should be used with care 
+         * when specifying the withConcurrencyLevel. 
+         * e.g  if you have a concurrencyLevel of 10 with a fixed threadpool of size 1 then this effectively 
+         * negates the point of the concurrencyLevel
+         * 
+         * @param executor
+         * @return
+         */
+        public Builder<K, C> withExecutor(ExecutorService executor) {
+            Preconditions.checkArgument(executor != null, "Supplied executor must not be null");
+            this.executor = executor;
             return this;
         }
         
@@ -585,26 +599,53 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
      * @return true if all tasks returned true or false otherwise.  
      */
     private boolean waitForTasksToFinish() throws Exception {
+        
+        Boolean succeeded = true;
+        
+        // Tracking state for multiple exceptions, if any
+        List<StackTraceElement> stackTraces = new ArrayList<StackTraceElement>();
+        StringBuilder sb = new StringBuilder();
+        int exCount = 0;
+        
         for (Future<Boolean> future : futures) {
             try {
                 if (!future.get()) {
                     cancel();
-                    return false;
+                    succeeded = false;
                 }
             }
             catch (Exception e) {
                 error.compareAndSet(null, e);
                 cancel();
-                throw e;
+                succeeded = false;
+                
+                exCount++;
+                sb.append("ex" + exCount + ": ").append(e.getMessage()).append("\n");
+                StackTraceElement[] stackTrace = e.getStackTrace();
+                if (stackTrace != null && stackTrace.length > 0) {
+                    StackTraceElement delimiterSE = new StackTraceElement("StackTrace: ex" + exCount, "", "", 0);
+                    stackTraces.add(delimiterSE);
+                    for (StackTraceElement se : stackTrace) {
+                        stackTraces.add(se);
+                    }
+                }
             }
         }
         
         if (this.rowFunction instanceof Flushable) {
             ((Flushable)rowFunction).flush();
         }
-        return true;
+        
+        if (exCount > 0) {
+            String exMessage = sb.toString();
+            StackTraceElement[] seArray = stackTraces.toArray(new StackTraceElement[stackTraces.size()]);
+            Exception ex = new Exception(exMessage);
+            ex.setStackTrace(seArray);
+            throw ex;
+        }
+        return succeeded;
     }
-    
+
     /**
      * Submit all the callables to the executor by synchronize their execution so they all start
      * AFTER the have all been submitted.
@@ -614,9 +655,8 @@ public class AllRowsReader<K, C> implements Callable<Boolean> {
      */
     private List<Future<Boolean>> startTasks(ExecutorService executor, List<Callable<Boolean>> callables) {
         List<Future<Boolean>> tasks = Lists.newArrayList();
-        CyclicBarrier barrier = new CyclicBarrier(callables.size());
         for (Callable<Boolean> callable : callables) {
-            tasks.add(executor.submit(Callables.decorateWithBarrier(barrier, callable)));
+            tasks.add(executor.submit(callable));
         }
         return tasks;
     }

@@ -21,6 +21,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.connectionpool.TokenRange;
 
+/**
+ * Impl for {@link TokenRange}
+ * 
+ * @author elandau
+ */
 public class TokenRangeImpl implements TokenRange {
 
     private final String startToken;

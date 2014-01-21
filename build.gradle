@@ -56,6 +56,7 @@ project(':astyanax') {
         compile  project(':astyanax-recipes')
         compile  project(':astyanax-entity-mapper')
         compile  project(':astyanax-examples')
+        compile  project(':astyanax-contrib')
     }
 }
 
@@ -93,9 +94,9 @@ project(':astyanax-cassandra') {
     apply plugin: 'osgi'
     apply plugin: 'java'
     dependencies {
-    	compile "org.apache.cassandra:cassandra-all:$cassandraVersion"
+        compile "org.apache.cassandra:cassandra-all:$cassandraVersion"
         compile "org.apache.servicemix.bundles:org.apache.servicemix.bundles.commons-csv:$commonsCsvVersion"
-        compile "org.jboss.netty:netty:$nettyVersion"   
+        compile "io.netty:netty:$nettyVersion"   
         compile  project(':astyanax-core')
     }
 }
@@ -128,5 +129,15 @@ project(':astyanax-examples') {
         compile  project(':astyanax-cassandra')
         compile  project(':astyanax-thrift')
         testCompile project(':astyanax-thrift')
+    }
+}
+
+project(':astyanax-contrib') {
+    apply plugin: 'java'
+    dependencies {
+        compile  project(':astyanax-cassandra')
+        compile  project(':astyanax-core')
+        compile 'com.netflix.eureka:eureka-client:1.1.110'
+        compile 'com.netflix.archaius:archaius-core:0.5.12'
     }
 }

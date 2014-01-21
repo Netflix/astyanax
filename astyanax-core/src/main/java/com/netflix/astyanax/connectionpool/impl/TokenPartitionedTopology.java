@@ -26,11 +26,38 @@ import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.partitioner.Partitioner;
 
 /**
- * Partition hosts by start token.  Each token may map to a list of partitions.
+ * Partition hosts by start token.  Each token may map to a list of partitions. The class maintains 3 different data structures to represent {@link HostConnectionPool}s
+ * for a set of hosts in a partitioned ring. 
+ * 
+ * <ol>
+ * <li> <b> sortedRing </b>  -  the list of all pools for all hosts sorted in order specified by the token ranges for the cluster
+ * <li> <b> tokenToPartitionMap </b>  -  map of token range to host connection pools for that range 
+ * <li> <b> allPools </b>  -  all pools for all known hosts in case no tokens can be found by calls such as ring describe etc
+ * </ol>
+ * 
+ * <b> Prominent features of this class </b>
+ * 
+ * <p>
+ * <b> Maintaining the set of pools for all hosts in a token ring </b>
+ * See the {@link #setPools(Collection)} method for details on how the various data structures are updated from a list of {@link HostConnectionPool}s
+ * Note that when host connection pools are set on this class, each host associated with the host conneciton pool can serve multiple partitions, 
+ * hence this class builds a reverse index from token range -> list < HostConnectionPool> using this update. 
+ * </p>
+ * 
+ * <p>
+ * <b> Lookup all HostConnectionPools for a given row keyor token </b>
+ * See the {@link #getPartition(ByteBuffer)} method for details on how the various data structures are consulted for retrieving the comprehensive list of 
+ * host connection pools for a row key. <br/> 
+ * Note that if the token range token is provided directly, then we can directly consult the tokenPartitionMap. But if we receive a row key, then that is converted 
+ * to an integer which is then used to do a bin search over the list of all sorted tokens in the token ring. 
+ * </p>
+ * 
  * 
  * @author elandau
  *
  * @param <CL>
+ * 
+ * @see {@link HostConnectionPoolPartition} for details of token ranges partition based connection pools maintained for each host. 
  */
 public class TokenPartitionedTopology<CL> implements Topology<CL> {
     /**

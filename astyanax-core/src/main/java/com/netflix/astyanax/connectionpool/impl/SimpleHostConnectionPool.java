@@ -18,7 +18,6 @@ package com.netflix.astyanax.connectionpool.impl;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -49,9 +48,23 @@ import com.netflix.astyanax.connectionpool.exceptions.TimeoutException;
 import com.netflix.astyanax.connectionpool.exceptions.UnknownException;
 
 /**
- * Pool of connections for a single host.
+ * Pool of connections for a single host and implements the {@link HostConnectionPool} interface
  * 
- * Features 1. Async open connection 2.
+ * <p>
+ * <b>Salient Features </b> <br/> <br/>
+ *   
+ *      The class provides a bunch of counters for visibility into the connection pool status e.g no of 
+ *      that are available / active / pending / blocked  etc.  </br> </br>
+ *      
+ *      This class also provides an async mechanism to create / prime and borrow {@link Connection}(s) using a {@link LinkedBlockingQueue} <br/>
+ *      Clients borrowing connections can wait at the end of the queue for a connection to be available. They send a {@link SimpleHostConnectionPool#tryOpenAsync()} request 
+ *      to create a new connection before waiting, but don't necessarily wait for the same connection to be opened, since they could be unblocked by 
+ *      another client returning a previously used {@link Connection}
+ *      
+ *      The class also provides a {@link SimpleHostConnectionPool#markAsDown(ConnectionException)} method which helps purge all connections and then
+ *      attempts to init a new set of connections to the host. 
+ *      
+ * </p>
  * 
  * @author elandau
  * 

@@ -174,6 +174,10 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 			return new DefaultEntityManager<T, K>(this);
 		}
 	}
+	
+	public static <T,K> Builder<T,K> builder() {
+	    return new Builder<T,K>();
+	}
 
 	//////////////////////////////////////////////////////////////////
 	// private members
@@ -279,11 +283,6 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
             @Override
             public synchronized Boolean apply(T entity) {
                 entities.add(entity);
-                try {
-                    lifecycleHandler.onPostLoad(entity);
-                } catch (Exception e) {
-                    // TODO
-                }
                 return true;
             }
         });
@@ -457,6 +456,8 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
         try {
             keyspace.createColumnFamily(this.columnFamily, options);
         } catch (ConnectionException e) {
+            if (e.getMessage().contains("already exist")) 
+                return;
             throw new PersistenceException("Unable to create column family " + this.columnFamily.getName(), e);
         }
     }

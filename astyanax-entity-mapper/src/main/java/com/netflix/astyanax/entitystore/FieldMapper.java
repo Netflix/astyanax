@@ -4,8 +4,11 @@ import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 
 import javax.persistence.Column;
+import javax.persistence.OrderBy;
 
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.serializers.PrefixedSerializer;
+import com.netflix.astyanax.serializers.ByteBufferSerializer;
 
 /**
  * Mapper from a field to a ByteBuffer
@@ -17,9 +20,25 @@ public class FieldMapper<T> {
     final Serializer<T>     serializer;
     final Field             field;
     final String            name;
+    final boolean           reversed;
 
+    enum Order {
+        ASC,
+        DESC,
+    }
+    
     public FieldMapper(final Field field) {
-        this.serializer       = (Serializer<T>) MappingUtils.getSerializerForField(field);
+        this(field, null);
+    }
+    
+    public FieldMapper(final Field field, ByteBuffer prefix) {
+        
+        if (prefix != null) {
+            this.serializer   = new PrefixedSerializer<ByteBuffer, T>(prefix, ByteBufferSerializer.get(), (Serializer<T>) MappingUtils.getSerializerForField(field));
+        }
+        else {
+            this.serializer       = (Serializer<T>) MappingUtils.getSerializerForField(field);
+        }
         this.field            = field;
         
         Column columnAnnotation = field.getAnnotation(Column.class);
@@ -28,6 +47,15 @@ public class FieldMapper<T> {
         }
         else {
             name = columnAnnotation.name();
+        }
+        
+        OrderBy orderByAnnotation = field.getAnnotation(OrderBy.class);
+        if (orderByAnnotation == null) {
+            reversed = false;
+        }
+        else {
+            Order order = Order.valueOf(orderByAnnotation.value());
+            reversed = (order == Order.DESC);
         }
     }
 
@@ -59,6 +87,14 @@ public class FieldMapper<T> {
         field.set(entity, fromByteBuffer(buffer));
     }
 
+    public boolean isAscending() {
+        return reversed == false;
+    }
+    
+    public boolean isDescending() {
+        return reversed == true;
+    }
+    
     public String getName() {
         return name;
     }

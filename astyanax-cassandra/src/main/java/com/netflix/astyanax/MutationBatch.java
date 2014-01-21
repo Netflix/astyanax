@@ -194,6 +194,13 @@ public interface MutationBatch extends Execution<Void> {
     MutationBatch withTimestamp(long timestamp);
     
     /**
+     * Use Atomic Batches for these updates. 
+     * See http://www.datastax.com/dev/blog/atomic-batches-in-cassandra-1-2
+     * @return MutationBatch
+     */
+    MutationBatch withAtomicBatch(boolean condition); 
+    
+    /**
      * @return Serialize the entire mutation batch into a ByteBuffer.
      * @throws Exception
      */
@@ -208,5 +215,4 @@ public interface MutationBatch extends Execution<Void> {
      * @throws Exception
      */
     void deserialize(ByteBuffer data) throws Exception;
-
 }

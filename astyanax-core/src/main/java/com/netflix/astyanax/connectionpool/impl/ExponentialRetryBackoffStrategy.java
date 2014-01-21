@@ -19,21 +19,37 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
+import com.netflix.astyanax.connectionpool.HostConnectionPool;
 import com.netflix.astyanax.connectionpool.RetryBackoffStrategy;
 
+/**
+ * Impl for {@link RetryBackoffStrategy} that is used to reconnect a {@link HostConnectionPool} when a host is marked as down. 
+ * 
+ * @author elandau 
+ * @see {@link SimpleHostConnectionPool#markAsDown(com.netflix.astyanax.connectionpool.exceptions.ConnectionException)} for details on how this class is referenced
+ */
 public class ExponentialRetryBackoffStrategy implements RetryBackoffStrategy {
     private final ConnectionPoolConfiguration config;
 
+    /**
+     * @param config
+     */
     public ExponentialRetryBackoffStrategy(ConnectionPoolConfiguration config) {
         this.config = config;
     }
 
+    /**
+     * @return String 
+     */
     public String toString() {
         return new StringBuilder().append("ExpRetry[").append("max=").append(config.getRetryMaxDelaySlice())
                 .append(",slot=").append(config.getRetryDelaySlice()).append(",suspend=")
                 .append(config.getRetrySuspendWindow()).append("]").toString();
     }
 
+    /**
+     * @return {@link Instance}
+     */
     @Override
     public Instance createInstance() {
         return new RetryBackoffStrategy.Instance() {

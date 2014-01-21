@@ -74,6 +74,7 @@ import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.model.Equality;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
+import com.netflix.astyanax.query.AllRowsQuery;
 import com.netflix.astyanax.query.ColumnQuery;
 import com.netflix.astyanax.query.IndexQuery;
 import com.netflix.astyanax.query.PreparedIndexExpression;
@@ -147,6 +148,12 @@ public class ThriftKeyspaceImplTest {
                     StringSerializer.get(),
                     StringSerializer.get());
 
+    public static ColumnFamily<String, String> CF_ALLROWS = ColumnFamily
+            .newColumnFamily(
+                    "AllRows", 
+                    StringSerializer.get(),
+                    StringSerializer.get());
+
     public static ColumnFamily<String, String> CF_COUNTER1 = ColumnFamily
             .newColumnFamily(
                     "Counter1", 
@@ -164,6 +171,12 @@ public class ThriftKeyspaceImplTest {
                     "NotDefined", 
                     StringSerializer.get(),
                     StringSerializer.get());
+
+    public static ColumnFamily<Long, Long> ATOMIC_UPDATES = ColumnFamily
+            .newColumnFamily(
+                    "AtomicUpdates", 
+                    LongSerializer.get(),
+                    LongSerializer.get());
 
     public static AnnotatedCompositeSerializer<MockCompositeType> M_SERIALIZER = new AnnotatedCompositeSerializer<MockCompositeType>(
             MockCompositeType.class);
@@ -284,8 +297,11 @@ public class ThriftKeyspaceImplTest {
         keyspace.createKeyspace(ksOptions, cfs);
         
         keyspace.createColumnFamily(CF_STANDARD2,  null);
+        keyspace.createColumnFamily(CF_ALLROWS,  null);
         keyspace.createColumnFamily(CF_LONGCOLUMN, null);
         keyspace.createColumnFamily(CF_DELETE,     null);
+        keyspace.createColumnFamily(ATOMIC_UPDATES,null);
+        
         keyspace.createColumnFamily(CF_COUNTER1, ImmutableMap.<String, Object>builder()
                 .put("default_validation_class", "CounterColumnType")
                 .build());
@@ -390,6 +406,22 @@ public class ThriftKeyspaceImplTest {
                 .putEmptyColumn("empty");
 
             m.execute();
+            
+            
+            // Inserts for CF_ALLROWS
+            m = keyspace.prepareMutationBatch();
+
+            for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
+                rowKey = Character.toString(keyName);
+                ColumnListMutation<String> cfmStandard = m.withRow(
+                        CF_ALLROWS, rowKey);
+                for (char cName = 'a'; cName <= 'z'; cName++) {
+                    cfmStandard.putColumn(Character.toString(cName),
+                            (int) (cName - 'a') + 1, null);
+                }
+                m.execute();
+            }
+            
 
         } catch (Exception e) {
             System.out.println(e.getMessage());
@@ -678,7 +710,8 @@ public class ThriftKeyspaceImplTest {
         AtomicLong counter = new AtomicLong(0);
         try {
             OperationResult<Rows<String, String>> rows = keyspace
-                    .prepareQuery(CF_STANDARD1).getAllRows().setConcurrencyLevel(2).setRowLimit(10)
+                    .prepareQuery(CF_ALLROWS).getAllRows().setConcurrencyLevel(2).setRowLimit(10)
+                    .setRepeatLastToken(false)
                     .withColumnRange(new RangeBuilder().setLimit(0).build())
                     .setExceptionCallback(new ExceptionCallback() {
                         @Override
@@ -691,7 +724,7 @@ public class ThriftKeyspaceImplTest {
                 counter.incrementAndGet();
                 LOG.info("ROW: " + row.getKey() + " " + row.getColumns().size());
             }
-            Assert.assertEquals(27, counter.get());
+            Assert.assertEquals(26, counter.get());
         } catch (ConnectionException e) {
             Assert.fail();
         }
@@ -1214,6 +1247,56 @@ public class ThriftKeyspaceImplTest {
         ColumnList<String> result = keyspace.prepareQuery(CF_USERS).getRow(key).execute().getResult();
         
         Assert.assertEquals(1, result.size());
+    }
+    
+    @Test
+    public void testAtomicBatchMutation() throws Exception {
+        MutationBatch mb = keyspace.prepareMutationBatch().withAtomicBatch(true);
+        
+        mb.withRow(ATOMIC_UPDATES, 1L)
+            .putColumn(11L, 11L)
+            .putColumn(12L, 12L);
+        mb.withRow(ATOMIC_UPDATES, 2L)
+            .putColumn(21L, 21L)
+            .putColumn(22L, 22L);
+        
+        mb.execute();
+        
+        Rows<Long, Long> result = 
+                keyspace.prepareQuery(ATOMIC_UPDATES).getAllRows().execute().getResult();
+        
+        int size = 0;
+
+        for (Row<Long, Long> row : result) {
+            LOG.info("ROW: " + row.getKey() + " " + row.getColumns().size());
+            size++;
+            Assert.assertEquals(2, row.getColumns().size());
+        }
+        Assert.assertEquals(2, size);
+        
+        size = 0;
+        mb = keyspace.prepareMutationBatch().withAtomicBatch(true);
+        
+        mb.withRow(ATOMIC_UPDATES, 3L)
+            .putColumn(11L, 11L)
+            .putColumn(12L, 12L);
+        mb.withRow(ATOMIC_UPDATES, 1L).delete();
+        mb.withRow(ATOMIC_UPDATES, 2L).delete();
+        
+        mb.execute();
+
+        result = keyspace.prepareQuery(ATOMIC_UPDATES).getAllRows().execute().getResult();
+
+        for (Row<Long, Long> row : result) {
+            LOG.info("ROW: " + row.getKey() + " " + row.getColumns().size());
+            size++;
+            Assert.assertEquals(2, row.getColumns().size());
+        }
+        Assert.assertEquals(1, size);
+        
+       mb = keyspace.prepareMutationBatch().withAtomicBatch(true);
+       mb.withRow(ATOMIC_UPDATES, 3L).delete();
+       mb.execute();
     }
     
     @Test

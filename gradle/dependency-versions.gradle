@@ -1,5 +1,5 @@
 ext {
- cassandraVersion = "1.2.2"
+ cassandraVersion = "1.2.11"
  thriftVersion = "0.7.0"
  junitVersion = "4.8.1"
  guavaVersion = "14.0.1"
@@ -15,6 +15,6 @@ ext {
  jacksonVersion = "1.9.2"
  snappyVersion = "1.0.4.1"
  jpaVersion = "1.0"
- nettyVersion = "3.2.4.Final"
+ nettyVersion = "3.6.6.Final"
  commonsIOVersion = "2.1"
 }

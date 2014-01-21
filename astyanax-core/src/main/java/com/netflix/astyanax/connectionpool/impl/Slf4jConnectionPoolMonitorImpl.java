@@ -9,6 +9,14 @@ import com.netflix.astyanax.connectionpool.exceptions.HostDownException;
 import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 import com.netflix.astyanax.connectionpool.exceptions.PoolTimeoutException;
 
+/**
+ * 
+ * Impl for {@link CountingConnectionPoolMonitor} that does not track any internal state / counters. It simply uses a logger to log out the events. 
+ * Useful for debugging and basic event tracking. 
+ * 
+ * @author elandau
+ *
+ */
 public class Slf4jConnectionPoolMonitorImpl extends CountingConnectionPoolMonitor {
     private static final Logger LOG = LoggerFactory.getLogger(Slf4jConnectionPoolMonitorImpl.class);
 

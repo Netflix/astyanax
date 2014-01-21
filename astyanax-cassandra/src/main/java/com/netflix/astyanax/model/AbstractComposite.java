@@ -68,11 +68,12 @@ public abstract class AbstractComposite extends AbstractList<Object> implements 
     static final Logger logger = Logger.getLogger(AbstractComposite.class.getName());
 
     public static final BiMap<Class<? extends Serializer>, String> DEFAULT_SERIALIZER_TO_COMPARATOR_MAPPING = new ImmutableBiMap.Builder<Class<? extends Serializer>, String>()
-            .put(AsciiSerializer.class,      AsciiSerializer.get().getComparatorType().getTypeName())
-            .put(BigIntegerSerializer.class, BigIntegerSerializer.get().getComparatorType().getTypeName())
-            .put(LongSerializer.class,       LongSerializer.get().getComparatorType().getTypeName())
             .put(IntegerSerializer.class,    IntegerSerializer.get().getComparatorType().getTypeName())
             .put(BooleanSerializer.class,    BooleanSerializer.get().getComparatorType().getTypeName())
+            .put(AsciiSerializer.class,      AsciiSerializer.get().getComparatorType().getTypeName())
+            .put(BigIntegerSerializer.class, BigIntegerSerializer.get().getComparatorType().getTypeName())
+            .put(ByteBufferSerializer.class, ByteBufferSerializer.get().getComparatorType().getTypeName())
+            .put(LongSerializer.class,       LongSerializer.get().getComparatorType().getTypeName())
             .put(StringSerializer.class,     StringSerializer.get().getComparatorType().getTypeName())
             .put(UUIDSerializer.class,       UUIDSerializer.get().getComparatorType().getTypeName()).build();
 

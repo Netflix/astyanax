@@ -22,11 +22,18 @@ import com.netflix.astyanax.connectionpool.exceptions.PoolTimeoutException;
 
 /**
  * Connection pool which puts all connections in a single queue. The load
- * balancing is essentially random here.
+ * balancing is essentially random here. <br/>
+ * 
+ * The class consults {@link Topology} for all the pools and then selects a pool at random using {@link #randomIndex}
+ * For {@link #executeWithFailover(Operation, com.netflix.astyanax.retry.RetryPolicy)} it just fails over to the next pool in the list of pools 
+ * starting at the random index. 
  * 
  * @author elandau
  * 
  * @param <CL>
+ * 
+ * @see {@link AbstractHostPartitionConnectionPool} for the base class that provides the rest of the functionality
+ * @see {@link Topology} and {@link TokenPartitionedTopology} for details on where this class gets it list of host connection pools to randomly index over
  */
 public class BagOfConnectionsConnectionPoolImpl<CL> extends AbstractHostPartitionConnectionPool<CL> {
 
@@ -34,6 +41,11 @@ public class BagOfConnectionsConnectionPoolImpl<CL> extends AbstractHostPartitio
     private final AtomicInteger activeConnectionCount = new AtomicInteger(0);
     private final Random randomIndex = new Random();
 
+    /**
+     * @param config
+     * @param factory
+     * @param monitor
+     */
     public BagOfConnectionsConnectionPoolImpl(ConnectionPoolConfiguration config, ConnectionFactory<CL> factory,
             ConnectionPoolMonitor monitor) {
         super(config, factory, monitor);

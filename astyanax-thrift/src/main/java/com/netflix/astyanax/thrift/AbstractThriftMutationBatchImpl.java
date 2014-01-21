@@ -29,7 +29,7 @@ import com.google.common.collect.Maps.EntryTransformer;
 
 import org.apache.cassandra.thrift.Cassandra.batch_mutate_args;
 import org.apache.cassandra.thrift.Mutation;
-import org.apache.cassandra.thrift.TBinaryProtocol;
+import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.thrift.TException;
 import org.apache.thrift.transport.TIOStreamTransport;
@@ -62,6 +62,7 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
     private Host                pinnedHost;
     private RetryPolicy         retry;
     private WriteAheadLog       wal;
+    private boolean             useAtomicBatch = false;
 
     private Map<ByteBuffer, Map<String, List<Mutation>>> mutationMap = Maps.newLinkedHashMap();
     private Map<KeyAndColumnFamily, ColumnListMutation<?>> rowLookup = Maps.newHashMap();
@@ -354,7 +355,17 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
         this.wal = manager;
         return this;
     }
+    
+    @Override
+    public MutationBatch withAtomicBatch(boolean condition) {
+        useAtomicBatch = condition;
+        return this;
+    }
 
+    public boolean useAtomicBatch() {
+        return useAtomicBatch;
+    }
+    
     public Host getPinnedHost() {
         return this.pinnedHost;
     }

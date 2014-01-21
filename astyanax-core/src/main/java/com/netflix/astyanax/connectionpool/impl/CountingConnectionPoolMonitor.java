@@ -20,6 +20,19 @@ import com.netflix.astyanax.connectionpool.exceptions.HostDownException;
 import com.netflix.astyanax.connectionpool.exceptions.TransportException;
 import com.netflix.astyanax.connectionpool.exceptions.InterruptedOperationException;
 
+/**
+ * 
+ * Impl for {@link ConnectionPoolMonitor} that employs counters to track stats such as 
+ * 
+ * <ol>
+ * <li> operation success / failures / timeouts / socket timeouts / interrupted </li>
+ * <li> connection created /  borrowed / returned / closed / create failures </li>
+ * <li> hosts added /  removed / marked as down / reactivated </li>
+ * <li> transport failures and other useful stats </li>
+ * </ol>
+ * 
+ * @author elandau
+ */
 public class CountingConnectionPoolMonitor implements ConnectionPoolMonitor {
     private static Logger LOG = LoggerFactory.getLogger(CountingConnectionPoolMonitor.class);
     

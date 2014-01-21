@@ -18,10 +18,16 @@ import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
 
 /**
  * Collection of hosts that are grouped by a certain criteria (such as token or rack)
+ * The class maintains the list of active pools for the given criteria (such as a token range in a ring)
+ * Any changes to the pools in this partition causes the active set to be revised and sorted according to the latency score strategy provided. <br/> <br/>
+ * 
+ * Note that an instance of this class is maintained / referenced for each token range partition by the {@link TokenPartitionedTopology} instance 
  * 
  * @author elandau
  *
  * @param <CL>
+ * 
+ * @see {@link TokenPartitionedTopology} for details on how this class is referenced. 
  */
 public class HostConnectionPoolPartition<CL> {
     protected final AtomicBoolean                                 prioritize  = new AtomicBoolean(false);

@@ -38,7 +38,7 @@ import com.netflix.astyanax.thrift.ThriftUtils;
 public class ThriftKeyspaceDefinitionImpl implements KeyspaceDefinition {
     private final static Map<String, FieldMetadata> fieldsMetadata = Maps.newHashMap();
     
-    {
+    static {
         for (Entry<_Fields, FieldMetaData> field : KsDef.metaDataMap.entrySet()) {
             fieldsMetadata.put(
                     field.getValue().fieldName,

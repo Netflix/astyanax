@@ -25,6 +25,7 @@ import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
+import com.netflix.astyanax.serializers.SerializerTypeInferer;
 
 /**
  * utility class to map btw root Entity and cassandra data model
@@ -153,10 +154,13 @@ class EntityMapper<T, K> {
     	return retTtl;
     }
 
+    @VisibleForTesting
 	T constructEntity(K id, ColumnList<String> cl) {
 		try {
 		    T entity = clazz.newInstance();
-			idField.set(entity, id);
+            com.netflix.astyanax.Serializer<?> serializer = MappingUtils.getSerializerForField(idField);
+            com.netflix.astyanax.Serializer<K> valueSerializer = SerializerTypeInferer.getSerializer(id);
+            idField.set(entity, serializer.fromByteBuffer(valueSerializer.toByteBuffer(id)));
 			
 			for (com.netflix.astyanax.model.Column<String> column : cl) {
 			    List<String> name = Lists.newArrayList(StringUtils.split(column.getName(), "."));

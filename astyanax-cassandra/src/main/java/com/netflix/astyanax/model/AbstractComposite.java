@@ -24,6 +24,7 @@ import com.netflix.astyanax.serializers.BooleanSerializer;
 import com.netflix.astyanax.serializers.ByteBufferOutputStream;
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
 import com.netflix.astyanax.serializers.ComparatorType;
+import com.netflix.astyanax.serializers.FloatSerializer;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.SerializerTypeInferer;
@@ -74,6 +75,7 @@ public abstract class AbstractComposite extends AbstractList<Object> implements 
             .put(BigIntegerSerializer.class, BigIntegerSerializer.get().getComparatorType().getTypeName())
             .put(ByteBufferSerializer.class, ByteBufferSerializer.get().getComparatorType().getTypeName())
             .put(LongSerializer.class,       LongSerializer.get().getComparatorType().getTypeName())
+            .put(FloatSerializer.class,      FloatSerializer.get().getComparatorType().getTypeName())
             .put(StringSerializer.class,     StringSerializer.get().getComparatorType().getTypeName())
             .put(UUIDSerializer.class,       UUIDSerializer.get().getComparatorType().getTypeName()).build();
 
@@ -84,6 +86,7 @@ public abstract class AbstractComposite extends AbstractList<Object> implements 
             .put(BigIntegerSerializer.class, BigIntegerSerializer.get())
             .put(ByteBufferSerializer.class, ByteBufferSerializer.get())
             .put(LongSerializer.class,       LongSerializer.get())
+            .put(FloatSerializer.class,      FloatSerializer.get())
             .put(StringSerializer.class,     StringSerializer.get())
             .put(UUIDSerializer.class,       UUIDSerializer.get()).build();
 
@@ -93,6 +96,7 @@ public abstract class AbstractComposite extends AbstractList<Object> implements 
             .put((byte) 'i', ComparatorType.INTEGERTYPE.getTypeName())
             .put((byte) 'x', ComparatorType.LEXICALUUIDTYPE.getTypeName())
             .put((byte) 'l', ComparatorType.LONGTYPE.getTypeName())
+            .put((byte) 'f', ComparatorType.FLOATTYPE.getTypeName())
             .put((byte) 't', ComparatorType.TIMEUUIDTYPE.getTypeName())
             .put((byte) 's', ComparatorType.UTF8TYPE.getTypeName())
             .put((byte) 'u', ComparatorType.UUIDTYPE.getTypeName()).build();

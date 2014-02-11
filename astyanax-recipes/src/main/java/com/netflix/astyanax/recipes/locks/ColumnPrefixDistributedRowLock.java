@@ -476,31 +476,19 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
     }
     
     /**
-     * Generate the expire time value to put in the column value.
-     * @param timeout
+     * Generates the expire time value to put as the column value using a {@link LongSerializer}.
+     * @param timeout the time value as {@link ByteBuffer}
      */
     private ByteBuffer generateTimeoutValue(long timeout) {
-        if (columnFamily.getDefaultValueSerializer() == ByteBufferSerializer.get() ||
-            columnFamily.getDefaultValueSerializer() == LongSerializer.get()) {
-            return LongSerializer.get().toByteBuffer(timeout);
-        }
-        else {
-            return columnFamily.getDefaultValueSerializer().fromString(Long.toString(timeout));
-        }
+        return LongSerializer.get().toByteBuffer(timeout);
     }
-    
+
     /**
-     * Read the expiration time from the column value
-     * @param column
+     * Reads the expiration time from the column value using a {@link LongSerializer}.
+     * @param column the time value
      */
     public long readTimeoutValue(Column<?> column) {
-        if (columnFamily.getDefaultValueSerializer() == ByteBufferSerializer.get() ||
-            columnFamily.getDefaultValueSerializer() == LongSerializer.get()) {
-            return column.getLongValue();
-        }
-        else {
-            return Long.parseLong(column.getStringValue());
-        }
+        return LongSerializer.get().fromByteBuffer(column.getByteBufferValue());
     }
 
     /**

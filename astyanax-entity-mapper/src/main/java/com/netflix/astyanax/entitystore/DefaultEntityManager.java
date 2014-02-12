@@ -20,6 +20,8 @@ import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
+import com.netflix.astyanax.partitioner.BigInteger127Partitioner;
+import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.recipes.reader.AllRowsReader;
 import com.netflix.astyanax.retry.RetryPolicy;
@@ -47,7 +49,8 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 		private LifecycleEvents<T> lifecycleHandler = null;
 		private String columnFamilyName = null;
 		private boolean autoCommit = true;
-		
+        private Partitioner partitioner = DEFAULT_ENTITY_MANAGER_PARTITIONER;
+
 		public Builder() {
 
 		}
@@ -151,9 +154,21 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 		    return this;
 		}
 
+        /**
+         * Partitioner used to determine token ranges and how to break token ranges
+         * into sub parts. The default is BigInteger127Partitioner in pre-cassandra 1.2.
+         * 
+         * @param partitioner
+         * @return
+         */
+        public Builder<T, K> withPartitioner(Partitioner partitioner) {
+            this.partitioner = partitioner;
+            return this;
+        }
+
 		@SuppressWarnings("unchecked")
         public DefaultEntityManager<T, K> build() {
-			// check mandatory fields
+            // check mandatory fields
 			Preconditions.checkNotNull(clazz, "withEntityType(...) is not set");
 			Preconditions.checkNotNull(keyspace, "withKeyspace(...) is not set");
 			
@@ -191,7 +206,9 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 	private final LifecycleEvents<T>       lifecycleHandler;
 	private final boolean                  autoCommit;
 	private final ThreadLocal<MutationBatch> tlMutation = new ThreadLocal<MutationBatch>();
-	
+    private static final Partitioner DEFAULT_ENTITY_MANAGER_PARTITIONER = BigInteger127Partitioner.get();
+    private final   Partitioner         partitioner;
+
 	private DefaultEntityManager(Builder<T, K> builder) {
 		entityMapper      = builder.entityMapper;
 		keyspace          = builder.keyspace;
@@ -201,6 +218,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 		retryPolicy       = builder.retryPolicy;
 		lifecycleHandler  = builder.lifecycleHandler;
 		autoCommit        = builder.autoCommit;
+		partitioner       = builder.partitioner;
 	}
 
 	//////////////////////////////////////////////////////////////////
@@ -378,6 +396,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
         try {
             new AllRowsReader.Builder<K, String>(keyspace, columnFamily)
                     .withIncludeEmptyRows(false)
+                    .withPartitioner(partitioner)
                     .forEachRow(new Function<Row<K,String>, Boolean>() {
                         @Override
                         public Boolean apply(Row<K, String> row) {

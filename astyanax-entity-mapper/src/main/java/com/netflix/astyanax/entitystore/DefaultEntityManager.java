@@ -49,7 +49,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 		private LifecycleEvents<T> lifecycleHandler = null;
 		private String columnFamilyName = null;
 		private boolean autoCommit = true;
-        private Partitioner partitioner = DEFAULT_ENTITY_MANAGER_PARTITIONER;
+		private Partitioner partitioner = DEFAULT_ENTITY_MANAGER_PARTITIONER;
 
 		public Builder() {
 
@@ -150,40 +150,42 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 		}
 		
 		public Builder<T, K> withAutoCommit(boolean autoCommit) {
-		    this.autoCommit = autoCommit;
-		    return this;
+			this.autoCommit = autoCommit;
+			return this;
 		}
 
-        /**
-         * Partitioner used to determine token ranges and how to break token ranges
-         * into sub parts. The default is BigInteger127Partitioner in pre-cassandra 1.2.
-         * 
-         * @param partitioner
-         * @return
-         */
-        public Builder<T, K> withPartitioner(Partitioner partitioner) {
-            this.partitioner = partitioner;
-            return this;
-        }
+		/**
+		 * Partitioner used to determine token ranges and how to break token
+		 * ranges into sub parts. The default is BigInteger127Partitioner in
+		 * pre-cassandra 1.2.
+		 * 
+		 * @param partitioner
+		 * @return
+		 */
+		public Builder<T, K> withPartitioner(Partitioner partitioner) {
+			this.partitioner = partitioner;
+			return this;
+		}
 
 		@SuppressWarnings("unchecked")
-        public DefaultEntityManager<T, K> build() {
-            // check mandatory fields
+		public DefaultEntityManager<T, K> build() {
+			// check mandatory fields
 			Preconditions.checkNotNull(clazz, "withEntityType(...) is not set");
-			Preconditions.checkNotNull(keyspace, "withKeyspace(...) is not set");
-			
+			Preconditions
+					.checkNotNull(keyspace, "withKeyspace(...) is not set");
+
 			// TODO: check @Id type compatibility
 			// TODO: do we need to require @Entity annotation
-			this.entityMapper = new EntityMapper<T,K>(clazz, ttl);
+			this.entityMapper = new EntityMapper<T, K>(clazz, ttl);
 			this.lifecycleHandler = new LifecycleEvents<T>(clazz);
 
 			if (columnFamily == null) {
-    			if (columnFamilyName == null)
-    			    columnFamilyName = entityMapper.getEntityName();
-    			columnFamily = new ColumnFamily<K, String>(
-    			        columnFamilyName, 
-    			        (com.netflix.astyanax.Serializer<K>)MappingUtils.getSerializerForField(this.entityMapper.getId()), 
-    			        StringSerializer.get());
+				if (columnFamilyName == null)
+					columnFamilyName = entityMapper.getEntityName();
+				columnFamily = new ColumnFamily<K, String>(columnFamilyName,
+						(com.netflix.astyanax.Serializer<K>) MappingUtils
+								.getSerializerForField(this.entityMapper
+										.getId()), StringSerializer.get());
 			}
 			// build object
 			return new DefaultEntityManager<T, K>(this);
@@ -197,17 +199,18 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 	//////////////////////////////////////////////////////////////////
 	// private members
 
-	private final EntityMapper<T,K>        entityMapper;
-	private final Keyspace                 keyspace;
-	private final ColumnFamily<K, String>  columnFamily;
-	private final ConsistencyLevel         readConsitency;
-	private final ConsistencyLevel         writeConsistency;
-	private final RetryPolicy              retryPolicy;
-	private final LifecycleEvents<T>       lifecycleHandler;
-	private final boolean                  autoCommit;
+	private final EntityMapper<T, K> entityMapper;
+	private final Keyspace keyspace;
+	private final ColumnFamily<K, String> columnFamily;
+	private final ConsistencyLevel readConsitency;
+	private final ConsistencyLevel writeConsistency;
+	private final RetryPolicy retryPolicy;
+	private final LifecycleEvents<T> lifecycleHandler;
+	private final boolean autoCommit;
 	private final ThreadLocal<MutationBatch> tlMutation = new ThreadLocal<MutationBatch>();
-    private static final Partitioner DEFAULT_ENTITY_MANAGER_PARTITIONER = BigInteger127Partitioner.get();
-    private final   Partitioner         partitioner;
+	private static final Partitioner DEFAULT_ENTITY_MANAGER_PARTITIONER = BigInteger127Partitioner
+			.get();
+	private final Partitioner partitioner;
 
 	private DefaultEntityManager(Builder<T, K> builder) {
 		entityMapper      = builder.entityMapper;

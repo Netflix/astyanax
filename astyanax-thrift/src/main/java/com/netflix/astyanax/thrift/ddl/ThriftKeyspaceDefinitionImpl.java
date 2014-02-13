@@ -132,7 +132,7 @@ public class ThriftKeyspaceDefinitionImpl implements KeyspaceDefinition {
     @Override
     public ColumnFamilyDefinition getColumnFamily(String columnFamily) {
         for (CfDef cfdef : ks_def.getCf_defs()) {
-            if (cfdef.getName().equalsIgnoreCase(columnFamily)) {
+            if (cfdef.getName().equals(columnFamily)) {
                 return new ThriftColumnFamilyDefinitionImpl(cfdef);
             }
         }

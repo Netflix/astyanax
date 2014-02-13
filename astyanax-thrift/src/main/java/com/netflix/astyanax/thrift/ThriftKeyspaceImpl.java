@@ -24,6 +24,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import com.netflix.astyanax.ddl.ColumnDefinition;
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.CfDef;
 import org.apache.cassandra.thrift.CounterColumn;
@@ -890,5 +891,64 @@ public final class ThriftKeyspaceImpl implements Keyspace {
             LOG.error("Error processing column family properties");
         }
         return props;    
+    }
+
+    @Override
+    public ColumnFamilyDefinition makeColumnFamilyDefinition() {
+        return new ThriftColumnFamilyDefinitionImpl();
+    }
+
+    @Override
+    public ColumnDefinition makeColumnDefinition() {
+        return new ThriftColumnDefinitionImpl();
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResult> addColumnFamily(ColumnFamilyDefinition def) throws ConnectionException {
+        if (def.getKeyspace() != null && !def.getKeyspace().equals(getKeyspaceName())) {
+            throw new RuntimeException(
+                    String.format("'keyspace' attribute must match keyspace name. Expected '%s' but got '%s'",
+                            getKeyspaceName(), def.getKeyspace()));
+        }
+        def.setKeyspace(getKeyspaceName());
+        return internalCreateColumnFamily(((ThriftColumnFamilyDefinitionImpl) def).getThriftColumnFamilyDefinition());
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResult> updateColumnFamily(ColumnFamilyDefinition def) throws ConnectionException {
+        if (def.getKeyspace() != null && !def.getKeyspace().equals(getKeyspaceName())) {
+            throw new RuntimeException(
+                    String.format("'keyspace' attribute must match keyspace name. Expected '%s' but got '%s'",
+                            getKeyspaceName(), def.getKeyspace()));
+        }
+        def.setKeyspace(getKeyspaceName());
+        return internalUpdateColumnFamily(((ThriftColumnFamilyDefinitionImpl) def).getThriftColumnFamilyDefinition());
+    }
+
+    @Override
+    public KeyspaceDefinition makeKeyspaceDefinition() {
+        return new ThriftKeyspaceDefinitionImpl();
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResult> addKeyspace(KeyspaceDefinition def) throws ConnectionException {
+        if (def.getName() != null && !def.getName().equals(getKeyspaceName())) {
+            throw new RuntimeException(
+                    String.format("'name' attribute must match keyspace name. Expected '%s' but got '%s'",
+                            getKeyspaceName(), def.getName()));
+        }
+        def.setName(getKeyspaceName());
+        return internalCreateKeyspace(((ThriftKeyspaceDefinitionImpl) def).getThriftKeyspaceDefinition());
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResult> updateKeyspace(KeyspaceDefinition def) throws ConnectionException {
+        if (def.getName() != null && !def.getName().equals(getKeyspaceName())) {
+            throw new RuntimeException(
+                    String.format("'name' attribute must match keyspace name. Expected '%s' but got '%s'",
+                            getKeyspaceName(), def.getName()));
+        }
+        def.setName(getKeyspaceName());
+        return internalUpdateKeyspace(((ThriftKeyspaceDefinitionImpl) def).getThriftKeyspaceDefinition());
     }
 }

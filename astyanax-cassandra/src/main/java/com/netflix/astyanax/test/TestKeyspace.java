@@ -31,6 +31,8 @@ import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.cql.CqlStatement;
+import com.netflix.astyanax.ddl.ColumnDefinition;
+import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
 import com.netflix.astyanax.model.ColumnFamily;
@@ -274,6 +276,42 @@ public class TestKeyspace implements Keyspace {
     public OperationResult<SchemaChangeResult> createColumnFamily(
             Map<String, Object> options) throws ConnectionException {
         // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public ColumnFamilyDefinition makeColumnFamilyDefinition() {
+        return null;
+    }
+
+    @Override
+    public ColumnDefinition makeColumnDefinition() {
+        return null;
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResult> addColumnFamily(ColumnFamilyDefinition def) throws ConnectionException {
+        return null;
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResult> updateColumnFamily(ColumnFamilyDefinition def) throws ConnectionException {
+        return null;
+    }
+
+
+    @Override
+    public KeyspaceDefinition makeKeyspaceDefinition() {
+        return null;
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResult> addKeyspace(KeyspaceDefinition def) throws ConnectionException {
+        return null;
+    }
+
+    @Override
+    public OperationResult<SchemaChangeResult> updateKeyspace(KeyspaceDefinition def) throws ConnectionException {
         return null;
     }
 }

@@ -271,7 +271,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                 connectionPool,
                 cf,
                 config.getDefaultReadConsistencyLevel(),
-                config.getRetryPolicy());
+                config.getRetryPolicy().duplicate());
     }
 
     @Override

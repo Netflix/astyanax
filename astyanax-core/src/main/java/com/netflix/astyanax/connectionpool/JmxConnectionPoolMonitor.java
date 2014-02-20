@@ -27,7 +27,7 @@ public class JmxConnectionPoolMonitor implements JmxConnectionPoolMonitorMBean {
 
     @Override
     public boolean removeHost(String host) {
-        return pool.addHost(new Host(host, DEFAULT_PORT), true);
+        return pool.removeHost(new Host(host, DEFAULT_PORT), true);
     }
 
     @Override

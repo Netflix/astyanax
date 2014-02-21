@@ -39,7 +39,7 @@ import com.netflix.astyanax.thrift.ThriftUtils;
 public class ThriftColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
     private final static Map<String, FieldMetadata> fieldsMetadata = Maps.newHashMap();
     
-    {
+    static {
         for (Entry<_Fields, FieldMetaData> field : CfDef.metaDataMap.entrySet()) {
             fieldsMetadata.put(
                     field.getValue().fieldName, 

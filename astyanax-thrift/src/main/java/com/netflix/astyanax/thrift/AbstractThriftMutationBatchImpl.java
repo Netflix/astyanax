@@ -19,21 +19,20 @@ import java.io.ByteArrayInputStream;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
+
+import org.apache.cassandra.thrift.Cassandra.batch_mutate_args;
+import org.apache.cassandra.thrift.Mutation;
+import org.apache.commons.codec.binary.Hex;
+import org.apache.thrift.TException;
+import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.transport.TIOStreamTransport;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Maps.EntryTransformer;
-
-import org.apache.cassandra.thrift.Cassandra.batch_mutate_args;
-import org.apache.cassandra.thrift.Mutation;
-import org.apache.thrift.protocol.TBinaryProtocol;
-import org.apache.commons.codec.binary.Hex;
-import org.apache.thrift.TException;
-import org.apache.thrift.transport.TIOStreamTransport;
-
 import com.netflix.astyanax.Clock;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.MutationBatch;
@@ -49,6 +48,10 @@ import com.netflix.astyanax.serializers.ByteBufferOutputStream;
  * The thrift mutation data structure is,
  * 
  * Map of Keys -> Map of ColumnFamily -> MutationList
+ * 
+ * @NotThreadSafe
+ * Note that this class is intended to be used by just one thread. It maintains all the state of the mixed mutations in maps which 
+ * are meant to be used by a single thread only. 
  * 
  * @author elandau
  * 

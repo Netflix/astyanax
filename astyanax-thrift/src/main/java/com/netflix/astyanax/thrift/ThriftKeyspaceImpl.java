@@ -76,6 +76,18 @@ import com.netflix.astyanax.serializers.SerializerPackageImpl;
 import com.netflix.astyanax.serializers.UnknownComparatorException;
 import com.netflix.astyanax.thrift.ddl.*;
 
+/**
+ * 
+ * @ThreadSafe
+ * Note that the same instances of this class can be used by multiple threads. 
+ * Especially for reads and writes, the prepareQuery() and prepareMutationBatch() calls are thread safe
+ * but adding multiple mutations to the same mutation batch is NOT thread safe. 
+ * 
+ * Hence once a mutation batch is created by a thread, then that batch should be used by that thread only.
+ * 
+ * @author elandau
+ *
+ */
 public final class ThriftKeyspaceImpl implements Keyspace {
     private final static Logger LOG = LoggerFactory.getLogger(ThriftKeyspaceImpl.class);
     

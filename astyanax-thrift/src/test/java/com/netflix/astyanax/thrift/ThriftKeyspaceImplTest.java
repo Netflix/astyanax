@@ -1909,6 +1909,65 @@ public class ThriftKeyspaceImplTest {
             keyspaceContext.shutdown();
         }
     }
+    
+
+    @Test
+    public void testCreateKeyspaceThatAlreadyExists() {
+
+    	String keyspaceName = TEST_KEYSPACE_NAME + "_ksAlreadyExists";
+
+    	AstyanaxContext<Keyspace> keyspaceContext = new AstyanaxContext.Builder()
+    	.forCluster(TEST_CLUSTER_NAME)
+    	.forKeyspace(keyspaceName)
+    	.withAstyanaxConfiguration(
+    			new AstyanaxConfigurationImpl()
+    			.setDiscoveryType(NodeDiscoveryType.NONE))
+    			.withConnectionPoolConfiguration(
+    					new ConnectionPoolConfigurationImpl(keyspaceName)
+    					.setMaxConnsPerHost(1).setSeeds(SEEDS))
+    					.buildKeyspace(ThriftFamilyFactory.getInstance());
+
+    	Keyspace ks = null;
+    	try {
+    		keyspaceContext.start();
+    		ks = keyspaceContext.getClient();
+
+    		Properties props = new Properties();
+    		props.setProperty("name", keyspaceName);
+    		props.setProperty("strategy_class", "SimpleStrategy");
+    		props.setProperty("strategy_options.replication_factor", "1");
+
+    		try {
+    			ks.createKeyspaceIfNotExists(props);
+
+    			KeyspaceDefinition ksDef = ks.describeKeyspace();
+    			Assert.assertNotNull(ksDef);
+
+    		} catch (Exception e) {
+    			Assert.fail(e.getMessage());
+    		}
+
+
+    		// NOW create is again. 
+    		try {
+    			ks.createKeyspaceIfNotExists(props);
+    		} catch (Exception e) {
+    			Assert.fail(e.getMessage());
+    		}
+    	} finally {
+
+    		try {
+    			if (ks != null) {
+    				ks.dropKeyspace();
+    			}
+    		} catch (Exception e) {
+    			LOG.info(e.getMessage());
+    		}
+
+    		keyspaceContext.shutdown();
+    	}
+    }
+
 
     @Test
     public void testGetSingleColumnNotExists() {

@@ -92,6 +92,12 @@ public class TestKeyspace implements Keyspace {
     }
 
     @Override
+    public KeyspaceDefinition describeKeyspaceDefinition() throws ConnectionException {
+
+        return null;
+    }
+
+    @Override
     public SerializerPackage getSerializerPackage(String columnFamily,
             boolean ignoreErrors) {
         return SerializerPackageImpl.DEFAULT_SERIALIZER_PACKAGE;

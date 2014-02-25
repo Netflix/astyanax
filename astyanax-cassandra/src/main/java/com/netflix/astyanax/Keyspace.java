@@ -23,6 +23,7 @@ import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.TokenRange;
+import com.netflix.astyanax.connectionpool.exceptions.BadRequestException;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.cql.CqlStatement;
@@ -99,10 +100,21 @@ public interface Keyspace {
 
     /**
      * Return a complete description of the keyspace and its column families
-     * 
+     *
+     * @throws BadRequestException if keyspace doesn't exist
+     * @throws ConnectionException
+     * @deprecated use describeKeyspaceDefinition() instead
+     */
+    @Deprecated
+    KeyspaceDefinition describeKeyspace() throws BadRequestException, ConnectionException;
+
+    /**
+     * Return a complete description of the keyspace and its column families
+     * If keyspace doesn't exist return null.
+     *
      * @throws ConnectionException
      */
-    KeyspaceDefinition describeKeyspace() throws ConnectionException;
+    KeyspaceDefinition describeKeyspaceDefinition() throws ConnectionException;
 
     /**
      * Get this keyspace's configuration (including column families) as flattened

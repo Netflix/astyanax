@@ -73,6 +73,11 @@ import com.netflix.astyanax.thrift.model.*;
  *
  * @author elandau
  *
+ * @NotThreadSafe
+ * This class creates objects that keep track of internal state for pagination, pinned host, keyspace tracers etc
+ * Hence it is NOT recommended to use the same instance with multiple threads. 
+ * Each thread should get it's own ThriftColumnFamilyQueryImpl<K,C> instance from keyspace object by calling keyspace.prepareQuery()
+ * 
  * @param <K>
  * @param <C>
  */

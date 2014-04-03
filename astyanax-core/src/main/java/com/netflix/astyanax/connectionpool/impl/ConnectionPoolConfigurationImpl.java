@@ -50,8 +50,8 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
      */
     public static final int DEFAULT_MAX_TIME_WHEN_EXHAUSTED = 2000;
     public static final int DEFAULT_SOCKET_TIMEOUT = 11000;	// ms
-    public static final int DEFAULT_RECEIVE_BUFFER_SIZE = 2048;	// ms
-    public static final int DEFAULT_SEND_BUFFER_SIZE = 1024;	// ms
+    public static final int DEFAULT_RECEIVE_BUFFER_SIZE = 2048;
+    public static final int DEFAULT_SEND_BUFFER_SIZE = 1024;
     public static final int DEFAULT_CONNECT_TIMEOUT = 2000; // ms
     public static final int DEFAULT_MAX_ACTIVE_PER_PARTITION = 3;
     public static final int DEFAULT_INIT_PER_PARTITION = 0;

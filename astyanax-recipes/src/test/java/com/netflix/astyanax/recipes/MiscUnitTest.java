@@ -961,8 +961,8 @@ public class MiscUnitTest {
         try {
             Stopwatch sw = new Stopwatch().start();
             boolean result = reader.call();
-            long runtimeMillis = sw.stop().elapsedMillis();
-            
+            long runtimeMillis = sw.stop().elapsed(TimeUnit.MILLISECONDS);
+
             LOG.info("Count = " + counter.get() + " runtime=" + runtimeMillis);
             LOG.info("ThreadIds (" + threadIds.size() + ") " + threadIds);
             Assert.assertEquals(threadIds.size(), 12);

@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax.test;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 
@@ -153,7 +154,13 @@ public class TestKeyspace implements Keyspace {
     }
 
     @Override
-    public List<CfSplit> describeSplitsEx(String cfName, String startToken, String endToken, int keysPerSplit) throws ConnectionException {
+    public List<CfSplit> describeSplitsEx(String cfName, String startToken, String endToken, int keysPerSplit)
+            throws ConnectionException {
+        return null;
+    }
+
+    @Override
+    public List<CfSplit> describeSplitsEx(String cfName, String startToken, String endToken, int keysPerSplit, ByteBuffer startKey) throws ConnectionException {
         return null;
     }
 

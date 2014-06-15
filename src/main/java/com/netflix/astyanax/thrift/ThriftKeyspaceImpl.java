@@ -22,6 +22,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.cassandra.dht.BytesToken;
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.Cassandra.Client;
 import org.apache.cassandra.thrift.CounterColumn;
@@ -67,6 +68,8 @@ import com.netflix.astyanax.serializers.UnknownComparatorException;
 import com.netflix.astyanax.thrift.ddl.ThriftColumnFamilyDefinitionImpl;
 import com.netflix.astyanax.thrift.ddl.ThriftKeyspaceDefinitionImpl;
 import com.netflix.astyanax.thrift.model.ThriftCfSplitImpl;
+import org.apache.cassandra.utils.ByteBufferUtil;
+import org.apache.commons.codec.binary.Hex;
 
 public final class ThriftKeyspaceImpl implements Keyspace {
 
@@ -442,8 +445,14 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     }
 
     @Override
+    public List<CfSplit> describeSplitsEx(String cfName, String startToken, String endToken, int keysPerSplit)
+            throws ConnectionException {
+        return describeSplitsEx(cfName, startToken, endToken, keysPerSplit, null);
+    }
+
+    @Override
     public List<CfSplit> describeSplitsEx(final String cfName, final String startToken, final String endToken,
-            final int keysPerSplit) throws ConnectionException {
+            final int keysPerSplit, final ByteBuffer startKey) throws ConnectionException {
         return executeOperation(
                 new AbstractKeyspaceOperationImpl<List<CfSplit>>(tracerFactory
                         .newTracer(CassandraOperationType.DESCRIBE_SPLITS), getKeyspaceName()) {
@@ -460,6 +469,11 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                         split.getRow_count());
                             }
                         });
+                    }
+
+                    @Override
+                    public ByteBuffer getRowKey() {
+                        return startKey;
                     }
                 }, getConfig().getRetryPolicy().duplicate()).getResult();
     }

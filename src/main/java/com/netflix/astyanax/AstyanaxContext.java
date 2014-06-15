@@ -30,7 +30,7 @@ import com.netflix.astyanax.shallows.EmptyKeyspaceTracerFactory;
  * 
  * @author elandau
  * 
- * @param <T>
+ * @param <Entity>
  */
 public class AstyanaxContext<Entity> {
     private final ConnectionPool<?> cp;

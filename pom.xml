@@ -4,7 +4,7 @@
 
     <groupId>com.netflix.astyanax</groupId>
     <artifactId>astyanax</artifactId>
-    <version>1.56.26-bv5</version>
+    <version>1.56.26-bv6-SNAPSHOT</version>
 
     <parent>
         <groupId>com.bazaarvoice.commons</groupId>

@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.netflix.astyanax</groupId>
         <artifactId>astyanax</artifactId>
-        <version>1.56.44-bv1-SNAPSHOT</version>
+        <version>1.56.49-bv1-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -22,6 +22,10 @@
             <version>${project.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.netflix.archaius</groupId>
+            <artifactId>archaius-core</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.netflix.eureka</groupId>
             <artifactId>eureka-client</artifactId>

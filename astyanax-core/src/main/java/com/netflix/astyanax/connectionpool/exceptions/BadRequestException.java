@@ -20,6 +20,9 @@ public class BadRequestException extends OperationException {
     
     private static final String WHY_UNCONFIGURED_COLUMNFAMILY = "unconfigured columnfamily";
 
+    private static final String KEYSPACE = "Keyspace";
+    private static final String DOES_NOT_EXIST = "does not exist";
+
     public BadRequestException(String message) {
         super(message);
     }
@@ -34,5 +37,10 @@ public class BadRequestException extends OperationException {
     
     public boolean isUnconfiguredColumnFamilyError() {
         return getMessage().contains(WHY_UNCONFIGURED_COLUMNFAMILY);
+    }
+
+    public boolean isKeyspaceDoestNotExist() {
+    	String message = getMessage();
+        return message.contains(KEYSPACE) && message.contains(DOES_NOT_EXIST);
     }
 }

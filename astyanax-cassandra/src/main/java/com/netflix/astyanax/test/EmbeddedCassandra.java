@@ -107,7 +107,7 @@ public class EmbeddedCassandra {
             }
         }
         finally {
-            Closeables.closeQuietly(is);
+            Closeables.close(is, true);
         }
         LOG.info("Started cassandra deamon");
     }

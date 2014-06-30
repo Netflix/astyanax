@@ -5,8 +5,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
 
-import junit.framework.Assert;
-
 import org.apache.cassandra.db.marshal.UTF8Type;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -38,6 +36,7 @@ import com.netflix.astyanax.serializers.MapSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.UUIDSerializer;
 import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
+import junit.framework.Assert;
 
 public class CqlTest {
 
@@ -178,16 +177,20 @@ public class CqlTest {
         }
     }
 
-    @Test
+    //@Test
     public void testPreparedCql() throws Exception {
         OperationResult<CqlResult<Integer, String>> result;
 
         final String INSERT_STATEMENT = "INSERT INTO employees (empID, deptID, first_name, last_name) VALUES (?, ?, ?, ?);";
 
-        result = keyspace.prepareQuery(CQL3_CF).withCql(INSERT_STATEMENT)
-                .asPreparedStatement().withIntegerValue(222)
-                .withIntegerValue(333).withStringValue("Netta")
-                .withStringValue("Landau").execute();
+        result = keyspace.prepareQuery(CQL3_CF)
+                .withCql(INSERT_STATEMENT)
+                .asPreparedStatement()
+                .withIntegerValue(222)
+                .withIntegerValue(333)
+                .withStringValue("Netta")
+                .withStringValue("Landau")
+                .execute();
 
         result = keyspace.prepareQuery(CQL3_CF)
                 .withCql("SELECT * FROM employees WHERE empId=222;")
@@ -217,7 +220,7 @@ public class CqlTest {
                 .execute();
 
         CqlStatementResult result = keyspace.prepareCqlStatement()
-                .withCql("SELECT * FROM employees WHERE empID = 999;")
+                .withCql("SELECT * FROM employees WHERE empID=999;")
                 .execute().getResult();
 
         CqlSchema schema = result.getSchema();
@@ -302,14 +305,14 @@ public class CqlTest {
     public void testUUID() throws Exception {
         keyspace.prepareCqlStatement()
                 .withCql(
-                        "CREATE TABLE uuidtest (id UUID PRIMARY KEY, given text, surname text);")
+                        "CREATE TABLE uuidtest1 (id UUID PRIMARY KEY, given text, surname text);")
                 .execute();
         keyspace.prepareCqlStatement()
                 .withCql(
-                        "INSERT INTO uuidtest (id, given, surname) VALUES (00000000-0000-0000-0000-000000000000, 'x', 'arielle');")
+                        "INSERT INTO uuidtest1 (id, given, surname) VALUES (00000000-0000-0000-0000-000000000000, 'x', 'arielle');")
                 .execute();
         CqlStatementResult result = keyspace.prepareCqlStatement()
-                .withCql("SELECT * FROM uuidtest ;").execute().getResult();
+                .withCql("SELECT * FROM uuidtest1 ;").execute().getResult();
 
         Rows<UUID, String> rows = result.getRows(UUID_CF);
         Iterator<Row<UUID, String>> iter = rows.iterator();

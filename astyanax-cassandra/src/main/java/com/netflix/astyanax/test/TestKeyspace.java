@@ -287,4 +287,27 @@ public class TestKeyspace implements Keyspace {
         // TODO Auto-generated method stub
         return null;
     }
+
+	@Override
+	public OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(
+			Map<String, Object> options) throws ConnectionException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(
+			Properties properties) throws ConnectionException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(
+			Map<String, Object> options,
+			Map<ColumnFamily, Map<String, Object>> cfs)
+			throws ConnectionException {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }

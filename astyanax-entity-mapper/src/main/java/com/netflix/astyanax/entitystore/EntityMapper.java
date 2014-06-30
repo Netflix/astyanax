@@ -31,7 +31,7 @@ import com.netflix.astyanax.model.ColumnList;
  * @param <T> entity type 
  * @param <K> rowKey type
  */
-class EntityMapper<T, K> {
+public class EntityMapper<T, K> {
 
 	private final Class<T> clazz;
 	private final Integer ttl;
@@ -48,13 +48,13 @@ class EntityMapper<T, K> {
 	 * 		if clazz is NOT annotated with @Entity
 	 * 		if column name contains illegal char (like dot)
 	 */
-	EntityMapper(Class<T> clazz, Integer ttl) {
+	public EntityMapper(Class<T> clazz, Integer ttl) {
 		this.clazz = clazz;
 		
 		// clazz should be annotated with @Entity
 		Entity entityAnnotation = clazz.getAnnotation(Entity.class);
 		if(entityAnnotation == null)
-			throw new IllegalArgumentException("class is NOT annotated with @java.persistence.Entity: " + clazz.getName());
+			throw new IllegalArgumentException("class is NOT annotated with @javax.persistence.Entity: " + clazz.getName());
 		
 		entityName = MappingUtils.getEntityName(entityAnnotation, clazz);
 		
@@ -128,7 +128,7 @@ class EntityMapper<T, K> {
 		uniqueColumn = tempUniqueMapper;
 	}
 
-    void fillMutationBatch(MutationBatch mb, ColumnFamily<K, String> columnFamily, T entity) {
+    public void fillMutationBatch(MutationBatch mb, ColumnFamily<K, String> columnFamily, T entity) {
 		try {
 			@SuppressWarnings("unchecked")
 			K rowKey = (K) idField.get(entity);
@@ -153,7 +153,7 @@ class EntityMapper<T, K> {
     	return retTtl;
     }
 
-	T constructEntity(K id, ColumnList<String> cl) {
+	public T constructEntity(K id, ColumnList<String> cl) {
 		try {
 		    T entity = clazz.newInstance();
 			idField.set(entity, id);
@@ -180,7 +180,7 @@ class EntityMapper<T, K> {
 	}
 	
 	@SuppressWarnings("unchecked")
-	K getEntityId(T entity) throws Exception {
+	public K getEntityId(T entity) throws Exception {
 	    return (K)idField.get(entity);
 	}
 	
@@ -194,7 +194,7 @@ class EntityMapper<T, K> {
 		return columnList.values();
 	}
 
-	String getEntityName() {
+	public String getEntityName() {
 	    return entityName;
 	}
 	

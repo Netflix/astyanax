@@ -62,6 +62,7 @@ import com.netflix.astyanax.connectionpool.exceptions.IsDeadConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.connectionpool.exceptions.SchemaDisagreementException;
+import com.netflix.astyanax.connectionpool.impl.OperationResultImpl;
 import com.netflix.astyanax.connectionpool.impl.TokenRangeImpl;
 import com.netflix.astyanax.cql.CqlStatement;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
@@ -80,6 +81,18 @@ import com.netflix.astyanax.thrift.ddl.ThriftColumnFamilyDefinitionImpl;
 import com.netflix.astyanax.thrift.ddl.ThriftKeyspaceDefinitionImpl;
 import com.netflix.astyanax.thrift.model.ThriftCfSplitImpl;
 
+/**
+ * 
+ * @ThreadSafe
+ * Note that the same instances of this class can be used by multiple threads. 
+ * Especially for reads and writes, the prepareQuery() and prepareMutationBatch() calls are thread safe
+ * but adding multiple mutations to the same mutation batch is NOT thread safe. 
+ * 
+ * Hence once a mutation batch is created by a thread, then that batch should be used by that thread only.
+ * 
+ * @author elandau
+ *
+ */
 public final class ThriftKeyspaceImpl implements Keyspace {
     private final static Logger LOG = LoggerFactory.getLogger(ThriftKeyspaceImpl.class);
     
@@ -245,6 +258,10 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
     @Override
     public KeyspaceDefinition describeKeyspace() throws ConnectionException {
+    	return internalDescribeKeyspace().getResult();
+    }
+    
+    public OperationResult<KeyspaceDefinition> internalDescribeKeyspace() throws ConnectionException {
         return executeOperation(
                 new AbstractKeyspaceOperationImpl<KeyspaceDefinition>(
                         tracerFactory.newTracer(CassandraOperationType.DESCRIBE_KEYSPACE), getKeyspaceName()) {
@@ -252,7 +269,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                     public KeyspaceDefinition internalExecute(Cassandra.Client client, ConnectionContext context) throws Exception {
                         return new ThriftKeyspaceDefinitionImpl(client.describe_keyspace(getKeyspaceName()));
                     }
-                }, getConfig().getRetryPolicy().duplicate()).getResult();
+                }, getConfig().getRetryPolicy().duplicate());
     }
 
     @Override
@@ -275,7 +292,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                 connectionPool,
                 cf,
                 config.getDefaultReadConsistencyLevel(),
-                config.getRetryPolicy());
+                config.getRetryPolicy().duplicate());
     }
 
     @Override
@@ -599,6 +616,17 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     }
 
     @Override
+    public OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(final Map<String, Object> options) throws ConnectionException {
+
+    	return createKeyspaceIfNotExists(new Callable<OperationResult<SchemaChangeResult>>() {
+			@Override
+			public OperationResult<SchemaChangeResult> call() throws Exception {
+				return createKeyspace(options);
+			}
+    	});
+    }
+    
+    @Override
     public OperationResult<SchemaChangeResult> createKeyspace(
             final Map<String, Object> options,
             final Map<ColumnFamily, Map<String, Object>> cfs) throws ConnectionException {
@@ -612,6 +640,19 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
         return internalCreateKeyspace(ksDef.getThriftKeyspaceDefinition());
     }    
+    
+    @Override
+    public OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(
+    		final Map<String, Object> options,
+            final Map<ColumnFamily, Map<String, Object>> cfs) throws ConnectionException {
+
+    	return createKeyspaceIfNotExists(new Callable<OperationResult<SchemaChangeResult>>() {
+			@Override
+			public OperationResult<SchemaChangeResult> call() throws Exception {
+				return createKeyspace(options, cfs);
+			}
+    	});
+    }
     
     @Override
     public OperationResult<SchemaChangeResult> createKeyspace(final Properties props) throws ConnectionException {
@@ -629,6 +670,55 @@ public final class ThriftKeyspaceImpl implements Keyspace {
         }
         
         return internalCreateKeyspace(ksDef);
+    }
+
+
+    @Override
+    public OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(final Properties props) throws ConnectionException {
+
+    	return createKeyspaceIfNotExists(new Callable<OperationResult<SchemaChangeResult>>() {
+			@Override
+			public OperationResult<SchemaChangeResult> call() throws Exception {
+				return createKeyspace(props);
+			}
+    	});
+    }
+    
+    private OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(Callable<OperationResult<SchemaChangeResult>> createKeyspace) throws ConnectionException {
+        
+    	boolean shouldCreateKeyspace = false;
+    	
+    	try { 
+    		
+    		OperationResult<KeyspaceDefinition> opResult = this.internalDescribeKeyspace();
+        	
+    		if (opResult != null && opResult.getResult() != null) {
+        		return new OperationResultImpl<SchemaChangeResult>(opResult.getHost(), 
+                        new SchemaChangeResponseImpl().setSchemaId("no-op"), 
+                        opResult.getLatency());
+
+        	} else {
+        		shouldCreateKeyspace = true;
+        	}
+        } catch (BadRequestException e) {
+        	if (e.isKeyspaceDoestNotExist()) {
+        		shouldCreateKeyspace = true;
+        	} else {
+        		throw e;
+        	}
+        }
+    	
+    	if (shouldCreateKeyspace) {
+    		try {
+				return createKeyspace.call();
+			} catch (ConnectionException e) {
+				throw e;
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+    	} else {
+    		throw new IllegalStateException();
+    	}
     }
 
 
@@ -765,10 +855,10 @@ public final class ThriftKeyspaceImpl implements Keyspace {
         if (options != null)
             internalOptions.putAll(options);
         
-        if (options.containsKey("name") && !options.get("name").equals(getKeyspaceName())) {
+        if (internalOptions.containsKey("name") && !internalOptions.get("name").equals(getKeyspaceName())) {
             throw new RuntimeException(
                     String.format("'name' attribute must match keyspace name. Expected '%s' but got '%s'", 
-                                  getKeyspaceName(), options.get("name")));
+                                  getKeyspaceName(), internalOptions.get("name")));
         }
         else {
             internalOptions.put("name", getKeyspaceName());
@@ -781,7 +871,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
     @Override
     public OperationResult<SchemaChangeResult> updateKeyspace(final Properties props) throws ConnectionException {
-        if (props.containsKey("name") && props.get("name").equals(getKeyspaceName())) { 
+        if (props.containsKey("name") && !props.get("name").equals(getKeyspaceName())) {
             throw new RuntimeException(
                     String.format("'name' attribute must match keyspace name. Expected '%s' but got '%s'", 
                                   getKeyspaceName(), props.get("name")));
@@ -828,7 +918,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
     @Override
     public OperationResult<SchemaChangeResult> createColumnFamily(final Properties props) throws ConnectionException {
-        if (props.containsKey("keyspace") && props.get("keyspace").equals(getKeyspaceName())) { 
+        if (props.containsKey("keyspace") && !props.get("keyspace").equals(getKeyspaceName())) { 
             throw new RuntimeException(
                     String.format("'keyspace' attribute must match keyspace name. Expected '%s' but got '%s'", 
                                   getKeyspaceName(), props.get("keyspace")));
@@ -870,16 +960,16 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
     @Override
     public OperationResult<SchemaChangeResult> updateColumnFamily(final Map<String, Object> options) throws ConnectionException  {
-        if (options.containsKey("keyspace") && options.get("keyspace").equals(getKeyspaceName())) { 
+        if (options.containsKey("keyspace") && !options.get("keyspace").equals(getKeyspaceName())) {
             throw new RuntimeException(
                     String.format("'keyspace' attribute must match keyspace name. Expected '%s' but got '%s'", 
-                                  getKeyspaceName(), options.get("name")));
+                                  getKeyspaceName(), options.get("keyspace")));
         }
         
         return connectionPool
                 .executeWithFailover(
                         new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
-                                tracerFactory.newTracer(CassandraOperationType.UPDATE_COLUMN_FAMILY), (String)options.get("keyspace")) {
+                                tracerFactory.newTracer(CassandraOperationType.UPDATE_COLUMN_FAMILY), getKeyspaceName()) {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
                                 ThriftColumnFamilyDefinitionImpl def = new ThriftColumnFamilyDefinitionImpl();
@@ -894,16 +984,16 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     
     @Override
     public OperationResult<SchemaChangeResult> updateColumnFamily(final Properties props) throws ConnectionException {
-        if (props.containsKey("keyspace") && props.get("keyspace").equals(getKeyspaceName())) { 
+        if (props.containsKey("keyspace") && !props.get("keyspace").equals(getKeyspaceName())) {
             throw new RuntimeException(
                     String.format("'keyspace' attribute must match keyspace name. Expected '%s' but got '%s'", 
-                                  getKeyspaceName(), props.get("name")));
+                                  getKeyspaceName(), props.get("keyspace")));
         }
         
         return connectionPool
                 .executeWithFailover(
                         new AbstractKeyspaceOperationImpl<SchemaChangeResult>(
-                                tracerFactory.newTracer(CassandraOperationType.ADD_COLUMN_FAMILY), (String)props.getProperty("name")) {
+                                tracerFactory.newTracer(CassandraOperationType.ADD_COLUMN_FAMILY), getKeyspaceName()) {
                             @Override
                             public SchemaChangeResult internalExecute(Client client, ConnectionContext context) throws Exception {
                                 CfDef def = ThriftUtils.getThriftObjectFromProperties(CfDef.class, props);

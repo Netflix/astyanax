@@ -12,7 +12,7 @@ rootProject {
         if (cassThriftDep != null) {
             def version = cassThriftDep.version
             deps.remove(cassThriftDep)
-            project.dependencies.add('compile', "org.apache.cassandra:cassandra-thrift:1.2.1.2")
+            project.dependencies.add('compile', "org.apache.cassandra:cassandra-thrift:1.2.11")
         }
         
         def cassAllDep = deps.find { it.group == 'org.apache.cassandra' && it.name == 'cassandra-all' }

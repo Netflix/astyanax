@@ -487,8 +487,14 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     }
 
     @Override
+    public List<CfSplit> describeSplitsEx(String cfName, String startToken, String endToken, int keysPerSplit)
+            throws ConnectionException {
+        return describeSplitsEx(cfName, startToken, endToken, keysPerSplit, null);
+    }
+
+    @Override
     public List<CfSplit> describeSplitsEx(final String cfName, final String startToken, final String endToken,
-            final int keysPerSplit) throws ConnectionException {
+            final int keysPerSplit, final ByteBuffer startKey) throws ConnectionException {
         return executeOperation(
                 new AbstractKeyspaceOperationImpl<List<CfSplit>>(tracerFactory
                         .newTracer(CassandraOperationType.DESCRIBE_SPLITS), getKeyspaceName()) {
@@ -505,6 +511,11 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                                         split.getRow_count());
                             }
                         });
+                    }
+
+                    @Override
+                    public ByteBuffer getRowKey() {
+                        return startKey;
                     }
                 }, getConfig().getRetryPolicy().duplicate()).getResult();
     }

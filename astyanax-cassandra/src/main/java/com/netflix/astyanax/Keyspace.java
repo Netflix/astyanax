@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -204,6 +205,14 @@ public interface Keyspace {
      * @since Cassandra 1.1.8+
      */
     List<CfSplit> describeSplitsEx(String cfName, String startToken, String endToken, int keysPerSplit)
+            throws ConnectionException;
+
+    /**
+     * This is an overloaded method of {@code describeSplitsEx}, which can be used for OrderedPartitioners.
+     * This method allows for passing a rowKey for ensuring token-aware connections.
+     */
+    List<CfSplit> describeSplitsEx(String cfName, String startToken, String endToken, int keysPerSplit,
+                                   ByteBuffer rowKey)
             throws ConnectionException;
 
     /**

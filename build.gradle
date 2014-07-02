@@ -29,6 +29,7 @@ subprojects {
     group = "com.netflix.${githubProjectName}"
 
     apply plugin: 'eclipse'
+    apply plugin: 'idea'
 
     dependencies {
         compile "joda-time:joda-time:$jodaTimeVersion"

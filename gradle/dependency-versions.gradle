@@ -17,5 +17,5 @@ ext {
  jpaVersion = "1.0"
  nettyVersion = "3.6.6.Final"
  commonsIOVersion = "2.1"
- javaDriverVersion = "2.0.0-beta2"
+ javaDriverVersion = "2.0.3"
 }

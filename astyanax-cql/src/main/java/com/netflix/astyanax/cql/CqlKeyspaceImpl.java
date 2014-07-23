@@ -412,7 +412,7 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 	
 	@Override
 	public void shutdown() {
-		cluster.shutdown();
+		cluster.close();
 	}
 
 

@@ -79,7 +79,7 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostLis
 	}
 
 	public void shutdown() {
-		cluster.shutdown();
+		cluster.close();
 	}
 	
 	@Override

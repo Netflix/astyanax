@@ -33,7 +33,6 @@ import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
-import com.yammer.metrics.core.MetricsRegistryListener;
 
 /**
  * Java Driver based impl of {@link Cluster} that implements ddl operations.
@@ -53,7 +52,7 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostLis
 	private final KeyspaceTracerFactory tracerFactory; 
 	private final Configuration javaDriverConfig; 
 	private final ConnectionPoolMonitor cpMonitor;
-	private final MetricsRegistryListener metricsRegListener;
+	private final MetricRegistryListener metricsRegListener;
 	
 	public CqlClusterImpl(AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory, ConnectionPoolConfiguration cpConfig, ConnectionPoolMonitor cpMonitor) {
 		this.astyanaxConfig = asConfig;

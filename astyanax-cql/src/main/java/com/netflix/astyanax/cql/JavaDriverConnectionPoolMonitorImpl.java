@@ -3,41 +3,93 @@ package com.netflix.astyanax.cql;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.Gauge;
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistryListener;
+import com.codahale.metrics.Timer;
 import com.datastax.driver.core.Cluster;
 import com.netflix.astyanax.connectionpool.ConnectionPoolMonitor;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
 import com.netflix.astyanax.connectionpool.HostStats;
-import com.yammer.metrics.core.Metric;
-import com.yammer.metrics.core.MetricName;
-import com.yammer.metrics.core.MetricsRegistryListener;
 
-public class JavaDriverConnectionPoolMonitorImpl implements
-		ConnectionPoolMonitor {
+public class JavaDriverConnectionPoolMonitorImpl implements ConnectionPoolMonitor {
 
 	private final AtomicReference<Cluster> cluster = new AtomicReference<Cluster>();
 	
-	private MetricsRegistryListener metricsRegListener = new MetricsRegistryListener(){
+	private MetricRegistryListener metricsRegListener = new MetricRegistryListener(){
 
 		@Override
-		public void onMetricAdded(MetricName name, Metric metric) {
-			// TODO Auto-generated method stub			
+		public void onGaugeAdded(String name, Gauge<?> gauge) {
+			// TODO Auto-generated method stub
+			
 		}
 
 		@Override
-		public void onMetricRemoved(MetricName name) {
-			// TODO Auto-generated method stub			
+		public void onGaugeRemoved(String name) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void onCounterAdded(String name, Counter counter) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void onCounterRemoved(String name) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void onHistogramAdded(String name, Histogram histogram) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void onHistogramRemoved(String name) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void onMeterAdded(String name, Meter meter) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void onMeterRemoved(String name) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void onTimerAdded(String name, Timer timer) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void onTimerRemoved(String name) {
+			// TODO Auto-generated method stub
+			
 		}};
 	
 	public JavaDriverConnectionPoolMonitorImpl() {	
 	}
 	
-	public JavaDriverConnectionPoolMonitorImpl withJavaDriverMetricsRegistry(MetricsRegistryListener metricsRegListener){
+	public JavaDriverConnectionPoolMonitorImpl withJavaDriverMetricsRegistry(MetricRegistryListener metricsRegListener){
 		this.metricsRegListener = metricsRegListener;
 		return this;
 	}
 	
-	public MetricsRegistryListener getMetricsRegistryListener(){
+	public MetricRegistryListener getMetricsRegistryListener(){
 		return metricsRegListener;
 	}
 	

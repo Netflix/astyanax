@@ -3,11 +3,8 @@ package com.netflix.astyanax.cql.util;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
-import org.apache.cassandra.cql3.CQL3Type;
-
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+import org.apache.commons.lang.NotImplementedException;
 
 import com.datastax.driver.core.Row;
 import com.netflix.astyanax.Serializer;
@@ -26,61 +23,58 @@ import com.netflix.astyanax.serializers.ComparatorType;
  */
 public class CqlTypeMapping {
 
-	private static Map<String, CQL3Type> directTypeMap = new HashMap<String, CQL3Type>();
-	private static Map<String, CQL3Type> reverseTypeMap = new HashMap<String, CQL3Type>();
-	
-	private static Map<CQL3Type, ComparatorType> cql3ToComparatorTypeMap = new HashMap<CQL3Type, ComparatorType>();
-	private static Map<String, CQL3Type> reverseCql3ToComparatorTypeMap = new HashMap<String, CQL3Type>();
+	private static Map<String, String> comparatorToCql3Type = new HashMap<String, String>();
+	private static Map<String, ComparatorType> cqlToComparatorType = new HashMap<String, ComparatorType>();
 		
 	static {
-		
-		for (CQL3Type.Native cqlType : CQL3Type.Native.values()) {
-			if (!cqlType.name().contains("VAR")) {
-				directTypeMap.put(cqlType.name().toLowerCase(), cqlType);
-				reverseTypeMap.put(cqlType.getType().getClass().getSimpleName(), cqlType);
-				reverseTypeMap.put(cqlType.getType().getClass().getName(), cqlType);
-			}
-		}
-		
-		cql3ToComparatorTypeMap.put(CQL3Type.Native.ASCII,     ComparatorType.ASCIITYPE);
-		cql3ToComparatorTypeMap.put(CQL3Type.Native.BIGINT,    ComparatorType.INTEGERTYPE);
-		cql3ToComparatorTypeMap.put(CQL3Type.Native.BLOB,      ComparatorType.BYTESTYPE);    
-		cql3ToComparatorTypeMap.put(CQL3Type.Native.BOOLEAN,   ComparatorType.BOOLEANTYPE);  
-		cql3ToComparatorTypeMap.put(CQL3Type.Native.COUNTER,   ComparatorType.COUNTERTYPE); 
-		cql3ToComparatorTypeMap.put(CQL3Type.Native.DECIMAL,   ComparatorType.DECIMALTYPE);
-		cql3ToComparatorTypeMap.put(CQL3Type.Native.DOUBLE,    ComparatorType.DOUBLETYPE);   
-		cql3ToComparatorTypeMap.put(CQL3Type.Native.FLOAT,     ComparatorType.FLOATTYPE);   
-		//cql3ToComparatorTypeMap.put(CQL3Type.Native.INET,      null);    
-		cql3ToComparatorTypeMap.put(CQL3Type.Native.INT,       ComparatorType.INT32TYPE);
-		cql3ToComparatorTypeMap.put(CQL3Type.Native.TEXT,      ComparatorType.UTF8TYPE);   
-		cql3ToComparatorTypeMap.put(CQL3Type.Native.TIMESTAMP, ComparatorType.DATETYPE);
-		cql3ToComparatorTypeMap.put(CQL3Type.Native.UUID,      ComparatorType.UUIDTYPE);     
-		cql3ToComparatorTypeMap.put(CQL3Type.Native.VARCHAR,   ComparatorType.UTF8TYPE); 
-		cql3ToComparatorTypeMap.put(CQL3Type.Native.VARINT,    ComparatorType.INTEGERTYPE);   
-		cql3ToComparatorTypeMap.put(CQL3Type.Native.TIMEUUID,  ComparatorType.TIMEUUIDTYPE); 
-		
-		for (Entry<CQL3Type, ComparatorType> e : cql3ToComparatorTypeMap.entrySet()) {
-			CQL3Type cql3Type = e.getKey();
-			ComparatorType compType = e.getValue();
-			reverseCql3ToComparatorTypeMap.put(compType.getClassName(), cql3Type);
-			reverseCql3ToComparatorTypeMap.put(compType.getTypeName(), cql3Type);
-		}
+		initComparatorTypeMap();
 	}
 		
-	public static String getCqlType(String typeString) {
+	private static void initComparatorTypeMap() {
 		
-		CQL3Type type = directTypeMap.get(typeString.toLowerCase());
-		type = (type == null) ? reverseTypeMap.get(typeString) : type;
-		type = (type == null) ? reverseCql3ToComparatorTypeMap.get(typeString) : type;
-			
-		if (type == null) {
-			throw new RuntimeException("Type not found: " + type);
-		}
-		return type.toString();
-	}
+		Map<ComparatorType, String> tmpMap = new HashMap<ComparatorType, String>();
 
-	public static ComparatorType getComparatorType(CQL3Type cqlType) {
-		return cql3ToComparatorTypeMap.get(cqlType);
+		tmpMap.put(ComparatorType.ASCIITYPE, "ASCII");
+		tmpMap.put(ComparatorType.BYTESTYPE, "BLOB");    
+		tmpMap.put(ComparatorType.BOOLEANTYPE, "BOOLEAN");  
+		tmpMap.put(ComparatorType.COUNTERTYPE, "COUNTER"); 
+		tmpMap.put(ComparatorType.DECIMALTYPE, "DECIMAL");
+		tmpMap.put(ComparatorType.DOUBLETYPE, "DOUBLE");   
+		tmpMap.put(ComparatorType.FLOATTYPE, "FLOAT");   
+		tmpMap.put(ComparatorType.LONGTYPE, "BIGINT");
+		tmpMap.put(ComparatorType.INT32TYPE, "INT");
+		tmpMap.put(ComparatorType.UTF8TYPE, "TEXT");   
+		tmpMap.put(ComparatorType.DATETYPE, "TIMESTAMP");
+		tmpMap.put(ComparatorType.UUIDTYPE, "UUID");     
+		tmpMap.put(ComparatorType.INTEGERTYPE, "VARINT");   
+		tmpMap.put(ComparatorType.TIMEUUIDTYPE, "TIMEUUID"); 
+		
+		for (ComparatorType cType : tmpMap.keySet()) {
+			
+			String value = tmpMap.get(cType);
+			
+			comparatorToCql3Type.put(cType.getClassName(), value);
+			comparatorToCql3Type.put(cType.getTypeName(), value);
+			
+			cqlToComparatorType.put(value, cType);
+		}
+	}
+	
+	public static ComparatorType getComparatorFromCqlType(String cqlTypeString) {
+		ComparatorType value = cqlToComparatorType.get(cqlTypeString);
+		if (value == null) {
+			throw new RuntimeException("Unrecognized cql type: " + cqlTypeString);
+		}
+		return value;
+	}
+	
+	
+	public static String getCqlTypeFromComparator(String comparatorString) {
+		String value = comparatorToCql3Type.get(comparatorString);
+		if (value == null) {
+			throw new RuntimeException("Could not find comparator type string: " + comparatorString);
+		}
+		return value;
 	}
 	
 	private static <T> Object getDynamicColumn(Row row, Serializer<T> serializer, String columnName, ColumnFamily<?,?> cf) {

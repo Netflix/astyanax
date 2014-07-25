@@ -94,7 +94,6 @@ project(':astyanax-cql') {
         compile  project(':astyanax-core')
         compile  project(':astyanax-cassandra')
         compile "com.datastax.cassandra:cassandra-driver-core:$javaDriverVersion"
-        compile "org.apache.cassandra:cassandra-all:$cassandraVersion"
         compile "junit:junit:$junitVersion"
     }
 }

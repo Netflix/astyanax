@@ -57,7 +57,6 @@ import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.serializers.SerializerPackageImpl;
 import com.netflix.astyanax.serializers.UnknownComparatorException;
-import com.yammer.metrics.core.MetricsRegistryListener;
 
 /**
  * Java Driver based impl of {@link Keyspace} that implements ddl operations as well as row queries and mutation batches.
@@ -84,7 +83,7 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 	private final KeyspaceTracerFactory tracerFactory; 
 	private final Configuration javaDriverConfig;
 	private final ConnectionPoolMonitor cpMonitor;
-	private final MetricsRegistryListener metricsRegListener;
+	private final MetricRegistryListener metricsRegListener;
 
 	public CqlKeyspaceImpl(String ksName, AstyanaxConfiguration asConfig, KeyspaceTracerFactory tracerFactory, ConnectionPoolConfiguration cpConfig, ConnectionPoolMonitor cpMonitor) {
 		this(null, ksName, asConfig, tracerFactory, cpConfig,cpMonitor);

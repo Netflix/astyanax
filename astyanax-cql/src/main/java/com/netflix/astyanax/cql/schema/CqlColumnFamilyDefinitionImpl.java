@@ -31,7 +31,6 @@ import com.google.common.collect.Maps;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.cql.CqlOperationResultImpl;
 import com.netflix.astyanax.cql.reads.CFRowQueryGen;
-import com.netflix.astyanax.cql.util.CqlTypeMapping;
 import com.netflix.astyanax.cql.util.DataTypeMapping;
 import com.netflix.astyanax.cql.writes.CFMutationQueryGen;
 import com.netflix.astyanax.ddl.ColumnDefinition;
@@ -41,6 +40,7 @@ import com.netflix.astyanax.ddl.SchemaChangeResult;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
 import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer.ComponentSerializer;
+import com.netflix.astyanax.serializers.ComparatorType;
 
 /**
  * Impl for {@link ColumnFamilyDefinition} interface that constructs it's state from the java driver {@link ResultSet}
@@ -166,14 +166,20 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 			 optionsMap.put(colName, value);
 		 }
 		readColDefinitions();
+		
+		/**
+		if (partitionKeyList.size() == 0) {
+			readColDefinitionsForCass12();
+		}
+		*/
 	}
 
 	private void processCompositeComparator() {
 
 		int colIndex = 1;
 		for (ComponentSerializer<?> componentSerializer : compositeSerializer.getComponents()) {
-			String type = CqlTypeMapping.getCqlType(componentSerializer.getSerializer().getComparatorType().getTypeName());
-			ColumnDefinition column = new CqlColumnDefinitionImpl().setName("column" + colIndex++).setValidationClass(type);
+			String typeName = componentSerializer.getSerializer().getComparatorType().getTypeName();
+			ColumnDefinition column = new CqlColumnDefinitionImpl().setName("column" + colIndex++).setValidationClass(typeName);
 			clusteringKeyList.add(column);
 		}
 	}
@@ -188,24 +194,24 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		int colIndex = 1;
 		for (int i=1; i<parts.length; i++) {
 			String componentTypeString = parts[i].trim();
-			String type = CqlTypeMapping.getCqlType(componentTypeString);
-			ColumnDefinition column = new CqlColumnDefinitionImpl().setName("column" + colIndex++).setValidationClass(type);
+			ColumnDefinition column = new CqlColumnDefinitionImpl().setName("column" + colIndex++).setValidationClass(componentTypeString);
 			clusteringKeyList.add(column);
 		}
 	}
 	
-
-
 	private void createColumnDefinitions() {
 
 		String keyClass = (String) optionsMap.remove("key_validator");
-		keyClass = (keyClass == null) ?	keyClass = "blob" : keyClass;
+		
+		String defaultBytesType = ComparatorType.BYTESTYPE.getTypeName();
+		
+		keyClass = (keyClass == null) ?	keyClass = defaultBytesType : keyClass;
 		
 		String comparatorClass = (String) optionsMap.remove("comparator");
-		comparatorClass = (comparatorClass == null) ?	comparatorClass = "blob" : comparatorClass;
+		comparatorClass = (comparatorClass == null) ?	comparatorClass = defaultBytesType : comparatorClass;
 		
 		String dataValidationClass = (String) optionsMap.remove("default_validator");
-		dataValidationClass = (dataValidationClass == null) ?	dataValidationClass = "blob" : dataValidationClass;
+		dataValidationClass = (dataValidationClass == null) ?	dataValidationClass = defaultBytesType : dataValidationClass;
 
 		ColumnDefinition key = new CqlColumnDefinitionImpl().setName("key").setValidationClass(keyClass);
 		partitionKeyList.add(key);
@@ -222,6 +228,51 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		ColumnDefinition valueColumn = new CqlColumnDefinitionImpl().setName("value").setValidationClass(dataValidationClass);
 		this.regularColumnList.add(valueColumn);
 	}
+	
+	/**
+	private void readColDefinitionsForCass12() {
+
+		String defaultBytesType = ComparatorType.BYTESTYPE.getTypeName();
+
+		String keyClass = (String) optionsMap.get("key_validator");
+		keyClass = (keyClass == null) ?	keyClass = defaultBytesType : keyClass;
+		
+		String comparatorClass = (String) optionsMap.get("comparator");
+		comparatorClass = (comparatorClass == null) ?	comparatorClass = defaultBytesType : comparatorClass;
+		
+		String dataValidationClass = (String) optionsMap.get("default_validator");
+		dataValidationClass = (dataValidationClass == null) ?	dataValidationClass = defaultBytesType : dataValidationClass;
+
+		ColumnDefinition key = new CqlColumnDefinitionImpl().setName("key").setValidationClass(keyClass);
+		partitionKeyList.add(key);
+
+		if (compositeSerializer != null) {
+			processCompositeComparator();
+		} else if (comparatorClass.contains("CompositeType")) {
+			processCompositeComparatorSpec(comparatorClass);
+		} else {
+			ColumnDefinition column1 = new CqlColumnDefinitionImpl().setName("column1").setValidationClass(comparatorClass);
+			clusteringKeyList.add(column1);
+		}
+
+		ColumnDefinition valueColumn = new CqlColumnDefinitionImpl().setName("value").setValidationClass(dataValidationClass);
+		this.regularColumnList.add(valueColumn);
+		
+		this.allColumnsDefinitionList.addAll(partitionKeyList);
+		this.allColumnsDefinitionList.addAll(clusteringKeyList);
+		this.allColumnsDefinitionList.addAll(regularColumnList);
+		
+		List<String> allPrimaryKeyColNames = new ArrayList<String>();
+		for (ColumnDefinition colDef : partitionKeyList) {
+			allPrimaryKeyColNames.add(colDef.getName());
+		}
+		for (ColumnDefinition colDef : clusteringKeyList) {
+			allPrimaryKeyColNames.add(colDef.getName());
+		}
+		
+		allPkColNames = allPrimaryKeyColNames.toArray(new String[allPrimaryKeyColNames.size()]);
+	}
+	*/
 	
 	private void readColDefinitions() {
 		

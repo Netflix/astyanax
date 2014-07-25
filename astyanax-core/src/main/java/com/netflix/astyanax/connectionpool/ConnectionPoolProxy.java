@@ -116,8 +116,9 @@ public class ConnectionPoolProxy<T> implements ConnectionPool<T> {
 
 	@Override
 	public void shutdown() {
-		// TODO Auto-generated method stub
-		
+		if (this.lastHostList.get() != null) {
+			this.listener.get().shutdown();
+		}
 	}
 
 	@Override

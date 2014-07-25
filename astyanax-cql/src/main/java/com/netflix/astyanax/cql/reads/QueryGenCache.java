@@ -3,7 +3,8 @@ package com.netflix.astyanax.cql.reads;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.PreparedStatement;
@@ -21,8 +22,8 @@ import com.datastax.driver.core.Session;
  * @param <Q>
  */
 public abstract class QueryGenCache<Q> {
-
-	private static final Logger LOG = Logger.getLogger(QueryGenCache.class);
+	
+	private static final Logger LOG = LoggerFactory.getLogger(QueryGenCache.class);
 
 	// reference to the session object. This is required for "preparing" a statement
 	private AtomicReference<Session> sessionRef = new AtomicReference<Session>(null); 

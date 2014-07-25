@@ -197,7 +197,7 @@ public class CqlColumnDefinitionImpl implements ColumnDefinition, Comparable<Cql
 	}
 
 	public String getCqlType() {
-		return CqlTypeMapping.getCqlType(getValidationClass());
+		return CqlTypeMapping.getCqlTypeFromComparator(getValidationClass());
 	}
 	
 	public CqlColumnType getColumnType() {

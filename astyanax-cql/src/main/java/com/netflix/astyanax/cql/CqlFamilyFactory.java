@@ -2,7 +2,7 @@ package com.netflix.astyanax.cql;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+import org.apache.commons.lang.NotImplementedException;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Configuration;

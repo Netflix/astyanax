@@ -4,8 +4,6 @@ import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.UUID;
 
-import org.apache.cassandra.cql3.CQL3Type;
-
 import com.datastax.driver.core.ColumnDefinitions.Definition;
 import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.ResultSet;
@@ -61,6 +59,7 @@ public class CqlColumnImpl<C> implements Column<C> {
 	}
 	
 	public CqlColumnImpl(C colName, Row row, int index, Definition colDefinition) {
+		
 		this.columnName = colName;
 		this.row = row;
 		this.index = index;
@@ -194,13 +193,7 @@ public class CqlColumnImpl<C> implements Column<C> {
 			throw new RuntimeException("This operation does not work for collection objects");
 		}
 		String typeString = (type.getName().name()).toUpperCase();
-		CQL3Type cql3Type = CQL3Type.Native.valueOf(typeString);
-		
-		cType = CqlTypeMapping.getComparatorType(cql3Type);
-		
-		if (cType == null) {
-			throw new RuntimeException("Cannot find comparator type for CQL3Type: " + cql3Type + ", DataType: " + type.getName());
-		}
+		cType = CqlTypeMapping.getComparatorFromCqlType(typeString);
 		
 		return cType;
 	}

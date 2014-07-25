@@ -128,8 +128,8 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
         	query.setRetryPolicy(jdRetryPolicy.getJDRetryPolicy());
         }
 
-		ResultSet resultSet = session.execute(query);
-		R result = parseResultSet(resultSet);
+        ResultSet resultSet = session.execute(query);
+        R result = parseResultSet(resultSet);
 		OperationResult<R> opResult = new CqlOperationResultImpl<R>(resultSet, result);
 		opResult.setAttemptsCount(retry.getAttemptCount());
 		tracer.success();

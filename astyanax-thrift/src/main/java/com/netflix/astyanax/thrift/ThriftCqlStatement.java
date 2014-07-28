@@ -26,7 +26,7 @@ class ThriftCqlStatement implements CqlStatement {
     
     public ThriftCqlStatement(ThriftKeyspaceImpl keyspace) {
         this.keyspace = keyspace;
-        this.retry = keyspace.getConfig().getRetryPolicy();
+        this.retry = keyspace.getConfig().getRetryPolicy().duplicate();
     }
 
     @Override

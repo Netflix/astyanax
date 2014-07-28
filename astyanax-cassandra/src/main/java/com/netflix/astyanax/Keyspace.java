@@ -268,6 +268,14 @@ public interface Keyspace {
     OperationResult<SchemaChangeResult> createKeyspace(Map<String, Object> options) throws ConnectionException ;
     
     /**
+     * Create the keyspace in cassandra if it does not exist.  This call will only create the keyspace and not 
+     * any column families.  Once the keyspace has been created then call createColumnFamily
+     * for each CF you want to create.
+     * @param options - For list of options see http://www.datastax.com/docs/1.0/configuration/storage_configuration
+     */
+    OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(Map<String, Object> options) throws ConnectionException ;
+
+    /**
      * Create the keyspace in cassandra.  This call will create the keyspace and any column families.
      * @param properties
      * @return
@@ -276,12 +284,28 @@ public interface Keyspace {
     OperationResult<SchemaChangeResult> createKeyspace(Properties properties) throws ConnectionException;
     
     /**
+     * Create a keyspace if it does not exist. 
+     * @param properties
+     * @return
+     * @throws ConnectionException
+     */
+    OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(Properties properties) throws ConnectionException;
+
+    /**
      * Bulk create for a keyspace and a bunch of column famlies
      * @param options
      * @param cfs
      * @throws ConnectionException
      */
     OperationResult<SchemaChangeResult> createKeyspace(Map<String, Object> options, Map<ColumnFamily, Map<String, Object>> cfs) throws ConnectionException ;
+    
+    /**
+     * Bulk create for a keyspace if it does not exist and a bunch of column famlies
+     * @param options
+     * @param cfs
+     * @throws ConnectionException
+     */
+    OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(Map<String, Object> options, Map<ColumnFamily, Map<String, Object>> cfs) throws ConnectionException ;
     
     /**
      * Update the keyspace in cassandra.

@@ -25,10 +25,10 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.cassandra.thrift.Cassandra;
+import org.apache.cassandra.thrift.Cassandra.Client;
 import org.apache.cassandra.thrift.CfDef;
 import org.apache.cassandra.thrift.CounterColumn;
 import org.apache.cassandra.thrift.KsDef;
-import org.apache.cassandra.thrift.Cassandra.Client;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,20 +36,21 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.netflix.astyanax.AstyanaxConfiguration;
+import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.ColumnMutation;
 import com.netflix.astyanax.Execution;
-import com.netflix.astyanax.CassandraOperationType;
+import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.KeyspaceTracerFactory;
 import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.SerializerPackage;
 import com.netflix.astyanax.WriteAheadEntry;
 import com.netflix.astyanax.WriteAheadLog;
-import com.netflix.astyanax.SerializerPackage;
-import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.ConnectionContext;
+import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.Operation;
 import com.netflix.astyanax.connectionpool.OperationResult;
@@ -60,22 +61,35 @@ import com.netflix.astyanax.connectionpool.exceptions.IsDeadConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.connectionpool.exceptions.SchemaDisagreementException;
+import com.netflix.astyanax.connectionpool.impl.OperationResultImpl;
 import com.netflix.astyanax.connectionpool.impl.TokenRangeImpl;
 import com.netflix.astyanax.cql.CqlStatement;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
 import com.netflix.astyanax.ddl.impl.SchemaChangeResponseImpl;
-import com.netflix.astyanax.model.*;
-import com.netflix.astyanax.Keyspace;
+import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.retry.RunOnce;
 import com.netflix.astyanax.serializers.SerializerPackageImpl;
 import com.netflix.astyanax.serializers.UnknownComparatorException;
-import com.netflix.astyanax.thrift.ddl.*;
+import com.netflix.astyanax.thrift.ddl.ThriftColumnFamilyDefinitionImpl;
+import com.netflix.astyanax.thrift.ddl.ThriftKeyspaceDefinitionImpl;
 
+/**
+ * 
+ * @ThreadSafe
+ * Note that the same instances of this class can be used by multiple threads. 
+ * Especially for reads and writes, the prepareQuery() and prepareMutationBatch() calls are thread safe
+ * but adding multiple mutations to the same mutation batch is NOT thread safe. 
+ * 
+ * Hence once a mutation batch is created by a thread, then that batch should be used by that thread only.
+ * 
+ * @author elandau
+ *
+ */
 public final class ThriftKeyspaceImpl implements Keyspace {
     private final static Logger LOG = LoggerFactory.getLogger(ThriftKeyspaceImpl.class);
     
@@ -247,6 +261,10 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
     @Override
     public KeyspaceDefinition describeKeyspace() throws ConnectionException {
+    	return internalDescribeKeyspace().getResult();
+    }
+    
+    public OperationResult<KeyspaceDefinition> internalDescribeKeyspace() throws ConnectionException {
         return executeOperation(
                 new AbstractKeyspaceOperationImpl<KeyspaceDefinition>(
                         tracerFactory.newTracer(CassandraOperationType.DESCRIBE_KEYSPACE), getKeyspaceName()) {
@@ -254,7 +272,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                     public KeyspaceDefinition internalExecute(Cassandra.Client client, ConnectionContext context) throws Exception {
                         return new ThriftKeyspaceDefinitionImpl(client.describe_keyspace(getKeyspaceName()));
                     }
-                }, getConfig().getRetryPolicy().duplicate()).getResult();
+                }, getConfig().getRetryPolicy().duplicate());
     }
 
     @Override
@@ -277,7 +295,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                 connectionPool,
                 cf,
                 config.getDefaultReadConsistencyLevel(),
-                config.getRetryPolicy());
+                config.getRetryPolicy().duplicate());
     }
 
     @Override
@@ -547,6 +565,17 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     }
 
     @Override
+    public OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(final Map<String, Object> options) throws ConnectionException {
+
+    	return createKeyspaceIfNotExists(new Callable<OperationResult<SchemaChangeResult>>() {
+			@Override
+			public OperationResult<SchemaChangeResult> call() throws Exception {
+				return createKeyspace(options);
+			}
+    	});
+    }
+    
+    @Override
     public OperationResult<SchemaChangeResult> createKeyspace(
             final Map<String, Object> options,
             final Map<ColumnFamily, Map<String, Object>> cfs) throws ConnectionException {
@@ -560,6 +589,19 @@ public final class ThriftKeyspaceImpl implements Keyspace {
 
         return internalCreateKeyspace(ksDef.getThriftKeyspaceDefinition());
     }    
+    
+    @Override
+    public OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(
+    		final Map<String, Object> options,
+            final Map<ColumnFamily, Map<String, Object>> cfs) throws ConnectionException {
+
+    	return createKeyspaceIfNotExists(new Callable<OperationResult<SchemaChangeResult>>() {
+			@Override
+			public OperationResult<SchemaChangeResult> call() throws Exception {
+				return createKeyspace(options, cfs);
+			}
+    	});
+    }
     
     @Override
     public OperationResult<SchemaChangeResult> createKeyspace(final Properties props) throws ConnectionException {
@@ -577,6 +619,55 @@ public final class ThriftKeyspaceImpl implements Keyspace {
         }
         
         return internalCreateKeyspace(ksDef);
+    }
+
+
+    @Override
+    public OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(final Properties props) throws ConnectionException {
+
+    	return createKeyspaceIfNotExists(new Callable<OperationResult<SchemaChangeResult>>() {
+			@Override
+			public OperationResult<SchemaChangeResult> call() throws Exception {
+				return createKeyspace(props);
+			}
+    	});
+    }
+    
+    private OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(Callable<OperationResult<SchemaChangeResult>> createKeyspace) throws ConnectionException {
+        
+    	boolean shouldCreateKeyspace = false;
+    	
+    	try { 
+    		
+    		OperationResult<KeyspaceDefinition> opResult = this.internalDescribeKeyspace();
+        	
+    		if (opResult != null && opResult.getResult() != null) {
+        		return new OperationResultImpl<SchemaChangeResult>(opResult.getHost(), 
+                        new SchemaChangeResponseImpl().setSchemaId("no-op"), 
+                        opResult.getLatency());
+
+        	} else {
+        		shouldCreateKeyspace = true;
+        	}
+        } catch (BadRequestException e) {
+        	if (e.isKeyspaceDoestNotExist()) {
+        		shouldCreateKeyspace = true;
+        	} else {
+        		throw e;
+        	}
+        }
+    	
+    	if (shouldCreateKeyspace) {
+    		try {
+				return createKeyspace.call();
+			} catch (ConnectionException e) {
+				throw e;
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+    	} else {
+    		throw new IllegalStateException();
+    	}
     }
 
 

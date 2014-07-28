@@ -148,6 +148,12 @@ public class ThriftKeyspaceImplTest {
                     StringSerializer.get(),
                     StringSerializer.get());
 
+    public static ColumnFamily<String, String> CF_ALLROWS = ColumnFamily
+            .newColumnFamily(
+                    "AllRows", 
+                    StringSerializer.get(),
+                    StringSerializer.get());
+
     public static ColumnFamily<String, String> CF_COUNTER1 = ColumnFamily
             .newColumnFamily(
                     "Counter1", 
@@ -291,6 +297,7 @@ public class ThriftKeyspaceImplTest {
         keyspace.createKeyspace(ksOptions, cfs);
         
         keyspace.createColumnFamily(CF_STANDARD2,  null);
+        keyspace.createColumnFamily(CF_ALLROWS,  null);
         keyspace.createColumnFamily(CF_LONGCOLUMN, null);
         keyspace.createColumnFamily(CF_DELETE,     null);
         keyspace.createColumnFamily(ATOMIC_UPDATES,null);
@@ -399,6 +406,22 @@ public class ThriftKeyspaceImplTest {
                 .putEmptyColumn("empty");
 
             m.execute();
+            
+            
+            // Inserts for CF_ALLROWS
+            m = keyspace.prepareMutationBatch();
+
+            for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
+                rowKey = Character.toString(keyName);
+                ColumnListMutation<String> cfmStandard = m.withRow(
+                        CF_ALLROWS, rowKey);
+                for (char cName = 'a'; cName <= 'z'; cName++) {
+                    cfmStandard.putColumn(Character.toString(cName),
+                            (int) (cName - 'a') + 1, null);
+                }
+                m.execute();
+            }
+            
 
         } catch (Exception e) {
             System.out.println(e.getMessage());
@@ -687,7 +710,8 @@ public class ThriftKeyspaceImplTest {
         AtomicLong counter = new AtomicLong(0);
         try {
             OperationResult<Rows<String, String>> rows = keyspace
-                    .prepareQuery(CF_STANDARD1).getAllRows().setConcurrencyLevel(2).setRowLimit(10)
+                    .prepareQuery(CF_ALLROWS).getAllRows().setConcurrencyLevel(2).setRowLimit(10)
+                    .setRepeatLastToken(false)
                     .withColumnRange(new RangeBuilder().setLimit(0).build())
                     .setExceptionCallback(new ExceptionCallback() {
                         @Override
@@ -700,7 +724,7 @@ public class ThriftKeyspaceImplTest {
                 counter.incrementAndGet();
                 LOG.info("ROW: " + row.getKey() + " " + row.getColumns().size());
             }
-            Assert.assertEquals(27, counter.get());
+            Assert.assertEquals(26, counter.get());
         } catch (ConnectionException e) {
             Assert.fail();
         }
@@ -1885,6 +1909,65 @@ public class ThriftKeyspaceImplTest {
             keyspaceContext.shutdown();
         }
     }
+    
+
+    @Test
+    public void testCreateKeyspaceThatAlreadyExists() {
+
+    	String keyspaceName = TEST_KEYSPACE_NAME + "_ksAlreadyExists";
+
+    	AstyanaxContext<Keyspace> keyspaceContext = new AstyanaxContext.Builder()
+    	.forCluster(TEST_CLUSTER_NAME)
+    	.forKeyspace(keyspaceName)
+    	.withAstyanaxConfiguration(
+    			new AstyanaxConfigurationImpl()
+    			.setDiscoveryType(NodeDiscoveryType.NONE))
+    			.withConnectionPoolConfiguration(
+    					new ConnectionPoolConfigurationImpl(keyspaceName)
+    					.setMaxConnsPerHost(1).setSeeds(SEEDS))
+    					.buildKeyspace(ThriftFamilyFactory.getInstance());
+
+    	Keyspace ks = null;
+    	try {
+    		keyspaceContext.start();
+    		ks = keyspaceContext.getClient();
+
+    		Properties props = new Properties();
+    		props.setProperty("name", keyspaceName);
+    		props.setProperty("strategy_class", "SimpleStrategy");
+    		props.setProperty("strategy_options.replication_factor", "1");
+
+    		try {
+    			ks.createKeyspaceIfNotExists(props);
+
+    			KeyspaceDefinition ksDef = ks.describeKeyspace();
+    			Assert.assertNotNull(ksDef);
+
+    		} catch (Exception e) {
+    			Assert.fail(e.getMessage());
+    		}
+
+
+    		// NOW create is again. 
+    		try {
+    			ks.createKeyspaceIfNotExists(props);
+    		} catch (Exception e) {
+    			Assert.fail(e.getMessage());
+    		}
+    	} finally {
+
+    		try {
+    			if (ks != null) {
+    				ks.dropKeyspace();
+    			}
+    		} catch (Exception e) {
+    			LOG.info(e.getMessage());
+    		}
+
+    		keyspaceContext.shutdown();
+    	}
+    }
+
 
     @Test
     public void testGetSingleColumnNotExists() {

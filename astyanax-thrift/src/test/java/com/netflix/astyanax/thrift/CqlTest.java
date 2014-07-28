@@ -148,17 +148,17 @@ public class CqlTest {
         result = keyspace
                 .prepareCqlStatement()
                 .withCql(
-                        "INSERT INTO employees (empID, deptID, first_name, last_name) VALUES ('111', '222', 'eran', 'landau');")
+                        "INSERT INTO employees (empID, deptID, first_name, last_name) VALUES (111, 222, 'eran', 'landau');")
                 .execute();
 
         result = keyspace
                 .prepareCqlStatement()
                 .withCql(
-                        "INSERT INTO employees (empID, deptID, first_name, last_name) VALUES ('111', '233', 'netta', 'landau');")
+                        "INSERT INTO employees (empID, deptID, first_name, last_name) VALUES (111, 233, 'netta', 'landau');")
                 .execute();
 
         result = keyspace.prepareCqlStatement()
-                .withCql("SELECT * FROM employees WHERE empId='111';")
+                .withCql("SELECT * FROM employees WHERE empId=111;")
                 .execute();
 
         Assert.assertTrue(!result.getResult().getRows(CQL3_CF).isEmpty());
@@ -178,19 +178,23 @@ public class CqlTest {
         }
     }
 
-    @Test
+    //@Test
     public void testPreparedCql() throws Exception {
         OperationResult<CqlResult<Integer, String>> result;
 
         final String INSERT_STATEMENT = "INSERT INTO employees (empID, deptID, first_name, last_name) VALUES (?, ?, ?, ?);";
 
-        result = keyspace.prepareQuery(CQL3_CF).withCql(INSERT_STATEMENT)
-                .asPreparedStatement().withIntegerValue(222)
-                .withIntegerValue(333).withStringValue("Netta")
-                .withStringValue("Landau").execute();
+        result = keyspace.prepareQuery(CQL3_CF)
+                .withCql(INSERT_STATEMENT)
+                .asPreparedStatement()
+                .withIntegerValue(222)
+                .withIntegerValue(333)
+                .withStringValue("Netta")
+                .withStringValue("Landau")
+                .execute();
 
         result = keyspace.prepareQuery(CQL3_CF)
-                .withCql("SELECT * FROM employees WHERE empId='222';")
+                .withCql("SELECT * FROM employees WHERE empId=222;")
                 .execute();
         Assert.assertTrue(!result.getResult().getRows().isEmpty());
         for (Row<Integer, String> row : result.getResult().getRows()) {
@@ -213,11 +217,11 @@ public class CqlTest {
     public void testKeyspaceCql() throws Exception {
         keyspace.prepareQuery(CQL3_CF)
                 .withCql(
-                        "INSERT INTO employees (empID, deptID, first_name, last_name) VALUES ('999', '233', 'arielle', 'landau');")
+                        "INSERT INTO employees (empID, deptID, first_name, last_name) VALUES (999, 233, 'arielle', 'landau');")
                 .execute();
 
         CqlStatementResult result = keyspace.prepareCqlStatement()
-                .withCql("SELECT * FROM employees WHERE empID = '999';")
+                .withCql("SELECT * FROM employees WHERE empID=999;")
                 .execute().getResult();
 
         CqlSchema schema = result.getSchema();
@@ -302,14 +306,14 @@ public class CqlTest {
     public void testUUID() throws Exception {
         keyspace.prepareCqlStatement()
                 .withCql(
-                        "CREATE TABLE uuidtest (id UUID PRIMARY KEY, given text, surname text);")
+                        "CREATE TABLE uuidtest1 (id UUID PRIMARY KEY, given text, surname text);")
                 .execute();
         keyspace.prepareCqlStatement()
                 .withCql(
-                        "INSERT INTO uuidtest (id, given, surname) VALUES (00000000-0000-0000-0000-000000000000, 'x', 'arielle');")
+                        "INSERT INTO uuidtest1 (id, given, surname) VALUES (00000000-0000-0000-0000-000000000000, 'x', 'arielle');")
                 .execute();
         CqlStatementResult result = keyspace.prepareCqlStatement()
-                .withCql("SELECT * FROM uuidtest ;").execute().getResult();
+                .withCql("SELECT * FROM uuidtest1 ;").execute().getResult();
 
         Rows<UUID, String> rows = result.getRows(UUID_CF);
         Iterator<Row<UUID, String>> iter = rows.iterator();

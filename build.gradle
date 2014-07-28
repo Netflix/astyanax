@@ -29,6 +29,7 @@ subprojects {
     group = "com.netflix.${githubProjectName}"
 
     apply plugin: 'eclipse'
+    apply plugin: 'idea'
 
     dependencies {
         compile "joda-time:joda-time:$jodaTimeVersion"
@@ -68,11 +69,6 @@ project(':astyanax-core') {
     apply plugin: 'java'
     dependencies {
         testCompile "junit:junit:$junitVersion"
-    }
-    jar {
-        dependsOn configurations.runtime
-        baseName = 'astyanax-all'
-        from { configurations.runtime.collect { it.isDirectory() ? it : zipTree(it) } }
     }
 }
 

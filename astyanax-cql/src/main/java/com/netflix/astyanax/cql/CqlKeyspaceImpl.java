@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.Callable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +40,7 @@ import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
+import com.netflix.astyanax.connectionpool.impl.OperationResultImpl;
 import com.netflix.astyanax.cql.direct.DirectCqlStatement;
 import com.netflix.astyanax.cql.reads.CqlColumnFamilyQueryImpl;
 import com.netflix.astyanax.cql.schema.CqlColumnFamilyDefinitionImpl;
@@ -49,6 +51,7 @@ import com.netflix.astyanax.cql.writes.CqlMutationBatchImpl;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
+import com.netflix.astyanax.ddl.impl.SchemaChangeResponseImpl;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.partitioner.BigInteger127Partitioner;
 import com.netflix.astyanax.partitioner.Murmur3Partitioner;
@@ -442,4 +445,57 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 			return cpMonitor;
 		}
 	}
+
+
+	@Override
+	public OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(final Map<String, Object> options) throws ConnectionException {
+
+		return createKeyspaceIfNotExists(new Callable<OperationResult<SchemaChangeResult>>() {
+			@Override
+			public OperationResult<SchemaChangeResult> call() throws Exception {
+				return createKeyspace(options);
+			}
+		});
+	}
+
+	@Override
+	public OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(final Properties properties) throws ConnectionException {
+		
+		return createKeyspaceIfNotExists(new Callable<OperationResult<SchemaChangeResult>>() {
+			@Override
+			public OperationResult<SchemaChangeResult> call() throws Exception {
+				return createKeyspace(properties);
+			}
+		});
+	}
+
+	@Override
+	public OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(final Map<String, Object> options, final Map<ColumnFamily, Map<String, Object>> cfs) throws ConnectionException {
+		
+		return createKeyspaceIfNotExists(new Callable<OperationResult<SchemaChangeResult>>() {
+			@Override
+			public OperationResult<SchemaChangeResult> call() throws Exception {
+				return createKeyspace(options, cfs);
+			}
+		});
+	}
+	
+    
+    private OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(Callable<OperationResult<SchemaChangeResult>> createKeyspace) throws ConnectionException {
+        
+    	// Check if keyspace exists
+    	ResultSet result = session.execute("select * from system.local where keyspace_name = '" + keyspaceName + "'");
+    	List<Row> rows = result.all();
+    	if (rows != null && rows.isEmpty()) {
+    		return new OperationResultImpl<SchemaChangeResult>(Host.NO_HOST, new SchemaChangeResponseImpl().setSchemaId("no-op"), 0);
+    	}
+
+    	try {
+    		return createKeyspace.call();
+    	} catch (ConnectionException e) {
+    		throw e;
+    	} catch (Exception e) {
+    		throw new RuntimeException(e);
+    	}
+    }
 }

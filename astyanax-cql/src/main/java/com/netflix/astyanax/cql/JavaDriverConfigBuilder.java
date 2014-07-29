@@ -24,7 +24,7 @@ import com.datastax.driver.core.policies.RoundRobinPolicy;
  * @author poberai
  *
  */
-public class JavaDriverConfigBuilder extends JavaDriverConnectionPoolConfigurationImpl {
+public class JavaDriverConfigBuilder {
 
 	// Config for Policies
     private LoadBalancingPolicy loadBalancingPolicy = new RoundRobinPolicy();
@@ -50,7 +50,7 @@ public class JavaDriverConfigBuilder extends JavaDriverConnectionPoolConfigurati
 		super();
 	}
 	
-	public JavaDriverConfigBuilder build() {
+	public JavaDriverConnectionPoolConfigurationImpl build() {
 		
 		Policies policies = new Policies(loadBalancingPolicy, reconnectionPolicy, retryPolicy);
 		ProtocolOptions protocolOptions = (nativeProtocolPort == -1) ? new ProtocolOptions() : new ProtocolOptions(nativeProtocolPort);
@@ -59,13 +59,12 @@ public class JavaDriverConfigBuilder extends JavaDriverConnectionPoolConfigurati
 		MetricsOptions metricsOptions = new MetricsOptions(jmxReportingEnabled);
 		QueryOptions qOptions = queryOptions;
 		
-		super.withJavaDriverConfig(new Configuration(policies, 
+		return new JavaDriverConnectionPoolConfigurationImpl(new Configuration(policies, 
 													 protocolOptions, 
 													 poolOptions, 
 													 sockOptions, 
 													 metricsOptions, 
 													 qOptions));
-		return this;
 	}
 	
 	

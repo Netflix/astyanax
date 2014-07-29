@@ -170,9 +170,7 @@ public class AstyanaxContextFactory {
 		.forKeyspace(keyspaceName)
 		.withHostSupplier(HostSupplier)
 		.withAstyanaxConfiguration(new AstyanaxConfigurationImpl())
-		.withConnectionPoolConfiguration(new JavaDriverConnectionPoolConfigurationImpl()
-										.withJavaDriverConfig(jdConfig)
-										)
+		.withConnectionPoolConfiguration(new JavaDriverConnectionPoolConfigurationImpl(jdConfig))
 		.buildKeyspace(CqlFamilyFactory.getInstance());
 
     	return context;

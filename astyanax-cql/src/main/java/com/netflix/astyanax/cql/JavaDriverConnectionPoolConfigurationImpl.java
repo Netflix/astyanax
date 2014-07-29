@@ -29,13 +29,12 @@ import com.netflix.astyanax.partitioner.Partitioner;
  */
 public class JavaDriverConnectionPoolConfigurationImpl implements ConnectionPoolConfiguration {
 
-	private Configuration jdConfig = new Configuration(); 
+	private final Configuration jdConfig;
 	
-	public JavaDriverConnectionPoolConfigurationImpl withJavaDriverConfig(Configuration jdCfg) {
-		jdConfig = jdCfg;
-		return this;
+	public JavaDriverConnectionPoolConfigurationImpl(Configuration configuration) {
+		this.jdConfig = configuration;
 	}
-	
+
 	public Configuration getJavaDriverConfig() {
 		return jdConfig;
 	}

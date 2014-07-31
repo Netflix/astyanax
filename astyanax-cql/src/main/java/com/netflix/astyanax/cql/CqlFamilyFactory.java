@@ -6,15 +6,6 @@ import org.apache.commons.lang.NotImplementedException;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Configuration;
-import com.datastax.driver.core.MetricsOptions;
-import com.datastax.driver.core.PoolingOptions;
-import com.datastax.driver.core.ProtocolOptions;
-import com.datastax.driver.core.QueryOptions;
-import com.datastax.driver.core.SocketOptions;
-import com.datastax.driver.core.policies.LoadBalancingPolicy;
-import com.datastax.driver.core.policies.Policies;
-import com.datastax.driver.core.policies.RoundRobinPolicy;
-import com.datastax.driver.core.policies.TokenAwarePolicy;
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.AstyanaxTypeFactory;
@@ -139,44 +130,14 @@ public class CqlFamilyFactory implements AstyanaxTypeFactory<Cluster> {
 	
 	private ConnectionPoolConfiguration getOrCreateJDConfiguration(AstyanaxConfiguration asConfig, ConnectionPoolConfiguration cpConfig) {
 		
-		if (asConfig.getConnectionPoolType() == ConnectionPoolType.BAG) {
-		}
-
-		Configuration actualConfig = null; 
-		
-		JavaDriverConnectionPoolConfigurationImpl jdConfig = (JavaDriverConnectionPoolConfigurationImpl) cpConfig;
-		if (jdConfig != null) {
+		if (cpConfig instanceof JavaDriverConnectionPoolConfigurationImpl) {
+			JavaDriverConnectionPoolConfigurationImpl jdConfig = (JavaDriverConnectionPoolConfigurationImpl) cpConfig;
 			if (jdConfig.getJavaDriverConfig() != null) {
-				actualConfig = jdConfig.getJavaDriverConfig();
-				if (actualConfig != null) {
-					return jdConfig;
-				}
+				return jdConfig;  // Java Driver config has already been setup.
 			}
 		}
 		
-		LoadBalancingPolicy lbPolicy = null;
-		switch (asConfig.getConnectionPoolType()) {
-		case BAG:
-				throw new RuntimeException("Cannot use ConnectionPoolType.BAG with java driver, " +
-					"use TOKEN_AWARE or ROUND_ROBIN or configure java driver directly");
-		case ROUND_ROBIN:
-				lbPolicy = new RoundRobinPolicy();
-				break;
-		case TOKEN_AWARE:
-				lbPolicy = new TokenAwarePolicy(new RoundRobinPolicy());
-				break;
-		};
-		
-		Policies policies = new Policies(lbPolicy, Policies.defaultReconnectionPolicy(), Policies.defaultRetryPolicy());
-		
-		actualConfig = new Configuration(
-				policies,
-				new ProtocolOptions(),
-				new PoolingOptions(),
-				new SocketOptions(),
-				new MetricsOptions(),
-				new QueryOptions());
-		
-		return new JavaDriverConnectionPoolConfigurationImpl().withJavaDriverConfig(actualConfig);
+		// Else create Java Driver Config from AstyanaxConfiguration and ConnectionPoolConfiguration and return that. 
+		return new JavaDriverConnectionPoolConfigurationImpl(new JavaDriverConfigBridge(asConfig, cpConfig).getJDConfig());
 	}
 }

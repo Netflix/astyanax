@@ -34,7 +34,9 @@ subprojects {
     dependencies {
         compile "joda-time:joda-time:$jodaTimeVersion"
         compile "com.github.stephenc.high-scale-lib:high-scale-lib:$highScaleLibVersion"
-        compile "com.google.guava:guava:$guavaVersion"
+        compile ("com.google.guava:guava:$guavaVersion") {
+             force = true
+        }
         compile "com.eaio.uuid:uuid:$uuidVersion"
         compile "org.slf4j:slf4j-api:$slf4jVersion"
         compile "org.codehaus.jettison:jettison:$jettisonVersion"
@@ -89,7 +91,10 @@ project(':astyanax-cql') {
     dependencies {
         compile  project(':astyanax-core')
         compile  project(':astyanax-cassandra')
-        compile "com.datastax.cassandra:cassandra-driver-core:$javaDriverVersion"
+        compile ("com.datastax.cassandra:cassandra-driver-core:$javaDriverVersion") {
+            exclude group: 'com.google.guava', module: 'guava'
+        }
+        compile "com.google.guava:guava:$guavaVersion"
         compile "junit:junit:$junitVersion"
     }
 }

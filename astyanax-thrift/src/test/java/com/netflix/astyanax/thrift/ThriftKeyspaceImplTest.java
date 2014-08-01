@@ -130,6 +130,18 @@ public class ThriftKeyspaceImplTest {
                     StringSerializer.get(),
                     StringSerializer.get());
 
+    public static ColumnFamily<String, String> CF_CQL = ColumnFamily
+            .newColumnFamily(
+                    "cfcql", 
+                    StringSerializer.get(),
+                    StringSerializer.get());
+
+    public static ColumnFamily<String, String> CF_CALLBACK = ColumnFamily
+            .newColumnFamily(
+                    "cfcallback", 
+                    StringSerializer.get(),
+                    StringSerializer.get());
+
     public static ColumnFamily<String, String> CF_STANDARD1 = ColumnFamily
             .newColumnFamily(
                     "Standard1", 
@@ -301,6 +313,8 @@ public class ThriftKeyspaceImplTest {
         keyspace.createColumnFamily(CF_LONGCOLUMN, null);
         keyspace.createColumnFamily(CF_DELETE,     null);
         keyspace.createColumnFamily(ATOMIC_UPDATES,null);
+        keyspace.createColumnFamily(CF_CQL,  null);
+        keyspace.createColumnFamily(CF_CALLBACK,  null);
         
         keyspace.createColumnFamily(CF_COUNTER1, ImmutableMap.<String, Object>builder()
                 .put("default_validation_class", "CounterColumnType")
@@ -733,9 +747,21 @@ public class ThriftKeyspaceImplTest {
     @Test
     public void getAllWithCallback() {
         try {
+        	
+            MutationBatch m = keyspace.prepareMutationBatch();
+            for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
+                String rowKey = Character.toString(keyName);
+                ColumnListMutation<String> cfmStandard = m.withRow(CF_CALLBACK, rowKey);
+                for (char cName = 'a'; cName <= 'z'; cName++) {
+                    cfmStandard.putColumn(Character.toString(cName),
+                            (int) (cName - 'a') + 1, null);
+                }
+                m.execute();
+            }
+
             final AtomicLong counter = new AtomicLong();
 
-            keyspace.prepareQuery(CF_STANDARD1).getAllRows().setRowLimit(3)
+            keyspace.prepareQuery(CF_CALLBACK).getAllRows().setRowLimit(3)
                     .setRepeatLastToken(false)
                     .setConcurrencyLevel(2)
                     .withColumnRange(new RangeBuilder().setLimit(2).build())
@@ -756,7 +782,7 @@ public class ThriftKeyspaceImplTest {
                         }
                     });
             LOG.info("Read " + counter.get() + " keys");
-            Assert.assertEquals(27,  counter.get());
+            Assert.assertEquals(26,  counter.get());
         } catch (ConnectionException e) {
             Assert.fail();
         }
@@ -1804,13 +1830,26 @@ public class ThriftKeyspaceImplTest {
     @Test
     public void testCql() {
         try {
+        	
             System.out.println("testCQL");
             LOG.info("CQL Test");
+
+            MutationBatch m = keyspace.prepareMutationBatch();
+            for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
+                String rowKey = Character.toString(keyName);
+                ColumnListMutation<String> cfmStandard = m.withRow(CF_CQL, rowKey);
+                for (char cName = 'a'; cName <= 'z'; cName++) {
+                    cfmStandard.putColumn(Character.toString(cName),
+                            (int) (cName - 'a') + 1, null);
+                }
+                m.execute();
+            }
+
             OperationResult<CqlResult<String, String>> result = keyspace
                     .prepareQuery(CF_STANDARD1)
-                    .withCql("SELECT * FROM Standard1;").execute();
+                    .withCql("SELECT * FROM cfcql;").execute();
             Assert.assertTrue(result.getResult().hasRows());
-            Assert.assertEquals(29, result.getResult().getRows().size());
+            Assert.assertEquals(26, result.getResult().getRows().size());
             Assert.assertFalse(result.getResult().hasNumber());
             
             Row<String, String> row;

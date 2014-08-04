@@ -31,10 +31,10 @@ public final class LongSerializer extends AbstractSerializer<Long> {
         if (byteBuffer == null)
             return null;
         ByteBuffer dup = byteBuffer.duplicate();
-        if (dup.remaining() == 8) {
+        if (dup.remaining() >= 8) {
             long l = dup.getLong();
             return l;
-        } else if (dup.remaining() == 4) {
+        } else if (dup.remaining() >= 4) {
             return (long) dup.getInt();
         }
         return null;

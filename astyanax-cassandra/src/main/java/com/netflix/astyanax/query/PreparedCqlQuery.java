@@ -1,6 +1,7 @@
 package com.netflix.astyanax.query;
 
 import java.nio.ByteBuffer;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -85,4 +86,11 @@ public interface PreparedCqlQuery<K, C> extends Execution<CqlResult<K, C>> {
      * @param value
      */
     PreparedCqlQuery<K, C> withUUIDValue(UUID value);
+
+    /**
+     * Set the next parameter value to this Date
+     * @param value
+     * @return
+     */
+    PreparedCqlQuery<K, C> withTimestamp(Date value);
 }

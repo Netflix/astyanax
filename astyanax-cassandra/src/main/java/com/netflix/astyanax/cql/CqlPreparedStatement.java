@@ -1,6 +1,7 @@
 package com.netflix.astyanax.cql;
 
 import java.nio.ByteBuffer;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -85,4 +86,11 @@ public interface CqlPreparedStatement extends Execution<CqlStatementResult> {
      * @return
      */
     CqlPreparedStatement withUUIDValue(UUID value);
+
+    /**
+     * Set the next parameter value to this Long as a timestamp
+     * @param value
+     * @return
+     */
+    CqlPreparedStatement withTimestamp(Date value);
 }

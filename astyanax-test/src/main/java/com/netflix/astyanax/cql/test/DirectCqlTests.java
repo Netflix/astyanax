@@ -1,5 +1,6 @@
 package com.netflix.astyanax.cql.test;
 
+import com.netflix.astyanax.serializers.DateSerializer;
 import junit.framework.Assert;
 
 import org.junit.AfterClass;
@@ -15,13 +16,16 @@ import com.netflix.astyanax.query.PreparedCqlQuery;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 
+import java.util.Date;
+
 public class DirectCqlTests extends KeyspaceTests {
 	
     public static ColumnFamily<Integer, String> CF_DIRECT = ColumnFamily
             .newColumnFamily(
                     "cfdirect", 
                     IntegerSerializer.get(),
-                    StringSerializer.get());
+                    StringSerializer.get(),
+                    DateSerializer.get());
     
     public static ColumnFamily<String, String> CF_EMPTY_TABLE = ColumnFamily
             .newColumnFamily(
@@ -31,12 +35,14 @@ public class DirectCqlTests extends KeyspaceTests {
                     StringSerializer.get());
 
 
+
+
     @BeforeClass
 	public static void init() throws Exception {
 		initContext();
-		
+		keyspace.prepareCqlStatement().withCql("CREATE KEYSPACE astyanaxunittests with REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1};").execute();
 		keyspace.prepareQuery(CF_DIRECT)
-        .withCql("CREATE TABLE astyanaxunittests.cfdirect ( key int, column1 text, value bigint, PRIMARY KEY (key) )")
+        .withCql("CREATE TABLE astyanaxunittests.cfdirect ( key int, column1 text, value bigint, column2 timestamp,PRIMARY KEY (key) )")
         .execute();
 		keyspace.prepareQuery(CF_EMPTY_TABLE)
         .withCql("CREATE TABLE astyanaxunittests.empty_table ( key text, column1 text, value text, PRIMARY KEY (key) )")
@@ -51,6 +57,9 @@ public class DirectCqlTests extends KeyspaceTests {
 		keyspace.prepareQuery(CF_EMPTY_TABLE)
         .withCql("DROP TABLE astyanaxunittests.empty_table")
         .execute();
+        keyspace.prepareCqlStatement()
+              .withCql("DROP KEYSPACE astyanaxunittests")
+              .execute();
 	}
 
     @Test
@@ -59,11 +68,11 @@ public class DirectCqlTests extends KeyspaceTests {
     	// INSERT VALUES 
     	CqlQuery<Integer, String> cqlQuery = keyspace
     	.prepareQuery(CF_DIRECT)
-    	.withCql("INSERT INTO astyanaxunittests.cfdirect (key, column1, value) VALUES (?,?,?)");
+    	.withCql("INSERT INTO astyanaxunittests.cfdirect (key, column1, value, column2) VALUES (?,?,?,?)");
     	
     	for (int i=0; i<10; i++) {
     		PreparedCqlQuery<Integer, String> pStatement = cqlQuery.asPreparedStatement();
-    		pStatement.withIntegerValue(i).withStringValue(""+i).withLongValue(Long.valueOf(""+i)).execute();
+    		pStatement.withIntegerValue(i).withStringValue(""+i).withLongValue(Long.valueOf(""+i)).withTimestamp(new Date()).execute();
     	}
     	
     	// TEST REGULAR CQL
@@ -79,7 +88,7 @@ public class DirectCqlTests extends KeyspaceTests {
     		
     		Row<Integer, String> row = result.getResult().getRows().getRow(i);
         	Assert.assertTrue(i == row.getKey());
-        	Assert.assertEquals(3, row.getColumns().size());
+        	Assert.assertEquals(4, row.getColumns().size());
         	
         	Integer key = row.getColumns().getIntegerValue("key", null);
         	Assert.assertTrue(Integer.valueOf(""+i) == key);
@@ -89,6 +98,9 @@ public class DirectCqlTests extends KeyspaceTests {
         	
         	Long value = row.getColumns().getLongValue("value", null);
         	Assert.assertTrue(Long.valueOf(""+i) == value);
+
+            Date column2 = row.getColumns().getDateValue("column2", null);
+            Assert.assertNotNull(column2);
     	}
     	
     	//  TEST CQL COUNT

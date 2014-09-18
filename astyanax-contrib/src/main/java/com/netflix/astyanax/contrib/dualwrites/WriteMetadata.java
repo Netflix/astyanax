@@ -1,5 +1,12 @@
 package com.netflix.astyanax.contrib.dualwrites;
 
+/**
+ * Simple class encapsulating metadata about a failed write. 
+ * It represents the source and destination cluster / keyspace along with the CF and the row key.
+ *  
+ * @author poberai
+ *
+ */
 public  class WriteMetadata {
     
     private final DualKeyspaceMetadata dualKeyspaceMetadata; 

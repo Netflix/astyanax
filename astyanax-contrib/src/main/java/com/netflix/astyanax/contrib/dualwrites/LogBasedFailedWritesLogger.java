@@ -5,6 +5,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Simple impl for {@link FailedWritesLogger} that just logs to the file. 
+ * 
+ * @author poberai
+ *
+ */
 public class LogBasedFailedWritesLogger implements FailedWritesLogger {
 
     private static final Logger Logger = LoggerFactory.getLogger(LogBasedFailedWritesLogger.class);

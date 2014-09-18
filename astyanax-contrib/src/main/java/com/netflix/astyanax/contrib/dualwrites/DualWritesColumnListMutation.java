@@ -8,6 +8,14 @@ import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.model.ColumnPath;
 
+/**
+ * Class that implements the {@link ColumnListMutation} interface and acts as a dual router for capturing all the dual writes. 
+ * Note that it purely maintains state in 2 separate ColumnListMutation objects, each corresponding to the source of destination keyspace / mutation batches
+ * 
+ * @author poberai
+ *
+ * @param <C>
+ */
 @SuppressWarnings("deprecation")
 public class DualWritesColumnListMutation<C> implements ColumnListMutation<C> {
 

@@ -9,6 +9,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Class that acts as an async logger that helps 'unblock' the caller immediately. 
+ * It hands off to a {@link LinkedBlockingQueue} and there is a thread on the other end
+ * that polls the queue for tasks which are then actually written using a real logger 
+ * provided to this class. 
+ * 
+ * It leverages the decorator pattern to do this. 
+ * 
+ * @author poberai
+ *
+ */
 public class AsyncFailedWritesLogger implements FailedWritesLogger {
 
     private static final Logger Logger = LoggerFactory.getLogger(AsyncFailedWritesLogger.class);

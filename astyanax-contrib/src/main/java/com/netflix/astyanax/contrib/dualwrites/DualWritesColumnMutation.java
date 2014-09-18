@@ -12,6 +12,14 @@ import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
 
+/**
+ * Class that implements the {@link ColumnMutation} interface and acts as a dual router for capturing all the dual writes. 
+ * Note that it purely maintains state in 2 separate ColumnMutation objects, each corresponding to the source of destination keyspace
+ * 
+ * @author poberai
+ *
+ * @param <C>
+ */
 public class DualWritesColumnMutation implements ColumnMutation {
 
     private final ColumnMutation primary;

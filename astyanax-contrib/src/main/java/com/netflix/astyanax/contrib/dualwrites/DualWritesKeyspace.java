@@ -29,6 +29,18 @@ import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.serializers.UnknownComparatorException;
 
+/**
+ * Main class that orchistrates all the dual writes. It wraps the 2 keyspaces (source and destination)
+ * and appropriately forwards reads and writes to it as dictated by updates using the {@link DualWritesUpdateListener}
+ * 
+ * Note that if dual writes are enabled then the writes are sent to the {@link DualWritesMutationBatch} or {@link DualWritesColumnMutation}
+ * classes appropriately. 
+ * 
+ * The reads are always served from the primary data source. 
+ * 
+ * @author poberai
+ *
+ */
 public class DualWritesKeyspace implements Keyspace, DualWritesUpdateListener {
 
     private static final Logger Logger = LoggerFactory.getLogger(DualWritesKeyspace.class);

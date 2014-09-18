@@ -13,6 +13,18 @@ import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 
+/**
+ * Impl of {@link FailedWritesLogger} which communicates metadata of failed writes to a separate cluster. 
+ * The keyspace and cluster for this backup cassandra cluster needs to be provided to this class. 
+ * Note that for ease of management, the original cluster and keysapce are represented in the backup CF name. 
+ * Row keys are sharded between 0 ... 10 so that there is no hot spot and also represent the CF name in there for ease of management. 
+ * 
+ * NOTE: this class only backs up metadata about the failed write - i.e not the actual payload. 
+ * This serves merely as an indicator of which rows in which cluster / keysapce / CF were not sent to the destination cluster / keyspace / CF. 
+ * 
+ * @author poberai
+ *
+ */
 public class CassBasedFailedWritesLogger implements FailedWritesLogger {
 
     private static final Logger Logger = LoggerFactory.getLogger(CassBasedFailedWritesLogger.class);

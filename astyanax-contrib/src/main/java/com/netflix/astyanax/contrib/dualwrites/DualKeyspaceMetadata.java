@@ -1,5 +1,11 @@
 package com.netflix.astyanax.contrib.dualwrites;
 
+/**
+ * Simple class representing the keyspace pair i.e   Source Keyspace --> Destination Keyspace
+ * 
+ * @author poberai
+ *
+ */
 public class DualKeyspaceMetadata {
 
     private final String primaryCluster;

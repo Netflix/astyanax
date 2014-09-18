@@ -18,6 +18,17 @@ import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.retry.RetryPolicy;
 
+/**
+ * Class that implements the {@link MutationBatch} interface and acts as a dual router for capturing all the dual writes. 
+ * Note that it purely maintains state in 2 separate MutationBatch objects, each corresponding to the source of destination keyspace / mutation batches.
+ * 
+ * It also tracks state of what row keys are being added to what column families. This is useful for reporting data when the dual writes fail partially,
+ * and hence that metadata can be communicated to some {@link FailedWritesLogger} to be dealt with accordingly. 
+ * 
+ * @author poberai
+ *
+ * @param <C>
+ */
 public class DualWritesMutationBatch implements MutationBatch {
 
     private final DualKeyspaceMetadata dualKeyspaceMetadata;

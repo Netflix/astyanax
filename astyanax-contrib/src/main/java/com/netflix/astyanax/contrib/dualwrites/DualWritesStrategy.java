@@ -27,4 +27,9 @@ public interface DualWritesStrategy {
      */
     public Execution<Void> wrapExecutions(Execution<Void> primary, Execution<Void> secondary, Collection<WriteMetadata> writeMetadata); 
 
+    /**
+     * 
+     * @return FailedWritesLogger
+     */
+    public FailedWritesLogger getFailedWritesLogger();
 }

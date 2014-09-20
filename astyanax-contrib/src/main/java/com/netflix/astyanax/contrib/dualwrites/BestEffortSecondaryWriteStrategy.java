@@ -64,4 +64,9 @@ public class BestEffortSecondaryWriteStrategy implements DualWritesStrategy {
             
         };
     }
+
+    @Override
+    public FailedWritesLogger getFailedWritesLogger() {
+        return failedWritesLogger;
+    }
 }

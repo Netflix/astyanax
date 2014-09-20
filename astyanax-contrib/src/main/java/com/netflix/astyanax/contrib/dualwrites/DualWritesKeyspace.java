@@ -60,6 +60,10 @@ public class DualWritesKeyspace implements Keyspace, DualWritesUpdateListener {
 	private Keyspace getPrimaryKS() {
 		return ksPair.get().getPrimaryKS();
 	}
+	
+	public DualKeyspaceMetadata getDualKeyspaceMetadata() {
+	    return ksPair.get().getDualKSMetadata();
+	}
 
     @Override
 	public AstyanaxConfiguration getConfig() {

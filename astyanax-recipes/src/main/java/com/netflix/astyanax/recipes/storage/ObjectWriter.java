@@ -111,7 +111,6 @@ public class ObjectWriter implements Callable<ObjectMetadata> {
             final BlockingConcurrentWindowCounter chunkCounter = new BlockingConcurrentWindowCounter(concurrencyLevel);
             final AutoAllocatingLinkedBlockingQueue<ByteBuffer> blocks = new AutoAllocatingLinkedBlockingQueue<ByteBuffer>(
                     concurrencyLevel);
-
             try {
                 // Write file data one block at a time
                 boolean done = false;
@@ -163,15 +162,15 @@ public class ObjectWriter implements Callable<ObjectMetadata> {
                         done = true;
                     }
                 }
-
-                // Rethrow any exception we got in a thread
-                if (exception.get() != null)
-                    throw exception.get();
             }
             finally {
                 executor.shutdown();
                 if (!executor.awaitTermination(maxWaitTimeInSeconds, TimeUnit.SECONDS)) {
                     throw new Exception("Took too long to write object: " + objectName);
+                }
+                // Rethrow any exception we got in a thread
+                if (exception.get() != null) {
+                    throw exception.get();
                 }
             }
 

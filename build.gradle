@@ -159,6 +159,7 @@ project(':astyanax-contrib') {
         compile  project(':astyanax-core')
         compile 'com.netflix.eureka:eureka-client:1.1.110'
         compile 'com.netflix.archaius:archaius-core:0.5.12'
+        compile project(':astyanax-thrift')
     }
 }
 

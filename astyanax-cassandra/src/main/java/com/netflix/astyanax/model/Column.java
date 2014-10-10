@@ -41,7 +41,7 @@ public interface Column<C> {
     C getName();
 
     /**
-     * Return the raw byet buffer for the column name
+     * Return the raw byte buffer for the column name
      * 
      * @return
      */

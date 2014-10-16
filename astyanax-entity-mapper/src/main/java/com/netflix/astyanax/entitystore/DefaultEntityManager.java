@@ -284,7 +284,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
         try {
             lifecycleHandler.onPreRemove(entity);
             id = entityMapper.getEntityId(entity);
-            MutationBatch mb = newMutationBatch();
+            MutationBatch mb = getMutationBatch();
             mb.withRow(columnFamily, id).delete();
             if (autoCommit)
                 mb.execute();

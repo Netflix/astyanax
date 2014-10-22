@@ -25,16 +25,16 @@ public class BestEffortSecondaryWriteStrategy implements DualWritesStrategy {
     public BestEffortSecondaryWriteStrategy(FailedWritesLogger logger) {
         this.failedWritesLogger = logger;
     }
-    
+
     @Override
-    public Execution<Void> wrapExecutions(final Execution<Void> primary, final Execution<Void> secondary, final Collection<WriteMetadata> writeMetadata) {
+    public <R> Execution<R> wrapExecutions(final Execution<R> primary, final Execution<R> secondary, final Collection<WriteMetadata> writeMetadata) {
         
-        return new Execution<Void>() {
+        return new Execution<R>() {
 
             @Override
-            public OperationResult<Void> execute() throws ConnectionException {
+            public OperationResult<R> execute() throws ConnectionException {
                 
-                OperationResult<Void> result = primary.execute();
+                OperationResult<R> result = primary.execute();
                 try { 
                     secondary.execute();
                 } catch (ConnectionException e) {
@@ -48,20 +48,9 @@ public class BestEffortSecondaryWriteStrategy implements DualWritesStrategy {
             }
 
             @Override
-            public ListenableFuture<OperationResult<Void>> executeAsync() throws ConnectionException {
-                ListenableFuture<OperationResult<Void>> result = primary.executeAsync();
-                try { 
-                    secondary.executeAsync();
-                } catch (ConnectionException e) {
-                    if (failedWritesLogger != null) {
-                        for (WriteMetadata writeMD : writeMetadata) {
-                            failedWritesLogger.logFailedWrite(writeMD);
-                        }
-                    }
-                }
-                return result;
+            public ListenableFuture<OperationResult<R>> executeAsync() throws ConnectionException {
+                throw new RuntimeException("Cannot chain async primary and secondary executions");
             }
-            
         };
     }
 

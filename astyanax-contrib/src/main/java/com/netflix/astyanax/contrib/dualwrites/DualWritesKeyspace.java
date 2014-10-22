@@ -1,5 +1,6 @@
 package com.netflix.astyanax.contrib.dualwrites;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -9,8 +10,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.ColumnMutation;
+import com.netflix.astyanax.Execution;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.SerializerPackage;
@@ -160,112 +163,214 @@ public class DualWritesKeyspace implements Keyspace, DualWritesUpdateListener {
 	}
 
 	@Override
-	public <K, C> OperationResult<Void> truncateColumnFamily(ColumnFamily<K, C> columnFamily) throws OperationException, ConnectionException {
-		return getPrimaryKS().truncateColumnFamily(columnFamily);
+	public <K, C> OperationResult<Void> truncateColumnFamily(final ColumnFamily<K, C> columnFamily) throws OperationException, ConnectionException {
+        
+	    return execDualKeyspaceOperation(new KeyspaceOperation<Void>() {
+            @Override
+            public OperationResult<Void> exec(Keyspace ks) throws ConnectionException {
+                return ks.truncateColumnFamily(columnFamily);
+            }
+	    });
 	}
 
 	@Override
-	public OperationResult<Void> truncateColumnFamily(String columnFamily) throws ConnectionException {
-		return getPrimaryKS().truncateColumnFamily(columnFamily);
+	public OperationResult<Void> truncateColumnFamily(final String columnFamily) throws ConnectionException {
+	    return execDualKeyspaceOperation(new KeyspaceOperation<Void>() {
+            @Override
+            public OperationResult<Void> exec(Keyspace ks) throws ConnectionException {
+                return ks.truncateColumnFamily(columnFamily);
+            }
+        });
 	}
 
 	@Override
-	public OperationResult<Void> testOperation(Operation<?, ?> operation) throws ConnectionException {
-		return getPrimaryKS().testOperation(operation);
+	public OperationResult<Void> testOperation(final Operation<?, ?> operation) throws ConnectionException {
+        return execDualKeyspaceOperation(new KeyspaceOperation<Void>() {
+            @Override
+            public OperationResult<Void> exec(Keyspace ks) throws ConnectionException {
+                return ks.testOperation(operation);
+            }
+        });
 	}
 
 	@Override
-	public OperationResult<Void> testOperation(Operation<?, ?> operation, RetryPolicy retry) throws ConnectionException {
-		return getPrimaryKS().testOperation(operation, retry);
+	public OperationResult<Void> testOperation(final Operation<?, ?> operation, RetryPolicy retry) throws ConnectionException {
+        return execDualKeyspaceOperation(new KeyspaceOperation<Void>() {
+            @Override
+            public OperationResult<Void> exec(Keyspace ks) throws ConnectionException {
+                return ks.testOperation(operation);
+            }
+        });
 	}
 
 	@Override
-	public <K, C> OperationResult<SchemaChangeResult> createColumnFamily(ColumnFamily<K, C> columnFamily, Map<String, Object> options) 
-			throws ConnectionException {
-		return getPrimaryKS().createColumnFamily(columnFamily, options);
+	public <K, C> OperationResult<SchemaChangeResult> createColumnFamily(final ColumnFamily<K, C> columnFamily, final Map<String, Object> options) throws ConnectionException {
+        return execDualKeyspaceOperation(new KeyspaceOperation<SchemaChangeResult>() {
+            @Override
+            public OperationResult<SchemaChangeResult> exec(Keyspace ks) throws ConnectionException {
+                return ks.createColumnFamily(columnFamily, options);
+            }
+        });
 	}
 
 	@Override
-	public OperationResult<SchemaChangeResult> createColumnFamily(Properties props) throws ConnectionException {
-		return getPrimaryKS().createColumnFamily(props);
+	public OperationResult<SchemaChangeResult> createColumnFamily(final Properties props) throws ConnectionException {
+        return execDualKeyspaceOperation(new KeyspaceOperation<SchemaChangeResult>() {
+            @Override
+            public OperationResult<SchemaChangeResult> exec(Keyspace ks) throws ConnectionException {
+                return ks.createColumnFamily(props);
+            }
+        });
 	}
 
 	@Override
-	public OperationResult<SchemaChangeResult> createColumnFamily(Map<String, Object> options) throws ConnectionException {
-		return getPrimaryKS().createColumnFamily(options);
+	public OperationResult<SchemaChangeResult> createColumnFamily(final Map<String, Object> options) throws ConnectionException {
+        return execDualKeyspaceOperation(new KeyspaceOperation<SchemaChangeResult>() {
+            @Override
+            public OperationResult<SchemaChangeResult> exec(Keyspace ks) throws ConnectionException {
+                return ks.createColumnFamily(options);
+            }
+        });
 	}
 
 	@Override
-	public <K, C> OperationResult<SchemaChangeResult> updateColumnFamily(ColumnFamily<K, C> columnFamily, Map<String, Object> options) 
-			throws ConnectionException {
-		return getPrimaryKS().updateColumnFamily(columnFamily, options);
+	public <K, C> OperationResult<SchemaChangeResult> updateColumnFamily(final ColumnFamily<K, C> columnFamily, final Map<String, Object> options) throws ConnectionException {
+        return execDualKeyspaceOperation(new KeyspaceOperation<SchemaChangeResult>() {
+            @Override
+            public OperationResult<SchemaChangeResult> exec(Keyspace ks) throws ConnectionException {
+                return ks.updateColumnFamily(columnFamily, options);
+            }
+        });
 	}
 
 	@Override
-	public OperationResult<SchemaChangeResult> updateColumnFamily(Properties props) throws ConnectionException {
-		return getPrimaryKS().updateColumnFamily(props);
+	public OperationResult<SchemaChangeResult> updateColumnFamily(final Properties props) throws ConnectionException {
+        return execDualKeyspaceOperation(new KeyspaceOperation<SchemaChangeResult>() {
+            @Override
+            public OperationResult<SchemaChangeResult> exec(Keyspace ks) throws ConnectionException {
+                return ks.updateColumnFamily(props);
+            }
+        });
 	}
 
 	@Override
-	public OperationResult<SchemaChangeResult> updateColumnFamily(Map<String, Object> options) throws ConnectionException {
-		return getPrimaryKS().updateColumnFamily(options);
+	public OperationResult<SchemaChangeResult> updateColumnFamily(final Map<String, Object> options) throws ConnectionException {
+        return execDualKeyspaceOperation(new KeyspaceOperation<SchemaChangeResult>() {
+            @Override
+            public OperationResult<SchemaChangeResult> exec(Keyspace ks) throws ConnectionException {
+                return ks.updateColumnFamily(options);
+            }
+        });
 	}
 
 	@Override
-	public OperationResult<SchemaChangeResult> dropColumnFamily(String columnFamilyName) throws ConnectionException {
-		return getPrimaryKS().dropColumnFamily(columnFamilyName);
+	public OperationResult<SchemaChangeResult> dropColumnFamily(final String columnFamilyName) throws ConnectionException {
+        return execDualKeyspaceOperation(new KeyspaceOperation<SchemaChangeResult>() {
+            @Override
+            public OperationResult<SchemaChangeResult> exec(Keyspace ks) throws ConnectionException {
+                return ks.dropColumnFamily(columnFamilyName);
+            }
+        });
 	}
 
 	@Override
-	public <K, C> OperationResult<SchemaChangeResult> dropColumnFamily(ColumnFamily<K, C> columnFamily) throws ConnectionException {
-		return getPrimaryKS().dropColumnFamily(columnFamily);
+	public <K, C> OperationResult<SchemaChangeResult> dropColumnFamily(final ColumnFamily<K, C> columnFamily) throws ConnectionException {
+        return execDualKeyspaceOperation(new KeyspaceOperation<SchemaChangeResult>() {
+            @Override
+            public OperationResult<SchemaChangeResult> exec(Keyspace ks) throws ConnectionException {
+                return ks.dropColumnFamily(columnFamily);
+            }
+        });
 	}
 
 	@Override
-	public OperationResult<SchemaChangeResult> createKeyspace(Map<String, Object> options) throws ConnectionException {
-		return getPrimaryKS().createKeyspace(options);
+	public OperationResult<SchemaChangeResult> createKeyspace(final Map<String, Object> options) throws ConnectionException {
+        return execDualKeyspaceOperation(new KeyspaceOperation<SchemaChangeResult>() {
+            @Override
+            public OperationResult<SchemaChangeResult> exec(Keyspace ks) throws ConnectionException {
+                return ks.createKeyspace(options);
+            }
+        });
 	}
 
 	@Override
-	public OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(Map<String, Object> options) throws ConnectionException {
-		return getPrimaryKS().createKeyspaceIfNotExists(options);
+	public OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(final Map<String, Object> options) throws ConnectionException {
+        return execDualKeyspaceOperation(new KeyspaceOperation<SchemaChangeResult>() {
+            @Override
+            public OperationResult<SchemaChangeResult> exec(Keyspace ks) throws ConnectionException {
+                return ks.createKeyspaceIfNotExists(options);
+            }
+        });
 	}
 
 	@Override
-	public OperationResult<SchemaChangeResult> createKeyspace(Properties properties) throws ConnectionException {
-		return getPrimaryKS().createKeyspace(properties);
+	public OperationResult<SchemaChangeResult> createKeyspace(final Properties properties) throws ConnectionException {
+        return execDualKeyspaceOperation(new KeyspaceOperation<SchemaChangeResult>() {
+            @Override
+            public OperationResult<SchemaChangeResult> exec(Keyspace ks) throws ConnectionException {
+                return ks.createKeyspace(properties);
+            }
+        });
 	}
 
 	@Override
-	public OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(Properties properties) throws ConnectionException {
-		return getPrimaryKS().createKeyspaceIfNotExists(properties);
+	public OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(final Properties properties) throws ConnectionException {
+        return execDualKeyspaceOperation(new KeyspaceOperation<SchemaChangeResult>() {
+            @Override
+            public OperationResult<SchemaChangeResult> exec(Keyspace ks) throws ConnectionException {
+                return ks.createKeyspaceIfNotExists(properties);
+            }
+        });
 	}
 
 	@Override
-	public OperationResult<SchemaChangeResult> createKeyspace(Map<String, Object> options,Map<ColumnFamily, Map<String, Object>> cfs) 
-			throws ConnectionException {
-		return getPrimaryKS().createKeyspace(options, cfs);
+	public OperationResult<SchemaChangeResult> createKeyspace(final Map<String, Object> options, final Map<ColumnFamily, Map<String, Object>> cfs)  throws ConnectionException {
+        return execDualKeyspaceOperation(new KeyspaceOperation<SchemaChangeResult>() {
+            @Override
+            public OperationResult<SchemaChangeResult> exec(Keyspace ks) throws ConnectionException {
+                return ks.createKeyspace(options, cfs);
+            }
+        });
 	}
 
 	@Override
-	public OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(Map<String, Object> options, Map<ColumnFamily, Map<String, Object>> cfs) 
-			throws ConnectionException {
-		return getPrimaryKS().createKeyspaceIfNotExists(options, cfs);
+	public OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(final Map<String, Object> options, final Map<ColumnFamily, Map<String, Object>> cfs) throws ConnectionException {
+        return execDualKeyspaceOperation(new KeyspaceOperation<SchemaChangeResult>() {
+            @Override
+            public OperationResult<SchemaChangeResult> exec(Keyspace ks) throws ConnectionException {
+                return ks.createKeyspaceIfNotExists(options, cfs);
+            }
+        });
 	}
 
 	@Override
-	public OperationResult<SchemaChangeResult> updateKeyspace(Map<String, Object> options) throws ConnectionException {
-		return getPrimaryKS().updateKeyspace(options);
+	public OperationResult<SchemaChangeResult> updateKeyspace(final Map<String, Object> options) throws ConnectionException {
+        return execDualKeyspaceOperation(new KeyspaceOperation<SchemaChangeResult>() {
+            @Override
+            public OperationResult<SchemaChangeResult> exec(Keyspace ks) throws ConnectionException {
+                return ks.updateKeyspace(options);
+            }
+        });
 	}
 
 	@Override
-	public OperationResult<SchemaChangeResult> updateKeyspace(Properties props) throws ConnectionException {
-		return getPrimaryKS().updateKeyspace(props);
+	public OperationResult<SchemaChangeResult> updateKeyspace(final Properties props) throws ConnectionException {
+        return execDualKeyspaceOperation(new KeyspaceOperation<SchemaChangeResult>() {
+            @Override
+            public OperationResult<SchemaChangeResult> exec(Keyspace ks) throws ConnectionException {
+                return ks.updateKeyspace(props);
+            }
+        });
 	}
 
 	@Override
 	public OperationResult<SchemaChangeResult> dropKeyspace() throws ConnectionException {
-		return getPrimaryKS().dropKeyspace();
+        return execDualKeyspaceOperation(new KeyspaceOperation<SchemaChangeResult>() {
+            @Override
+            public OperationResult<SchemaChangeResult> exec(Keyspace ks) throws ConnectionException {
+                return ks.dropKeyspace();
+            }
+        });
 	}
 
 	@Override
@@ -286,21 +391,21 @@ public class DualWritesKeyspace implements Keyspace, DualWritesUpdateListener {
 	private class KeyspacePair {
 		
         private final DualKeyspaceMetadata dualKeyspaceMetadata;
-		private final AtomicReference<Keyspace> ksPrimary = new AtomicReference<Keyspace>(null);
-		private final AtomicReference<Keyspace> ksSecondary = new AtomicReference<Keyspace>(null);
+		private final Keyspace ksPrimary;
+		private final Keyspace ksSecondary;
 		
 		private KeyspacePair(final DualKeyspaceMetadata dualKeyspaceSetup, final Keyspace pKS, final Keyspace sKS) {
             dualKeyspaceMetadata = dualKeyspaceSetup;
-			ksPrimary.set(pKS);
-			ksSecondary.set(sKS);
+			ksPrimary = pKS;
+			ksSecondary = sKS;
 		}
 		
         private Keyspace getPrimaryKS() {
-            return ksPrimary.get();
+            return ksPrimary;
         }
 
         private Keyspace getSecondaryKS() {
-            return ksSecondary.get();
+            return ksSecondary;
         }
 
         private DualKeyspaceMetadata getDualKSMetadata() {
@@ -311,8 +416,8 @@ public class DualWritesKeyspace implements Keyspace, DualWritesUpdateListener {
         public int hashCode() {
             final int prime = 31;
             int result = 1;
-            result = prime * result + ((ksPrimary == null) ? 0 : ksPrimary.get().hashCode());
-            result = prime * result + ((ksSecondary == null) ? 0 : ksSecondary.get().hashCode());
+            result = prime * result + ((ksPrimary == null) ? 0 : ksPrimary.hashCode());
+            result = prime * result + ((ksSecondary == null) ? 0 : ksSecondary.hashCode());
             result = prime * result + ((dualKeyspaceMetadata == null) ? 0 : dualKeyspaceMetadata.hashCode());
             return result;
         }
@@ -327,8 +432,8 @@ public class DualWritesKeyspace implements Keyspace, DualWritesUpdateListener {
             KeyspacePair other = (KeyspacePair) obj;
             boolean equals = true;
             
-            equals &= (ksPrimary.get() == null) ?  (other.ksPrimary.get() == null) : (ksPrimary.get().equals(other.ksPrimary.get()));
-            equals &= (ksSecondary.get() == null) ?  (other.ksSecondary.get() == null) : (ksSecondary.get().equals(other.ksSecondary.get()));
+            equals &= (ksPrimary == null) ?  (other.ksPrimary == null) : (ksPrimary.equals(other.ksPrimary));
+            equals &= (ksSecondary == null) ?  (other.ksSecondary == null) : (ksSecondary.equals(other.ksSecondary));
             equals &= (dualKeyspaceMetadata == null) ?  (other.dualKeyspaceMetadata == null) : (dualKeyspaceMetadata.equals(other.dualKeyspaceMetadata));
             
             return equals;
@@ -348,27 +453,59 @@ public class DualWritesKeyspace implements Keyspace, DualWritesUpdateListener {
     }
 
     @Override
-    public void flipPrimaryAndSecondary(final DualKeyspaceMetadata newDualKeyspaceSetup) {
+    public void flipPrimaryAndSecondary() {
         
         // Check that the expected state is actually reverse of what the destination state should be
-        KeyspacePair pair = ksPair.get();
-        DualKeyspaceMetadata currentKeyspaceSetup = pair.getDualKSMetadata();
+        KeyspacePair currentPair = ksPair.get();
+
+        DualKeyspaceMetadata currentKeyspaceSetup = currentPair.getDualKSMetadata();
         
-        if (currentKeyspaceSetup.isReverse(newDualKeyspaceSetup)) {
+        DualKeyspaceMetadata newDualKeyspaceSetup = 
+                new DualKeyspaceMetadata(currentKeyspaceSetup.getSecondaryCluster(), currentKeyspaceSetup.getSecondaryKeyspaceName(),
+                                         currentKeyspaceSetup.getPrimaryCluster(), currentKeyspaceSetup.getPrimaryKeyspaceName());
+
+        KeyspacePair newPair = 
+                new KeyspacePair(newDualKeyspaceSetup, currentPair.getSecondaryKS(), currentPair.getPrimaryKS());
+        boolean success = ksPair.compareAndSet(currentPair, newPair);
             
-            // flip
-            KeyspacePair currentPair = ksPair.get();
-            
-            KeyspacePair newPair = 
-                    new KeyspacePair(newDualKeyspaceSetup, currentPair.getSecondaryKS(), currentPair.getPrimaryKS());
-            boolean success = ksPair.compareAndSet(currentPair, newPair);
-            
-            if (success) {
-                Logger.info("Successfully flipped to new dual keyspace setup" + ksPair.get().getDualKSMetadata());
-            }
-            
+        if (success) {
+            Logger.info("Successfully flipped to new dual keyspace setup" + ksPair.get().getDualKSMetadata());
         } else {
-            Logger.error("Mismatch b/w expected primary andsecondary keyspaces. Will not FLIP to new keyspace setup: " + newDualKeyspaceSetup);
+            Logger.info("Could not flip keyspace pair: " + currentPair + " to new pair: " + newPair);
         }
     }
+    
+    private abstract class SimpleSyncExec<R> implements Execution<R> {
+        @Override
+        public ListenableFuture<OperationResult<R>> executeAsync() throws ConnectionException {
+            throw new RuntimeException("executeAsync not implemented for SimpleSyncExec");
+        }
+    }
+    
+    private interface KeyspaceOperation<R> {
+        OperationResult<R> exec(Keyspace ks) throws ConnectionException; 
+    }
+    
+    private <R> OperationResult<R> execDualKeyspaceOperation(final KeyspaceOperation<R> ksOperation) throws ConnectionException {
+        
+        final KeyspacePair pair = ksPair.get();
+                
+        final Execution<R> exec1 = new SimpleSyncExec<R>() {
+            @Override
+            public OperationResult<R> execute() throws ConnectionException {
+                return ksOperation.exec(pair.getPrimaryKS());
+            }
+        };
+        final Execution<R> exec2 = new SimpleSyncExec<R>() {
+            @Override
+            public OperationResult<R> execute() throws ConnectionException {
+                return ksOperation.exec(pair.getSecondaryKS());
+            }
+        };
+        
+        WriteMetadata writeMd = new WriteMetadata(pair.getDualKSMetadata(), null, null);
+
+        return executionStrategy.wrapExecutions(exec1, exec2, Collections.singletonList(writeMd)).execute();
+    }
+
 }

@@ -25,5 +25,5 @@ public interface DualWritesUpdateListener {
      * 
      * @param newDualKeyspaceSetup
      */
-    public void flipPrimaryAndSecondary(DualKeyspaceMetadata newDualKeyspaceSetup);
+    public void flipPrimaryAndSecondary();
 }

@@ -38,6 +38,9 @@ public class CassBasedFailedWritesLogger implements FailedWritesLogger {
     }
     
     public CassBasedFailedWritesLogger(AstyanaxContext<Keyspace> ctx, int numShards) {
+        if (numShards <= 0) {
+            throw new RuntimeException("numShards must be > 0");
+        }
         this.ksContext = ctx;
         this.counter = new CircularCounter(numShards);
     }

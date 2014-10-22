@@ -25,7 +25,7 @@ public interface DualWritesStrategy {
      * @param writeMetadata
      * @return
      */
-    public Execution<Void> wrapExecutions(Execution<Void> primary, Execution<Void> secondary, Collection<WriteMetadata> writeMetadata); 
+    public <R> Execution<R> wrapExecutions(Execution<R> primary, Execution<R> secondary, Collection<WriteMetadata> writeMetadata); 
 
     /**
      * 

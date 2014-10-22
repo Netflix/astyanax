@@ -85,8 +85,7 @@ public class DualWritesDemo {
             verifyPresent(keyspace1, 3);
             verifyNotPresent(keyspace2, 3);
 
-            DualKeyspaceMetadata newDualKeyspaceSetup = new DualKeyspaceMetadata(cluster2, ks2, cluster1, ks1);
-            dualKeyspace.flipPrimaryAndSecondary(newDualKeyspaceSetup);
+            dualKeyspace.flipPrimaryAndSecondary();
 
             addRowToKS(dualKeyspace, 4, 0, 10);
 
@@ -105,7 +104,7 @@ public class DualWritesDemo {
             verifyNotPresent(keyspace1, 6);
             verifyPresent(keyspace2, 6);
 
-            dualKeyspace.flipPrimaryAndSecondary(dualKeyspaceSetup);
+            dualKeyspace.flipPrimaryAndSecondary();
             addRowToKS(dualKeyspace, 7, 0, 10);
 
             verifyPresent(keyspace1, 7);

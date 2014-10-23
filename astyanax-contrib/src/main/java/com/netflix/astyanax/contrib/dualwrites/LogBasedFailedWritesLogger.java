@@ -20,7 +20,7 @@ public class LogBasedFailedWritesLogger implements FailedWritesLogger {
     @Override
     public void init() {
         Logger.info("-------LOGGER INIT------");
-        stop.set(true);
+        stop.set(false);
     }
 
     @Override
@@ -32,7 +32,7 @@ public class LogBasedFailedWritesLogger implements FailedWritesLogger {
 
     @Override
     public void shutdown() {
-        stop.set(false);
+        stop.set(true);
         Logger.info("-------LOGGER SHUTDOWN------");
     }
 

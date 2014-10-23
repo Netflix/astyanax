@@ -66,7 +66,9 @@ public class AsyncFailedWritesLogger implements FailedWritesLogger {
             @Override
             public Void call() throws Exception {
                 
-                while (!stop.get() && Thread.currentThread().isInterrupted()) {
+                Logger.info("Async failed writes logger starting..");
+
+                while (!stop.get() && !Thread.currentThread().isInterrupted()) {
                     try { 
                         WriteMetadata writeMD = taskQueue.take();  // this is a blocking call
                         try { 

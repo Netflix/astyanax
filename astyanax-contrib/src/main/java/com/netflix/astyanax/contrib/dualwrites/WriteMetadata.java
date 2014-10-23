@@ -56,7 +56,7 @@ public  class WriteMetadata {
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + ((dualKeyspaceMetadata == null) ? 0 : dualKeyspaceMetadata.hashCode());
+        result = prime * result + dualKeyspaceMetadata.hashCode();
         result = prime * result + ((cfName == null) ? 0 : cfName.hashCode());
         result = prime * result + ((rowKey == null) ? 0 : rowKey.hashCode());
         result = prime * result + ((uuid == null) ? 0 : uuid.hashCode());

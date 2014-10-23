@@ -14,6 +14,12 @@ public class DualKeyspaceMetadata {
     private final String secondaryKeyspaceName;
     
     public DualKeyspaceMetadata(String primaryCluster, String primaryKeyspaceName, String secondaryCluster, String secondaryKeyspaceName) {
+        if (primaryCluster == null || primaryKeyspaceName == null) {
+            throw new RuntimeException("primaryCluster and primaryKeyspaceName cannot be NULL");
+        }
+        if (secondaryCluster == null || secondaryKeyspaceName == null) {
+            throw new RuntimeException("secondaryCluster and secondaryKeyspaceName cannot be NULL");
+        }
         this.primaryCluster = primaryCluster;
         this.primaryKeyspaceName = primaryKeyspaceName;
         this.secondaryCluster = secondaryCluster;
@@ -42,7 +48,7 @@ public class DualKeyspaceMetadata {
                 this.primaryCluster.equals(newDualKeyspaceSetup.getSecondaryCluster()) &&
                 this.secondaryCluster.equals(newDualKeyspaceSetup.getPrimaryCluster()));
     }
-
+    
     @Override
     public int hashCode() {
         final int prime = 31;

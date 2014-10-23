@@ -23,7 +23,7 @@ public class DualWritesDemo {
     final String seed1 = "";
 
     final String cluster2 = "cass_dualwrites_dest";
-    final String ks2 = "dualwritesdst";
+    final String ks2 = "dualwritessrc";
     final String seed2 = "";
 
     final ColumnFamily<Integer, Long> CF_DUAL_WRITES = 
@@ -85,8 +85,7 @@ public class DualWritesDemo {
             verifyPresent(keyspace1, 3);
             verifyNotPresent(keyspace2, 3);
 
-            DualKeyspaceMetadata newDualKeyspaceSetup = new DualKeyspaceMetadata(cluster2, ks2, cluster1, ks1);
-            dualKeyspace.flipPrimaryAndSecondary(newDualKeyspaceSetup);
+            dualKeyspace.flipPrimaryAndSecondary();
 
             addRowToKS(dualKeyspace, 4, 0, 10);
 
@@ -105,7 +104,7 @@ public class DualWritesDemo {
             verifyNotPresent(keyspace1, 6);
             verifyPresent(keyspace2, 6);
 
-            dualKeyspace.flipPrimaryAndSecondary(dualKeyspaceSetup);
+            dualKeyspace.flipPrimaryAndSecondary();
             addRowToKS(dualKeyspace, 7, 0, 10);
 
             verifyPresent(keyspace1, 7);
@@ -173,6 +172,8 @@ public class DualWritesDemo {
         ColumnList<Long> result = ks.prepareQuery(CF_DUAL_WRITES).getRow(rowKey).execute().getResult();
         if (result.isEmpty()) {
             throw new RuntimeException("Row: " + rowKey + " missing from keysapce: " + ks.getKeyspaceName());
+        } else {
+            System.out.println("Verified Row: " + rowKey + " present in ks: " + ks.getKeyspaceName());
         }
     }
 
@@ -181,6 +182,8 @@ public class DualWritesDemo {
         ColumnList<Long> result = ks.prepareQuery(CF_DUAL_WRITES).getRow(rowKey).execute().getResult();
         if (!result.isEmpty()) {
             throw new RuntimeException("Row: " + rowKey + " present in keysapce: " + ks.getKeyspaceName());
+        } else {
+            System.out.println("Verified Row: " + rowKey + " NOT present in ks: " + ks.getKeyspaceName());
         }
     }
 

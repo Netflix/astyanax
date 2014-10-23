@@ -23,7 +23,7 @@ public class DualWritesDemo {
     final String seed1 = "";
 
     final String cluster2 = "cass_dualwrites_dest";
-    final String ks2 = "dualwritesdst";
+    final String ks2 = "dualwritessrc";
     final String seed2 = "";
 
     final ColumnFamily<Integer, Long> CF_DUAL_WRITES = 
@@ -172,6 +172,8 @@ public class DualWritesDemo {
         ColumnList<Long> result = ks.prepareQuery(CF_DUAL_WRITES).getRow(rowKey).execute().getResult();
         if (result.isEmpty()) {
             throw new RuntimeException("Row: " + rowKey + " missing from keysapce: " + ks.getKeyspaceName());
+        } else {
+            System.out.println("Verified Row: " + rowKey + " present in ks: " + ks.getKeyspaceName());
         }
     }
 
@@ -180,6 +182,8 @@ public class DualWritesDemo {
         ColumnList<Long> result = ks.prepareQuery(CF_DUAL_WRITES).getRow(rowKey).execute().getResult();
         if (!result.isEmpty()) {
             throw new RuntimeException("Row: " + rowKey + " present in keysapce: " + ks.getKeyspaceName());
+        } else {
+            System.out.println("Verified Row: " + rowKey + " NOT present in ks: " + ks.getKeyspaceName());
         }
     }
 

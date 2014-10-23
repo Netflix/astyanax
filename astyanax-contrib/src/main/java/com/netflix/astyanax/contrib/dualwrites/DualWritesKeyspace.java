@@ -380,7 +380,10 @@ public class DualWritesKeyspace implements Keyspace, DualWritesUpdateListener {
 
 	@Override
 	public CqlStatement prepareCqlStatement() {
-		return getPrimaryKS().prepareCqlStatement();
+	    KeyspacePair pair = ksPair.get();
+        CqlStatement primaryStmt = pair.getPrimaryKS().prepareCqlStatement();
+        CqlStatement secondaryStmt = pair.getSecondaryKS().prepareCqlStatement();
+        return new DualWritesCqlStatement(primaryStmt, secondaryStmt, executionStrategy, pair.getDualKSMetadata());
 	}
 
 	@Override

@@ -60,6 +60,10 @@ public class CassBasedFailedWritesLogger implements FailedWritesLogger {
     
     private void addToBatch(MutationBatch batch, WriteMetadata failedWrite) {
         
+        // TODO: must deal with failed operations like createCF etc
+        if (failedWrite.getCFName() == null || failedWrite.getRowKey() == null) {
+            return;
+        }
         String cfName = failedWrite.getPrimaryCluster() + "-" + failedWrite.getPrimaryKeyspace();
         
         ColumnFamily<String, Long> CF_FAILED_WRITES = 

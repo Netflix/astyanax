@@ -11,7 +11,6 @@ import org.apache.cassandra.db.marshal.UTF8Type;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.mortbay.log.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +40,7 @@ import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
 
 public class CqlTest {
 
-    private static Logger LOG = LoggerFactory.getLogger(CqlTest.class);
+    private static Logger Log = LoggerFactory.getLogger(CqlTest.class);
 
     private static Keyspace keyspace;
     private static AstyanaxContext<Keyspace> keyspaceContext;
@@ -109,7 +108,7 @@ public class CqlTest {
             keyspace.dropKeyspace();
             Thread.sleep(CASSANDRA_WAIT_TIME);
         } catch (Exception e) {
-            LOG.info("Error dropping keyspace " + e.getMessage());
+            Log.info("Error dropping keyspace " + e.getMessage());
         }
 
         keyspace.createKeyspace(ImmutableMap
@@ -138,7 +137,7 @@ public class CqlTest {
         Thread.sleep(CASSANDRA_WAIT_TIME);
 
         KeyspaceDefinition ki = keyspaceContext.getEntity().describeKeyspace();
-        LOG.info("Describe Keyspace: " + ki.getName());
+        Log.info("Describe Keyspace: " + ki.getName());
 
     }
 
@@ -163,17 +162,17 @@ public class CqlTest {
 
         Assert.assertTrue(!result.getResult().getRows(CQL3_CF).isEmpty());
         for (Row<Integer, String> row : result.getResult().getRows(CQL3_CF)) {
-            LOG.info("CQL Key: " + row.getKey());
+            Log.info("CQL Key: " + row.getKey());
 
             ColumnList<String> columns = row.getColumns();
 
-            LOG.info("   empid      : "
+            Log.info("   empid      : "
                     + columns.getIntegerValue("empid", null));
-            LOG.info("   deptid     : "
+            Log.info("   deptid     : "
                     + columns.getIntegerValue("deptid", null));
-            LOG.info("   first_name : "
+            Log.info("   first_name : "
                     + columns.getStringValue("first_name", null));
-            LOG.info("   last_name  : "
+            Log.info("   last_name  : "
                     + columns.getStringValue("last_name", null));
         }
     }
@@ -198,17 +197,17 @@ public class CqlTest {
                 .execute();
         Assert.assertTrue(!result.getResult().getRows().isEmpty());
         for (Row<Integer, String> row : result.getResult().getRows()) {
-            LOG.info("CQL Key: " + row.getKey());
+            Log.info("CQL Key: " + row.getKey());
 
             ColumnList<String> columns = row.getColumns();
 
-            LOG.info("   empid      : "
+            Log.info("   empid      : "
                     + columns.getIntegerValue("empid", null));
-            LOG.info("   deptid     : "
+            Log.info("   deptid     : "
                     + columns.getIntegerValue("deptid", null));
-            LOG.info("   first_name : "
+            Log.info("   first_name : "
                     + columns.getStringValue("first_name", null));
-            LOG.info("   last_name  : "
+            Log.info("   last_name  : "
                     + columns.getStringValue("last_name", null));
         }
     }
@@ -249,14 +248,14 @@ public class CqlTest {
                 UTF8Type.instance, UTF8Type.instance);
 
         for (Row<String, String> row : rows) {
-            LOG.info(row.getKey());
+            Log.info(row.getKey());
             for (Column<String> column : row.getColumns()) {
-                LOG.info("  " + column.getName());
+                Log.info("  " + column.getName());
             }
             Column<String> favs = row.getColumns().getColumnByName("favs");
             Map<String, String> map = favs.getValue(mapSerializer);
             for (Entry<String, String> entry : map.entrySet()) {
-                LOG.info(" fav: " + entry.getKey() + " = " + entry.getValue());
+                Log.info(" fav: " + entry.getKey() + " = " + entry.getValue());
             }
         }
     }

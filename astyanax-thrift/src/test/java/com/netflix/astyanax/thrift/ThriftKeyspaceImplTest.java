@@ -27,6 +27,7 @@ import junit.framework.Assert;
 import org.apache.cassandra.thrift.KsDef;
 import org.apache.cassandra.utils.Pair;
 import org.apache.commons.lang.RandomStringUtils;
+import org.apache.log4j.BasicConfigurator;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -232,6 +233,7 @@ public class ThriftKeyspaceImplTest {
     
     @BeforeClass
     public static void setup() throws Exception {
+        BasicConfigurator.configure();
         System.out.println("TESTING THRIFT KEYSPACE");
 
         SingletonEmbeddedCassandra.getInstance();

@@ -15,16 +15,16 @@
  ******************************************************************************/
 package com.netflix.astyanax.test;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.apache.cassandra.service.CassandraDaemon;
 import org.slf4j.Logger;
@@ -113,7 +113,7 @@ public class EmbeddedCassandra {
     }
 
     public void start()  {
-        service.submit(new Callable<Object>(){
+        Future<Object> future = service.submit(new Callable<Object>(){
                 @Override
                 public Object call() throws Exception
                 {
@@ -127,6 +127,15 @@ public class EmbeddedCassandra {
                 }
             }
         );
+        
+        try {
+            future.get();
+        } catch (InterruptedException e) {
+            // do nothing
+        } catch (ExecutionException e) {
+            LOG.error("Error starting embedded cassandra", e);
+            throw new RuntimeException(e);
+        }
     }
 
     public void stop() {

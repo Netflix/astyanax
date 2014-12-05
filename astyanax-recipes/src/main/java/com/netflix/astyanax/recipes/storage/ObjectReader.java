@@ -137,7 +137,7 @@ public class ObjectReader implements Callable<ObjectMetadata> {
                     ExecutorService executor = Executors.newFixedThreadPool(
                             concurrencyLevel,
                             new ThreadFactoryBuilder().setDaemon(true)
-                                    .setNameFormat("ChunkReader-" + objectName + "-%d").build());
+                                    .setNameFormat("ChunkReader-" + objectName.replace("%","%%") + "-%d").build());
                     try {
                         for (final int chunkId : idsToRead) {
                             executor.submit(new Runnable() {

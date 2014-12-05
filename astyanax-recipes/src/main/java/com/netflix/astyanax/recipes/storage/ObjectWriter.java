@@ -107,7 +107,7 @@ public class ObjectWriter implements Callable<ObjectMetadata> {
 
         try {
             final ExecutorService executor = Executors.newFixedThreadPool(concurrencyLevel, new ThreadFactoryBuilder()
-                    .setDaemon(true).setNameFormat("ChunkWriter-" + objectName + "-%d").build());
+                    .setDaemon(true).setNameFormat("ChunkWriter-" + objectName.replace("%","%%") + "-%d").build());
             final BlockingConcurrentWindowCounter chunkCounter = new BlockingConcurrentWindowCounter(concurrencyLevel);
             final AutoAllocatingLinkedBlockingQueue<ByteBuffer> blocks = new AutoAllocatingLinkedBlockingQueue<ByteBuffer>(
                     concurrencyLevel);

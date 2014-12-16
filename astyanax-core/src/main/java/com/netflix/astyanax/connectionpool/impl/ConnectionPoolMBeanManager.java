@@ -3,6 +3,7 @@ package com.netflix.astyanax.connectionpool.impl;
 import java.lang.management.ManagementFactory;
 import java.util.HashMap;
 
+import javax.management.InstanceNotFoundException;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
@@ -69,6 +70,9 @@ public class ConnectionPoolMBeanManager {
         monitors.remove(monitorName);
         try {
             mbs.unregisterMBean(new ObjectName(monitorName));
+        }
+        catch (InstanceNotFoundException e) {
+            LOG.info("Connection pool MBean '" + monitorName + "' might have been already unregistered elsewhere. Original message: " + e.getMessage());
         }
         catch (Exception e) {
             LOG.error(e.getMessage());

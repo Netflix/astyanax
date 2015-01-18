@@ -24,6 +24,9 @@ import com.netflix.astyanax.serializers.BooleanSerializer;
 import com.netflix.astyanax.serializers.ByteBufferOutputStream;
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
 import com.netflix.astyanax.serializers.ComparatorType;
+import com.netflix.astyanax.serializers.DateSerializer;
+import com.netflix.astyanax.serializers.DoubleSerializer;
+import com.netflix.astyanax.serializers.FloatSerializer;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.SerializerTypeInferer;
@@ -75,7 +78,10 @@ public abstract class AbstractComposite extends AbstractList<Object> implements 
             .put(ByteBufferSerializer.class, ByteBufferSerializer.get().getComparatorType().getTypeName())
             .put(LongSerializer.class,       LongSerializer.get().getComparatorType().getTypeName())
             .put(StringSerializer.class,     StringSerializer.get().getComparatorType().getTypeName())
-            .put(UUIDSerializer.class,       UUIDSerializer.get().getComparatorType().getTypeName()).build();
+            .put(UUIDSerializer.class,       UUIDSerializer.get().getComparatorType().getTypeName())
+            .put(FloatSerializer.class,      FloatSerializer.get().getComparatorType().getTypeName())
+            .put(DoubleSerializer.class,     DoubleSerializer.get().getComparatorType().getTypeName())
+            .put(DateSerializer.class,       DateSerializer.get().getComparatorType().getTypeName()).build();
 
     static final ImmutableClassToInstanceMap<Serializer> SERIALIZERS = new ImmutableClassToInstanceMap.Builder<Serializer>()
             .put(IntegerSerializer.class,    IntegerSerializer.get())
@@ -85,7 +91,10 @@ public abstract class AbstractComposite extends AbstractList<Object> implements 
             .put(ByteBufferSerializer.class, ByteBufferSerializer.get())
             .put(LongSerializer.class,       LongSerializer.get())
             .put(StringSerializer.class,     StringSerializer.get())
-            .put(UUIDSerializer.class,       UUIDSerializer.get()).build();
+            .put(UUIDSerializer.class,       UUIDSerializer.get())
+            .put(FloatSerializer.class,      FloatSerializer.get())
+            .put(DoubleSerializer.class,     DoubleSerializer.get())
+            .put(DateSerializer.class,       DateSerializer.get()).build();
 
     public static final BiMap<Byte, String> DEFAULT_ALIAS_TO_COMPARATOR_MAPPING = new ImmutableBiMap.Builder<Byte, String>()
             .put((byte) 'a', ComparatorType.ASCIITYPE.getTypeName())
@@ -95,7 +104,10 @@ public abstract class AbstractComposite extends AbstractList<Object> implements 
             .put((byte) 'l', ComparatorType.LONGTYPE.getTypeName())
             .put((byte) 't', ComparatorType.TIMEUUIDTYPE.getTypeName())
             .put((byte) 's', ComparatorType.UTF8TYPE.getTypeName())
-            .put((byte) 'u', ComparatorType.UUIDTYPE.getTypeName()).build();
+            .put((byte) 'u', ComparatorType.UUIDTYPE.getTypeName())
+            .put((byte) 'f', ComparatorType.FLOATTYPE.getTypeName())
+            .put((byte) 'd', ComparatorType.DOUBLETYPE.getTypeName())
+            .put((byte) 'D', ComparatorType.DATETYPE.getTypeName()).build();
 
     BiMap<Class<? extends Serializer>, String> serializerToComparatorMapping = DEFAULT_SERIALIZER_TO_COMPARATOR_MAPPING;
 

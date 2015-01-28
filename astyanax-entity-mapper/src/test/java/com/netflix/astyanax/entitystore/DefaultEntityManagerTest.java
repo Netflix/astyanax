@@ -94,7 +94,7 @@ public class DefaultEntityManagerTest {
 
 		keyspaceContext.start();
 
-		keyspace = keyspaceContext.getEntity();
+		keyspace = keyspaceContext.getClient();
 
 		try {
 			keyspace.dropKeyspace();
@@ -167,6 +167,10 @@ public class DefaultEntityManagerTest {
 		bar.s = RandomStringUtils.randomAlphanumeric(4);
 		bar.barbar = barbar;
 		entity.setBar(bar);
+		Foo foo1 = new Foo(prng.nextInt(), RandomStringUtils.randomAlphanumeric(4));
+		Foo foo2 = new Foo(prng.nextInt(), RandomStringUtils.randomAlphanumeric(4));
+		entity.setFooSet(ImmutableSet.of(foo1, foo2));
+		entity.setFooMap(ImmutableMap.of("K1", foo2, "K2", foo1));
 		return entity;
 	}
 

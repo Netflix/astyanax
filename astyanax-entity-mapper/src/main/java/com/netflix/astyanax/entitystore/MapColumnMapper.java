@@ -1,7 +1,6 @@
 package com.netflix.astyanax.entitystore;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.ParameterizedType;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -17,15 +16,21 @@ public class MapColumnMapper extends AbstractColumnMapper {
     private final Serializer<?>      keySerializer;
     private final Serializer<Object> valueSerializer;
 
-    public MapColumnMapper(Field field) {
+    @SuppressWarnings("unchecked")
+	public MapColumnMapper(Field field) {
         super(field);
         
-        ParameterizedType stringListType = (ParameterizedType) field.getGenericType();
-        this.keyClazz         = (Class<?>) stringListType.getActualTypeArguments()[0];
-        this.keySerializer    = SerializerTypeInferer.getSerializer(this.keyClazz);
-
-        this.valueClazz       = (Class<?>) stringListType.getActualTypeArguments()[1];
-        this.valueSerializer  = SerializerTypeInferer.getSerializer(this.valueClazz);
+        /**
+         * Only support custom type for value for now
+         * Hoping there will something like @Serializer(mapKey=KeySerializer, mapValue=ValueSerializer)
+         * or @MapSerializer(key=KeySerializer, value=ValueSerialier) to specify serializer for both key and value
+         * in the future, then declared fields could be Map<Foo, Foo>.
+         */
+        this.keyClazz         = MappingUtils.getGenericTypeClass(field, 0);
+        this.keySerializer    = SerializerTypeInferer.getSerializer(keyClazz);
+        
+        this.valueClazz       = MappingUtils.getGenericTypeClass(field, 1);
+        this.valueSerializer  = (Serializer<Object>) MappingUtils.getSerializer(field, valueClazz);
     }
 
     @Override

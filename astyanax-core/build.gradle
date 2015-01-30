@@ -1,0 +1,14 @@
+apply plugin: 'osgi'
+apply plugin: 'java'
+
+dependencies {
+    compile "joda-time:joda-time:$jodaTimeVersion"
+    compile "com.github.stephenc.high-scale-lib:high-scale-lib:$highScaleLibVersion"
+    compile ("com.google.guava:guava:$guavaVersion") {
+         force = true
+    }
+    compile "com.eaio.uuid:uuid:$uuidVersion"
+    compile "org.slf4j:slf4j-api:$slf4jVersion"
+    compile "commons-lang:commons-lang:$commonsLangVersion"
+    testCompile "junit:junit:$junitVersion"
+}

@@ -8,8 +8,12 @@ apply from: 'dependency-versions.gradle'
 
 subprojects {
     apply plugin: 'nebula.netflixoss'
+    apply plugin: 'java'
 
     group = "com.netflix.${githubProjectName}"
+
+    sourceCompatibility = 1.6
+    targetCompatibility = 1.6
 
     repositories {
         jcenter()

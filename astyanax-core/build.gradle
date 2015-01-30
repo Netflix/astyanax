@@ -1,5 +1,4 @@
 apply plugin: 'osgi'
-apply plugin: 'java'
 
 dependencies {
     compile "joda-time:joda-time:$jodaTimeVersion"

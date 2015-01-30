@@ -1,0 +1,17 @@
+apply plugin: 'osgi'
+
+dependencies {
+    compile "joda-time:joda-time:$jodaTimeVersion"
+    compile "com.github.stephenc.high-scale-lib:high-scale-lib:$highScaleLibVersion"
+    compile "com.google.guava:guava:$guavaVersion"
+    compile "com.eaio.uuid:uuid:$uuidVersion"
+    compile "org.slf4j:slf4j-api:$slf4jVersion"
+    compile "org.codehaus.jettison:jettison:$jettisonVersion"
+    compile "commons-codec:commons-codec:$commonsCodecVersion"
+    compile "commons-lang:commons-lang:$commonsLangVersion"
+    compile "com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:$concurrentLinkedHashMapVersion"
+    compile "org.codehaus.jackson:jackson-core-asl:$jacksonVersion"
+    compile "org.codehaus.jackson:jackson-mapper-asl:$jacksonVersion"
+    compile "org.xerial.snappy:snappy-java:$snappyVersion"
+    testCompile "junit:junit:$junitVersion"
+}

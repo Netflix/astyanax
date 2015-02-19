@@ -284,19 +284,15 @@ public class CqlTest {
             while (colIter.hasNext()) {
                 Column<String> col = colIter.next();
                 String name = col.getName();
-                Log.info("*************************************");
                 if (name.equals("given")) {
                     String val = col.getValue(StringSerializer.get());
-                    Log.info("columnname=  " + name + "  columnvalue= " + val);
                     Assert.assertEquals("x", val);
                 }
                 if (name.equals("surname")) {
                     String val = col.getValue(StringSerializer.get());
-                    Log.info("columnname=  " + name + "  columnvalue= " + val);
                     Assert.assertEquals("arielle", val);
                 }
             }
-            Log.info("*************************************");
         }
         Assert.assertEquals(1, rows.size());
     }
@@ -323,26 +319,20 @@ public class CqlTest {
             while (colIter.hasNext()) {
                 Column<String> col = colIter.next();
                 String name = col.getName();
-                Log.info("*************************************");
                 if (name.equals("id")) {
                     UUID val = col.getValue(UUIDSerializer.get());
-                    Log.info("columnname=  " + name + "  columnvalue= " + val);
                     Assert.assertEquals("00000000-0000-0000-0000-000000000000",
                             val.toString());
                 }
                 if (name.equals("given")) {
                     String val = col.getValue(StringSerializer.get());
-                    Log.info("columnname=  " + name + "  columnvalue= "
-                            + val.toString());
                     Assert.assertEquals("x", val);
                 }
                 if (name.equals("surname")) {
                     String val = col.getValue(StringSerializer.get());
-                    Log.info("columnname=  " + name + "  columnvalue= " + val);
                     Assert.assertEquals("arielle", val);
                 }
             }
-            Log.info("*************************************");
         }
         Assert.assertEquals(1, rows.size());
     }

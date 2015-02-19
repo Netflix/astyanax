@@ -247,7 +247,6 @@ public abstract class AbstractThriftMutationBatchImpl implements MutationBatch {
 
         try {
             TBinaryProtocol bp = new TBinaryProtocol(transport);
-            bp.setReadLength(data.remaining());
             args.read(bp);
             mutationMap = args.getMutation_map();
         }

@@ -3,7 +3,7 @@ package com.netflix.astyanax.serializers;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 
-import org.apache.cassandra.cql.jdbc.JdbcDecimal;
+import org.apache.cassandra.serializers.DecimalSerializer;
 import org.apache.cassandra.db.marshal.DecimalType;
 
 public class BigDecimalSerializer extends AbstractSerializer<BigDecimal> {
@@ -18,12 +18,13 @@ public class BigDecimalSerializer extends AbstractSerializer<BigDecimal> {
     public BigDecimal fromByteBuffer(final ByteBuffer byteBuffer) {
         if (byteBuffer == null)
             return null;
-        return JdbcDecimal.instance.compose(byteBuffer.duplicate());
+
+        return DecimalSerializer.instance.deserialize(byteBuffer.duplicate());
     }
 
     @Override
     public ByteBuffer toByteBuffer(BigDecimal obj) {
-        return JdbcDecimal.instance.decompose(obj);
+        return DecimalSerializer.instance.serialize(obj);
     }
 
     @Override

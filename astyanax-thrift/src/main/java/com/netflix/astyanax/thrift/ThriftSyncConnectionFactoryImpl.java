@@ -187,10 +187,10 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
                 socket.getSocket().setKeepAlive(true);
                 socket.getSocket().setSoLinger(false, 0);
 
-                setTimeout(cpConfig.getSocketTimeout());
                 transport = new TFramedTransport(socket);
                 if(!transport.isOpen())
                     transport.open();
+                setTimeout(cpConfig.getSocketTimeout());
 
                 cassandraClient = new Cassandra.Client(new TBinaryProtocol.Factory().getProtocol(transport));
                 monitor.incConnectionCreated(getHost());

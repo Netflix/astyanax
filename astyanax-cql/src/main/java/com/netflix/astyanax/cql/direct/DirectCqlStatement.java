@@ -52,7 +52,7 @@ public class DirectCqlStatement implements CqlStatement {
 		
 		Statement q = new SimpleStatement(cqlQuery);
 		q.setConsistencyLevel(ConsistencyLevelTransform.getConsistencyLevel(cLevel));
-		
+		q.setFetchSize(100);
 		ResultSet resultSet = session.execute(q);
 		
 		CqlStatementResult result = new DirectCqlStatementResultImpl(resultSet);

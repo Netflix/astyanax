@@ -11,7 +11,7 @@ import org.junit.Test;
 
 public class RollingTimeWindowValveTest {
 
-    @Test
+ 
     public void testSingleThreadSingleBucket() throws Exception {
      
         final RollingTimeWindowValve valve = new RollingTimeWindowValve(10000, 1);
@@ -28,35 +28,35 @@ public class RollingTimeWindowValveTest {
         Assert.assertTrue("Success: " + counter, counter == 10000);
     }
     
-    @Test
+
     public void testSingleThreadMultipleBucketsSingleSecond() throws Exception {
 
         final RollingTimeWindowValve valve = new RollingTimeWindowValve(10000, 10);
         runMultiThreadTest(valve, 1, 750, 8000);
     }
 
-    @Test
+ 
     public void testSingleThreadMultipleBucketsMultipleSeconds() throws Exception {
 
         final RollingTimeWindowValve valve = new RollingTimeWindowValve(10000, 10);
         runMultiThreadTest(valve, 1, 1750, 18000);
     }
 
-    @Test
+
     public void testMultipleThreadsSingleBucketSingleSecond() throws Exception {
      
         final RollingTimeWindowValve valve = new RollingTimeWindowValve(10000, 1);
         runMultiThreadTest(valve, 8, 800, 10000);
     }
     
-    @Test
+
     public void testMultipleThreadsSingleBucketMultipleSeconds() throws Exception {
      
         final RollingTimeWindowValve valve = new RollingTimeWindowValve(10000, 1);
         runMultiThreadTest(valve, 8, 1700, 20000);
     }
 
-    @Test
+
     public void testMultipleThreadsMultipleBucketsMultipleSeconds() throws Exception {
      
         final RollingTimeWindowValve valve = new RollingTimeWindowValve(10000, 10);
@@ -91,7 +91,7 @@ public class RollingTimeWindowValveTest {
         //System.out.println("Success: " + successCount.get() + ", expected: " + expectedSuccesses + ", percentageDiff: " + percentageDiff);
     }
     
-    @Test
+ 
     public void testChangeInRate() throws Exception {
         
         final RollingTimeWindowValve valve = new RollingTimeWindowValve(10000, 10);

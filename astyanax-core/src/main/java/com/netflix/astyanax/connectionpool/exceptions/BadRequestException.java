@@ -15,7 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax.connectionpool.exceptions;
 
-public class BadRequestException extends OperationException {
+public class BadRequestException extends OperationException implements IsRetryableException {
     private static final long serialVersionUID = -6046784540431794568L;
     
     private static final String WHY_UNCONFIGURED_COLUMNFAMILY = "unconfigured columnfamily";

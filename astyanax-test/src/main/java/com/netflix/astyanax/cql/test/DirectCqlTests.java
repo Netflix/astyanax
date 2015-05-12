@@ -12,6 +12,7 @@ import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.query.CqlQuery;
 import com.netflix.astyanax.query.PreparedCqlQuery;
+import com.netflix.astyanax.retry.RetryNTimes;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 
@@ -69,7 +70,9 @@ public class DirectCqlTests extends KeyspaceTests {
     	// TEST REGULAR CQL
     	OperationResult<CqlResult<Integer, String>> result = keyspace
     			.prepareQuery(CF_DIRECT)
-    			.withCql("SELECT * FROM astyanaxunittests.cfdirect;").execute();
+    			.withRetryPolicy(new RetryNTimes(5))
+    			.withCql("SELECT * FROM astyanaxunittests.cfdirect;")
+    			.execute();
     	Assert.assertTrue(result.getResult().hasRows());
 
     	Assert.assertEquals(10, result.getResult().getRows().size());

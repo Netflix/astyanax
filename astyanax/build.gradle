@@ -1,0 +1,12 @@
+dependencies {
+    compile project(':astyanax-core')
+    compile project(':astyanax-cassandra')
+    compile project(':astyanax-thrift')
+    compile project(':astyanax-cql')
+    compile project(':astyanax-queue')
+    compile project(':astyanax-recipes')
+    compile project(':astyanax-entity-mapper')
+    compile project(':astyanax-examples')
+    compile project(':astyanax-contrib')
+    testCompile project(':astyanax-test')
+}

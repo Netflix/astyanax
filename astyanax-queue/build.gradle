@@ -1,0 +1,17 @@
+apply plugin: 'osgi'
+
+dependencies {
+    compile  project(':astyanax-core')
+    compile  project(':astyanax-cassandra')
+    runtime  project(':astyanax-thrift')
+    compile  project(':astyanax-recipes')
+    compile ("com.google.guava:guava:$guavaVersion") {
+         force = true
+    }
+    compile "org.slf4j:slf4j-api:$slf4jVersion"
+    compile "commons-lang:commons-lang:$commonsLangVersion"
+    compile "org.codehaus.jackson:jackson-core-asl:$jacksonVersion"
+    compile "org.codehaus.jackson:jackson-mapper-asl:$jacksonVersion"
+    testCompile "junit:junit:$junitVersion"
+    testCompile  project(':astyanax-thrift')
+}

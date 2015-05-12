@@ -1,0 +1,13 @@
+dependencies {
+    compile  project(':astyanax-core')
+    compile  project(':astyanax-cassandra')
+    compile  project(':astyanax-recipes')
+    compile  "javax.persistence:persistence-api:$jpaVersion"
+    compile ("com.google.guava:guava:$guavaVersion") {
+         force = true
+    }
+    compile "org.slf4j:slf4j-api:$slf4jVersion"
+    compile "commons-lang:commons-lang:$commonsLangVersion"
+    testCompile project(':astyanax-thrift')
+    testCompile "junit:junit:$junitVersion"
+}

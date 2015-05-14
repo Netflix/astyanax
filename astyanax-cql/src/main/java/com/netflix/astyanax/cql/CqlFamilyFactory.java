@@ -62,8 +62,8 @@ public class CqlFamilyFactory implements AstyanaxTypeFactory<Cluster> {
 		
 		ConnectionPoolConfiguration jdConfig = getOrCreateJDConfiguration(asConfig, cpProxy.getConnectionPoolConfiguration());
 		ConnectionPoolMonitor monitor = cpProxy.getConnectionPoolMonitor();
-		if (monitor != null && (monitor instanceof CountingConnectionPoolMonitor))
-			monitor = new JavaDriverConnectionPoolMonitorImpl();
+		if (monitor == null || !(monitor instanceof JavaDriverConnectionPoolMonitorImpl))
+            monitor = new JavaDriverConnectionPoolMonitorImpl();
 		CqlKeyspaceImpl keyspace = new CqlKeyspaceImpl(ksName, asConfig, tracerFactory, jdConfig, monitor);
 		cpProxy.addListener(keyspace);
 		
@@ -80,7 +80,7 @@ public class CqlFamilyFactory implements AstyanaxTypeFactory<Cluster> {
 		ConnectionPoolProxy<?> cpProxy = (ConnectionPoolProxy<?>)cp; 
 		ConnectionPoolConfiguration jdConfig = getOrCreateJDConfiguration(asConfig, cpProxy.getConnectionPoolConfiguration());
 		ConnectionPoolMonitor monitor = cpProxy.getConnectionPoolMonitor();
-		if (monitor != null && (monitor instanceof CountingConnectionPoolMonitor))
+		if (monitor == null || !(monitor instanceof JavaDriverConnectionPoolMonitorImpl))
 			monitor = new JavaDriverConnectionPoolMonitorImpl();
 		CqlClusterImpl cluster = new CqlClusterImpl(asConfig, tracerFactory, jdConfig, monitor);
 		((ConnectionPoolProxy<Cluster>)cp).addListener(cluster);

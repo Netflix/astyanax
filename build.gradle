@@ -6,6 +6,16 @@ ext.githubProjectName = rootProject.name // Change if github project name is not
 
 apply from: 'dependency-versions.gradle'
 
+idea {
+    module {
+        // if you hate browsing Javadoc
+        downloadJavadoc = false
+
+        // and love reading sources :)
+        downloadSources = true
+    }
+}
+
 subprojects {
     apply plugin: 'nebula.netflixoss'
     apply plugin: 'java'

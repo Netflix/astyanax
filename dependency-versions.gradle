@@ -1,6 +1,6 @@
 ext {
- cassandraVersion = "1.2.11"
- thriftVersion = "0.7.0"
+ cassandraVersion = "2.0.9"
+ thriftVersion = "0.9.1"
  junitVersion = "4.8.1"
  guavaVersion = "14.0.1"
  jodaTimeVersion = "1.6.2"
@@ -17,5 +17,5 @@ ext {
  jpaVersion = "1.0"
  nettyVersion = "3.6.6.Final"
  commonsIOVersion = "2.1"
- javaDriverVersion = "2.0.3"
+ javaDriverVersion = "2.0.5"
 }

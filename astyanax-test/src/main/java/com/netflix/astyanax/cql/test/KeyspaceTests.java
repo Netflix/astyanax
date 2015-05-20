@@ -15,7 +15,7 @@ public class KeyspaceTests {
 	}
 	
     public static void initContext() throws Exception {
-    	PropertyConfigurator.configure("./src/main/java/test-log4j.properties");
+    	PropertyConfigurator.configure("./src/main/resources/test-log4j.properties");
     	keyspace = AstyanaxContextFactory.getCachedKeyspace();
     }
 }

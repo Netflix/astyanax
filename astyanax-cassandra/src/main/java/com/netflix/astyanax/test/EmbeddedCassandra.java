@@ -82,7 +82,7 @@ public class EmbeddedCassandra {
         InputStream is = null;
 
         try {
-            URL         templateUrl = EmbeddedCassandra.class.getClassLoader().getResource("cassandra-template.yaml");
+            URL         templateUrl = EmbeddedCassandra.class.getClassLoader().getResource("cassandra2-template.yaml");
             Preconditions.checkNotNull(templateUrl, "Cassandra config template is null");
             String      baseFile = Resources.toString(templateUrl, Charset.defaultCharset());
 
@@ -141,5 +141,10 @@ public class EmbeddedCassandra {
     public void stop() {
         service.shutdownNow();
         cassandra.deactivate();
+    }
+    
+    public static void main(String[] args) throws IOException {
+    	EmbeddedCassandra ec = new EmbeddedCassandra();
+    	ec.start();
     }
 }

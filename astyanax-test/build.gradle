@@ -5,7 +5,9 @@ dependencies {
     compile project(':astyanax-cassandra')
     compile project(':astyanax-thrift')
     compile project(':astyanax-cql')
+    compile project(':astyanax-contrib')
     compile project(':astyanax-recipes')
+    compile project(':astyanax-queue')
     compile project(':astyanax-entity-mapper')
     compile "junit:junit:$junitVersion"
     compile "joda-time:joda-time:$jodaTimeVersion"
@@ -15,4 +17,8 @@ dependencies {
     compile("com.datastax.cassandra:cassandra-driver-core:$javaDriverVersion") {
         exclude group: 'com.google.guava', module: 'guava'
     }
+    compile ("org.apache.cassandra:cassandra-all:$cassandraVersion") {
+       force = true
+    }
 }
+

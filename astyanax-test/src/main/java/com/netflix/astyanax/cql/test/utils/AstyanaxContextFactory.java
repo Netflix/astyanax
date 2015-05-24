@@ -37,7 +37,7 @@ public class AstyanaxContextFactory {
     private static final AtomicReference<Keyspace> keyspaceReference = new AtomicReference<Keyspace>(null);
     
     static {
-    	PropertyConfigurator.configure("./src/main/java/test-log4j.properties");
+    	PropertyConfigurator.configure("./src/main/resources/test-log4j.properties");
 
     	AstyanaxContext<Keyspace> context = AstyanaxContextFactory.getKeyspace();
     	context.start();

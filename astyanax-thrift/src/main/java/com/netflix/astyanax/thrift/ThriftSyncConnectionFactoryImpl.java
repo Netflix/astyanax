@@ -86,7 +86,7 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
             throw new ThrottledException("Too many connection attempts");
         }
 
-        return new ThriftConnection(pool);
+        return new ThriftConnection(pool, asConfig.getMaxThriftSize());
     }
     
     public class ThriftConnection implements Connection<Cassandra.Client> {
@@ -95,6 +95,7 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
         private TFramedTransport transport;
         private TSocket socket;
         private int timeout = 0;
+        private int maxThriftSize = 0;
         private AtomicLong operationCounter = new AtomicLong();
         private AtomicBoolean closed = new AtomicBoolean(false);
 
@@ -105,8 +106,9 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
 
         private Map<String, Object> metadata = Maps.newHashMap();
         
-        public ThriftConnection(HostConnectionPool<Cassandra.Client> pool) {
+        public ThriftConnection(HostConnectionPool<Cassandra.Client> pool, int maxThriftSizeVal) {
             this.pool = pool;
+            this.maxThriftSize = maxThriftSizeVal;
         }
         
         @Override
@@ -188,7 +190,7 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
                 socket.getSocket().setSoLinger(false, 0);
 
                 setTimeout(cpConfig.getSocketTimeout());
-                transport = new TFramedTransport(socket);
+                transport = new TFramedTransport(socket, maxThriftSize);
                 if(!transport.isOpen())
                     transport.open();
 

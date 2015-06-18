@@ -20,10 +20,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.cliffc.high_scale_lib.NonBlockingHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -80,6 +82,8 @@ import com.netflix.astyanax.retry.RetryPolicy;
  */
 public abstract class AbstractHostPartitionConnectionPool<CL> implements ConnectionPool<CL>,
         SimpleHostConnectionPool.Listener<CL> {
+    private static Logger LOG = LoggerFactory.getLogger(AbstractHostPartitionConnectionPool.class);
+	
     protected final NonBlockingHashMap<Host, HostConnectionPool<CL>> hosts;
     protected final ConnectionPoolConfiguration                      config;
     protected final ConnectionFactory<CL>                            factory;
@@ -345,6 +349,11 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
             }
             catch (ConnectionException e) {
                 lastException = e;
+            }
+            
+            if (retry.allowRetry()) {
+            	LOG.debug("Retry policy[" + retry.toString() + "] will allow a subsequent retry for operation [" + op.getClass() + 
+            			  "] on keyspace [" + op.getKeyspace() + "] on pinned host[" + op.getPinnedHost() + "]");
             }
         } while (retry.allowRetry());
         retry.failure(lastException);

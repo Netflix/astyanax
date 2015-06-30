@@ -46,15 +46,18 @@ class MessageConsumerImpl implements MessageConsumer {
         // TODO: Read full itemsToPop instead of just stopping when we get the first successful set
         List<MessageContext> messages = null;
         while (true) {
+            boolean success = false;
             MessageQueueShard partition = queue.shardReaderPolicy.nextShard();
             if (partition != null) {
                 try {
                     messages = readAndReturnShard(partition, itemsToPop);
+                    success = true;
                     if (messages != null && !messages.isEmpty()) {
                         return messages;
                     }
                 } finally {
-                    queue.shardReaderPolicy.releaseShard(partition, messages == null ? 0 : messages.size());
+                    // releaseShard needs to know how many messages were proceed OR if there was an error fetching messages (-1)
+                    queue.shardReaderPolicy.releaseShard(partition, success ? (messages == null ? 0 : messages.size()) : -1);
                 }
             }
             if (timeoutTime != 0 && System.currentTimeMillis() > timeoutTime) {

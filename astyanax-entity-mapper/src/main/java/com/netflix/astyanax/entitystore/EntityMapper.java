@@ -100,21 +100,25 @@ public class EntityMapper<T, K> {
 			if ((columnAnnotation != null)) {
 				field.setAccessible(true);
 				ColumnMapper columnMapper = null;
-				Entity compositeAnnotation = field.getType().getAnnotation(Entity.class);
-			    if (Map.class.isAssignableFrom(field.getType())) {
-                    columnMapper = new MapColumnMapper(field);
-                } else if (Set.class.isAssignableFrom(field.getType())) {
-                    columnMapper = new SetColumnMapper(field);
-                } else if(compositeAnnotation == null) {
-                    if (columnAnnotation.unique()) {
-                        Preconditions.checkArgument(tempUniqueMapper == null, "can't have multiple unique columns '" + field.getName() + "'");
-                        tempUniqueMapper = new LeafColumnMapper(field);
-                    }
-                    else {
-                        columnMapper = new LeafColumnMapper(field);
-                    }
+				if (field.getAnnotation(Serializer.class) != null) {
+					columnMapper = new LeafColumnMapper(field);
 				} else {
-	                columnMapper = new CompositeColumnMapper(field);
+					Entity compositeAnnotation = field.getType().getAnnotation(Entity.class);
+			    	if (Map.class.isAssignableFrom(field.getType())) {
+                    	columnMapper = new MapColumnMapper(field);
+                	} else if (Set.class.isAssignableFrom(field.getType())) {
+                    	columnMapper = new SetColumnMapper(field);
+                	} else if(compositeAnnotation == null) {
+                    	if (columnAnnotation.unique()) {
+                        	Preconditions.checkArgument(tempUniqueMapper == null, "can't have multiple unique columns '" + field.getName() + "'");
+                        	tempUniqueMapper = new LeafColumnMapper(field);
+                    	}
+                    	else {
+                        	columnMapper = new LeafColumnMapper(field);
+                    	}
+					} else {
+	                	columnMapper = new CompositeColumnMapper(field);
+					}
 				}
 				Preconditions.checkArgument(!usedColumnNames.contains(columnMapper.getColumnName()), 
 						String.format("duplicate case-insensitive column name: %s", columnMapper.getColumnName().toLowerCase()));

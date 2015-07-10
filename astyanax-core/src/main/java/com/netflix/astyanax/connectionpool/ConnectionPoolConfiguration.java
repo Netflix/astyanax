@@ -21,6 +21,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import com.netflix.astyanax.AuthenticationCredentials;
 import com.netflix.astyanax.connectionpool.impl.HostSelectorStrategy;
 import com.netflix.astyanax.partitioner.Partitioner;
+import com.netflix.astyanax.tracing.OperationTracer;
 
 public interface ConnectionPoolConfiguration {
     /**
@@ -217,6 +218,12 @@ public interface ConnectionPoolConfiguration {
      * and simulation filters
      */
     OperationFilterFactory getOperationFilterFactory();
+    
+    
+    /**
+     * @return Return tracing factory that helps to trace a request
+     */
+    OperationTracer getOperationTracer();
     
     /**
      * @return Get the partitioner used to convert row keys to TOKEN

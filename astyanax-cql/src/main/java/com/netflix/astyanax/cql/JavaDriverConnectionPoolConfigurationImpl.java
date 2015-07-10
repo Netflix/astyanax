@@ -15,6 +15,8 @@ import com.netflix.astyanax.connectionpool.RetryBackoffStrategy;
 import com.netflix.astyanax.connectionpool.SSLConnectionContext;
 import com.netflix.astyanax.connectionpool.impl.HostSelectorStrategy;
 import com.netflix.astyanax.partitioner.Partitioner;
+import com.netflix.astyanax.shallows.EmptyOperationTracer;
+import com.netflix.astyanax.tracing.OperationTracer;
 
 /**
  * This class simply acts as a holder for the {@link Configuration} object for the java driver. It can be injected into the 
@@ -30,6 +32,7 @@ import com.netflix.astyanax.partitioner.Partitioner;
 public class JavaDriverConnectionPoolConfigurationImpl implements ConnectionPoolConfiguration {
 
 	private final Configuration jdConfig;
+    private OperationTracer opTracer                      = new EmptyOperationTracer();
 	
 	public JavaDriverConnectionPoolConfigurationImpl(Configuration configuration) {
 		this.jdConfig = configuration;
@@ -240,5 +243,14 @@ public class JavaDriverConnectionPoolConfigurationImpl implements ConnectionPool
 
 	@Override
 	public void shutdown() {
+	}
+
+	@Override
+	public OperationTracer getOperationTracer() {
+		return opTracer;
+	}
+	
+	public void setOperationTracer(OperationTracer opTracer) {
+		this.opTracer = opTracer;
 	}
 }

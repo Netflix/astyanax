@@ -70,3 +70,4 @@ atlassian-ide-plugin.xml
 astyanax-cassandra/bin/cassandra1.1-template.yaml
 
 astyanax-cassandra/bin/cassandra-template.yaml
+/bin/

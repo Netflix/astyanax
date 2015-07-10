@@ -16,7 +16,6 @@
 package com.netflix.astyanax.connectionpool.impl;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -37,6 +36,8 @@ import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.shallows.EmptyBadHostDetectorImpl;
 import com.netflix.astyanax.shallows.EmptyLatencyScoreStrategyImpl;
 import com.netflix.astyanax.shallows.EmptyOperationFilterFactory;
+import com.netflix.astyanax.shallows.EmptyOperationTracer;
+import com.netflix.astyanax.tracing.OperationTracer;
 
 /**
  * 
@@ -115,6 +116,7 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     private BadHostDetector badHostDetector               = DEFAULT_BAD_HOST_DETECTOR;
     private AuthenticationCredentials credentials         = null;
     private OperationFilterFactory filterFactory          = EmptyOperationFilterFactory.getInstance();
+    private OperationTracer opTracer                      = new EmptyOperationTracer();
     private Partitioner partitioner                       = null;
     private SSLConnectionContext sslCtx;
 
@@ -620,4 +622,13 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
         return this;
     }
 
+	@Override
+	public OperationTracer getOperationTracer() {
+		return opTracer;
+	}
+
+	public ConnectionPoolConfigurationImpl setOperationTracer(OperationTracer opTracer) {
+		this.opTracer = opTracer;
+		return this;
+	}
 }

@@ -45,6 +45,8 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.retry.RetryPolicy;
+import com.netflix.astyanax.tracing.AstyanaxContext;
+import com.netflix.astyanax.tracing.OperationTracer;
 
 /**
  * Base for all connection pools that keep a separate pool of connections for
@@ -335,27 +337,45 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
     @Override
     public <R> OperationResult<R> executeWithFailover(Operation<CL, R> op, RetryPolicy retry)
             throws ConnectionException {
+    	
+    	//Tracing operation
+    	OperationTracer opsTracer = config.getOperationTracer();
+    	final AstyanaxContext context = opsTracer.getAstyanaxContext();
+        if(context != null) {
+        	opsTracer.onCall(context, op);
+        }
+    	
         retry.begin();
         ConnectionException lastException = null;
         do {
             try {
                 OperationResult<R> result = newExecuteWithFailover(op).tryOperation(op);
                 retry.success();
+                if(context != null)  
+                	opsTracer.onSuccess(context, op);
+                
                 return result;
             }
             catch (OperationException e) {
+            	if(context != null)  
+            		opsTracer.onException(context, op, e);
+            	
                 retry.failure(e);
                 throw e;
             }
             catch (ConnectionException e) {
                 lastException = e;
-            }
+            } 
             
             if (retry.allowRetry()) {
             	LOG.debug("Retry policy[" + retry.toString() + "] will allow a subsequent retry for operation [" + op.getClass() + 
             			  "] on keyspace [" + op.getKeyspace() + "] on pinned host[" + op.getPinnedHost() + "]");
             }
         } while (retry.allowRetry());
+        
+        if(context != null && lastException != null)  
+        	opsTracer.onException(context, op, lastException);
+        
         retry.failure(lastException);
         throw lastException;
     }

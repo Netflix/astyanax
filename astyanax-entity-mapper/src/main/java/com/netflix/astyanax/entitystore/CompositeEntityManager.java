@@ -448,7 +448,7 @@ public class CompositeEntityManager<T, K> implements EntityManager<T, K> {
                         public Boolean apply(Row<K, ByteBuffer> row) {
                             if (row.getColumns().isEmpty())
                                 return true;
-                            for (Column column : row.getColumns()) {
+                            for (Column<ByteBuffer> column : row.getColumns()) {
                                 T entity = entityMapper.constructEntity(row.getKey(), column);
                                 try {
                                     lifecycleHandler.onPostLoad(entity);

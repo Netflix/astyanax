@@ -657,7 +657,7 @@ public class QueueTest {
         })
                 .withMessageQueue(scheduler)
                 .withConsumerCount(5)
-                .withThreadCount(1 + 10)
+                .withProcessorThreadCount(1 + 10)
                 .build();
 
         dispatcher.start();

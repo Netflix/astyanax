@@ -62,7 +62,7 @@ public class UniquenessConstraintTest {
         clusterContext.start();
 
         if (TEST_INIT_KEYSPACE) {
-            Cluster cluster = clusterContext.getEntity();
+            Cluster cluster = clusterContext.getClient();
             try {
                 LOG.info("Dropping keyspace: " + TEST_KEYSPACE_NAME);
                 cluster.dropKeyspace(TEST_KEYSPACE_NAME);
@@ -104,7 +104,7 @@ public class UniquenessConstraintTest {
     public void testUniqueness() throws Exception {
         LOG.info("Starting");
 
-        Keyspace keyspace = clusterContext.getEntity().getKeyspace(TEST_KEYSPACE_NAME);
+        Keyspace keyspace = clusterContext.getClient().getKeyspace(TEST_KEYSPACE_NAME);
 
         UniquenessConstraintWithPrefix<Long> unique = new UniquenessConstraintWithPrefix<Long>(
                 keyspace, CF_DATA)

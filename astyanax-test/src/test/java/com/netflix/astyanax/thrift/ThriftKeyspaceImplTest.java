@@ -521,7 +521,7 @@ public class ThriftKeyspaceImplTest {
     
     @Test
     public void getKeyspaceDefinition() throws Exception {
-        KeyspaceDefinition def = keyspaceContext.getEntity().describeKeyspace();
+        KeyspaceDefinition def = keyspaceContext.getClient().describeKeyspace();
         Collection<String> fieldNames = def.getFieldNames();
         LOG.info("Getting field names");
         for (String field : fieldNames) {
@@ -543,7 +543,7 @@ public class ThriftKeyspaceImplTest {
     
     @Test 
     public void testCopyKeyspace() throws Exception {
-        KeyspaceDefinition def = keyspaceContext.getEntity().describeKeyspace();
+        KeyspaceDefinition def = keyspaceContext.getClient().describeKeyspace();
         Properties props = def.getProperties();
         
         for (Entry<Object, Object> prop : props.entrySet()) {
@@ -588,7 +588,7 @@ public class ThriftKeyspaceImplTest {
         ctx.start();
         
         try {
-            KeyspaceDefinition keyspaceDef = ctx.getEntity().describeKeyspace();
+            KeyspaceDefinition keyspaceDef = ctx.getClient().describeKeyspace();
             Assert.fail();
         } catch (ConnectionException e) {
             LOG.info(e.getMessage());
@@ -599,11 +599,11 @@ public class ThriftKeyspaceImplTest {
     @Test
     public void testDescribeRing() throws Exception {
         // [TokenRangeImpl [startToken=0, endToken=0, endpoints=[127.0.0.1]]]
-        List<TokenRange> ring = keyspaceContext.getEntity().describeRing();
+        List<TokenRange> ring = keyspaceContext.getClient().describeRing();
         LOG.info(ring.toString());
         
         // 127.0.0.1
-        RingDescribeHostSupplier ringSupplier = new RingDescribeHostSupplier(keyspaceContext.getEntity(), 9160);
+        RingDescribeHostSupplier ringSupplier = new RingDescribeHostSupplier(keyspaceContext.getClient(), 9160);
         List<Host> hosts = ringSupplier.get();
         Assert.assertEquals(1, hosts.get(0).getTokenRanges().size());
         LOG.info(hosts.toString());
@@ -663,7 +663,7 @@ public class ThriftKeyspaceImplTest {
                 .buildKeyspace(ThriftFamilyFactory.getInstance());
 
         context.start();
-        Keyspace keyspace = context.getEntity();
+        Keyspace keyspace = context.getClient();
 
         MutationBatch m = keyspace.prepareMutationBatch();
 
@@ -1934,7 +1934,7 @@ public class ThriftKeyspaceImplTest {
         try {
             keyspaceContext.start();
 
-            Keyspace ks = keyspaceContext.getEntity();
+            Keyspace ks = keyspaceContext.getClient();
 
             OperationResult<Void> result = null;
             try {
@@ -2734,7 +2734,7 @@ public class ThriftKeyspaceImplTest {
                 .buildCluster(ThriftFamilyFactory.getInstance());
 
         clusterContext.start();
-        Cluster cluster = clusterContext.getEntity();
+        Cluster cluster = clusterContext.getClient();
 
         try {
             cluster.describeClusterName();
@@ -2821,7 +2821,7 @@ public class ThriftKeyspaceImplTest {
         ColumnFamily<String, String> cf = new ColumnFamily<String, String>(
                 "DoesntExist", StringSerializer.get(), StringSerializer.get());
         try {
-            MutationBatch m = keyspaceContext.getEntity()
+            MutationBatch m = keyspaceContext.getClient()
                     .prepareMutationBatch()
                     .withRetryPolicy(new ExponentialBackoff(10, 3));
             m.withRow(cf, "Key1").putColumn("Column2", "Value2", null);

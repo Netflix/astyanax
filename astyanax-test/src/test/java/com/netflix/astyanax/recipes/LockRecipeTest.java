@@ -94,7 +94,7 @@ public class LockRecipeTest {
 
         keyspaceContext.start();
         
-        keyspace = keyspaceContext.getEntity();
+        keyspace = keyspaceContext.getClient();
         
         try {
             keyspace.dropKeyspace();
@@ -124,7 +124,7 @@ public class LockRecipeTest {
                 .build());
         ;
         
-        KeyspaceDefinition ki = keyspaceContext.getEntity().describeKeyspace();
+        KeyspaceDefinition ki = keyspaceContext.getClient().describeKeyspace();
         System.out.println("Describe Keyspace: " + ki.getName());
 
     }

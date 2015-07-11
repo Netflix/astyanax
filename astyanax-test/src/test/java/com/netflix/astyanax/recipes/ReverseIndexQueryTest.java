@@ -92,7 +92,7 @@ public class ReverseIndexQueryTest {
         clusterContext.start();
 
         if (TEST_INIT_KEYSPACE) {
-            Cluster cluster = clusterContext.getEntity();
+            Cluster cluster = clusterContext.getClient();
             try {
                 LOG.info("Dropping keyspace: " + TEST_KEYSPACE_NAME);
                 cluster.dropKeyspace(TEST_KEYSPACE_NAME);
@@ -143,7 +143,7 @@ public class ReverseIndexQueryTest {
     public static void populateKeyspace() throws Exception {
         LOG.info("Ppoulating keyspace: " + TEST_KEYSPACE_NAME);
 
-        Keyspace keyspace = clusterContext.getEntity().getKeyspace(
+        Keyspace keyspace = clusterContext.getClient().getKeyspace(
                 TEST_KEYSPACE_NAME);
 
         try {
@@ -181,7 +181,7 @@ public class ReverseIndexQueryTest {
         LOG.info("Starting");
         final AtomicLong counter = new AtomicLong();
 
-        Keyspace keyspace = clusterContext.getEntity().getKeyspace(TEST_KEYSPACE_NAME);
+        Keyspace keyspace = clusterContext.getClient().getKeyspace(TEST_KEYSPACE_NAME);
         ReverseIndexQuery
                 .newQuery(keyspace, CF_DATA, CF_INDEX.getName(),
                         LongSerializer.get())

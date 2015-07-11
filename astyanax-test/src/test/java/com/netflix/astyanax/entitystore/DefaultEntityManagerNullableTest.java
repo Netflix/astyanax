@@ -87,7 +87,7 @@ public class DefaultEntityManagerNullableTest {
 
 		keyspaceContext.start();
 
-		keyspace = keyspaceContext.getEntity();
+		keyspace = keyspaceContext.getClient();
 
 		try {
 			keyspace.dropKeyspace();

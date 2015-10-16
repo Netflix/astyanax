@@ -1,6 +1,6 @@
 ext {
  cassandraVersion = "2.0.12"
- thriftVersion = "0.9.1"
+ thriftVersion = "0.9.2"
  junitVersion = "4.8.1"
  guavaVersion = "15.0"
  snappyVersion = "1.1.1.6"

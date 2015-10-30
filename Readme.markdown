@@ -48,7 +48,7 @@ Detailed documentation of Astyanax's features and usage can be found on the [wik
 
 Ancient History
 ---------------
-[Astyanax](http://en.wikipedia.org/wiki/Astyanax) was the son of [Hector](http://en.wikipedia.org/wiki/Hector) who was [Cassandra's](http://en.wikipedia.org/wiki/Cassandra) brother in greek mythology. 
+[Astyanax](http://en.wikipedia.org/wiki/Astyanax) was the affectionate name given by the people of Troy to the son of [Hector](http://en.wikipedia.org/wiki/Hector) who was [Cassandra's](http://en.wikipedia.org/wiki/Cassandra) brother in greek mythology. The name means 'high lord or protector of the city'.
 
 
 Modern History

@@ -24,7 +24,7 @@ public class SetSerializer<T> extends AbstractSerializer<Set<T>> {
      * @param elements
      */
     public SetSerializer(AbstractType<T> elements) {
-        mySet = SetType.getInstance(elements);
+        mySet = SetType.getInstance(elements, true);
     }
 
     @Override

@@ -1,5 +1,5 @@
 ext {
- cassandraVersion = "2.0.12"
+ cassandraVersion = "2.2.3"
  thriftVersion = "0.9.1"
  junitVersion = "4.8.1"
  guavaVersion = "15.0"

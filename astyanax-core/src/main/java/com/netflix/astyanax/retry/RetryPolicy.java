@@ -57,4 +57,8 @@ public interface RetryPolicy {
      * @return
      */
     RetryPolicy duplicate();
+    
+    public interface RetryPolicyFactory {
+    	public RetryPolicy createRetryPolicy();
+    }
 }

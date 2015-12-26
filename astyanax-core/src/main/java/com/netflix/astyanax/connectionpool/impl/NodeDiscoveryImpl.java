@@ -41,7 +41,8 @@ import com.netflix.astyanax.connectionpool.NodeDiscovery;
  * @param <CL> 
  */
 public class NodeDiscoveryImpl implements NodeDiscovery {
-    private final ConnectionPool<?> connectionPool;
+
+	private final ConnectionPool<?> connectionPool;
     private final ScheduledExecutorService executor;
     private boolean bOwnedExecutor = false;
     private final int interval;
@@ -103,7 +104,7 @@ public class NodeDiscoveryImpl implements NodeDiscovery {
 
     private void update() {
         try {
-            connectionPool.setHosts(hostSupplier.get());
+        	connectionPool.setHosts(hostSupplier.get());
             refreshCounter.incrementAndGet();
             lastUpdateTime.set(new DateTime());
         }

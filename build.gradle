@@ -1,143 +1,21 @@
-// Establish version and status
+plugins {
+    id 'nebula.netflixoss' version '2.2.5'
+}
+
 ext.githubProjectName = rootProject.name // Change if github project name is not the same as the root project's name
 
-buildscript {
-    repositories {
-        mavenLocal()
-        mavenCentral() // maven { url 'http://jcenter.bintray.com' }
-    }
-    apply from: file('gradle/buildscript.gradle'), to: buildscript 
-}
-
-allprojects {
-    repositories { 
-        mavenCentral() // maven { url: 'http://jcenter.bintray.com' }
-    }
-}
-
-apply plugin: 'idea'
-apply plugin: 'osgi'
-
-apply from: file('gradle/convention.gradle')
-apply from: file('gradle/maven.gradle')
-//apply from: file('gradle/check.gradle')
-//apply from: file('gradle/license.gradle')
-apply from: file('gradle/release.gradle')
-apply from: file('gradle/dependency-versions.gradle')
+apply from: 'dependency-versions.gradle'
 
 subprojects {
+    apply plugin: 'nebula.netflixoss'
+    apply plugin: 'java'
+
     group = "com.netflix.${githubProjectName}"
 
-    apply plugin: 'eclipse'
+    sourceCompatibility = 1.6
+    targetCompatibility = 1.6
 
-    dependencies {
-        compile "joda-time:joda-time:$jodaTimeVersion"
-        compile "com.github.stephenc.high-scale-lib:high-scale-lib:$highScaleLibVersion"
-        compile "com.google.guava:guava:$guavaVersion"
-        compile "com.eaio.uuid:uuid:$uuidVersion"
-        compile "org.slf4j:slf4j-api:$slf4jVersion"
-        compile "org.codehaus.jettison:jettison:$jettisonVersion"
-        compile "commons-codec:commons-codec:$commonsCodecVersion"
-        compile "commons-lang:commons-lang:$commonsLangVersion"
-        compile "com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:$concurrentLinkedHashMapVersion"
-        compile "org.codehaus.jackson:jackson-core-asl:$jacksonVersion"
-        compile "org.codehaus.jackson:jackson-mapper-asl:$jacksonVersion"
-        compile "org.xerial.snappy:snappy-java:$snappyVersion"
-        testCompile "junit:junit:$junitVersion"
-    }
-}
-
-project(':astyanax') {
-    dependencies {
-        compile  project(':astyanax-core')
-        compile  project(':astyanax-cassandra')
-        compile  project(':astyanax-thrift')
-        compile  project(':astyanax-queue')
-        compile  project(':astyanax-recipes')
-        compile  project(':astyanax-entity-mapper')
-        compile  project(':astyanax-examples')
-        compile  project(':astyanax-contrib')
-    }
-}
-
-project(':astyanax-core') {
-    apply plugin: 'osgi'
-    apply plugin: 'java'
-    dependencies {
-        testCompile "junit:junit:$junitVersion"
-    }
-}
-
-project(':astyanax-thrift') {
-    apply plugin: 'osgi'
-    apply plugin: 'java'
-    dependencies {
-        compile  project(':astyanax-core')
-        compile  project(':astyanax-cassandra')
-        compile "org.apache.cassandra:cassandra-thrift:$cassandraVersion"
-        compile "org.apache.thrift:libthrift:$thriftVersion"
-    }
-}
-
-project(':astyanax-queue') {
-    apply plugin: 'osgi'
-    apply plugin: 'java'
-    dependencies {
-        compile  project(':astyanax-core')
-        compile  project(':astyanax-cassandra')
-        compile  project(':astyanax-thrift')
-        compile  project(':astyanax-recipes')
-    }
-}
-
-project(':astyanax-cassandra') {
-    apply plugin: 'osgi'
-    apply plugin: 'java'
-    dependencies {
-        compile "org.apache.cassandra:cassandra-all:$cassandraVersion"
-        compile "org.apache.servicemix.bundles:org.apache.servicemix.bundles.commons-csv:$commonsCsvVersion"
-        compile "io.netty:netty:$nettyVersion"   
-        compile  project(':astyanax-core')
-    }
-}
-
-project(':astyanax-recipes') {
-    apply plugin: 'java'
-    dependencies {
-        compile  project(':astyanax-core')
-        compile  project(':astyanax-cassandra')
-        testCompile project(':astyanax-thrift')
-    }
-}
-
-project(':astyanax-entity-mapper') {
-    apply plugin: 'java'
-    dependencies {
-        compile  project(':astyanax-core')
-        compile  project(':astyanax-cassandra')
-        compile  project(':astyanax-recipes')
-    	compile  "javax.persistence:persistence-api:$jpaVersion"
-        testCompile project(':astyanax-thrift')
-        testCompile "junit:junit:$junitVersion"
-    }
-}
-
-project(':astyanax-examples') {
-    apply plugin: 'java'
-    dependencies {
-        compile  project(':astyanax-core')
-        compile  project(':astyanax-cassandra')
-        compile  project(':astyanax-thrift')
-        testCompile project(':astyanax-thrift')
-    }
-}
-
-project(':astyanax-contrib') {
-    apply plugin: 'java'
-    dependencies {
-        compile  project(':astyanax-cassandra')
-        compile  project(':astyanax-core')
-        compile 'com.netflix.eureka:eureka-client:1.1.110'
-        compile 'com.netflix.archaius:archaius-core:0.5.12'
+    repositories {
+        jcenter()
     }
 }

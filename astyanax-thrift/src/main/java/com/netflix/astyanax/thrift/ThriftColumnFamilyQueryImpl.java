@@ -26,8 +26,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 
 import org.apache.cassandra.thrift.Cassandra;
-import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.Cassandra.Client;
+import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.CounterSuperColumn;
 import org.apache.cassandra.thrift.KeyRange;
@@ -38,14 +38,14 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.KeyspaceTracerFactory;
 import com.netflix.astyanax.RowCopier;
-import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.ConnectionContext;
+import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
@@ -66,7 +66,13 @@ import com.netflix.astyanax.query.RowSliceQuery;
 import com.netflix.astyanax.retry.RetryPolicy;
 import com.netflix.astyanax.shallows.EmptyColumnList;
 import com.netflix.astyanax.shallows.EmptyRowsImpl;
-import com.netflix.astyanax.thrift.model.*;
+import com.netflix.astyanax.thrift.model.ThriftColumnImpl;
+import com.netflix.astyanax.thrift.model.ThriftColumnOrSuperColumnListImpl;
+import com.netflix.astyanax.thrift.model.ThriftCounterColumnImpl;
+import com.netflix.astyanax.thrift.model.ThriftCounterSuperColumnImpl;
+import com.netflix.astyanax.thrift.model.ThriftRowsListImpl;
+import com.netflix.astyanax.thrift.model.ThriftRowsSliceImpl;
+import com.netflix.astyanax.thrift.model.ThriftSuperColumnImpl;
 
 /**
  * Implementation of all column family queries using the thrift API.
@@ -731,4 +737,10 @@ public class ThriftColumnFamilyQueryImpl<K, C> implements ColumnFamilyQuery<K, C
     public RowSliceQuery<K, C> getRowSlice(Iterable<K> keys) {
         return getKeySlice(keys);
     }
+
+	@Override
+	public ColumnFamilyQuery<K, C> withCaching(boolean condition) {
+		// do nothing
+		return this;
+	}
 }

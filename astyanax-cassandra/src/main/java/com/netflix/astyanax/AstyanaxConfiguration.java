@@ -30,9 +30,10 @@ import com.netflix.astyanax.retry.RetryPolicy;
  * 
  */
 public interface AstyanaxConfiguration {
-    /**
-     * TODO
-     */
+	
+	/**
+	 * @return
+	 */
     RetryPolicy getRetryPolicy();
 
     /**
@@ -93,4 +94,9 @@ public interface AstyanaxConfiguration {
      * @throws Exception 
      */
     Partitioner getPartitioner(String partitionerName) throws Exception;
+
+    /**
+     * @return Return maximum thrift packet size
+     */
+    int getMaxThriftSize();
 }

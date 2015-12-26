@@ -16,10 +16,8 @@
 package com.netflix.astyanax;
 
 import java.nio.ByteBuffer;
-import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.model.ColumnFamily;
@@ -215,4 +213,12 @@ public interface MutationBatch extends Execution<Void> {
      * @throws Exception
      */
     void deserialize(ByteBuffer data) throws Exception;
+    
+    /**
+     * Turn statement caching ON/OFF
+     * This is to be used specifically with the CQL3 driver which uses PreparedStatment(s)
+     * @param condition
+     * @return MutationBatch
+     */
+    MutationBatch withCaching(boolean condition);
 }

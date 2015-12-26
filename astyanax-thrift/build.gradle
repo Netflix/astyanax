@@ -1,0 +1,12 @@
+apply plugin: 'osgi'
+
+dependencies {
+    compile  project(':astyanax-core')
+    compile  project(':astyanax-cassandra')
+    compile "org.apache.cassandra:cassandra-thrift:$cassandraVersion"
+    compile ("org.apache.thrift:libthrift:$thriftVersion") {
+        force = true
+    }
+
+    testCompile "junit:junit:$junitVersion"
+}

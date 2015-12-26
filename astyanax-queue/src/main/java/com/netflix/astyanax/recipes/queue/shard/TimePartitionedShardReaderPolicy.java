@@ -132,6 +132,7 @@ public class TimePartitionedShardReaderPolicy implements ShardReaderPolicy {
         // Shard is not in the current partition and we did't final any messages so let's just put in the
         // idle queue.  It'll be added back later when in this shard's time partition.
         // May want to randomly check an idle queue when there is nothing in the working queue
+        // A value of -1 in messagesRead means that the consumer had trouble reading messages from the shard
         if (shard.getPartition() != currentTimePartition && messagesRead == 0) {
             idleQueue.add(shard);
         }

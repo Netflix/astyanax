@@ -1,0 +1,7 @@
+dependencies {
+    compile  project(':astyanax-core')
+    compile  project(':astyanax-cassandra')
+    compile  project(':astyanax-thrift')
+    compile  project(':astyanax-contrib')
+    compile "org.slf4j:slf4j-api:$slf4jVersion"
+}

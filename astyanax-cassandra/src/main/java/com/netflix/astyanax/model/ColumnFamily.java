@@ -15,7 +15,11 @@
  ******************************************************************************/
 package com.netflix.astyanax.model;
 
+import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
+import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.impl.PreparedIndexExpressionImpl;
 import com.netflix.astyanax.query.PreparedIndexExpression;
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
@@ -38,6 +42,10 @@ public class ColumnFamily<K, C> implements Comparable<ColumnFamily<K,C>>{
     private final Serializer<?> defaultValueSerializer;
     private final ColumnType type;
 
+    private ColumnFamilyDefinition cfDef; 
+    
+    private String keyAlias = "key";
+    
     /**
      * @param columnFamilyName
      * @param keySerializer
@@ -69,7 +77,7 @@ public class ColumnFamily<K, C> implements Comparable<ColumnFamily<K,C>>{
     public String getName() {
         return columnFamilyName;
     }
-
+    
     /**
      * Serializer for first level column names. This serializer does not apply
      * to sub column names.
@@ -102,7 +110,15 @@ public class ColumnFamily<K, C> implements Comparable<ColumnFamily<K,C>>{
     public ColumnType getType() {
         return type;
     }
+    
+    public void setKeyAlias(String alias) {
+    	keyAlias = alias; 
+    }
 
+    public String getKeyAlias() {
+    	return keyAlias;
+    }
+    
     public PreparedIndexExpression<K, C> newIndexClause() {
         return new PreparedIndexExpressionImpl<K, C>(this.columnSerializer);
     }
@@ -142,4 +158,20 @@ public class ColumnFamily<K, C> implements Comparable<ColumnFamily<K,C>>{
         result = prime * result + ((getName() == null) ? 0 : getName().hashCode());
         return result;
     }
+    
+    public boolean inThriftMode() {
+    	return true;
+    }
+    
+    public ColumnFamilyDefinition describe(Keyspace keyspace) throws ConnectionException {
+    	
+		KeyspaceDefinition ksDef = keyspace.describeKeyspace();
+		cfDef = ksDef.getColumnFamily(this.getName());
+    	return cfDef;
+    }
+    
+    public ColumnFamilyDefinition getColumnFamilyDefinition() {
+    	return cfDef;
+    }
+    
 }

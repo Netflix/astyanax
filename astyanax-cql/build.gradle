@@ -1,0 +1,18 @@
+apply plugin: 'osgi'
+
+dependencies {
+    compile  project(':astyanax-core')
+    compile  project(':astyanax-cassandra')
+    compile ("com.datastax.cassandra:cassandra-driver-core:$javaDriverVersion") {
+        //exclude group: 'com.google.guava', module: 'guava'
+        transitive = false
+    }
+
+    compile "io.netty:netty:$nettyVersion"
+    compile "com.google.guava:guava:$guavaVersion"
+    compile "net.jpountz.lz4:lz4:$lz4Version"
+    compile "com.codahale.metrics:metrics-core:$metricCoreVersion"
+    compile "org.xerial.snappy:snappy-java:$snappyVersion"
+
+}
+

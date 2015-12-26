@@ -16,6 +16,8 @@
 package com.netflix.astyanax.serializers;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.Equality;
@@ -27,7 +29,15 @@ public abstract class CompositeRangeBuilder implements ByteBufferRange {
     private boolean reversed = false;
     private boolean lockComponent = false;
 
-    abstract protected void nextComponent();
+    private List<RangeQueryRecord> records = new ArrayList<RangeQueryRecord>();
+    
+    protected void nextComponent() {
+    	getNextComponent();
+    	// flip to a new record, which is for a new component
+    	records.add(new RangeQueryRecord());
+    }
+
+    abstract protected void getNextComponent();
 
     abstract protected void append(ByteBufferOutputStream out, Object value, Equality equality);
 
@@ -37,7 +47,10 @@ public abstract class CompositeRangeBuilder implements ByteBufferRange {
         }
         append(start, object, Equality.EQUAL);
         append(end, object, Equality.EQUAL);
+        
+        getLastRecord().addQueryOp(object, Equality.EQUAL);
         nextComponent();
+        
         return this;
     }
 
@@ -57,25 +70,41 @@ public abstract class CompositeRangeBuilder implements ByteBufferRange {
     public CompositeRangeBuilder greaterThan(Object value) {
         lockComponent = true;
         append(start, value, Equality.GREATER_THAN);
+        getLastRecord().addQueryOp(value, Equality.GREATER_THAN);
+
         return this;
     }
 
     public CompositeRangeBuilder greaterThanEquals(Object value) {
         lockComponent = true;
         append(start, value, Equality.GREATER_THAN_EQUALS);
+        getLastRecord().addQueryOp(value, Equality.GREATER_THAN_EQUALS);
+
         return this;
     }
 
     public CompositeRangeBuilder lessThan(Object value) {
         lockComponent = true;
         append(end, value, Equality.LESS_THAN);
+        getLastRecord().addQueryOp(value, Equality.LESS_THAN);
         return this;
     }
 
     public CompositeRangeBuilder lessThanEquals(Object value) {
         lockComponent = true;
         append(end, value, Equality.LESS_THAN_EQUALS);
+        getLastRecord().addQueryOp(value, Equality.LESS_THAN_EQUALS);
         return this;
+    }
+    
+    private RangeQueryRecord getLastRecord() {
+    	
+    	if (records.size() == 0) {
+    		RangeQueryRecord record = new RangeQueryRecord();
+    		records.add(record);
+    	}
+    	
+    	return records.get(records.size()-1);
     }
 
     @Override
@@ -102,27 +131,98 @@ public abstract class CompositeRangeBuilder implements ByteBufferRange {
         return limit;
     }
 
-    public ByteBufferRange build() {
-        return new ByteBufferRange() {
-            @Override
-            public ByteBuffer getStart() {
-                return start.getByteBuffer();
-            }
+    public CompositeByteBufferRange build() {
+    	return new CompositeByteBufferRange(start, end, limit, reversed, records);
+    }
+    
+    public static class RangeQueryRecord {
+    	
+    	private List<RangeQueryOp> ops = new ArrayList<RangeQueryOp>();
 
-            @Override
-            public ByteBuffer getEnd() {
-                return end.getByteBuffer();
-            }
+    	public RangeQueryRecord() {
+    		
+    	}
+    	
+    	public void addQueryOp(Object value, Equality operator) {
+    		add(new RangeQueryOp(value, operator));
+    	}
+    	
+    	public void add(RangeQueryOp rangeOp) {
+    		ops.add(rangeOp);
+    	}
+    	
+    	public List<RangeQueryOp> getOps() {
+    		return ops;
+    	}
+    }
 
-            @Override
-            public boolean isReversed() {
-                return reversed;
-            }
+    public static class RangeQueryOp {
+		
+		private final Object value;
+		private final Equality operator;
+		
+		public RangeQueryOp(Object value, Equality operator) {
+			this.value = value;
+			this.operator = operator;
+		}
+		
+		public Object getValue() {
+			return value;
+		}
+		public Equality getOperator() {
+			return operator;
+		}
+	}
+    
+    public static class CompositeByteBufferRange implements ByteBufferRange {
+    	
+        private final ByteBufferOutputStream start;
+        private final ByteBufferOutputStream end;
+        private int limit;
+        private boolean reversed;
+        private final List<RangeQueryRecord> records;
 
-            @Override
-            public int getLimit() {
-                return limit;
-            }
-        };
+        private CompositeByteBufferRange(ByteBufferOutputStream rangeStart, ByteBufferOutputStream rangeEnd, 
+        		int rangeLimit, boolean rangeReversed, 
+        		List<RangeQueryRecord> rangeRecords) {
+        	this.start = rangeStart;
+        	this.end = rangeEnd;
+        	this.limit = rangeLimit;
+        	this.reversed = rangeReversed;
+        	this.records = rangeRecords;
+        }
+        
+        public CompositeByteBufferRange(int rangeLimit, boolean rangeReversed, List<RangeQueryRecord> rangeRecords) {
+        	// This is only meant to be called by internally
+        	this.start = null;
+        	this.end = null;
+        	this.limit = rangeLimit;
+        	this.reversed = rangeReversed;
+        	this.records = rangeRecords;
+        }
+
+    	 @Override
+         public ByteBuffer getStart() {
+             return start.getByteBuffer();
+         }
+
+         @Override
+         public ByteBuffer getEnd() {
+             return end.getByteBuffer();
+         }
+
+         @Override
+         public boolean isReversed() {
+             return reversed;
+         }
+
+         @Override
+         public int getLimit() {
+             return limit;
+         }
+         
+         public List<RangeQueryRecord> getRecords() {
+        	 return records;
+         }
     }
 }

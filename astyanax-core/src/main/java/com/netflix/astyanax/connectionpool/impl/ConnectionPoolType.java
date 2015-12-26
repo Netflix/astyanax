@@ -25,5 +25,5 @@ import com.netflix.astyanax.connectionpool.ConnectionPool;
  * that correspond to this enum.
  */
 public enum ConnectionPoolType {
-    TOKEN_AWARE, ROUND_ROBIN, BAG
+    TOKEN_AWARE, ROUND_ROBIN, BAG;
 }

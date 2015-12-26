@@ -26,4 +26,5 @@ import com.netflix.astyanax.model.Column;
  * @param <C>
  */
 public interface ColumnQuery<C> extends Execution<Column<C>> {
+
 }

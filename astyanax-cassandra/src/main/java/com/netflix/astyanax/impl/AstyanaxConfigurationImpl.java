@@ -50,6 +50,7 @@ public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
     private String              cqlVersion                  = null;
     private String              targetCassandraVersion      = "1.1";
     private Map<String, Partitioner> partitioners           = Maps.newHashMap();
+    private int                 maxThriftSize               = 16384000;
 
     public AstyanaxConfigurationImpl() {
         partitioners.put(org.apache.cassandra.dht.RandomPartitioner.class.getCanonicalName(), BigInteger127Partitioner.get());
@@ -183,4 +184,14 @@ public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
             throw new Exception("Unsupported partitioner " + partitionerName);
         return partitioner;
     }
+    public AstyanaxConfigurationImpl setMaxThriftSize(int maxthriftsize) {
+        this.maxThriftSize = maxthriftsize;
+        return this;
+    }
+
+    @Override
+    public int getMaxThriftSize() {
+        return maxThriftSize;
+    }
+
 }

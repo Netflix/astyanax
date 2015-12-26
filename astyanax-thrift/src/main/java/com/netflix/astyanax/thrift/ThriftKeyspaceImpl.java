@@ -188,6 +188,12 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                     }
                 });
             }
+
+			@Override
+			public MutationBatch withCaching(boolean condition) {
+				// This is a no-op when using Thrift
+				return this;
+			}
         };
     }
 

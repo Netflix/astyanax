@@ -2,7 +2,7 @@ package com.netflix.astyanax.partitioner;
 
 import java.nio.ByteBuffer;
 
-import org.apache.cassandra.dht.BigIntegerToken;
+import org.apache.cassandra.dht.RandomPartitioner.BigIntegerToken;
 
 import com.netflix.astyanax.serializers.BigIntegerSerializer;
 

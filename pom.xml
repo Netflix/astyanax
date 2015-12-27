@@ -11,7 +11,7 @@
 
     <groupId>com.netflix.astyanax</groupId>
     <artifactId>astyanax</artifactId>
-    <version>1.56.49-bv2-SNAPSHOT</version>
+    <version>1.56.49-bv3-SNAPSHOT</version>
 
     <name>astyanax</name>
     <description>astyanax developed by Netflix</description>

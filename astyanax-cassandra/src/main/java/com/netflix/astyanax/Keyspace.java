@@ -127,7 +127,7 @@ public interface Keyspace {
      * a call to the Cassandra cluster and is therefore cached to reduce load on
      * Cassandra and since this data rarely changes.
      * 
-     * @param columnFamily
+     * @param cfName
      * @param ignoreErrors
      * @throws ConnectionException
      */
@@ -273,7 +273,7 @@ public interface Keyspace {
     
     /**
      * Update the column family definition from a map of string to object
-     * @param props
+     * @param options
      * @throws ConnectionException
      */
     OperationResult<SchemaChangeResult> updateColumnFamily(Map<String, Object> options) throws ConnectionException;

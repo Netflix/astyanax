@@ -46,7 +46,7 @@
     </scm>
 
     <properties>
-        <next.release.version>3.8.0-bv5</next.release.version>
+        <next.release.version>3.8.0-bv4</next.release.version>
         <next.development.version>3.8.0-bv4-SNAPSHOT</next.development.version>
     </properties>
 

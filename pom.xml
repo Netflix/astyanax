@@ -11,7 +11,7 @@
 
     <groupId>com.netflix.astyanax</groupId>
     <artifactId>astyanax</artifactId>
-    <version>3.8.0-bv4-SNAPSHOT</version>
+    <version>3.8.0-bv5-SNAPSHOT</version>
 
     <name>astyanax</name>
     <description>astyanax developed by Netflix</description>
@@ -46,8 +46,8 @@
     </scm>
 
     <properties>
-        <next.release.version>3.8.0-bv3</next.release.version>
-        <next.development.version>3.8.0-bv4-SNAPSHOT</next.development.version>
+        <next.release.version>3.8.0-bv5</next.release.version>
+        <next.development.version>3.8.0-bv6-SNAPSHOT</next.development.version>
     </properties>
 
     <dependencyManagement>
@@ -157,7 +157,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-release-plugin</artifactId>
-                <version>2.2</version>
+                <version>2.5.1</version>
                 <configuration>
                     <releaseVersion>${next.release.version}</releaseVersion>
                     <developmentVersion>${next.development.version}</developmentVersion>

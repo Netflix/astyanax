@@ -175,7 +175,7 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 	
 	private ConsistencyLevel getDefaultCL(KeyspaceContext ksContext) {
 		
-		ConsistencyLevel clLevel = ksContext.getConfig().getDefaultReadConsistencyLevel(); 
+		ConsistencyLevel clLevel;
 		
 		CassandraOperationCategory op = getOperationType().getCategory();
 		switch (op) {
@@ -184,8 +184,10 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 			break;
 		case WRITE:
 			clLevel = ksContext.getConfig().getDefaultWriteConsistencyLevel();
+			break;
 		default:
-			clLevel = ksContext.getConfig().getDefaultReadConsistencyLevel(); 
+			clLevel = ksContext.getConfig().getDefaultReadConsistencyLevel();
+			break;
 		}
 		
 		return clLevel;

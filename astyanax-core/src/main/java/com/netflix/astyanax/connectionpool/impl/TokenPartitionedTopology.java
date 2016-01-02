@@ -227,7 +227,7 @@ public class TokenPartitionedTopology<CL> implements Topology<CL> {
     	List<TokenHostConnectionPoolPartition<CL>> partitions = this.sortedRing.get();
         // Must have a token otherwise we default to the base class
         // implementation
-        if (token == null || partitions == null || partitions.isEmpty()) {
+        if (partitions == null || partitions.isEmpty()) {
             return getAllPools();
         }
 

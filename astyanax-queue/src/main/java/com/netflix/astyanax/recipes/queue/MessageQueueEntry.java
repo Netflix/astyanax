@@ -84,7 +84,7 @@ public class MessageQueueEntry {
     }
     
     public static MessageQueueEntry newBusyEntry(Message message) {
-        return new MessageQueueEntry(MessageQueueEntryType.Message, (byte)message.getPriority(), message.getToken(), message.getRandom(), MessageQueueEntryState.Busy);
+        return new MessageQueueEntry(MessageQueueEntryType.Message, message.getPriority(), message.getToken(), message.getRandom(), MessageQueueEntryState.Busy);
     }
     
     public static MessageQueueEntry fromMetadata(MessageMetadataEntry meta) {

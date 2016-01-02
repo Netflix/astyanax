@@ -307,7 +307,7 @@ public class ColumnCountQueryTests extends ReadTests {
         	String rowKey = Character.toString(keyName);
         	ColumnListMutation<String> colMutation = m.withRow(CF_COLUMN_RANGE_TEST, rowKey);
               for (char cName = 'a'; cName <= 'z'; cName++) {
-            	  colMutation.putColumn(Character.toString(cName), (int) (cName - 'a') + 1, null);
+            	  colMutation.putColumn(Character.toString(cName), cName - 'a' + 1, null);
               }
               m.withCaching(true);
               m.execute();

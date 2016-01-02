@@ -443,7 +443,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     }
 
     private <T> T deserializeString(String data, Class<T> clazz) throws JsonParseException, JsonMappingException, IOException {
-        return (T) mapper.readValue(
+        return mapper.readValue(
                 new ByteArrayInputStream(data.getBytes()),
                 clazz);
     }
@@ -842,7 +842,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                         String groupKey = getCompositeKey(getName(), message.getKey());
                         uniqueKeys.put(groupKey, message);
                         mb.withRow(keyIndexColumnFamily, groupKey)
-                            .putEmptyColumn(lockColumn, (Integer)lockTtl);
+                            .putEmptyColumn(lockColumn, lockTtl);
                     }
                 }
 

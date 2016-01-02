@@ -405,7 +405,7 @@ public class CFStandardTests extends KeyspaceTests {
             ColumnListMutation<String> cfmStandard = m.withRow(CF_STANDARD1, rowKey);
             for (char cName = 'a'; cName <= 'z'; cName++) {
                 cfmStandard.putColumn(Character.toString(cName),
-                        (int) (cName - 'a') + 1, null);
+                        cName - 'a' + 1, null);
             }
             m.withCaching(true);
             m.execute();

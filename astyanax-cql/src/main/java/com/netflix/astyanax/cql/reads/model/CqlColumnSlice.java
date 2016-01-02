@@ -82,7 +82,7 @@ public class CqlColumnSlice<C> extends ColumnSlice<C> {
 	}
 	
 	private void initFrom(CqlColumnSlice<C> cqlColumnSlice) {
-		this.cqlColumns = (Collection<C>) cqlColumnSlice.cqlColumns;
+		this.cqlColumns = cqlColumnSlice.cqlColumns;
 		this.cqlRange = cqlColumnSlice.cqlRange;
 	}
 
@@ -109,12 +109,12 @@ public class CqlColumnSlice<C> extends ColumnSlice<C> {
 
 	@Override
 	public C getStartColumn() {
-		return (cqlRange != null) ? (C) cqlRange.getCqlStart() : null;
+		return (cqlRange != null) ? cqlRange.getCqlStart() : null;
 	}
 
 	@Override
 	public C getEndColumn() {
-		return (cqlRange != null) ? (C) cqlRange.getCqlEnd() : null;
+		return (cqlRange != null) ? cqlRange.getCqlEnd() : null;
 	}
 
 	@Override
@@ -140,11 +140,11 @@ public class CqlColumnSlice<C> extends ColumnSlice<C> {
 		if (isColumnSelectQuery()) {
 			return false;
 		}
-		
+
 		if (cqlRange != null)  {
 			return true;
 		}
-		
+
 		return false;
 	}
 	

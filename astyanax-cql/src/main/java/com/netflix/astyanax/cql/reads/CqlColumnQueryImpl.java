@@ -87,7 +87,7 @@ public class CqlColumnQueryImpl<C> implements ColumnQuery<C> {
 				return null;
 			}
 
-			CqlColumnImpl<C> cqlCol = new CqlColumnImpl<C>((C) columnName, row, 0);
+			CqlColumnImpl<C> cqlCol = new CqlColumnImpl<C>(columnName, row, 0);
 			return cqlCol;
 		}
 	}

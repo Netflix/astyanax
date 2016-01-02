@@ -51,7 +51,7 @@ import com.netflix.astyanax.connectionpool.exceptions.UnknownException;
  * 
  */
 public abstract class AbstractExecuteWithFailoverImpl<CL, R> implements ExecuteWithFailover<CL, R> {
-    protected Connection<CL> connection = null;
+    protected Connection<CL> connection;
     private long startTime;
     private long poolStartTime;
     private int attemptCounter = 0;

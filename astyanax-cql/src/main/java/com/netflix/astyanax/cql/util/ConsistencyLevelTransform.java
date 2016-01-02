@@ -12,7 +12,7 @@ public class ConsistencyLevelTransform {
 
 	public static ConsistencyLevel getConsistencyLevel(com.netflix.astyanax.model.ConsistencyLevel level) {
 		
-		ConsistencyLevel result = null;
+		ConsistencyLevel result;
 		switch(level) {
 		case CL_ONE:
 			result = ConsistencyLevel.ONE;

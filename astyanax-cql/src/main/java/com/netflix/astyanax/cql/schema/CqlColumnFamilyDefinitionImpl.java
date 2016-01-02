@@ -205,13 +205,13 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 		
 		String defaultBytesType = ComparatorType.BYTESTYPE.getTypeName();
 		
-		keyClass = (keyClass == null) ?	keyClass = defaultBytesType : keyClass;
+		keyClass = (keyClass == null) ?	defaultBytesType : keyClass;
 		
 		String comparatorClass = (String) optionsMap.remove("comparator");
-		comparatorClass = (comparatorClass == null) ?	comparatorClass = defaultBytesType : comparatorClass;
+		comparatorClass = (comparatorClass == null) ?	defaultBytesType : comparatorClass;
 		
 		String dataValidationClass = (String) optionsMap.remove("default_validator");
-		dataValidationClass = (dataValidationClass == null) ?	dataValidationClass = defaultBytesType : dataValidationClass;
+		dataValidationClass = (dataValidationClass == null) ? defaultBytesType : dataValidationClass;
 
 		ColumnDefinition key = new CqlColumnDefinitionImpl().setName("key").setValidationClass(keyClass);
 		partitionKeyList.add(key);
@@ -311,8 +311,7 @@ public class CqlColumnFamilyDefinitionImpl implements ColumnFamilyDefinition {
 
 			Collections.sort(tmpList);
 			clusteringKeyList.addAll(tmpList);
-			tmpList = null;
-			
+
 			List<String> allPrimaryKeyColNames = new ArrayList<String>();
 			for (ColumnDefinition colDef : partitionKeyList) {
 				allPrimaryKeyColNames.add(colDef.getName());

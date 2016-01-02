@@ -37,7 +37,7 @@ class CompositeColumnMapper extends AbstractColumnMapper {
 			Column annotation = childField.getAnnotation(Column.class);
 			if ((annotation != null)) {
 				childField.setAccessible(true);
-				ColumnMapper columnMapper = null;
+				ColumnMapper columnMapper;
 				Entity compositeAnnotation = childField.getType().getAnnotation(Entity.class);
 				if(compositeAnnotation == null) {
 					columnMapper = new LeafColumnMapper(childField);

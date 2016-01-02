@@ -106,7 +106,7 @@ public class AstyanaxContext<T> {
         }
 
         protected <T> ConnectionPool<T> createConnectionPool(ConnectionFactory<T> connectionFactory) {
-            ConnectionPool<T> connectionPool = null;
+            ConnectionPool<T> connectionPool;
             
             // HACK to get the CqlFamilyFactory working with AstyanaxContext
             if (connectionFactory.getClass().getName().contains("CqlFamilyFactory")) {

@@ -11,7 +11,7 @@ import com.netflix.astyanax.serializers.SerializerTypeInferer;
 
 public class MappingUtils {
     static com.netflix.astyanax.Serializer<?> getSerializerForField(Field field) {
-        com.netflix.astyanax.Serializer<?> serializer = null;
+        com.netflix.astyanax.Serializer<?> serializer;
         // check if there is explicit @Serializer annotation first
         Serializer serializerAnnotation = field.getAnnotation(Serializer.class);
         if(serializerAnnotation != null) {

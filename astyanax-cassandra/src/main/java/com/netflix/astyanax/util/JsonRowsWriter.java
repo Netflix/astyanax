@@ -318,7 +318,7 @@ public class JsonRowsWriter implements RowsWriter {
                     columnString = e.getMessage(); // this.errorValueText;
                 }
 
-                String valueString = null;
+                String valueString;
                 try {
                     valueString = serializers.valueAsString(column.getRawName(), column.getByteBufferValue());
                 }
@@ -412,7 +412,7 @@ public class JsonRowsWriter implements RowsWriter {
                 if (this.dynamicNames != null)
                     this.dynamicNames.add(columnString);
 
-                String valueString = null;
+                String valueString;
                 try {
                     valueString = serializers.valueAsString(column.getRawName(), column.getByteBufferValue());
                 }

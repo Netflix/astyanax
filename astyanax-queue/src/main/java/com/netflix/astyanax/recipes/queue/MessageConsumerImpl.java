@@ -114,7 +114,7 @@ class MessageConsumerImpl implements MessageConsumer {
     List<MessageContext> readMessagesFromShardUsingDefaultLock(String shardName, int itemsToPop) throws MessageQueueException, BusyLockException {
         MutationBatch m = null;
         MessageQueueEntry lockColumn = null;
-        ColumnListMutation<MessageQueueEntry> rowMutation = null;
+        ColumnListMutation<MessageQueueEntry> rowMutation;
         int lockColumnCount = 0;
         // Try locking first
         try {

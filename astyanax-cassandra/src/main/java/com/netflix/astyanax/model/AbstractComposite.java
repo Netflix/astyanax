@@ -103,8 +103,8 @@ public abstract class AbstractComposite extends AbstractList<Object> implements 
 
     final boolean dynamic;
 
-    List<Serializer<?>> serializersByPosition = null;
-    List<String> comparatorsByPosition = null;
+    List<Serializer<?>> serializersByPosition;
+    List<String> comparatorsByPosition;
 
     public class Component<T> {
         final Serializer<T> serializer;
@@ -190,7 +190,7 @@ public abstract class AbstractComposite extends AbstractList<Object> implements 
 
     List<Component<?>> components = new ArrayList<Component<?>>();
 
-    ByteBuffer serialized = null;
+    ByteBuffer serialized;
 
     public AbstractComposite(boolean dynamic) {
         this.dynamic = dynamic;
@@ -680,7 +680,7 @@ public abstract class AbstractComposite extends AbstractList<Object> implements 
         serialized = b.duplicate();
         components = new ArrayList<Component<?>>();
 
-        String comparator = null;
+        String comparator;
         int i = 0;
         while ((comparator = getComparator(i, b)) != null) {
             ByteBuffer data = getWithShortLength(b);

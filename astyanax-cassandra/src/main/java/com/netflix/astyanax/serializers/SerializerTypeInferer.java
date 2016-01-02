@@ -19,7 +19,7 @@ public class SerializerTypeInferer {
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public static <T> Serializer<T> getSerializer(Object value) {
-        Serializer serializer = null;
+        Serializer serializer;
         if (value == null) {
             serializer = ByteBufferSerializer.get();
         }

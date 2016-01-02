@@ -219,18 +219,13 @@ public class FlatTableRowSliceQueryGen {
 		} else if (tokenIsPresent) {
 
 			BigInteger startTokenB = rowRange.getStartToken() != null ? new BigInteger(rowRange.getStartToken()) : null; 
-			BigInteger endTokenB = rowRange.getEndToken() != null ? new BigInteger(rowRange.getEndToken()) : null; 
+			BigInteger endTokenB = rowRange.getEndToken() != null ? new BigInteger(rowRange.getEndToken()) : null;
 
-			Long startToken = startTokenB.longValue();
-			Long endToken = endTokenB.longValue();
-			
-			if (startToken != null && endToken != null) {
-				if (startToken != null) {
-					values.add(startToken);
-				}
-				if (endToken != null) {
-					values.add(endToken);
-				}
+			if (startTokenB != null) {
+				values.add(startTokenB.longValue());
+			}
+			if (endTokenB != null) {
+				values.add(endTokenB.longValue());
 			}
 
 			if (rowRange.getCount() > 0) {

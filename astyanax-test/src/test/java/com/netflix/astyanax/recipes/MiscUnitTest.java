@@ -252,9 +252,7 @@ public class MiscUnitTest {
             // ...
             //
 
-            MutationBatch m;
-            OperationResult<Void> result;
-            m = keyspace.prepareMutationBatch();
+            MutationBatch m = keyspace.prepareMutationBatch();
 
             for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
                 String rowKey = Character.toString(keyName);
@@ -273,8 +271,6 @@ public class MiscUnitTest {
             m.withRow(CF_STANDARD1, "Prefixes").putColumn("Prefix1_a", 1, null)
                     .putColumn("Prefix1_b", 2, null)
                     .putColumn("prefix2_a", 3, null);
-
-            result = m.execute();
 
             m.execute();
             
@@ -308,7 +304,7 @@ public class MiscUnitTest {
                   .withRow(CF_EMAIL_UNIQUE_UUID, "user1@domain.com");
         
         try {
-            Column<UUID> c = constraint.getUniqueColumn();
+            constraint.getUniqueColumn();
             Assert.fail();
         }
         catch (Exception e) {
@@ -693,7 +689,7 @@ public class MiscUnitTest {
         }
         
         try {
-            String data = unique.readDataAsString();
+            unique.readDataAsString();
             Assert.fail();
         }
         catch (Exception e) {
@@ -1039,7 +1035,7 @@ public class MiscUnitTest {
         Future<Boolean> future = Executors.newSingleThreadExecutor().submit(reader);        
         
         try {
-            boolean result = future.get();
+            future.get();
             Assert.fail();
         }
         catch (Exception e) {

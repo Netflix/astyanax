@@ -19,7 +19,7 @@ import com.netflix.astyanax.serializers.StringSerializer;
 
 public class ChunkedObjectStoreTest extends KeyspaceTests {
 
-	public static ColumnFamily<String, String> CF_CHUNK = ColumnFamily.newColumnFamily("cfchunk", StringSerializer.get(), StringSerializer.get());
+	public static final ColumnFamily<String, String> CF_CHUNK = ColumnFamily.newColumnFamily("cfchunk", StringSerializer.get(), StringSerializer.get());
 
 	@BeforeClass
 	public static void init() throws Exception {

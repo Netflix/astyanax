@@ -18,7 +18,7 @@ import com.netflix.astyanax.serializers.StringSerializer;
 
 public class LongColumnPaginationTests extends KeyspaceTests {
 	
-	public static ColumnFamily<String, Long> CF_LONGCOLUMN = ColumnFamily
+	public static final ColumnFamily<String, Long> CF_LONGCOLUMN = ColumnFamily
             .newColumnFamily(
                     "LongColumn1", 
                     StringSerializer.get(),

@@ -22,7 +22,7 @@ import com.netflix.astyanax.serializers.StringSerializer;
 
 public class ColumnPrefixUniquenessConstraintTest extends KeyspaceTests {
 
-	public static ColumnFamily<Long, String> CF_UNIQUE_CONSTRAINT = ColumnFamily
+	public static final ColumnFamily<Long, String> CF_UNIQUE_CONSTRAINT = ColumnFamily
 			.newColumnFamily(
 					"cfunique2", 
 					LongSerializer.get(),

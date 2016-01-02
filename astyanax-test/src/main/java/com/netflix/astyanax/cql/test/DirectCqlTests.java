@@ -18,13 +18,13 @@ import com.netflix.astyanax.serializers.StringSerializer;
 
 public class DirectCqlTests extends KeyspaceTests {
 	
-    public static ColumnFamily<Integer, String> CF_DIRECT = ColumnFamily
+    public static final ColumnFamily<Integer, String> CF_DIRECT = ColumnFamily
             .newColumnFamily(
                     "cfdirect", 
                     IntegerSerializer.get(),
                     StringSerializer.get());
     
-    public static ColumnFamily<String, String> CF_EMPTY_TABLE = ColumnFamily
+    public static final ColumnFamily<String, String> CF_EMPTY_TABLE = ColumnFamily
             .newColumnFamily(
                     "empty_table", 
                     StringSerializer.get(),

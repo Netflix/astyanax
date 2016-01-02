@@ -20,10 +20,10 @@ import com.netflix.astyanax.util.TimeUUIDUtils;
 
 public class ClickStreamTests extends KeyspaceTests {
 
-	public static AnnotatedCompositeSerializer<SessionEvent> SE_SERIALIZER 
+	public static final AnnotatedCompositeSerializer<SessionEvent> SE_SERIALIZER
 	= new AnnotatedCompositeSerializer<SessionEvent>(SessionEvent.class);
 
-	public static ColumnFamily<String, SessionEvent> CF_CLICK_STREAM = 
+	public static final ColumnFamily<String, SessionEvent> CF_CLICK_STREAM =
 			ColumnFamily.newColumnFamily("ClickStream", StringSerializer.get(), SE_SERIALIZER);
 
 	@BeforeClass

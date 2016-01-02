@@ -23,7 +23,7 @@ import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
 
 public class EmptyLatencyScoreStrategyImpl implements LatencyScoreStrategy {
 
-    public static EmptyLatencyScoreStrategyImpl instance = new EmptyLatencyScoreStrategyImpl();
+    public static final EmptyLatencyScoreStrategyImpl instance = new EmptyLatencyScoreStrategyImpl();
 
     public static EmptyLatencyScoreStrategyImpl get() {
         return instance;

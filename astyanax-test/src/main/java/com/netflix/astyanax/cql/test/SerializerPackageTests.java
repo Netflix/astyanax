@@ -24,7 +24,7 @@ public class SerializerPackageTests extends KeyspaceTests {
 
 	private static final Logger LOG = Logger.getLogger(SerializerPackageTests.class);
 
-	public static ColumnFamily<String, Long> CF_SERIALIZER1 = ColumnFamily
+	public static final ColumnFamily<String, Long> CF_SERIALIZER1 = ColumnFamily
 			.newColumnFamily(
 					"Serializer1", 
 					StringSerializer.get(),

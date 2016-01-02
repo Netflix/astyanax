@@ -26,7 +26,7 @@ public class TimeUUIDTests extends KeyspaceTests {
 	
 	private static final Logger LOG = Logger.getLogger(TimeUUIDTests.class);
 	
-    public static ColumnFamily<String, UUID> CF_TIME_UUID = ColumnFamily
+    public static final ColumnFamily<String, UUID> CF_TIME_UUID = ColumnFamily
             .newColumnFamily(
                     "TimeUUID1", 
                     StringSerializer.get(),

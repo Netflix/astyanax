@@ -2,6 +2,7 @@ package com.netflix.astyanax.cql;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 
+import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +54,7 @@ import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
 import com.netflix.astyanax.ddl.impl.SchemaChangeResponseImpl;
 import com.netflix.astyanax.model.ColumnFamily;
+import com.netflix.astyanax.model.CfSplit;
 import com.netflix.astyanax.partitioner.BigInteger127Partitioner;
 import com.netflix.astyanax.partitioner.Murmur3Partitioner;
 import com.netflix.astyanax.partitioner.Partitioner;
@@ -67,7 +69,7 @@ import com.netflix.astyanax.serializers.UnknownComparatorException;
  *  
  * Note that due to the way the object is setup via AstyanaxContext and CqlFamilyFactory, it needs to implements 
  * a {@link SeedHostListener} so that it can construct the cluster and session object appropriately once the seed hosts
- * have been provided by the {@link HostSupplier} object.
+ * have been provided by the {link HostSupplier} object.
  *  
  * @author poberai
  */
@@ -479,6 +481,25 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 			}
 		});
 	}
+
+    @Override
+    public List<CfSplit> describeSplitsEx(String cfName, String startToken, String endToken, int keysPerSplit)
+            throws ConnectionException {
+        return null;
+    }
+
+    @Override
+    public List<CfSplit> describeSplitsEx(String cfName, String startToken, String endToken, int keysPerSplit,
+                                   ByteBuffer rowKey)
+            throws ConnectionException {
+        return null;
+    }
+
+    @Override
+    public List<String> describeSplits(String cfName, String startToken, String endToken, int keysPerSplit)
+            throws ConnectionException {
+        return null;
+    }
 	
     
     private OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(Callable<OperationResult<SchemaChangeResult>> createKeyspace) throws ConnectionException {

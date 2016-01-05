@@ -27,7 +27,7 @@ public class MapSerializer<K, V> extends AbstractSerializer<Map<K, V>> {
      * @param value
      */
     public MapSerializer(AbstractType<K> key, AbstractType<V> value) {
-        myMap = MapType.getInstance(key, value, true);
+        myMap = MapType.getInstance(key, value);
     }
 
     @Override

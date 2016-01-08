@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -28,6 +29,7 @@ import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.cql.CqlStatement;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
+import com.netflix.astyanax.model.CfSplit;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
@@ -125,7 +127,7 @@ public interface Keyspace {
      * a call to the Cassandra cluster and is therefore cached to reduce load on
      * Cassandra and since this data rarely changes.
      * 
-     * @param columnFamily
+     * @param cfName
      * @param ignoreErrors
      * @throws ConnectionException
      */
@@ -185,6 +187,35 @@ public interface Keyspace {
     OperationResult<Void> truncateColumnFamily(String columnFamily) throws ConnectionException;
 
     /**
+     * Experimental Cassandra API.  May change without warning.
+     *
+     * @return A list of tokens, where each range query from {@code tokens[n]} to {@code tokens[n+1]} will return
+     *    approximately {@code keysPerSplit} rows.
+     */
+    List<String> describeSplits(String cfName, String startToken, String endToken, int keysPerSplit)
+            throws ConnectionException;
+
+    /**
+     * Experimental Cassandra API added.  May change without warning.
+     *
+     * @return A list of column family splits, where each range query from {@code split.getStartToken()} to
+     * {@code split.getEndToken()} will return approximately {@code split.getRowCount()} rows where the latter
+     * is close to {@code keysPerSplit}.
+     *
+     * @since Cassandra 1.1.8+
+     */
+    List<CfSplit> describeSplitsEx(String cfName, String startToken, String endToken, int keysPerSplit)
+            throws ConnectionException;
+
+    /**
+     * This is an overloaded method of {@code describeSplitsEx}, which can be used for OrderedPartitioners.
+     * This method allows for passing a rowKey for ensuring token-aware connections.
+     */
+    List<CfSplit> describeSplitsEx(String cfName, String startToken, String endToken, int keysPerSplit,
+                                   ByteBuffer rowKey)
+            throws ConnectionException;
+
+    /**
      * This method is used for testing purposes only. It is used to inject
      * errors in the connection pool.
      * 
@@ -242,7 +273,7 @@ public interface Keyspace {
     
     /**
      * Update the column family definition from a map of string to object
-     * @param props
+     * @param options
      * @throws ConnectionException
      */
     OperationResult<SchemaChangeResult> updateColumnFamily(Map<String, Object> options) throws ConnectionException;

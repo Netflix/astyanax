@@ -1,12 +1,10 @@
 package com.netflix.astyanax.serializers;
 
-import java.nio.ByteBuffer;
-import java.util.Map;
-
 import org.apache.cassandra.db.marshal.AbstractType;
 import org.apache.cassandra.db.marshal.MapType;
 
-import com.netflix.astyanax.serializers.AbstractSerializer;
+import java.nio.ByteBuffer;
+import java.util.Map;
 
 /**
  * Serializer implementation for generic maps.
@@ -27,7 +25,7 @@ public class MapSerializer<K, V> extends AbstractSerializer<Map<K, V>> {
      * @param value
      */
     public MapSerializer(AbstractType<K> key, AbstractType<V> value) {
-        myMap = MapType.getInstance(key, value);
+        myMap = MapType.getInstance(key, value, true);
     }
 
     @Override

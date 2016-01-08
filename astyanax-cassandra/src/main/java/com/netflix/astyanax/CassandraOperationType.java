@@ -32,6 +32,7 @@ public enum CassandraOperationType {
     ADD_KEYSPACE        (CassandraOperationCategory.OTHER), 
     UPDATE_KEYSPACE     (CassandraOperationCategory.OTHER), 
     SET_KEYSPACE        (CassandraOperationCategory.OTHER), 
+    DESCRIBE_SPLITS     (CassandraOperationCategory.OTHER),
     TEST                (CassandraOperationCategory.OTHER),
     
     ;

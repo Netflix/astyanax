@@ -74,6 +74,16 @@ public class BigInteger127Partitioner implements Partitioner {
     }
 
     @Override
+    public RingPosition getRingPositionForKey(ByteBuffer key) {
+        return new TokenRingPosition(partitioner.getToken(key));
+    }
+
+    @Override
+    public RingPosition getRingPositionForToken(String token) {
+        return new TokenRingPosition(partitioner.getTokenFactory().fromString(token));
+    }
+
+    @Override
     public String getTokenMinusOne(String token) {
         BigInteger bigInt = new BigInteger(token);
         // if zero rotate to the Maximum else minus one.

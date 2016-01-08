@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.partitioner.Partitioner;
+import com.netflix.astyanax.partitioner.RingPosition;
 
 public class EmptyPartitioner implements Partitioner {
 
@@ -44,4 +45,15 @@ public class EmptyPartitioner implements Partitioner {
         return null;
     }
 
+    @Override
+    public RingPosition getRingPositionForKey(ByteBuffer key) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public RingPosition getRingPositionForToken(String token) {
+        // TODO Auto-generated method stub
+        return null;
+    }
 }

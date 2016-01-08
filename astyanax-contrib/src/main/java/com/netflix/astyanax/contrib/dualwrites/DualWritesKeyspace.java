@@ -1,5 +1,6 @@
 package com.netflix.astyanax.contrib.dualwrites;
 
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -7,6 +8,7 @@ import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.netflix.astyanax.model.CfSplit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -183,7 +185,25 @@ public class DualWritesKeyspace implements Keyspace, DualWritesUpdateListener {
         });
 	}
 
-	@Override
+    @Override
+    public List<String> describeSplits(String cfName, String startToken, String endToken, int keysPerSplit)
+            throws ConnectionException {
+        return null;
+    }
+
+    @Override
+    public List<CfSplit> describeSplitsEx(String cfName, String startToken, String endToken, int keysPerSplit)
+            throws ConnectionException {
+        return null;
+    }
+
+    @Override
+    public List<CfSplit> describeSplitsEx(String cfName, String startToken, String endToken, int keysPerSplit, ByteBuffer rowKey)
+            throws ConnectionException {
+        return null;
+    }
+
+    @Override
 	public OperationResult<Void> testOperation(final Operation<?, ?> operation) throws ConnectionException {
         return execDualKeyspaceOperation(new KeyspaceOperation<Void>() {
             @Override

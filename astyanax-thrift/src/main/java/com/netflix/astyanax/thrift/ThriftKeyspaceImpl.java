@@ -32,6 +32,7 @@ import org.apache.cassandra.thrift.KsDef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Function;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
@@ -68,6 +69,7 @@ import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
 import com.netflix.astyanax.ddl.impl.SchemaChangeResponseImpl;
+import com.netflix.astyanax.model.CfSplit;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
@@ -77,6 +79,7 @@ import com.netflix.astyanax.serializers.SerializerPackageImpl;
 import com.netflix.astyanax.serializers.UnknownComparatorException;
 import com.netflix.astyanax.thrift.ddl.ThriftColumnFamilyDefinitionImpl;
 import com.netflix.astyanax.thrift.ddl.ThriftKeyspaceDefinitionImpl;
+import com.netflix.astyanax.thrift.model.ThriftCfSplitImpl;
 
 /**
  * 
@@ -467,6 +470,71 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     public SerializerPackage getSerializerPackage(String cfName, boolean ignoreErrors) throws ConnectionException,
             UnknownComparatorException {
         return new SerializerPackageImpl(describeKeyspace().getColumnFamily(cfName), ignoreErrors);
+    }
+
+    @Override
+    public List<String> describeSplits(final String cfName, final String startToken, final String endToken,
+                                       final int keysPerSplit) throws ConnectionException {
+        return executeOperation(
+                new AbstractKeyspaceOperationImpl<List<String>>(tracerFactory
+                        .newTracer(CassandraOperationType.DESCRIBE_SPLITS), getKeyspaceName()) {
+                    @Override
+                    public List<String> internalExecute(Client client, ConnectionContext state) throws Exception {
+                        List<String> tokens = client.describe_splits(cfName, startToken, endToken, keysPerSplit);
+                        return Lists.transform(tokens, new Function<String, String>() {
+                            @Override
+                            public String apply(String token) {
+                                return sanitizeToken(token);
+
+                            }
+                        });
+                    }
+                }, getConfig().getRetryPolicy().duplicate()).getResult();
+    }
+
+    @Override
+    public List<CfSplit> describeSplitsEx(String cfName, String startToken, String endToken, int keysPerSplit)
+            throws ConnectionException {
+        return describeSplitsEx(cfName, startToken, endToken, keysPerSplit, null);
+    }
+
+    @Override
+    public List<CfSplit> describeSplitsEx(final String cfName, final String startToken, final String endToken,
+            final int keysPerSplit, final ByteBuffer startKey) throws ConnectionException {
+        return executeOperation(
+                new AbstractKeyspaceOperationImpl<List<CfSplit>>(tracerFactory
+                        .newTracer(CassandraOperationType.DESCRIBE_SPLITS), getKeyspaceName()) {
+                    @Override
+                    public List<CfSplit> internalExecute(Client client, ConnectionContext state) throws Exception {
+                        List<org.apache.cassandra.thrift.CfSplit> splits =
+                                client.describe_splits_ex(cfName, startToken, endToken, keysPerSplit);
+                        return Lists.transform(splits, new Function<org.apache.cassandra.thrift.CfSplit, CfSplit>() {
+                            @Override
+                            public CfSplit apply(org.apache.cassandra.thrift.CfSplit split) {
+                                return new ThriftCfSplitImpl(
+                                        sanitizeToken(split.getStart_token()),
+                                        sanitizeToken(split.getEnd_token()),
+                                        split.getRow_count());
+                            }
+                        });
+                    }
+
+                    @Override
+                    public ByteBuffer getRowKey() {
+                        return startKey;
+                    }
+                }, getConfig().getRetryPolicy().duplicate()).getResult();
+    }
+
+    private String sanitizeToken(String token) {
+        // In Cassandra 1.1.8+ describe_splits changed to return "Token(bytes[<hex>])" instead
+        // of just "<hex>" when using the ByteOrderedPartitioner.  Preserve the old, more
+        // sensible behavior.  See https://issues.apache.org/jira/browse/CASSANDRA-4803
+        String prefix = "Token(bytes[", suffix = "])";
+        if (token.startsWith(prefix) && token.endsWith(suffix)) {
+            token = token.substring(prefix.length(), token.length() - suffix.length());
+        }
+        return token;
     }
 
     @Override

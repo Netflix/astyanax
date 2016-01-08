@@ -44,9 +44,22 @@ public interface Partitioner {
     List<TokenRange> splitTokenRange(int count);
     
     /**
-     * Return the token for the specifie key
+     * Return the token for the specified key
      * @param key
      */
     String getTokenForKey(ByteBuffer key);
-    
+
+    /**
+     * Return the ring position for the specified key
+     * @param key
+     * @return
+     */
+    RingPosition getRingPositionForKey(ByteBuffer key);
+
+    /**
+     * Return the ring position for the specified token
+     * @param token
+     * @return
+     */
+    RingPosition getRingPositionForToken(String token);
 }

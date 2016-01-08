@@ -8,7 +8,6 @@ import java.util.Set;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
 import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
@@ -94,11 +93,6 @@ public class AbstractTopology<CL> implements Topology<CL> {
     @Override
     public List<String> getPartitionNames() {
         return Lists.newArrayList(allPools.id().toString());
-    }
-
-    @Override
-    public TokenHostConnectionPoolPartition<CL> getPartition(String token) {
-        return allPools;
     }
 
     @Override

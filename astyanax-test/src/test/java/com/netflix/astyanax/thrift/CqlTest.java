@@ -2,12 +2,11 @@ package com.netflix.astyanax.thrift;
 
 import java.util.Iterator;
 import java.util.Map;
-import java.util.UUID;
 import java.util.Map.Entry;
-
-import junit.framework.Assert;
+import java.util.UUID;
 
 import org.apache.cassandra.db.marshal.UTF8Type;
+import org.apache.cassandra.serializers.UTF8Serializer;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -37,6 +36,7 @@ import com.netflix.astyanax.serializers.MapSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.UUIDSerializer;
 import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
+import junit.framework.Assert;
 
 public class CqlTest {
 
@@ -88,7 +88,7 @@ public class CqlTest {
                                 .setConnectionPoolType(
                                         ConnectionPoolType.TOKEN_AWARE)
                                 .setDiscoveryDelayInSeconds(60000)
-                                .setTargetCassandraVersion("1.2")
+                                .setTargetCassandraVersion("2.2")
                                 .setCqlVersion("3.0.0"))
                 .withConnectionPoolConfiguration(
                         new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME
@@ -231,6 +231,7 @@ public class CqlTest {
 
     }
 
+    // The following test fails with C* 2.2.4
     @Test
     public void testCollections() throws Exception {
         OperationResult<CqlStatementResult> result;
@@ -265,14 +266,14 @@ public class CqlTest {
         CqlStatementResult result;
         keyspace.prepareCqlStatement()
                 .withCql(
-                        "CREATE TABLE uuidtest (id UUID PRIMARY KEY, given text, surname text);")
+                        "CREATE TABLE uuidpart (id UUID PRIMARY KEY, given text, surname text);")
                 .execute();
         keyspace.prepareCqlStatement()
                 .withCql(
-                        "INSERT INTO uuidtest (id, given, surname) VALUES (00000000-0000-0000-0000-000000000000, 'x', 'arielle');")
+                        "INSERT INTO uuidpart (id, given, surname) VALUES (00000000-0000-0000-0000-000000000000, 'x', 'arielle');")
                 .execute();
         result = keyspace.prepareCqlStatement()
-                .withCql("SELECT given,surname FROM uuidtest ;").execute()
+                .withCql("SELECT given,surname FROM uuidpart ;").execute()
                 .getResult();
 
         Rows<UUID, String> rows = result.getRows(UUID_CF);

@@ -5,6 +5,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.cassandra.dht.ByteOrderedPartitioner.BytesToken;
 import org.apache.commons.codec.binary.Hex;
 
 import com.google.common.collect.Lists;
@@ -53,7 +54,17 @@ public class BOP20Partitioner implements Partitioner {
         if (key.remaining() != KEY_LENGTH) {
             throw new IllegalArgumentException("Key must be a 20 byte array");
         }
-        return new String(Hex.encodeHexString(key.duplicate().array()));
+        return Hex.encodeHexString(key.duplicate().array());
+    }
+
+    @Override
+    public RingPosition getRingPositionForKey(ByteBuffer key) {
+        return new TokenRingPosition(new BytesToken(key));
+    }
+
+    @Override
+    public RingPosition getRingPositionForToken(String token) {
+        return new TokenRingPosition(new BytesToken(org.apache.cassandra.utils.Hex.hexToBytes(token)));
     }
 
     @Override

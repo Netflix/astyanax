@@ -71,10 +71,20 @@ public class Murmur3Partitioner implements Partitioner {
     }
 
     @Override
+    public RingPosition getRingPositionForKey(ByteBuffer key) {
+        return new TokenRingPosition(partitioner.getToken(key));
+    }
+
+    @Override
+    public RingPosition getRingPositionForToken(String token) {
+        return new TokenRingPosition(partitioner.getTokenFactory().fromString(token));
+    }
+
+    @Override
     public String getTokenMinusOne(String token) {
         Long lToken = Long.parseLong(token);
         // if zero rotate to the Maximum else minus one.
-        if (lToken.equals(MINIMUM))
+        if (lToken.equals(MINIMUM))  // TODO: comparison always returns false
             return MAXIMUM.toString();
         else
             return Long.toString(lToken - 1);

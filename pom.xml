@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.bazaarvoice.commons</groupId>
+        <artifactId>bv-super-pom</artifactId>
+        <version>1.10</version>
+        <relativePath />
+    </parent>
+
+    <groupId>com.netflix.astyanax</groupId>
+    <artifactId>astyanax</artifactId>
+    <version>3.8.0-bv7-SNAPSHOT</version>
+
+    <name>astyanax</name>
+    <description>astyanax developed by Netflix</description>
+    <url>https://github.com/bazaarvoice/astyanax</url>
+    <packaging>pom</packaging>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>netflixgithub</id>
+            <name>Netflix Open Source Development</name>
+            <email>talent@netflix.com</email>
+        </developer>
+    </developers>
+
+    <issueManagement>
+        <system>github</system>
+        <url>https://github.com/bazaarvoice/astyanax/issues</url>
+    </issueManagement>
+
+    <scm>
+        <connection>scm:git:git@github.com:bazaarvoice/astyanax.git</connection>
+        <developerConnection>scm:git:git@github.com:bazaarvoice/astyanax.git</developerConnection>
+        <url>scm:git:git@github.com:bazaarvoice/astyanax.git</url>
+      <tag>astyanax-3.8.0-bv5</tag>
+  </scm>
+
+    <properties>
+        <next.release.version>3.8.0-bv6</next.release.version>
+        <next.development.version>3.8.0-bv7-SNAPSHOT</next.development.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.eaio.uuid</groupId>
+                <artifactId>uuid</artifactId>
+                <version>3.2</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.stephenc.high-scale-lib</groupId>
+                <artifactId>high-scale-lib</artifactId>
+                <version>1.1.2</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>15.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.netflix.archaius</groupId>
+                <artifactId>archaius-core</artifactId>
+                <version>0.5.12</version>
+            </dependency>
+            <dependency>
+                <groupId>com.netflix.eureka</groupId>
+                <artifactId>eureka-client</artifactId>
+                <version>1.1.110</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-codec</groupId>
+                <artifactId>commons-codec</artifactId>
+                <version>1.6</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-lang</groupId>
+                <artifactId>commons-lang</artifactId>
+                <version>2.6</version>
+            </dependency>
+            <dependency>
+                <groupId>javax.persistence</groupId>
+                <artifactId>persistence-api</artifactId>
+                <version>1.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.codahale.metrics</groupId>
+                <artifactId>metrics-core</artifactId>
+                <version>3.0.2</version>
+            </dependency>
+            <dependency>
+                <groupId>joda-time</groupId>
+                <artifactId>joda-time</artifactId>
+                <version>1.6.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.cassandra</groupId>
+                <artifactId>cassandra-all</artifactId>
+                <version>2.2.4</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.cassandra</groupId>
+                <artifactId>cassandra-thrift</artifactId>
+                <version>2.2.4</version>
+            </dependency>
+            <dependency>
+                <groupId>com.datastax.cassandra</groupId>
+                <artifactId>cassandra-driver-core</artifactId>
+                <version>2.0.6</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.servicemix.bundles</groupId>
+                <artifactId>org.apache.servicemix.bundles.commons-csv</artifactId>
+                <version>1.0-r706900_3</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.thrift</groupId>
+                <artifactId>libthrift</artifactId>
+                <version>0.9.1</version>
+            </dependency>
+            <dependency>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-core-asl</artifactId>
+                <version>1.9.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-mapper-asl</artifactId>
+                <version>1.9.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.codehaus.jettison</groupId>
+                <artifactId>jettison</artifactId>
+                <version>1.2</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty</artifactId>
+                <version>3.9.0.Final</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>1.6.4</version>
+            </dependency>
+            <dependency>
+                <groupId>org.xerial.snappy</groupId>
+                <artifactId>snappy-java</artifactId>
+                <version>1.0.4.1</version>
+            </dependency>
+
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>4.8.1</version>
+            </dependency>
+
+            <dependency>
+                <groupId>net.jpountz.lz4</groupId>
+                <artifactId>lz4</artifactId>
+                <version>1.2.0</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>2.5.1</version>
+                <configuration>
+                    <releaseVersion>${next.release.version}</releaseVersion>
+                    <developmentVersion>${next.development.version}</developmentVersion>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <modules>
+        <module>astyanax-core</module>
+        <module>astyanax-cassandra</module>
+        <module>astyanax-thrift</module>
+        <module>astyanax-recipes</module>
+        <module>astyanax-queue</module>
+        <module>astyanax-entity-mapper</module>
+        <module>astyanax-examples</module>
+        <module>astyanax-contrib</module>
+        <module>astyanax-cql</module>
+        <!--The following test module fails the astyanax-cql tests, that we don't use anyway.-->
+        <!--Also, maven is getting into some dependency conflicts with guava that gradle doesn't.-->
+        <!--<module>astyanax-test</module>-->
+    </modules>
+
+</project>

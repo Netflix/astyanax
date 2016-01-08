@@ -28,12 +28,12 @@ seed_provider:
   - seeds: 127.0.0.1
 concurrent_reads: 32
 concurrent_writes: 64
-memtable_flush_queue_size: 4
+#memtable_flush_queue_size: 4
 trickle_fsync: false
 trickle_fsync_interval_in_kb: 10240
 storage_port: $STORAGE_PORT$
 listen_address: 127.0.0.1
-start_native_transport: false
+start_native_transport: true
 native_transport_port: 9260
 start_rpc: true
 rpc_address: 127.0.0.1
@@ -45,10 +45,10 @@ incremental_backups: false
 snapshot_before_compaction: false
 auto_snapshot: false
 column_index_size_in_kb: 64
-in_memory_compaction_limit_in_mb: 128
-multithreaded_compaction: false
+#in_memory_compaction_limit_in_mb: 128
+#multithreaded_compaction: false
 compaction_throughput_mb_per_sec: 128
-compaction_preheat_key_cache: true
+#compaction_preheat_key_cache: true
 read_request_timeout_in_ms: 10000
 range_request_timeout_in_ms: 10000
 write_request_timeout_in_ms: 10000
@@ -62,7 +62,7 @@ dynamic_snitch_badness_threshold: 0.1
 request_scheduler: org.apache.cassandra.scheduler.NoScheduler
 index_interval: 256
 inter_dc_tcp_nodelay: true
-memtable_total_space_in_mb: 1024
+#memtable_total_space_in_mb: 1024
 rpc_min_threads: 16
 rpc_max_threads: 2048
 stream_throughput_outbound_megabits_per_sec: '400'
@@ -70,6 +70,6 @@ dynamic_snitch: true
 concurrent_compactors: 1
 num_tokens: 1
 auto_bootstrap: true
-preheat_kernel_page_cache: false
+#preheat_kernel_page_cache: false
 cas_contention_timeout_in_ms: 1000
 file_cache_size_in_mb: '512'

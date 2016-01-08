@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.netflix.astyanax.test;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -33,6 +34,7 @@ import com.netflix.astyanax.connectionpool.exceptions.OperationException;
 import com.netflix.astyanax.cql.CqlStatement;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
+import com.netflix.astyanax.model.CfSplit;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.partitioner.Partitioner;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
@@ -144,6 +146,21 @@ public class TestKeyspace implements Keyspace {
     @Override
     public String describePartitioner() throws ConnectionException {
         
+        return null;
+    }
+
+    @Override
+    public List<String> describeSplits(String cfName, String startToken, String endToken, int keysPerSplit) throws ConnectionException {
+        return null;
+    }
+
+    @Override
+    public List<CfSplit> describeSplitsEx(String cfName, String startToken, String endToken, int keysPerSplit) throws ConnectionException {
+        return null;
+    }
+
+    @Override
+    public List<CfSplit> describeSplitsEx(String cfName, String startToken, String endToken, int keysPerSplit, ByteBuffer rowKey) throws ConnectionException {
         return null;
     }
 

@@ -1,23 +1,20 @@
 package com.netflix.astyanax.connectionpool.impl;
 
-import java.math.BigInteger;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
-import junit.framework.Assert;
-
+import org.apache.cassandra.dht.RandomPartitioner.BigIntegerToken;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
 import com.netflix.astyanax.connectionpool.LatencyScoreStrategy;
 import com.netflix.astyanax.partitioner.LongBOPPartitioner;
+import com.netflix.astyanax.partitioner.TokenRingPosition;
 import com.netflix.astyanax.test.TestClient;
 import com.netflix.astyanax.test.TestHostConnectionPool;
+import junit.framework.Assert;
 
 public class HostConnectionPoolPartitionTest {
 
@@ -25,7 +22,8 @@ public class HostConnectionPoolPartitionTest {
     public void testPartition() {
         LatencyScoreStrategy strategy = new SmaLatencyScoreStrategyImpl(10000, 60000, 100, 4.0);
 
-        TokenHostConnectionPoolPartition partition = new TokenHostConnectionPoolPartition(new BigInteger("1"), strategy);
+        TokenHostConnectionPoolPartition partition = new TokenHostConnectionPoolPartition(
+                new TokenRingPosition(new BigIntegerToken("1")), strategy);
 
         List<TestHostConnectionPool> pools = Arrays.asList(
                 makePool(1),

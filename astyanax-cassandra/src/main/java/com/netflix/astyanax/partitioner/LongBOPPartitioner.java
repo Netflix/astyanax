@@ -2,7 +2,7 @@ package com.netflix.astyanax.partitioner;
 
 import java.nio.ByteBuffer;
 
-import org.apache.cassandra.dht.LongToken;
+import org.apache.cassandra.dht.Murmur3Partitioner.LongToken;
 
 /**
  * This partitioner is used mostly for tests 

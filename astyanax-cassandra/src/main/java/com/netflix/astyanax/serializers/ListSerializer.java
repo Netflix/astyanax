@@ -24,7 +24,7 @@ public class ListSerializer<T> extends AbstractSerializer<List<T>> {
      * @param elements
      */
     public ListSerializer(AbstractType<T> elements) {
-        myList = ListType.getInstance(elements);
+        myList = ListType.getInstance(elements, true);
     }
 
     @Override

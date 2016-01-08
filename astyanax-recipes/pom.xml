@@ -16,6 +16,12 @@
     <dependencies>
         <dependency>
             <groupId>com.netflix.astyanax</groupId>
+            <artifactId>astyanax-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.netflix.astyanax</groupId>
             <artifactId>astyanax-cassandra</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -25,6 +31,15 @@
             <artifactId>astyanax-thrift</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
         </dependency>
 
         <dependency>

@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.cassandra.dht.BytesToken;
+import org.apache.cassandra.dht.ByteOrderedPartitioner.BytesToken;
 import org.apache.commons.codec.binary.Hex;
 
 import com.google.common.collect.Lists;

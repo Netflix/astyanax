@@ -3,7 +3,7 @@ package com.netflix.astyanax.connectionpool.impl;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.cassandra.dht.BigIntegerToken;
+import org.apache.cassandra.dht.RandomPartitioner.BigIntegerToken;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;

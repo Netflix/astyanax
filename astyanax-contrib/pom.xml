@@ -16,13 +16,12 @@
     <dependencies>
         <dependency>
             <groupId>com.netflix.astyanax</groupId>
-            <artifactId>astyanax-core</artifactId>
+            <artifactId>astyanax-cassandra</artifactId>
             <version>${project.version}</version>
         </dependency>
-
         <dependency>
             <groupId>com.netflix.astyanax</groupId>
-            <artifactId>astyanax-cassandra</artifactId>
+            <artifactId>astyanax-core</artifactId>
             <version>${project.version}</version>
         </dependency>
 
@@ -40,11 +39,17 @@
             <groupId>com.netflix.eureka</groupId>
             <artifactId>eureka-client</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 

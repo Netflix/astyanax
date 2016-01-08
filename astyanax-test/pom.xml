@@ -16,12 +16,12 @@
     <dependencies>
         <dependency>
             <groupId>com.netflix.astyanax</groupId>
-            <artifactId>astyanax-cassandra</artifactId>
+            <artifactId>astyanax-core</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.netflix.astyanax</groupId>
-            <artifactId>astyanax-core</artifactId>
+            <artifactId>astyanax-cassandra</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -29,7 +29,6 @@
             <artifactId>astyanax-thrift</artifactId>
             <version>${project.version}</version>
         </dependency>
-
         <dependency>
             <groupId>com.netflix.astyanax</groupId>
             <artifactId>astyanax-cql</artifactId>
@@ -40,19 +39,16 @@
             <artifactId>astyanax-contrib</artifactId>
             <version>${project.version}</version>
         </dependency>
-
         <dependency>
             <groupId>com.netflix.astyanax</groupId>
             <artifactId>astyanax-recipes</artifactId>
             <version>${project.version}</version>
         </dependency>
-
         <dependency>
             <groupId>com.netflix.astyanax</groupId>
             <artifactId>astyanax-queue</artifactId>
             <version>${project.version}</version>
         </dependency>
-
         <dependency>
             <groupId>com.netflix.astyanax</groupId>
             <artifactId>astyanax-entity-mapper</artifactId>
@@ -76,17 +72,26 @@
             <artifactId>slf4j-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-        </dependency>
-        <dependency>
             <groupId>commons-lang</groupId>
             <artifactId>commons-lang</artifactId>
         </dependency>
+        <!--<dependency>-->
+            <!--<groupId>com.google.guava</groupId>-->
+            <!--<artifactId>guava</artifactId>-->
+        <!--</dependency>-->
         <dependency>
             <groupId>org.apache.cassandra</groupId>
             <artifactId>cassandra-all</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.codahale.metrics</groupId>
+            <artifactId>metrics-core</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>com.datastax.cassandra</groupId>
             <artifactId>cassandra-driver-core</artifactId>
@@ -94,10 +99,6 @@
                 <exclusion>
                     <groupId>com.google.guava</groupId>
                     <artifactId>guava</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-log4j12</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>

@@ -1,11 +1,11 @@
 ext {
- cassandraVersion = "2.0.12"
+ cassandraVersion = "2.2.3"
  thriftVersion = "0.9.1"
  junitVersion = "4.8.1"
  guavaVersion = "15.0"
  snappyVersion = "1.1.1.6"
  jacksonVersion = "1.9.13"
- cassandraThriftVersion = "2.0.12"
+ cassandraThriftVersion = "2.2.3"
  jodaTimeVersion = "1.6.2"
  highScaleLibVersion = "1.1.2"
  uuidVersion = "3.2"

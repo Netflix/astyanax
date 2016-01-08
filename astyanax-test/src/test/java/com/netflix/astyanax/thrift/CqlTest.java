@@ -6,6 +6,7 @@ import java.util.Map.Entry;
 import java.util.UUID;
 
 import org.apache.cassandra.db.marshal.UTF8Type;
+import org.apache.cassandra.serializers.UTF8Serializer;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -87,7 +88,7 @@ public class CqlTest {
                                 .setConnectionPoolType(
                                         ConnectionPoolType.TOKEN_AWARE)
                                 .setDiscoveryDelayInSeconds(60000)
-                                .setTargetCassandraVersion("1.2")
+                                .setTargetCassandraVersion("2.2")
                                 .setCqlVersion("3.0.0"))
                 .withConnectionPoolConfiguration(
                         new ConnectionPoolConfigurationImpl(TEST_CLUSTER_NAME
@@ -230,6 +231,7 @@ public class CqlTest {
 
     }
 
+    // The following test fails with C* 2.2.4
     @Test
     public void testCollections() throws Exception {
         OperationResult<CqlStatementResult> result;

@@ -43,7 +43,8 @@
         <connection>scm:git:git@github.com:bazaarvoice/astyanax.git</connection>
         <developerConnection>scm:git:git@github.com:bazaarvoice/astyanax.git</developerConnection>
         <url>scm:git:git@github.com:bazaarvoice/astyanax.git</url>
-    </scm>
+      <tag>astyanax-3.8.0-bv5</tag>
+  </scm>
 
     <properties>
         <next.release.version>3.8.0-bv6</next.release.version>

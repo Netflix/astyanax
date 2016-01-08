@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.netflix.astyanax</groupId>
         <artifactId>astyanax</artifactId>
-        <version>3.8.0-bv6-SNAPSHOT</version>
+        <version>3.8.0-bv5</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 

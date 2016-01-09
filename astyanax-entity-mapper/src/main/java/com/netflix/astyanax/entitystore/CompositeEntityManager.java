@@ -449,7 +449,7 @@ public class CompositeEntityManager<T, K> implements EntityManager<T, K> {
                             if (row.getColumns().isEmpty())
                                 return true;
                             for (Column column : row.getColumns()) {
-                                T entity = entityMapper.constructEntity(row.getKey(), column);
+                                T entity = (T) entityMapper.constructEntity(row.getKey(), column);
                                 try {
                                     lifecycleHandler.onPostLoad(entity);
                                 } catch (Exception e) {

@@ -364,7 +364,7 @@ public abstract class AbstractComposite extends AbstractList<Object> implements 
                     byte a = (byte) (header & 0xFF);
                     name = aliasToComparatorMapping.get(a);
                     if (name == null) {
-                        a = (byte) Character.toUpperCase((char) a);
+                        a = (byte) Character.toLowerCase((char) a);
                         name = aliasToComparatorMapping.get(a);
                         if (name != null) {
                             name += "(reversed=true)";

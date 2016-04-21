@@ -5,6 +5,7 @@ dependencies {
     compile ("org.apache.cassandra:cassandra-all:$cassandraVersion") {
        force = true
        transitive = false
+       exclude group: '*', module: '*'
     }
     compile "org.xerial.snappy:snappy-java:$snappyVersion"
     compile "org.codehaus.jackson:jackson-mapper-asl:$jacksonVersion"

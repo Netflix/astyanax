@@ -80,8 +80,19 @@ public class RoundRobinExecuteWithFailover<CL, R> extends AbstractExecuteWithFai
 
     @Override
     public Connection<CL> borrowConnection(Operation<CL, R> operation) throws ConnectionException {
-        pool = pools.get(getNextHostIndex());
-        return pool.borrowConnection(waitDelta * waitMultiplier);
+        Connection<CL> connection = null;
+        long startTime = System.currentTimeMillis();
+
+        try {
+            pool = pools.get(getNextHostIndex());
+            connection = pool.borrowConnection(waitDelta * waitMultiplier);
+            return connection;
+        }
+        finally {
+            if (connection != null) {
+                getMonitor().incConnectionBorrowed(connection.getHost(), System.currentTimeMillis() - startTime);
+            }
+        }
     }
 
 }

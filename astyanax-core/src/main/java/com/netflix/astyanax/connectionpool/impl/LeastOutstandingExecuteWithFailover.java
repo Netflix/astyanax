@@ -62,16 +62,28 @@ public class LeastOutstandingExecuteWithFailover<CL, R> extends AbstractExecuteW
 
     @Override
     public Connection<CL> borrowConnection(Operation<CL, R> operation) throws ConnectionException {
-        // find the pool with the least outstanding (i.e most idle) active connections
-        Iterator<HostConnectionPool<CL>> iterator = this.pools.iterator();
-        HostConnectionPool eligible = iterator.next();
-        while (iterator.hasNext()) {
-            HostConnectionPool<CL> candidate = iterator.next();
-            if (candidate.getIdleConnectionCount() > eligible.getIdleConnectionCount()) {
-                eligible = candidate;
+        Connection<CL> connection = null;
+        long startTime = System.currentTimeMillis();
+
+        try {
+            // find the pool with the least outstanding (i.e most idle) active connections
+            Iterator<HostConnectionPool<CL>> iterator = this.pools.iterator();
+            HostConnectionPool eligible = iterator.next();
+            while (iterator.hasNext()) {
+                HostConnectionPool<CL> candidate = iterator.next();
+                if (candidate.getIdleConnectionCount() > eligible.getIdleConnectionCount()) {
+                    eligible = candidate;
+                }
+            }
+
+            connection = eligible.borrowConnection(waitDelta * waitMultiplier);
+            return connection;
+        }
+        finally {
+            if (connection != null) {
+                getMonitor().incConnectionBorrowed(connection.getHost(), System.currentTimeMillis() - startTime);
             }
         }
-        return eligible.borrowConnection(waitDelta * waitMultiplier);
     }
 
 }

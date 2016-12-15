@@ -23,11 +23,12 @@ public class ThriftCql3Statement implements CqlStatement {
     private ByteBuffer  query;
     private Compression compression = Compression.NONE;
     private RetryPolicy retry;
-    private ConsistencyLevel cl = ConsistencyLevel.CL_ONE;
+    private ConsistencyLevel cl;
     
     public ThriftCql3Statement(ThriftKeyspaceImpl keyspace) {
         this.keyspace = keyspace;
         this.retry = keyspace.getConfig().getRetryPolicy().duplicate();
+        this.cl = keyspace.getConfig().getDefaultWriteConsistencyLevel();
     }
 
     @Override

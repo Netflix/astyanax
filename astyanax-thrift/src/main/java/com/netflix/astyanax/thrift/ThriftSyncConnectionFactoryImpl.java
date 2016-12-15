@@ -15,6 +15,24 @@
  ******************************************************************************/
 package com.netflix.astyanax.thrift;
 
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+
+import org.apache.cassandra.thrift.AuthenticationRequest;
+import org.apache.cassandra.thrift.Cassandra;
+import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.transport.TFramedTransport;
+import org.apache.thrift.transport.TSSLTransportFactory;
+import org.apache.thrift.transport.TSSLTransportFactory.TSSLTransportParameters;
+import org.apache.thrift.transport.TSocket;
+import org.apache.thrift.transport.TTransportException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.netflix.astyanax.AstyanaxConfiguration;
@@ -37,25 +55,6 @@ import com.netflix.astyanax.connectionpool.exceptions.IsTimeoutException;
 import com.netflix.astyanax.connectionpool.exceptions.ThrottledException;
 import com.netflix.astyanax.connectionpool.impl.OperationResultImpl;
 import com.netflix.astyanax.connectionpool.impl.SimpleRateLimiterImpl;
-
-import org.apache.cassandra.thrift.AuthenticationRequest;
-import org.apache.cassandra.thrift.Cassandra;
-import org.apache.thrift.protocol.TBinaryProtocol;
-import org.apache.thrift.transport.TFramedTransport;
-import org.apache.thrift.transport.TSSLTransportFactory;
-import org.apache.thrift.transport.TSSLTransportFactory.TSSLTransportParameters;
-import org.apache.thrift.transport.TSocket;
-import org.apache.thrift.transport.TTransportException;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassandra.Client> {
     private static final String NAME_FORMAT = "ThriftConnection<%s-%d>";
@@ -188,6 +187,8 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
                 socket.getSocket().setTcpNoDelay(true);
                 socket.getSocket().setKeepAlive(true);
                 socket.getSocket().setSoLinger(false, 0);
+                socket.getSocket().setReceiveBufferSize(cpConfig.getReceiveBufferSize());
+                socket.getSocket().setSendBufferSize(cpConfig.getSendBufferSize());
 
                 setTimeout(cpConfig.getSocketTimeout());
                 transport = new TFramedTransport(socket, maxThriftSize);

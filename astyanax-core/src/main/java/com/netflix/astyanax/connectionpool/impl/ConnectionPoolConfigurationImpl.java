@@ -51,6 +51,8 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
      */
     public static final int DEFAULT_MAX_TIME_WHEN_EXHAUSTED = 2000;
     public static final int DEFAULT_SOCKET_TIMEOUT = 11000;	// ms
+    public static final int DEFAULT_RECEIVE_BUFFER_SIZE = 2048;	// ms
+    public static final int DEFAULT_SEND_BUFFER_SIZE = 1024;	// ms
     public static final int DEFAULT_CONNECT_TIMEOUT = 2000; // ms
     public static final int DEFAULT_MAX_ACTIVE_PER_PARTITION = 3;
     public static final int DEFAULT_INIT_PER_PARTITION = 0;
@@ -88,6 +90,8 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
     private int maxConns                         = DEFAULT_MAX_CONNS;
     private int port                             = DEFAULT_PORT;
     private int socketTimeout                    = DEFAULT_SOCKET_TIMEOUT;
+    private int receiveBufferSize                = DEFAULT_RECEIVE_BUFFER_SIZE;
+    private int sendBufferSize                   = DEFAULT_SEND_BUFFER_SIZE;
     private int connectTimeout                   = DEFAULT_CONNECT_TIMEOUT;
     private int maxFailoverCount                 = DEFAULT_FAILOVER_COUNT;
     private int latencyAwareWindowSize           = DEFAULT_LATENCY_AWARE_WINDOW_SIZE;
@@ -189,6 +193,37 @@ public class ConnectionPoolConfigurationImpl implements ConnectionPoolConfigurat
         this.socketTimeout = socketTimeout;
         return this;
     }
+    
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.netflix.cassandra.ConnectionPoolConfiguration#getReceiveBufferSize()
+     */
+    @Override
+    public int getReceiveBufferSize() {
+		return receiveBufferSize;
+	}
+
+	public ConnectionPoolConfigurationImpl setReceiveBufferSize(int receiveBufferSize) {
+		this.receiveBufferSize = receiveBufferSize;
+		return this;
+	}
+	
+	 /*
+     * (non-Javadoc)
+     * 
+     * @see com.netflix.cassandra.ConnectionPoolConfiguration#getSendBufferSize()
+     */
+	@Override
+	public int getSendBufferSize() {
+		return sendBufferSize;
+	}
+
+	public ConnectionPoolConfigurationImpl setSendBufferSize(int sendBufferSize) {
+		this.sendBufferSize = sendBufferSize;
+		return this;
+	}
+
 
     /*
      * (non-Javadoc)

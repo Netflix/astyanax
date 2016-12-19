@@ -21,6 +21,7 @@ import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.cassandra.service.StorageProxy;
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.Cassandra.Client;
 import org.apache.cassandra.thrift.CfDef;
@@ -471,6 +472,7 @@ public class ThriftClusterImpl implements Cluster {
      */
     private void precheckSchemaAgreement(Client client) throws Exception {
         Map<String, List<String>> schemas = client.describe_schema_versions();
+        schemas.remove(StorageProxy.UNREACHABLE);
         if (schemas.size() > 1) {
             throw new SchemaDisagreementException("Can't change schema due to pending schema agreement");
         }

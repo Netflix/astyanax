@@ -24,6 +24,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.cassandra.service.StorageProxy;
 import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.Cassandra.Client;
 import org.apache.cassandra.thrift.CfDef;
@@ -761,6 +762,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
      */
     private void precheckSchemaAgreement(Client client) throws Exception {
         Map<String, List<String>> schemas = client.describe_schema_versions();
+        schemas.remove(StorageProxy.UNREACHABLE);
         if (schemas.size() > 1) {
             throw new SchemaDisagreementException("Can't change schema due to pending schema agreement");
         }

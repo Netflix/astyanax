@@ -2219,7 +2219,7 @@ public class ThriftKeyspaceImplTest {
             Assert.assertNull(row);
             
             row = result.getResult().getRowByIndex(10);
-            Assert.assertEquals("M", row.getKey());
+            Assert.assertEquals("K", row.getKey());
             /*
              * LOG.info("Get " + result.getResult().size() + " keys"); for
              * (Row<String, String> row : result.getResult()) {

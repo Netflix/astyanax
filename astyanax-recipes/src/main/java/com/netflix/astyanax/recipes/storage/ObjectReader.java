@@ -53,6 +53,7 @@ public class ObjectReader implements Callable<ObjectMetadata> {
     private int batchSize = DEFAULT_BATCH_SIZE;
     private RetryPolicy retryPolicy;
     private ObjectReadCallback callback = new NoOpObjectReadCallback();
+    private ExecutorService executor = null;
 
     public ObjectReader(ChunkedStorageProvider provider, String objectName, OutputStream os) {
         this.provider = provider;
@@ -83,6 +84,11 @@ public class ObjectReader implements Callable<ObjectMetadata> {
 
     public ObjectReader withCallback(ObjectReadCallback callback) {
         this.callback = callback;
+        return this;
+    }
+
+    public ObjectReader withExecutorService(ExecutorService executerService) {
+        this.executor = executerService;
         return this;
     }
 
@@ -134,10 +140,12 @@ public class ObjectReader implements Callable<ObjectMetadata> {
                     Collections.shuffle(idsToRead);
                     final AtomicReferenceArray<ByteBuffer> chunks = new AtomicReferenceArray<ByteBuffer>(
                             idsToRead.size());
-                    ExecutorService executor = Executors.newFixedThreadPool(
-                            concurrencyLevel,
-                            new ThreadFactoryBuilder().setDaemon(true)
-                                    .setNameFormat("ChunkReader-" + objectName + "-%d").build());
+                    if (executor == null) {
+                        executor = Executors.newFixedThreadPool(
+                                concurrencyLevel,
+                                new ThreadFactoryBuilder().setDaemon(true)
+                                                          .setNameFormat("ChunkReader-" + objectName + "-%d").build());
+                    }
                     try {
                         for (final int chunkId : idsToRead) {
                             executor.submit(new Runnable() {
@@ -166,9 +174,15 @@ public class ObjectReader implements Callable<ObjectMetadata> {
                     }
                     finally {
                         executor.shutdown();
-                        if (!executor.awaitTermination(maxWaitTimeInSeconds, TimeUnit.SECONDS)) {
-                            throw new Exception("Took too long to fetch object: " + objectName);
+                        while (!executor.isTerminated()) {
+                            try {
+                                if (!executor.awaitTermination(maxWaitTimeInSeconds, TimeUnit.SECONDS))
+                                    throw new Exception("Took too long to fetch object: " + objectName);
+                            } catch (InterruptedException e) {
+
+                            }
                         }
+
                     }
 
                     if (exception.get() != null)

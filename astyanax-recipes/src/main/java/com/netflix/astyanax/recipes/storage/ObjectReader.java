@@ -15,6 +15,15 @@
  ******************************************************************************/
 package com.netflix.astyanax.recipes.storage;
 
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
+import com.netflix.astyanax.retry.RetryPolicy;
+import com.netflix.astyanax.retry.RunOnce;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -26,16 +35,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceArray;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
-import com.netflix.astyanax.retry.RetryPolicy;
-import com.netflix.astyanax.retry.RunOnce;
 
 public class ObjectReader implements Callable<ObjectMetadata> {
     private static final Logger LOG = LoggerFactory.getLogger(ObjectReader.class);
@@ -87,8 +86,15 @@ public class ObjectReader implements Callable<ObjectMetadata> {
         return this;
     }
 
-    public ObjectReader withExecutorService(ExecutorService executerService) {
-        this.executor = executerService;
+    /**
+     * When providing an external executor service, users are expected to manage their executor service.
+     * This class does not shutdown executor.
+     *
+     * @param executorService
+     * @return ObjectReader
+     */
+    public ObjectReader withExecutorService(ExecutorService executorService) {
+        this.executor = executorService;
         return this;
     }
 
@@ -140,11 +146,13 @@ public class ObjectReader implements Callable<ObjectMetadata> {
                     Collections.shuffle(idsToRead);
                     final AtomicReferenceArray<ByteBuffer> chunks = new AtomicReferenceArray<ByteBuffer>(
                             idsToRead.size());
+                    boolean isExecutorServiceProvided = true;
                     if (executor == null) {
                         executor = Executors.newFixedThreadPool(
                                 concurrencyLevel,
                                 new ThreadFactoryBuilder().setDaemon(true)
                                                           .setNameFormat("ChunkReader-" + objectName + "-%d").build());
+                        isExecutorServiceProvided = false;
                     }
                     try {
                         for (final int chunkId : idsToRead) {
@@ -173,16 +181,16 @@ public class ObjectReader implements Callable<ObjectMetadata> {
                         }
                     }
                     finally {
-                        executor.shutdown();
-                        while (!executor.isTerminated()) {
+                        if (!isExecutorServiceProvided) {
+                            executor.shutdown();
                             try {
                                 if (!executor.awaitTermination(maxWaitTimeInSeconds, TimeUnit.SECONDS))
                                     throw new Exception("Took too long to fetch object: " + objectName);
-                            } catch (InterruptedException e) {
-
+                            } finally {
+                                if (!executor.isTerminated())
+                                    executor.shutdownNow();
                             }
                         }
-
                     }
 
                     if (exception.get() != null)

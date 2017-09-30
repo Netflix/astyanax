@@ -58,7 +58,7 @@ public class ConnectionPoolMBeanManager {
 
             }
             catch (Exception e) {
-                LOG.error(e.getMessage());
+                LOG.error("Failed to register connection pool MBean: '" + monitorName + "'.", e);
                 monitors.remove(monitorName);
             }
         }
@@ -71,7 +71,7 @@ public class ConnectionPoolMBeanManager {
             mbs.unregisterMBean(new ObjectName(monitorName));
         }
         catch (Exception e) {
-            LOG.error(e.getMessage());
+            LOG.error("Failed to unregister connection pool MBean: '" + monitorName + "'.", e);
         }
     }
 

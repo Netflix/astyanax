@@ -59,7 +59,7 @@ public class AstClient {
     .buildKeyspace(ThriftFamilyFactory.getInstance());
 
     context.start();
-    keyspace = context.getEntity();
+    keyspace = context.getClient();
     
     EMP_CF = ColumnFamily.newColumnFamily(
         EMP_CF_NAME, 

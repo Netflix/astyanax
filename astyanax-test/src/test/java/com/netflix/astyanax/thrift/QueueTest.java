@@ -120,7 +120,7 @@ public class QueueTest {
 
         keyspaceContext.start();
 
-        keyspace = keyspaceContext.getEntity();
+        keyspace = keyspaceContext.getClient();
 
         try {
             keyspace.dropKeyspace();
@@ -657,7 +657,7 @@ public class QueueTest {
         })
                 .withMessageQueue(scheduler)
                 .withConsumerCount(5)
-                .withThreadCount(1 + 10)
+                .withProcessorThreadCount(1 + 10)
                 .build();
 
         dispatcher.start();

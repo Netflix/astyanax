@@ -94,7 +94,7 @@ public class DefaultEntityManagerTest {
 
 		keyspaceContext.start();
 
-		keyspace = keyspaceContext.getEntity();
+		keyspace = keyspaceContext.getClient();
 
 		try {
 			keyspace.dropKeyspace();

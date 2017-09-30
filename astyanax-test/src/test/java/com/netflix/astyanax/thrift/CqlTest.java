@@ -102,7 +102,7 @@ public class CqlTest {
 
         keyspaceContext.start();
 
-        keyspace = keyspaceContext.getEntity();
+        keyspace = keyspaceContext.getClient();
 
         try {
             keyspace.dropKeyspace();
@@ -136,7 +136,7 @@ public class CqlTest {
 
         Thread.sleep(CASSANDRA_WAIT_TIME);
 
-        KeyspaceDefinition ki = keyspaceContext.getEntity().describeKeyspace();
+        KeyspaceDefinition ki = keyspaceContext.getClient().describeKeyspace();
         Log.info("Describe Keyspace: " + ki.getName());
 
     }

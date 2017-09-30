@@ -63,7 +63,7 @@ public class SerializerPackageImpl implements SerializerPackage {
         }
 
         try {
-            setColumnType(cfDef.getComparatorType());
+            setColumnNameType(cfDef.getComparatorType());
         }
         catch (UnknownComparatorException e) {
             if (!ignoreErrors)
@@ -263,7 +263,7 @@ public class SerializerPackageImpl implements SerializerPackage {
 
     @Override
     public Serializer<?> getColumnSerializer(String columnName) {
-        return getValueSerializer(StringSerializer.get().toByteBuffer(columnName));
+        return getColumnSerializer(StringSerializer.get().toByteBuffer(columnName));
     }
 
     @Override

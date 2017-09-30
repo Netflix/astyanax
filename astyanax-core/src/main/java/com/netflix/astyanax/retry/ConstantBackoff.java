@@ -33,7 +33,7 @@ public class ConstantBackoff extends SleepingRetryPolicy {
 
     @Override
     public RetryPolicy duplicate() {
-        return new ConstantBackoff(sleepTimeMs, getMax());
+        return new ConstantBackoff(sleepTimeMs, getMaxAttemptCount());
     }
 
     public String toString() {

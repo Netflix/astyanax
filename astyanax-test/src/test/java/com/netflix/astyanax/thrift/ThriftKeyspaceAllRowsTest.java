@@ -102,7 +102,7 @@ public class ThriftKeyspaceAllRowsTest {
 
         keyspaceContext.start();
         
-        keyspace = keyspaceContext.getEntity();
+        keyspace = keyspaceContext.getClient();
         
         try {
             keyspace.dropKeyspace();
@@ -125,7 +125,7 @@ public class ThriftKeyspaceAllRowsTest {
         keyspace.createColumnFamily(CF_LOTS_OF_ROWS,        null);
         keyspace.createColumnFamily(CF_CHECKPOINTS,         null);
         
-        KeyspaceDefinition ki = keyspaceContext.getEntity().describeKeyspace();
+        KeyspaceDefinition ki = keyspaceContext.getClient().describeKeyspace();
         System.out.println("Describe Keyspace: " + ki.getName());
 
         MutationBatch m;

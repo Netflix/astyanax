@@ -173,7 +173,7 @@ public class MiscUnitTest {
 
         keyspaceContext.start();
         
-        keyspace = keyspaceContext.getEntity();
+        keyspace = keyspaceContext.getClient();
         
         try {
             keyspace.dropKeyspace();
@@ -225,7 +225,7 @@ public class MiscUnitTest {
         keyspace.createColumnFamily(UNIQUE_CF, null);
         keyspace.createColumnFamily(CF_STANDARD1_COPY, null);
         
-        KeyspaceDefinition ki = keyspaceContext.getEntity().describeKeyspace();
+        KeyspaceDefinition ki = keyspaceContext.getClient().describeKeyspace();
         System.out.println("Describe Keyspace: " + ki.getName());
         
         try {
@@ -959,7 +959,7 @@ public class MiscUnitTest {
                 .build();
         
         try {
-            Stopwatch sw = new Stopwatch().start();
+            Stopwatch sw = Stopwatch.createStarted();
             boolean result = reader.call();
             long runtimeMillis = sw.stop().elapsed(TimeUnit.MILLISECONDS);
 

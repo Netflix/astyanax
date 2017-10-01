@@ -959,7 +959,7 @@ public class MiscUnitTest {
                 .build();
         
         try {
-            Stopwatch sw = new Stopwatch().start();
+            Stopwatch sw = Stopwatch.createStarted();
             boolean result = reader.call();
             long runtimeMillis = sw.stop().elapsed(TimeUnit.MILLISECONDS);
 

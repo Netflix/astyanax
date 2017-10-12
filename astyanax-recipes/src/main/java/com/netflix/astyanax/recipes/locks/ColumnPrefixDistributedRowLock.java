@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright 2011 Netflix
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -104,13 +104,14 @@ import com.netflix.astyanax.util.TimeUUIDUtils;
  * 
  * @param <K>
  */
+@SuppressWarnings("ALL")
 public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
     public static final int      LOCK_TIMEOUT                    = 60;
     public static final TimeUnit DEFAULT_OPERATION_TIMEOUT_UNITS = TimeUnit.MINUTES;
     public static final String   DEFAULT_LOCK_PREFIX             = "_LOCK_";
 
     private final ColumnFamily<K, String> columnFamily; // The column family for data and lock
-    private final Keyspace   keyspace;                  // The keyspace
+    private final Keyspace keyspace;                  // The keyspace
     private final K          key;                       // Key being locked
 
     private long             timeout          = LOCK_TIMEOUT;                   // Timeout after which the lock expires.  Units defined by timeoutUnits.
@@ -124,7 +125,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
     private ColumnMap<String> columns         = null;
     private Integer          ttl              = null;                           // Units in seconds
     private boolean          readDataColumns  = false;
-    private RetryPolicy      backoffPolicy    = RunOnce.get();
+    private RetryPolicy backoffPolicy    = RunOnce.get();
     private long             acquireTime      = 0;
     private int              retryCount       = 0;
 
@@ -235,7 +236,8 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
     @Override
     public void acquire() throws Exception {
         
-        Preconditions.checkArgument(ttl == null || TimeUnit.SECONDS.convert(timeout, timeoutUnits) < ttl, "Timeout " + timeout + " must be less than TTL " + ttl);
+        Preconditions.checkArgument(ttl == null || TimeUnit.SECONDS.convert(timeout, timeoutUnits) < ttl,
+                "Timeout " + timeout + " must be less than TTL " + ttl);
         
         RetryPolicy retry = backoffPolicy.duplicate();
         retryCount = 0;
@@ -243,7 +245,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
             try {
                 long curTimeMicros = getCurrentTimeMicros();
                 
-                MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+                MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(getWriteConsistency());
                 fillLockMutation(m, curTimeMicros, ttl);
                 m.execute();
                 
@@ -308,7 +310,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
     @Override
     public void release() throws Exception {
         if (!locksToDelete.isEmpty() || lockColumn != null) {
-            MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+            MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(getWriteConsistency());
             fillReleaseMutation(m, false);
             m.execute();
         }
@@ -334,7 +336,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
             }
         }
         
-        m.setConsistencyLevel(consistencyLevel);
+        m.setConsistencyLevel(getWriteConsistency());
         fillReleaseMutation(m, false);
         m.execute();
         
@@ -363,7 +365,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
             columns = new OrderedColumnMap<String>();
             ColumnList<String> lockResult = keyspace
                 .prepareQuery(columnFamily)
-                    .setConsistencyLevel(consistencyLevel)
+                    .setConsistencyLevel(getReadConsistency())
                     .getKey(key)
                 .execute()
                     .getResult();
@@ -379,7 +381,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
         else {
             ColumnList<String> lockResult = keyspace
                 .prepareQuery(columnFamily)
-                    .setConsistencyLevel(consistencyLevel)
+                    .setConsistencyLevel(getReadConsistency())
                     .getKey(key)
                     .withColumnRange(new RangeBuilder().setStart(prefix + "\u0000").setEnd(prefix + "\uFFFF").build())
                 .execute()
@@ -428,7 +430,7 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
     public Map<String, Long> releaseLocks(boolean force) throws Exception {
         Map<String, Long> locksToDelete = readLockColumns();
 
-        MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+        MutationBatch m = keyspace.prepareMutationBatch().setConsistencyLevel(getWriteConsistency());
         ColumnListMutation<String> row = m.withRow(columnFamily, key);
         long now = getCurrentTimeMicros();
         for (Entry<String, Long> c : locksToDelete.entrySet()) {
@@ -552,6 +554,14 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
     
     public int getRetryCount() {
         return retryCount;
+    }
+
+    private ConsistencyLevel getReadConsistency() {
+        return consistencyLevel == ConsistencyLevel.CL_EACH_QUORUM ? ConsistencyLevel.CL_LOCAL_QUORUM : consistencyLevel;
+    }
+
+    private ConsistencyLevel getWriteConsistency() {
+        return consistencyLevel;
     }
 
 }

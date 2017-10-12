@@ -327,7 +327,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     final ColumnFamily<String, UUID>                  historyColumnFamily;
 
     final Keyspace                        keyspace;
-    final ConsistencyLevel                consistencyLevel;
+    final private ConsistencyLevel                consistencyLevel;
     final long                            lockTimeout;
     final int                             lockTtl;
     final int                             metadataDeleteTTL;
@@ -409,7 +409,6 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
     /**
      * Return the shard for this timestamp
-     * @param message
      * @return
      */
     private String getShardKey(long messageTime, int modShard) {
@@ -496,7 +495,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     @Override
     public void clearMessages() throws MessageQueueException {
         LOG.info("Clearing messages from '" + getName() + "'");
-        MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+        MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(getWriteConsistency());
 
         for (MessageQueueShard partition : shardReaderPolicy.listShards()) {
             mb.withRow(queueColumnFamily, partition.getName()).delete();
@@ -512,7 +511,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
     @Override
     public void deleteQueue() throws MessageQueueException {
         LOG.info("Deleting queue '" + getName() + "'");
-        MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+        MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(getWriteConsistency());
 
         for (MessageQueueShard partition : shardReaderPolicy.listShards()) {
             mb.withRow(queueColumnFamily, partition.getName()).delete();
@@ -537,7 +536,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         try {
             Column<MessageQueueEntry> column = keyspace
                     .prepareQuery(queueColumnFamily)
-                    .setConsistencyLevel(consistencyLevel)
+                    .setConsistencyLevel(getReadConsistency())
                     .getKey(shardKey)
                     .getColumn(entry)
                     .execute().getResult();
@@ -601,7 +600,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         String groupRowKey = getCompositeKey(getName(), key);
         try {
             ColumnList<MessageMetadataEntry> columns = keyspace.prepareQuery(keyIndexColumnFamily)
-                    .setConsistencyLevel(consistencyLevel)
+                    .setConsistencyLevel(getReadConsistency())
                     .getRow(groupRowKey)
                     .withColumnRange(metadataSerializer.buildRange()
                     .greaterThanEquals((byte)MessageMetadataEntryType.MessageId.ordinal())
@@ -627,12 +626,12 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
     @Override
     public boolean deleteMessageByKey(String key) throws MessageQueueException {
-        MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+        MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(getWriteConsistency());
 
         String groupRowKey = getCompositeKey(getName(), key);
         try {
             ColumnList<MessageMetadataEntry> columns = keyspace.prepareQuery(keyIndexColumnFamily)
-                    .setConsistencyLevel(consistencyLevel)
+                    .setConsistencyLevel(getReadConsistency())
                     .getRow(groupRowKey)
                     .withColumnRange(metadataSerializer.buildRange()
                     .greaterThanEquals((byte)MessageMetadataEntryType.MessageId.ordinal())
@@ -676,7 +675,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
         try {
             keyspace.prepareColumnMutation(queueColumnFamily, shardKey, entry)
-                    .setConsistencyLevel(consistencyLevel)
+                    .setConsistencyLevel(getWriteConsistency())
                     .deleteColumn().execute();
         }
         catch (ConnectionException e) {
@@ -686,7 +685,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
     @Override
     public void deleteMessages(Collection<String> messageIds) throws MessageQueueException {
-        MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+        MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(getWriteConsistency());
 
         for (String messageId : messageIds) {
             String[] parts = splitCompositeKey(messageId);
@@ -833,7 +832,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                 Set<String>          notUniqueKeys     = Sets.newHashSet();
                 List<Message>        notUniqueMessages = Lists.newArrayList();
 
-                MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+                MutationBatch mb = keyspace.prepareMutationBatch().setConsistencyLevel(getWriteConsistency());
                 MessageMetadataEntry lockColumn = MessageMetadataEntry.newUnique();
 
                 // Get list of keys that must be unique and prepare the mutation for phase 1
@@ -856,11 +855,11 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     }
 
                     // Phase 2: Read back ALL the lock columms
-                    mb = keyspace.prepareMutationBatch().setConsistencyLevel(consistencyLevel);
+                    mb = keyspace.prepareMutationBatch().setConsistencyLevel(getReadConsistency());
                     Rows<String, MessageMetadataEntry> result;
                     try {
                         result = keyspace.prepareQuery(keyIndexColumnFamily)
-                                .setConsistencyLevel(consistencyLevel)
+                                .setConsistencyLevel(getReadConsistency())
                                 .getRowSlice(uniqueKeys.keySet())
                                 .withColumnRange(metadataSerializer.buildRange()
                                     .greaterThanEquals((byte)MessageMetadataEntryType.Unique.ordinal())
@@ -973,7 +972,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
         ColumnList<UUID> columns;
         try {
             columns = keyspace.prepareQuery(historyColumnFamily)
-                    .setConsistencyLevel(consistencyLevel)
+                    .setConsistencyLevel(getReadConsistency())
                     .getRow(key)
                     .execute()
                     .getResult();
@@ -1017,14 +1016,14 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
      * Peek into messages contained in the shard.  This call does not take trigger time into account
      * and will return messages that are not yet due to be executed
      * @param shardName
-     * @param itemsToPop
+     * @param itemsToPeek
      * @return
      * @throws MessageQueueException
      */
     private Collection<Message> peekMessages(String shardName, int itemsToPeek) throws MessageQueueException {
         try {
             ColumnList<MessageQueueEntry> result = keyspace.prepareQuery(queueColumnFamily)
-                    .setConsistencyLevel(consistencyLevel)
+                    .setConsistencyLevel(getReadConsistency())
                     .getKey(shardName)
                     .withColumnRange(new RangeBuilder()
                     .setLimit(itemsToPeek)
@@ -1083,7 +1082,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
         try {
             ColumnList<MessageQueueEntry> result = keyspace.prepareQuery(queueColumnFamily)
-                    .setConsistencyLevel(consistencyLevel)
+                    .setConsistencyLevel(getReadConsistency())
                     .getKey(shardName)
                     .withColumnRange(new RangeBuilder()
                         .setLimit(1)   // Read extra messages because of the lock column
@@ -1125,6 +1124,14 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
     public ColumnFamily<String, UUID>                  getHistoryColumnFamily() {
         return this.historyColumnFamily;
+    }
+
+    ConsistencyLevel getReadConsistency() {
+        return consistencyLevel == ConsistencyLevel.CL_EACH_QUORUM ? ConsistencyLevel.CL_LOCAL_QUORUM : consistencyLevel;
+    }
+
+    ConsistencyLevel getWriteConsistency() {
+        return consistencyLevel;
     }
 
 }

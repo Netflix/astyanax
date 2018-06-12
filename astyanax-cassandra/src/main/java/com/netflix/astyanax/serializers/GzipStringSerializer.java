@@ -23,7 +23,7 @@ import java.nio.charset.Charset;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-import org.apache.cassandra.db.marshal.UTF8Type;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.UTF8Type;
 import org.apache.commons.codec.binary.StringUtils;
 
 public class GzipStringSerializer extends AbstractSerializer<String> {

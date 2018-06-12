@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.cassandra.dht.RandomPartitioner;
+import com.netflix.astyanax.shaded.org.apache.cassandra.dht.RandomPartitioner;
 
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.Serializer;

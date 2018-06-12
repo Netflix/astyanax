@@ -1,24 +1,25 @@
 apply plugin: 'osgi'
 
+/**
+ * Unit/integration tests for all of Astyanax.
+ */
 dependencies {
     compile project(':astyanax-core')
     compile project(':astyanax-cassandra')
+
     compile project(':astyanax-thrift')
     compile project(':astyanax-cql')
-    compile project(':astyanax-contrib')
-    compile project(':astyanax-recipes')
-    compile project(':astyanax-queue')
-    compile project(':astyanax-entity-mapper')
-    compile "junit:junit:$junitVersion"
-    compile "joda-time:joda-time:$jodaTimeVersion"
-    compile "javax.persistence:persistence-api:$jpaVersion"
-    compile "org.slf4j:slf4j-api:$slf4jVersion"
-    compile "commons-lang:commons-lang:$commonsLangVersion"
-    compile("com.datastax.cassandra:cassandra-driver-core:$javaDriverVersion") {
-        exclude group: 'com.google.guava', module: 'guava'
-    }
-    compile ("org.apache.cassandra:cassandra-all:$cassandraVersion") {
-       force = true
-    }
+    compile project(path: ':astyanax-contrib')
+    compile project(path: ':astyanax-recipes')
+    compile project(path: ':astyanax-queue')
+    compile project(path: ':astyanax-entity-mapper')
+    compile "org.slf4j:log4j-over-slf4j:$slf4jVersion"
+
+    // CassandraDaemon for EmbeddedCassandra
+    compile "org.cassandraunit:cassandra-unit-shaded:$cassandraUnitShadedVersion"
+
+    testCompile "junit:junit:$junitVersion"
+    testCompile "org.slf4j:slf4j-api:$slf4jVersion"
+    testCompile "org.slf4j:slf4j-simple:$slf4jVersion"
 }
 

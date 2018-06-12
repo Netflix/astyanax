@@ -1,19 +1,19 @@
 apply plugin: 'osgi'
 
+/**
+ * Cassandra-specific features shared by astyanax-thrift and astyanax-cql.
+ */
 dependencies {
-    compile  project(':astyanax-core')
-    compile ("org.apache.cassandra:cassandra-all:$cassandraVersion") {
-       force = true
-       transitive = false
-    }
+    compile project(':astyanax-core')
+
+    // Shaded version of cassandra-all for the few simple classes Astyanax actually uses.
+    // Also excludes cassandra-all's transitive dependencies.
+    compile project(path: ':astyanax-cassandra-all-shaded', configuration: 'shadow')
+
     compile "org.xerial.snappy:snappy-java:$snappyVersion"
     compile "org.codehaus.jackson:jackson-mapper-asl:$jacksonVersion"
-    compile "org.apache.cassandra:cassandra-thrift:$cassandraThriftVersion"
     compile "org.apache.servicemix.bundles:org.apache.servicemix.bundles.commons-csv:$commonsCsvVersion"
     compile "org.codehaus.jettison:jettison:$jettisonVersion"
     compile "commons-codec:commons-codec:$commonsCodecVersion"
     compile "org.slf4j:slf4j-api:$slf4jVersion"
-    testCompile "junit:junit:$junitVersion"
 }
-
-

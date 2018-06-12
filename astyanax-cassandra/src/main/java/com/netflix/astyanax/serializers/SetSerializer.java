@@ -18,8 +18,8 @@ package com.netflix.astyanax.serializers;
 import java.nio.ByteBuffer;
 import java.util.Set;
 
-import org.apache.cassandra.db.marshal.AbstractType;
-import org.apache.cassandra.db.marshal.SetType;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.AbstractType;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.SetType;
 
 import com.netflix.astyanax.serializers.AbstractSerializer;
 

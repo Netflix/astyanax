@@ -66,20 +66,19 @@ public class JavaDriverConfigBuilder {
 	}
 	
 	public JavaDriverConnectionPoolConfigurationImpl build() {
-		
-		Policies policies = new Policies(loadBalancingPolicy, reconnectionPolicy, retryPolicy);
+		Policies policies = Policies.builder()
+				.withLoadBalancingPolicy(loadBalancingPolicy)
+				.withReconnectionPolicy(reconnectionPolicy)
+				.withRetryPolicy(retryPolicy).build();
 		ProtocolOptions protocolOptions = (nativeProtocolPort == -1) ? new ProtocolOptions() : new ProtocolOptions(nativeProtocolPort);
-		PoolingOptions poolOptions = poolingOptions;
-		SocketOptions sockOptions = socketOptions;
-		MetricsOptions metricsOptions = new MetricsOptions(jmxReportingEnabled);
-		QueryOptions qOptions = queryOptions;
-		
-		return new JavaDriverConnectionPoolConfigurationImpl(new Configuration(policies, 
-													 protocolOptions, 
-													 poolOptions, 
-													 sockOptions, 
-													 metricsOptions, 
-													 qOptions));
+		MetricsOptions metricsOptions = new MetricsOptions(true, jmxReportingEnabled);
+		return new JavaDriverConnectionPoolConfigurationImpl(Configuration.builder()
+				.withPolicies(policies)
+				.withProtocolOptions(protocolOptions)
+				.withPoolingOptions(poolingOptions)
+				.withSocketOptions(socketOptions)
+				.withMetricsOptions(metricsOptions)
+				.withQueryOptions(queryOptions).build());
 	}
 	
 	
@@ -114,12 +113,13 @@ public class JavaDriverConfigBuilder {
 	}
 
 	public JavaDriverConfigBuilder withMinRequestsPerConnection(HostDistance distance, int minRequests) {
-		this.poolingOptions.setMinSimultaneousRequestsPerConnectionThreshold(distance, minRequests);
+
+		this.poolingOptions.setNewConnectionThreshold(distance, minRequests);
 		return this;
 	}
 
 	public JavaDriverConfigBuilder withMaxRequestsPerConnection(HostDistance distance, int maxRequests) {
-		this.poolingOptions.setMaxSimultaneousRequestsPerConnectionThreshold(distance, maxRequests);
+		this.poolingOptions.setMaxRequestsPerConnection(distance, maxRequests);
 		return this;
 	}
 

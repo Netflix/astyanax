@@ -119,7 +119,7 @@ public class CompositeEntityManagerTest {
             keyspace.dropKeyspace();
         }
         catch (Exception e) {
-            LOG.info(e.getMessage(), e);
+            LOG.info(e.getMessage());
         }
 
         keyspace.createKeyspace(ImmutableMap.<String, Object>builder()

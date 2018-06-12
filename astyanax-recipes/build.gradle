@@ -1,11 +1,10 @@
+/**
+ * Optional implementations of some common patterns.
+ * Use at your own risk; some of these are popular but not well-suite for Cassandra for many use cases (looking at you, AllRowsReader).
+ */
 dependencies {
-    compile  project(':astyanax-core')
-    compile  project(':astyanax-cassandra')
-    compile ("com.google.guava:guava:$guavaVersion") {
-         force = true
-    }
-    compile "org.slf4j:slf4j-api:$slf4jVersion"
+    compile project(':astyanax-core')
+    compile project(':astyanax-cassandra')
 
-    testCompile "junit:junit:$junitVersion"
     testCompile project(':astyanax-thrift')
 }

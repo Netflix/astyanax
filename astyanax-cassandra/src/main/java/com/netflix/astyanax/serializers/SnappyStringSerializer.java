@@ -20,7 +20,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.cassandra.db.marshal.UTF8Type;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.UTF8Type;
 import org.apache.commons.codec.binary.StringUtils;
 import org.xerial.snappy.SnappyInputStream;
 import org.xerial.snappy.SnappyOutputStream;

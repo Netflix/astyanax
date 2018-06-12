@@ -16,12 +16,11 @@
 package com.netflix.astyanax.serializers;
 
 import java.nio.ByteBuffer;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.UUID;
 
-import org.apache.cassandra.db.marshal.TimeUUIDType;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.TimeUUIDType;
 
 import com.netflix.astyanax.util.TimeUUIDUtils;
 

@@ -18,7 +18,9 @@ package com.netflix.astyanax.examples;
 import static com.netflix.astyanax.examples.ModelConstants.*;
 
 import java.util.Iterator;
+import java.util.Properties;
 
+import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,17 +50,18 @@ import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 public class AstClient {
   private static final Logger logger = LoggerFactory.getLogger(AstClient.class);
 
-  private AstyanaxContext<Keyspace> context;
+  private AstyanaxContext<Keyspace> keyspaceContext;
   private Keyspace keyspace;
   private ColumnFamily<Integer, String> EMP_CF;
+  private static final String KEYSPACE_NAME = "test1";
   private static final String EMP_CF_NAME = "employees2";
 
   public void init() {
     logger.debug("init()");
-    
-    context = new AstyanaxContext.Builder()
+
+    keyspaceContext = new AstyanaxContext.Builder()
     .forCluster("Test Cluster")
-    .forKeyspace("test1")
+    .forKeyspace(KEYSPACE_NAME)
     .withAstyanaxConfiguration(new AstyanaxConfigurationImpl()      
         .setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
     )
@@ -73,15 +76,54 @@ public class AstClient {
     .withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
     .buildKeyspace(ThriftFamilyFactory.getInstance());
 
-    context.start();
-    keyspace = context.getEntity();
-    
+    keyspaceContext.start();
+
+    // Create keyspace if it doesn't already exist.
+    // Don't do in production; better to create from cqlsh to avoid parallel issues from eventual consistency.
+    Keyspace ks = createKeyspaceIfNotExists();
+
+    keyspace = keyspaceContext.getEntity();
+
     EMP_CF = ColumnFamily.newColumnFamily(
         EMP_CF_NAME, 
         IntegerSerializer.get(), 
         StringSerializer.get());
+
+    // Create column family if it doesn't already exist.
+    // Don't do in production; better to create from cqlsh to avoid parallel issues from eventual consistency.
+    createColumnFamilyIfNotExists(ks);
   }
-  
+
+  private Keyspace createKeyspaceIfNotExists() {
+    // Don't do in production; better to create from cqlsh to avoid parallel issues from eventual consistency.
+    Keyspace ks = null;
+    try {
+      ks = keyspaceContext.getClient();
+
+      Properties props = new Properties();
+      props.setProperty("name", KEYSPACE_NAME);
+      props.setProperty("strategy_class", "SimpleStrategy");
+      props.setProperty("strategy_options.replication_factor", "1");
+
+      ks.createKeyspaceIfNotExists(props);
+      KeyspaceDefinition ksDef = ks.describeKeyspace();
+    } catch (Exception e) {
+      logger.info("Didn't (re)create keyspace, message={}", e.getMessage());
+    }
+    return ks;
+  }
+
+  private void createColumnFamilyIfNotExists(Keyspace ks) {
+    // Don't do in production; better to create from cqlsh to avoid parallel issues from eventual consistency.
+    if(ks != null) {
+      try {
+        ks.createColumnFamily(EMP_CF, null);
+      } catch (Exception e) {
+        // Do nothing
+      }
+    }
+  }
+
   public void insert(int empId, int deptId, String firstName, String lastName) {
     MutationBatch m = keyspace.prepareMutationBatch();
 
@@ -101,10 +143,7 @@ public class AstClient {
     }
     logger.debug("insert ok");
   }
-  
-  public void createCF() {
-  }
-  
+
   public void read(int empId) {
     OperationResult<ColumnList<String>> result;
     try {

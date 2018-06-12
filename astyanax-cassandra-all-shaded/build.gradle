@@ -1,0 +1,41 @@
+/**
+ * Shaded version of cassandra-all for the few classes used by astyanax-cassandra. Shading frees projects to select
+ * arbitrary versions of cassandra-unit for unit/integration testing against newer versions of Cassandra.
+ * Hides Astyanax's dependency on cassandra-all by refactoring "org.apache.cassandra" classes to
+ * "com.netflix.astyanax.shaded.org.apache.cassandra".
+ */
+
+plugins {
+    id 'com.github.johnrengelman.plugin-shadow' version '2.0.3'
+    id 'java'
+}
+
+print "Shading cassandra-all for cassandraVersion=${cassandraVersion}\n"
+
+dependencies {
+    compile ("org.apache.cassandra:cassandra-all:$cassandraVersion") {
+        // Exclude all those heavy transitive dependencies because Astyanax doesn't need them
+        transitive = false
+    }
+}
+
+shadowJar {
+    // Don't append default "-all" to end of shaded jar name.
+    classifier = ''
+
+    // Add only the shaded cassandra-all classes
+    dependencies {
+        include(
+                dependency('org.apache.cassandra:cassandra-all::.*')
+        )
+    }
+
+    // Shaded/rename cassandra-all class packages
+    relocate("org.apache.cassandra", "com.netflix.astyanax.shaded.org.apache.cassandra")
+}
+
+tasks.build.dependsOn(shadowJar)
+
+// Create only the shadow jar containing the shaded classes
+tasks.jar.setEnabled(false)
+tasks.jar.dependsOn(tasks.shadowJar)

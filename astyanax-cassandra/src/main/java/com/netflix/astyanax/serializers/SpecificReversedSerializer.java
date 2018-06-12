@@ -16,8 +16,8 @@
 package com.netflix.astyanax.serializers;
 
 import java.nio.ByteBuffer;
-import org.apache.cassandra.db.marshal.AbstractType;
-import org.apache.cassandra.db.marshal.ReversedType;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.AbstractType;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.ReversedType;
 import com.google.common.base.Preconditions;
 
 @SuppressWarnings("rawtypes")
@@ -30,9 +30,7 @@ public class SpecificReversedSerializer extends ReversedSerializer {
 		Preconditions.checkNotNull(type);
 		AbstractType<?> compType = type.baseType;
 		reversedTypeName = compType.toString();
-		if ( reversedTypeName.startsWith( "org.apache.cassandra.db.marshal." ) ) {
-			reversedTypeName = reversedTypeName.substring( "org.apache.cassandra.db.marshal.".length() );
-		}		
+		reversedTypeName = ComparatorType.getShadedTypeName(reversedTypeName);
 		this.reversedComparatorType = ComparatorType.getByClassName(reversedTypeName);
 	}
 

@@ -17,7 +17,7 @@ package com.netflix.astyanax.serializers;
 
 import java.nio.ByteBuffer;
 
-import org.apache.cassandra.db.marshal.LongType;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.LongType;
 
 /**
  * Converts bytes to Long and vise a versa

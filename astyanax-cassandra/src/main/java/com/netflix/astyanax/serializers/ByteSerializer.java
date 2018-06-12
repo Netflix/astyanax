@@ -17,7 +17,7 @@ package com.netflix.astyanax.serializers;
 
 import java.nio.ByteBuffer;
 
-import org.apache.cassandra.db.marshal.IntegerType;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.IntegerType;
 
 public class ByteSerializer extends AbstractSerializer<Byte> {
 

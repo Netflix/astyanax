@@ -19,8 +19,8 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.cassandra.db.marshal.AbstractType;
-import org.apache.cassandra.db.marshal.CompositeType;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.AbstractType;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.CompositeType;
 
 import com.google.common.base.Preconditions;
 
@@ -34,10 +34,7 @@ public class SpecificCompositeSerializer extends CompositeSerializer {
 		comparators = new ArrayList<String>( type.types.size() );
 		for ( AbstractType<?> compType : type.types ) {
 			String typeName = compType.toString();
-			if ( typeName.startsWith( "org.apache.cassandra.db.marshal." ) ) {
-				typeName = typeName.substring( "org.apache.cassandra.db.marshal.".length() );
-			}
-			comparators.add( typeName );
+			comparators.add( ComparatorType.getShadedTypeName(typeName) );
 		}
 	}
 

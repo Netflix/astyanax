@@ -18,7 +18,7 @@ package com.netflix.astyanax.serializers;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 
-import org.apache.cassandra.db.marshal.DecimalType;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.DecimalType;
 
 public class BigDecimalSerializer extends AbstractSerializer<BigDecimal> {
 

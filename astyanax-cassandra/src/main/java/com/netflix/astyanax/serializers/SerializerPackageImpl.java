@@ -23,16 +23,15 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.cassandra.db.marshal.CompositeType;
-import org.apache.cassandra.db.marshal.ReversedType;
-import org.apache.cassandra.db.marshal.TypeParser;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.CompositeType;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.ReversedType;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.ShadedTypeParser;
 import org.apache.commons.lang.StringUtils;
 
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.SerializerPackage;
 import com.netflix.astyanax.ddl.ColumnDefinition;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
-//import org.apache.cassandra.config.ConfigurationException;
 
 /**
  * Basic implementation of SerializerPackage which can be configured either from
@@ -118,7 +117,7 @@ public class SerializerPackageImpl implements SerializerPackage {
 
         if (type == ComparatorType.COMPOSITETYPE) {
             try {
-                this.keySerializer = new SpecificCompositeSerializer((CompositeType) TypeParser.parse(keyType));
+                this.keySerializer = new SpecificCompositeSerializer((CompositeType) ShadedTypeParser.parse(keyType));
                 return this;
             }
             catch (Exception e) {
@@ -132,7 +131,7 @@ public class SerializerPackageImpl implements SerializerPackage {
         }
         else if (type == ComparatorType.REVERSEDTYPE) {
             try {
-                this.keySerializer = new SpecificReversedSerializer((ReversedType) TypeParser.parse(keyType));
+                this.keySerializer = new SpecificReversedSerializer((ReversedType) ShadedTypeParser.parse(keyType));
                 return this;
             }
             catch (Exception e) {
@@ -160,6 +159,7 @@ public class SerializerPackageImpl implements SerializerPackage {
     @SuppressWarnings("rawtypes")
 	public SerializerPackageImpl setColumnNameType(String columnType) throws UnknownComparatorException {
         // Determine the column serializer
+        columnType = ComparatorType.getShadedClassName(columnType);
         String comparatorType = StringUtils.substringBefore(columnType, "(");
         ComparatorType type = ComparatorType.getByClassName(comparatorType);
         if (type == null) {
@@ -168,7 +168,7 @@ public class SerializerPackageImpl implements SerializerPackage {
 
         if (type == ComparatorType.COMPOSITETYPE) {
             try {
-                this.columnSerializer = new SpecificCompositeSerializer((CompositeType) TypeParser.parse(columnType));
+                this.columnSerializer = new SpecificCompositeSerializer((CompositeType) ShadedTypeParser.parse(columnType));
                 return this;
             }
             catch (Exception e) {
@@ -182,7 +182,7 @@ public class SerializerPackageImpl implements SerializerPackage {
         }
         else if (type == ComparatorType.REVERSEDTYPE) {
             try {
-                this.columnSerializer = new SpecificReversedSerializer((ReversedType) TypeParser.parse(columnType));
+                this.columnSerializer = new SpecificReversedSerializer((ReversedType) ShadedTypeParser.parse(columnType));
                 return this;
             }
             catch (Exception e) {

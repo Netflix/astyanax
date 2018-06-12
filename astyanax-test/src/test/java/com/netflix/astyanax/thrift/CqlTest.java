@@ -7,7 +7,7 @@ import java.util.Map.Entry;
 
 import junit.framework.Assert;
 
-import org.apache.cassandra.db.marshal.UTF8Type;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.UTF8Type;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;

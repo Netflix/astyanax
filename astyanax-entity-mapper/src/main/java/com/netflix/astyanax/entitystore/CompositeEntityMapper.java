@@ -300,7 +300,7 @@ public class CompositeEntityMapper<T, K> {
     }
 
     public String getKeyType() {
-        return idMapper.getSerializer().getComparatorType().getClassName();
+        return idMapper.getSerializer().getComparatorType().getTypeName();
     }
 
     /**
@@ -359,7 +359,7 @@ public class CompositeEntityMapper<T, K> {
         sb.append(StringUtils.join(
             Collections2.transform(components, new Function<FieldMapper<?>, String>() {
                 public String apply(FieldMapper<?> input) {
-                    return input.serializer.getComparatorType().getClassName();
+                    return input.serializer.getComparatorType().getTypeName();
                 }
             }),
             ","));
@@ -386,7 +386,7 @@ public class CompositeEntityMapper<T, K> {
     }
 
     String getValueType() {
-        return valueMapper.getSerializer().getComparatorType().getClassName();
+        return valueMapper.getSerializer().getComparatorType().getTypeName();
     }
 
     ByteBuffer[] getQueryEndpoints(Collection<ColumnPredicate> predicates) {

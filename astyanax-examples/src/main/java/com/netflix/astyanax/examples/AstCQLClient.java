@@ -17,6 +17,7 @@ package com.netflix.astyanax.examples;
 
 import static com.netflix.astyanax.examples.ModelConstants.*;
 
+import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +39,8 @@ import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 
+import java.util.Properties;
+
 /**
  * Example code for demonstrating how to access Cassandra using Astyanax and CQL3.
  * 
@@ -47,9 +50,10 @@ import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 public class AstCQLClient {
   private static final Logger logger = LoggerFactory.getLogger(AstCQLClient.class);
   
-  private AstyanaxContext<Keyspace> context;
+  private AstyanaxContext<Keyspace> keyspaceContext;
   private Keyspace keyspace;
   private ColumnFamily<Integer, String> EMP_CF;
+  private static final String KEYSPACE_NAME = "test1";
   private static final String EMP_CF_NAME = "employees1";
   private static final String INSERT_STATEMENT =
       String.format("INSERT INTO %s (%s, %s, %s, %s) VALUES (?, ?, ?, ?);",
@@ -62,9 +66,9 @@ public class AstCQLClient {
   public void init() {
     logger.debug("init()");
     
-    context = new AstyanaxContext.Builder()
+    keyspaceContext = new AstyanaxContext.Builder()
     .forCluster("Test Cluster")
-    .forKeyspace("test1")
+    .forKeyspace(KEYSPACE_NAME)
     .withAstyanaxConfiguration(new AstyanaxConfigurationImpl()      
         .setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
     )
@@ -79,15 +83,43 @@ public class AstCQLClient {
     .withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
     .buildKeyspace(ThriftFamilyFactory.getInstance());
 
-    context.start();
-    keyspace = context.getEntity();
+    keyspaceContext.start();
+
+    // Create keyspace if it doesn't already exist.
+    // Don't do in production; better to create from cqlsh to avoid parallel issues from eventual consistency.
+    Keyspace ks = createKeyspaceIfNotExists();
+
+    keyspace = keyspaceContext.getEntity();
     
     EMP_CF = ColumnFamily.newColumnFamily(
         EMP_CF_NAME, 
         IntegerSerializer.get(), 
         StringSerializer.get());
+
+    // Create column family if it doesn't already exist.
+    // Don't do in production; better to create from cqlsh to avoid parallel issues from eventual consistency.
+    createColumnFamilyIfNotExists();
   }
-  
+
+  private Keyspace createKeyspaceIfNotExists() {
+    // Don't do in production; better to create from cqlsh to avoid parallel issues from eventual consistency.
+    Keyspace ks = null;
+    try {
+      ks = keyspaceContext.getClient();
+
+      Properties props = new Properties();
+      props.setProperty("name", KEYSPACE_NAME);
+      props.setProperty("strategy_class", "SimpleStrategy");
+      props.setProperty("strategy_options.replication_factor", "1");
+
+      ks.createKeyspaceIfNotExists(props);
+      KeyspaceDefinition ksDef = ks.describeKeyspace();
+    } catch (Exception e) {
+      logger.info("Didn't (re)create keyspace, message={}", e.getMessage());
+    }
+    return ks;
+  }
+
   public void insert(int empId, int deptId, String firstName, String lastName) {
     try {
       @SuppressWarnings("unused")
@@ -126,7 +158,8 @@ public class AstCQLClient {
   }
 
   
-  public void createCF() {
+  public void createColumnFamilyIfNotExists() {
+    // Don't do in production; better to create from cqlsh to avoid parallel issues from eventual consistency.
     logger.debug("CQL: "+CREATE_STATEMENT);
     try {
       @SuppressWarnings("unused")
@@ -134,9 +167,8 @@ public class AstCQLClient {
           .prepareQuery(EMP_CF)
           .withCql(CREATE_STATEMENT)
           .execute();
-    } catch (ConnectionException e) {
-      logger.error("failed to create CF", e);
-      throw new RuntimeException("failed to create CF", e);
+    } catch (Exception e) {
+      logger.info("Didn't (re)create column family, message={}", e.getMessage());
     }
   }
 

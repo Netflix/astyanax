@@ -2,6 +2,7 @@ package com.netflix.astyanax.recipes;
 
 import java.util.concurrent.TimeUnit;
 
+import com.netflix.astyanax.test.EmbeddedCassandra;
 import junit.framework.Assert;
 
 import org.junit.AfterClass;
@@ -24,7 +25,6 @@ import com.netflix.astyanax.recipes.locks.ColumnPrefixDistributedRowLock;
 import com.netflix.astyanax.recipes.locks.StaleLockException;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
-import com.netflix.astyanax.test.EmbeddedCassandra;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 
 /**

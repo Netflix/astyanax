@@ -1,6 +1,15 @@
+/**
+ * Project to add dependencies on every Astyanax module.
+ *
+ * Please don't depend on this module; it's a bad practice and exists only for backwards-compatibility.
+ *
+ * Instead add explicit dependency on only the modules you actually use, for example astyanax-thrift or astyanax-cql.
+ * Depending on these will automatically add any other necessary transitive dependencies.
+ */
 dependencies {
     compile project(':astyanax-core')
     compile project(':astyanax-cassandra')
+    compile project(':astyanax-cassandra-all-shaded')
     compile project(':astyanax-thrift')
     compile project(':astyanax-cql')
     compile project(':astyanax-queue')

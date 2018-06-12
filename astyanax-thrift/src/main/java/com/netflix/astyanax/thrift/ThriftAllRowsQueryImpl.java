@@ -32,7 +32,7 @@ import org.apache.cassandra.thrift.KeySlice;
 import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
 import org.apache.cassandra.thrift.Cassandra.Client;
-import org.apache.cassandra.utils.Pair;
+import com.netflix.astyanax.shaded.org.apache.cassandra.utils.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

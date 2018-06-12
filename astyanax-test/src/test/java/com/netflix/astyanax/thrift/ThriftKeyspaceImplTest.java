@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import junit.framework.Assert;
 
 import org.apache.cassandra.thrift.KsDef;
-import org.apache.cassandra.utils.Pair;
+import com.netflix.astyanax.shaded.org.apache.cassandra.utils.Pair;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.log4j.BasicConfigurator;
 import org.junit.AfterClass;
@@ -2219,7 +2219,7 @@ public class ThriftKeyspaceImplTest {
             Assert.assertNull(row);
             
             row = result.getResult().getRowByIndex(10);
-            Assert.assertEquals("M", row.getKey());
+            Assert.assertEquals("K", row.getKey());
             /*
              * LOG.info("Get " + result.getResult().size() + " keys"); for
              * (Row<String, String> row : result.getResult()) {

@@ -32,7 +32,8 @@ public class Murmur3Partitioner implements Partitioner {
 
     public static final BigInteger ONE     = new BigInteger("1");
     
-    private static final org.apache.cassandra.dht.Murmur3Partitioner partitioner = new org.apache.cassandra.dht.Murmur3Partitioner();
+    private static final com.netflix.astyanax.shaded.org.apache.cassandra.dht.Murmur3Partitioner partitioner =
+            new com.netflix.astyanax.shaded.org.apache.cassandra.dht.Murmur3Partitioner();
     private static final Murmur3Partitioner instance = new Murmur3Partitioner();
     
     public static Partitioner get() {

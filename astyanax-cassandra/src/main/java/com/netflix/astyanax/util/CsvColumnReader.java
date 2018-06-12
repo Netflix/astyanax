@@ -20,7 +20,7 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.cassandra.utils.Pair;
+import com.netflix.astyanax.shaded.org.apache.cassandra.utils.Pair;
 import org.apache.commons.csv.CSVParser;
 
 /**

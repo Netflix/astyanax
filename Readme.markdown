@@ -46,7 +46,7 @@ Optional artifacts
 |GroupID/Org|ArtifactID/Name|Desc|
 | --------- | ------------- |----|
 |com.netflix.astyanax|astyanax-contrib|Optional integration with other commonly-used Netflix OSS modules.|
-|com.netflix.astyanax|astyanax-queue|Queue implementation backed by Cassandra storage. Use at your own risk -- Cassandra can be a *very bad* storage engine for queues. If you insist on using Cassandra for queues, set a very short TTL and use DateTieredCompactionStrategy (DTCS).|
+|com.netflix.astyanax|astyanax-queue|Queue implementation backed by Cassandra storage. Use at your own risk -- Cassandra can be a *very bad* storage engine for queues. If you insist on using Cassandra for queues, set a very short TTL and use TimeWindowCompactionStrategy (TWCS).|
 |com.netflix.astyanax|astyanax-entity-mapper||
 |com.netflix.astyanax|astyanax-recipes|Optional implementations of some common patterns. Use at your own risk; some of these are popular but not well-suite for Cassandra for many use cases (looking at you, AllRowsReader).|
 

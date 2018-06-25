@@ -11,7 +11,7 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 
-import org.apache.cassandra.db.marshal.UTF8Type;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.UTF8Type;
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.codehaus.jettison.json.JSONException;

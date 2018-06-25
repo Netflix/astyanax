@@ -39,31 +39,31 @@ import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.UUIDSerializer;
 
 /**
- * Class that implements the {@link Column} interface. 
- * 
+ * Class that implements the {@link Column} interface.
+ *
  * Note that since columns can be rows in CQL3, this class needs access to the java driver {@link Row}
  * within the java driver {@link ResultSet}
- * 
- * The index provided within the row indicates where to start parsing the Column data. 
- * Also this class handles reading the TTL and Timestamp on the Column as well. 
- * 
+ *
+ * The index provided within the row indicates where to start parsing the Column data.
+ * Also this class handles reading the TTL and Timestamp on the Column as well.
+ *
  * @author poberai
  *
  * @param <C>
  */
 public class CqlColumnImpl<C> implements Column<C> {
 
-	private Row row; 
-	private C columnName; 
+	private Row row;
+	private C columnName;
 	private int index;
-	
+
 	private ComparatorType cType;
-	
+
 	private boolean isBlob = false;
-	
+
 	public CqlColumnImpl() {
 	}
-	
+
 	public CqlColumnImpl(C colName, Row row, int index) {
 		this.columnName = colName;
 		this.row = row;
@@ -72,9 +72,8 @@ public class CqlColumnImpl<C> implements Column<C> {
 		Definition colDefinition  = row.getColumnDefinitions().asList().get(index);
 		isBlob = colDefinition.getType() == DataType.blob();
 	}
-	
+
 	public CqlColumnImpl(C colName, Row row, int index, Definition colDefinition) {
-		
 		this.columnName = colName;
 		this.row = row;
 		this.index = index;
@@ -86,7 +85,7 @@ public class CqlColumnImpl<C> implements Column<C> {
 	public C getName() {
 		return columnName;
 	}
-	
+
 	@Override
 	public ByteBuffer getRawName() {
 		return StringSerializer.get().toByteBuffer(String.valueOf(columnName));
@@ -158,9 +157,13 @@ public class CqlColumnImpl<C> implements Column<C> {
 		return row.getBytes(index);
 	}
 
+	/**
+	 * @return {@link Date} from {@link com.datastax.driver.core.GettableByIndexData#getTimestamp(int)} for backwards-
+	 * compatibility because this {@link #getTimestamp()} returns column timestamp, not value of a Date-based column.
+	 */
 	@Override
 	public Date getDateValue() {
-		return (isBlob) ? DateSerializer.get().fromByteBuffer(row.getBytes(index)) : row.getDate(index);
+		return (isBlob) ? DateSerializer.get().fromByteBuffer(row.getBytes(index)) : row.getTimestamp(index);
 	}
 
 	@Override
@@ -189,19 +192,17 @@ public class CqlColumnImpl<C> implements Column<C> {
 	public boolean hasValue() {
 		return (row != null) && !(row.isNull(index));
 	}
-	
 
 	public Object getGenericValue() {
 		ComparatorType cType = getComparatorType();
 		return CqlTypeMapping.getDynamicColumn(row, cType.getSerializer(), index, null);
 	}
-	
+
 	public ComparatorType getComparatorType() {
-		
 		if (cType != null) {
 			return cType;
 		}
-		
+
 		// Lazy init
 		DataType type = row.getColumnDefinitions().getType(index);
 		if (type.isCollection()) {
@@ -209,7 +210,7 @@ public class CqlColumnImpl<C> implements Column<C> {
 		}
 		String typeString = (type.getName().name()).toUpperCase();
 		cType = CqlTypeMapping.getComparatorFromCqlType(typeString);
-		
+
 		return cType;
 	}
 }

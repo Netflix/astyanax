@@ -18,7 +18,7 @@ package com.netflix.astyanax.serializers;
 import java.nio.ByteBuffer;
 import java.util.UUID;
 
-import org.apache.cassandra.db.marshal.UUIDType;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.UUIDType;
 
 /**
  * A UUIDSerializer translates the byte[] to and from UUID types.

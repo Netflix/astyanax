@@ -19,9 +19,11 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.cassandra.db.marshal.AbstractType;
-import org.apache.cassandra.db.marshal.CompositeType;
-import org.apache.cassandra.db.marshal.UTF8Type;
+import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.serializers.SpecificCompositeSerializer;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.AbstractType;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.CompositeType;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.UTF8Type;
 import org.apache.log4j.Logger;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -32,7 +34,6 @@ import com.netflix.astyanax.SerializerPackage;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.Composite;
 import com.netflix.astyanax.serializers.LongSerializer;
-import com.netflix.astyanax.serializers.SpecificCompositeSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 
 public class SerializerPackageTests extends KeyspaceTests {
@@ -84,12 +85,13 @@ public class SerializerPackageTests extends KeyspaceTests {
 		System.out.println("ss1Result: " + ss1Result);
 		Assert.assertEquals(ss1, ss1Result);
 
-		SpecificCompositeSerializer comp = (SpecificCompositeSerializer) serializer.getColumnNameSerializer();
-		System.out.println(comp.getComparators().toString());
+		Serializer comp = serializer.getColumnNameSerializer();
+		System.out.println(comp.getComparatorType().toString());
 
 		Composite dc = new Composite(ss1);
 
-		List<AbstractType<?>> types = new ArrayList<AbstractType<?>>();
+		List<AbstractType<?>> types =
+				new ArrayList<AbstractType<?>>();
 		types.add(UTF8Type.instance);
 
 		CompositeType c1 = CompositeType.getInstance(types);

@@ -18,7 +18,7 @@ package com.netflix.astyanax.serializers;
 import java.nio.ByteBuffer;
 import java.util.Date;
 
-import org.apache.cassandra.db.marshal.DateType;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.DateType;
 
 /**
  * Converts bytes to Date and vice versa, by first converting the Date to or

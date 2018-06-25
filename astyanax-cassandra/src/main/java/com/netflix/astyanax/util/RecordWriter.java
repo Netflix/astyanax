@@ -17,7 +17,7 @@ package com.netflix.astyanax.util;
 
 import java.util.List;
 
-import org.apache.cassandra.utils.Pair;
+import com.netflix.astyanax.shaded.org.apache.cassandra.utils.Pair;
 
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 

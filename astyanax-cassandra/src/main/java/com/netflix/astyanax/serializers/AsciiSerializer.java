@@ -18,7 +18,7 @@ package com.netflix.astyanax.serializers;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
-import org.apache.cassandra.db.marshal.AsciiType;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.AsciiType;
 
 /**
  * Almost identical to StringSerializer except we use the US-ASCII character set

@@ -22,7 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.cassandra.db.marshal.UTF8Type;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.UTF8Type;
 
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;

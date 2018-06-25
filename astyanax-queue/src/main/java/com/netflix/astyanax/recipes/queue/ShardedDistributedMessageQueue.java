@@ -28,7 +28,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.cassandra.thrift.SchemaDisagreementException;
 import org.apache.commons.lang.StringUtils;
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.JsonParseException;
@@ -424,7 +423,8 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
     /**
      * Return the shard for this timestamp
-     * @param message
+     * @param messageTime
+     * @param modShard
      * @return
      */
     private String getShardKey(long messageTime, int modShard) {
@@ -731,14 +731,17 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
                     throw new MessageQueueException("Interrupted while trying to create column family for queue " + getName(), ie);
                 }
                 return;
-            } catch (SchemaDisagreementException e) {
-                try {
-                    Thread.sleep(SCHEMA_CHANGE_DELAY);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    throw new MessageQueueException("Interrupted while trying to create column family for queue " + getName(), ie);
-                }
             } catch (Exception e) {
+                if (e.getClass().getSimpleName().equals("SchemaDisagreementException")){
+                    // Check by class name since SchemaDisagreementException is defined in cassandra-thrift,
+                    // but astayanx-cassandra should not have a Thrift-specific dependency.
+                    try {
+                        Thread.sleep(SCHEMA_CHANGE_DELAY);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new MessageQueueException("Interrupted while trying to create column family for queue " + getName(), ie);
+                    }
+                }
                 if (e.getMessage().contains("already exist"))
                     return;
                 throw new MessageQueueException("Failed to create column family for " + queueColumnFamily.getName(), e);
@@ -1032,7 +1035,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
      * Peek into messages contained in the shard.  This call does not take trigger time into account
      * and will return messages that are not yet due to be executed
      * @param shardName
-     * @param itemsToPop
+     * @param itemsToPeek
      * @return
      * @throws MessageQueueException
      */

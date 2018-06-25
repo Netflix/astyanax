@@ -15,23 +15,8 @@
  */
 package com.netflix.astyanax.cql.test.utils;
 
-import static com.netflix.astyanax.cql.test.utils.ClusterConfiguration.TEST_CLUSTER_NAME;
-import static com.netflix.astyanax.cql.test.utils.ClusterConfiguration.TEST_KEYSPACE_NAME;
-import static com.netflix.astyanax.cql.test.utils.ClusterConfiguration.TheDriver;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
-
-import org.apache.log4j.PropertyConfigurator;
-
 import com.datastax.driver.core.Configuration;
-import com.datastax.driver.core.MetricsOptions;
-import com.datastax.driver.core.PoolingOptions;
 import com.datastax.driver.core.ProtocolOptions;
-import com.datastax.driver.core.QueryOptions;
-import com.datastax.driver.core.SocketOptions;
-import com.datastax.driver.core.policies.Policies;
 import com.google.common.base.Supplier;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Cluster;
@@ -43,9 +28,16 @@ import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
 import com.netflix.astyanax.cql.CqlFamilyFactory;
 import com.netflix.astyanax.cql.JavaDriverConnectionPoolConfigurationImpl;
-import com.netflix.astyanax.cql.test.utils.ClusterConfiguration.Driver;
+import com.netflix.astyanax.cql.test.utils.ClusterConfiguration.*;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
+import org.apache.log4j.PropertyConfigurator;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static com.netflix.astyanax.cql.test.utils.ClusterConfiguration.*;
 
 public class AstyanaxContextFactory {
 
@@ -174,12 +166,9 @@ public class AstyanaxContextFactory {
     	
     	ProtocolOptions protocolOptions = new ProtocolOptions(9042);
 		
-		Configuration jdConfig = new Configuration(new Policies(),
-	             protocolOptions,
-	             new PoolingOptions(),
-	             new SocketOptions(),
-	             new MetricsOptions(),
-	             new QueryOptions());
+		Configuration jdConfig = Configuration.builder()
+				.withProtocolOptions(protocolOptions)
+				.build();
 
 		AstyanaxContext<Keyspace> context = new AstyanaxContext.Builder()
 		.forKeyspace(keyspaceName)

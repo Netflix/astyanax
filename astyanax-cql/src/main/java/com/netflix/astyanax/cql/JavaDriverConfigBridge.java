@@ -15,16 +15,7 @@
  */
 package com.netflix.astyanax.cql;
 
-import com.datastax.driver.core.AuthProvider;
-import com.datastax.driver.core.Configuration;
-import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.HostDistance;
-import com.datastax.driver.core.MetricsOptions;
-import com.datastax.driver.core.PlainTextAuthProvider;
-import com.datastax.driver.core.PoolingOptions;
-import com.datastax.driver.core.ProtocolOptions;
-import com.datastax.driver.core.QueryOptions;
-import com.datastax.driver.core.SocketOptions;
+import com.datastax.driver.core.*;
 import com.datastax.driver.core.policies.LoadBalancingPolicy;
 import com.datastax.driver.core.policies.Policies;
 import com.datastax.driver.core.policies.RoundRobinPolicy;
@@ -33,6 +24,8 @@ import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.AuthenticationCredentials;
 import com.netflix.astyanax.connectionpool.ConnectionPoolConfiguration;
 import com.netflix.astyanax.cql.util.ConsistencyLevelTransform;
+
+import static com.datastax.driver.core.ProtocolOptions.DEFAULT_MAX_SCHEMA_AGREEMENT_WAIT_SECONDS;
 
 public class JavaDriverConfigBridge {
 	
@@ -45,20 +38,21 @@ public class JavaDriverConfigBridge {
 	}
 	
 	public Configuration getJDConfig() {
-		
-		return new Configuration(getPolicies(),
-								 getProtocolOptions(),
-								 getPoolingOptions(),
-								 getSocketOptions(),
-								 getMetricsOptions(),
-								 getQueryOptions());
+
+		return Configuration.builder()
+				.withPolicies(getPolicies())
+				.withProtocolOptions(getProtocolOptions())
+				.withPoolingOptions(getPoolingOptions())
+				.withSocketOptions(getSocketOptions())
+				.withMetricsOptions(getMetricsOptions())
+				.withQueryOptions(getQueryOptions())
+				.build();
 	}
 	
 	private Policies getPolicies() {
-		return new Policies(getLB(),
-				            Policies.defaultReconnectionPolicy(),
-				            Policies.defaultRetryPolicy(),
-				            Policies.defaultAddressTranslater());
+		return Policies.builder()
+				.withLoadBalancingPolicy(getLB())
+				.build();
 	}
 	
 	private LoadBalancingPolicy getLB() {
@@ -78,16 +72,16 @@ public class JavaDriverConfigBridge {
 	private ProtocolOptions getProtocolOptions() {
 			
 		int port = cpConfig.getPort();
-		int protocolVersion = -1; // use default
-		
+
 		AuthProvider authProvider = AuthProvider.NONE;
 		
 		AuthenticationCredentials creds = cpConfig.getAuthenticationCredentials();
 		if (creds != null) {
 			authProvider = new PlainTextAuthProvider(creds.getUsername(), creds.getPassword());
 		}
-		
-		return new ProtocolOptions(port, protocolVersion, null, authProvider);
+
+		return new ProtocolOptions(port, ProtocolVersion.NEWEST_SUPPORTED, DEFAULT_MAX_SCHEMA_AGREEMENT_WAIT_SECONDS,
+				null, authProvider);
 	}
 
 	private PoolingOptions getPoolingOptions() {

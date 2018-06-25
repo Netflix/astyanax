@@ -53,9 +53,11 @@ public class AstyanaxConfigurationImpl implements AstyanaxConfiguration {
     private int                 maxThriftSize               = 16384000;
 
     public AstyanaxConfigurationImpl() {
-        partitioners.put(org.apache.cassandra.dht.RandomPartitioner.class.getCanonicalName(), BigInteger127Partitioner.get());
+        partitioners.put("org.apache.cassandra.dht.RandomPartitioner",
+                BigInteger127Partitioner.get());
         try {
-        	partitioners.put(org.apache.cassandra.dht.Murmur3Partitioner.class.getCanonicalName(), Murmur3Partitioner.get());
+        	partitioners.put("org.apache.cassandra.dht.Murmur3Partitioner",
+                    Murmur3Partitioner.get());
         }
         catch (NoClassDefFoundError exception) {
         	// We ignore this for backwards compatiblity with pre 1.2 cassandra.

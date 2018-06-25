@@ -9,10 +9,10 @@ import java.util.UUID;
 
 import junit.framework.Assert;
 
-import org.apache.cassandra.db.marshal.AbstractType;
-import org.apache.cassandra.db.marshal.CompositeType;
-import org.apache.cassandra.db.marshal.TypeParser;
-import org.apache.cassandra.utils.ByteBufferUtil;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.AbstractType;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.CompositeType;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.ShadedTypeParser;
+import com.netflix.astyanax.shaded.org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.commons.lang.StringUtils;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -714,7 +714,7 @@ public class SerializersTest {
         String comparatorType = "CompositeType(UTF8Type,UTF8Type)";
         String columnName = "(abc,1234)";
         try {
-            AbstractType type = TypeParser.parse(comparatorType);
+            AbstractType type = ShadedTypeParser.parse(comparatorType);
             if (type instanceof CompositeType) {
                 CompositeType ctype = (CompositeType) type;
 
@@ -734,7 +734,7 @@ public class SerializersTest {
     public void testDeserializeOfSepecificSerializer() throws Exception {
         Composite composite1 = new Composite("abc", 123L);
         CompositeSerializer serializer = new SpecificCompositeSerializer(
-                (CompositeType) TypeParser
+                (CompositeType) ShadedTypeParser
                         .parse("CompositeType(UTF8Type,LongType)"));
         ByteBuffer byteBuffer = serializer.toByteBuffer(composite1);
         Composite composite2 = serializer.fromByteBuffer(byteBuffer);

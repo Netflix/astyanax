@@ -15,9 +15,11 @@
  */
 package com.netflix.astyanax.cql.retrypolicies;
 
+import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.WriteType;
+import com.datastax.driver.core.exceptions.DriverException;
 import com.datastax.driver.core.policies.RetryPolicy.RetryDecision;
 import com.netflix.astyanax.cql.ConsistencyLevelMapping;
 
@@ -111,6 +113,22 @@ public class ChangeConsistencyLevelRetryPolicy extends JavaDriverBasedRetryPolic
 
 			boolean shouldRetry = retryOnAllConditions || retryOnUnavailable;
 			return checkRetry(query, cl, shouldRetry);
+		}
+
+		@Override
+		public RetryDecision onRequestError(Statement query, ConsistencyLevel cl, DriverException e, int nbRetry) {
+			boolean shouldRetry = retryOnAllConditions || retryOnUnavailable;
+			return checkRetry(query, cl, shouldRetry);
+		}
+
+		@Override
+		public void init(Cluster cluster) {
+			// Do nothing
+		}
+
+		@Override
+		public void close() {
+			// Do nothing
 		}
 	};
 

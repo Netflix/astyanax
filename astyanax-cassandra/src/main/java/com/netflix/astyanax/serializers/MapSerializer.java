@@ -15,13 +15,11 @@
  */
 package com.netflix.astyanax.serializers;
 
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.AbstractType;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.MapType;
+
 import java.nio.ByteBuffer;
 import java.util.Map;
-
-import org.apache.cassandra.db.marshal.AbstractType;
-import org.apache.cassandra.db.marshal.MapType;
-
-import com.netflix.astyanax.serializers.AbstractSerializer;
 
 /**
  * Serializer implementation for generic maps.

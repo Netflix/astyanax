@@ -18,7 +18,7 @@ package com.netflix.astyanax.serializers;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
-import org.apache.cassandra.db.marshal.UTF8Type;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.UTF8Type;
 
 /**
  * A StringSerializer translates the byte[] to and from string using utf-8

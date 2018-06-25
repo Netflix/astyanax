@@ -17,7 +17,7 @@ package com.netflix.astyanax.serializers;
 
 import java.nio.ByteBuffer;
 
-import org.apache.cassandra.db.marshal.DoubleType;
+import com.netflix.astyanax.shaded.org.apache.cassandra.db.marshal.DoubleType;
 
 /**
  * Uses LongSerializer via translating Doubles to and from raw long bytes form.

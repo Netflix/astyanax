@@ -1,12 +1,9 @@
+/**
+ * Optional integration with other commonly-used Netflix OSS modules.
+ */
 dependencies {
-    compile project(':astyanax-cassandra')
     compile project(':astyanax-core')
     compile project(':astyanax-thrift')
-    compile 'com.netflix.eureka:eureka-client:1.1.110'
-    compile 'com.netflix.archaius:archaius-core:0.5.12'
-    compile ("com.google.guava:guava:$guavaVersion") {
-         force = true
-    }
-    compile "org.slf4j:slf4j-api:$slf4jVersion"
-    testCompile "junit:junit:$junitVersion"
+    compile 'com.netflix.eureka:eureka-client:1.9.0'
+    compile 'com.netflix.archaius:archaius-core:0.7.6'
 }

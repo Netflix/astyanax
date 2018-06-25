@@ -1,27 +1,9 @@
 package com.netflix.astyanax.recipes;
 
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
-
-import junit.framework.Assert;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.base.Function;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Keyspace;
@@ -33,13 +15,7 @@ import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
-import com.netflix.astyanax.model.Column;
-import com.netflix.astyanax.model.ColumnFamily;
-import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.model.ConsistencyLevel;
-import com.netflix.astyanax.model.Row;
-import com.netflix.astyanax.partitioner.Murmur3Partitioner;
-import com.netflix.astyanax.recipes.UUIDStringSupplier;
+import com.netflix.astyanax.model.*;
 import com.netflix.astyanax.recipes.functions.ColumnCounterFunction;
 import com.netflix.astyanax.recipes.functions.RowCopierFunction;
 import com.netflix.astyanax.recipes.functions.RowCounterFunction;
@@ -47,11 +23,7 @@ import com.netflix.astyanax.recipes.functions.TraceFunction;
 import com.netflix.astyanax.recipes.locks.ColumnPrefixDistributedRowLock;
 import com.netflix.astyanax.recipes.locks.StaleLockException;
 import com.netflix.astyanax.recipes.reader.AllRowsReader;
-import com.netflix.astyanax.recipes.uniqueness.ColumnPrefixUniquenessConstraint;
-import com.netflix.astyanax.recipes.uniqueness.DedicatedMultiRowUniquenessConstraint;
-import com.netflix.astyanax.recipes.uniqueness.MultiRowUniquenessConstraint;
-import com.netflix.astyanax.recipes.uniqueness.NotUniqueException;
-import com.netflix.astyanax.recipes.uniqueness.RowUniquenessConstraint;
+import com.netflix.astyanax.recipes.uniqueness.*;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
@@ -59,6 +31,19 @@ import com.netflix.astyanax.serializers.TimeUUIDSerializer;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 import com.netflix.astyanax.util.SingletonEmbeddedCassandra;
 import com.netflix.astyanax.util.TimeUUIDUtils;
+import junit.framework.Assert;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class MiscUnitTest {
     private static Logger LOG = LoggerFactory.getLogger(MiscUnitTest.class);
@@ -959,7 +944,7 @@ public class MiscUnitTest {
                 .build();
         
         try {
-            Stopwatch sw = new Stopwatch().start();
+            Stopwatch sw = Stopwatch.createStarted();
             boolean result = reader.call();
             long runtimeMillis = sw.stop().elapsed(TimeUnit.MILLISECONDS);
 

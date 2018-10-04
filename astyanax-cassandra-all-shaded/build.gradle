@@ -13,7 +13,8 @@ plugins {
 print "Shading cassandra-all for cassandraVersion=${cassandraVersion}\n"
 
 dependencies {
-    compile ("org.apache.cassandra:cassandra-all:$cassandraVersion") {
+    // Add cassandra-all to the shadow configuration so it doesn't get included in the pom
+    shadow ("org.apache.cassandra:cassandra-all:$cassandraVersion") {
         // Exclude all those heavy transitive dependencies because Astyanax doesn't need them
         transitive = false
     }
@@ -22,6 +23,10 @@ dependencies {
 shadowJar {
     // Don't append default "-all" to end of shaded jar name.
     classifier = ''
+
+    // Add shadow configuration to package all the cassandra-all classes into the shaded jar
+    // (plugin default is compile configuration, but that adds cassandra-all to the pom)
+    configurations = [project.configurations.shadow]
 
     // Add only the shaded cassandra-all classes
     dependencies {

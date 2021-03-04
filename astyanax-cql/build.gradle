@@ -1,4 +1,4 @@
-apply plugin: 'osgi'
+apply plugin: 'com.github.blindpirate.osgi'
 
 /**
  * CQL protocol implementation of astyanax-core

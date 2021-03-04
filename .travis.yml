@@ -1,5 +1,5 @@
 language: java
-jdk: oraclejdk8
+jdk: openjdk8
 install: "./installViaTravis.sh"
 script: "./buildViaTravis.sh"
 cache:
@@ -8,7 +8,9 @@ cache:
   - "$HOME/.gradle/wrapper/"
 env:
   global:
-  - secure: A1ZGdyklE1FniXYhbN+mIljE9xpHRpg7Yz2uvL+1bojvlRm9omhCmnODO/aPF7S2SMOoDLEcCZSpmbXOLw+Io8asa3Miy0QyIurCp6kBg5Lkls+2UGGbzqkaFHzKXm12DWxbwqo5k+JRSGrR9X8+pzvyzK/nMunw/h39Vfoy8hc=
-  - secure: asAGLJNdvHvEsytezyjXzJWbKgSVYhC2EH11dbSr2VmxCV3gsaOi0u2jyV1wrnwq+VMDg/GvgqDDE452q8WvcKtUpgxPmujlbskSFhVXj692zHI/x4ZF302f9z/b6Ps57+bnF5s3Hl6wPAtOXm4Y+OwzFr+Ysytev+LXY+BX7QM=
-  - secure: QP5vDaIltt5pNz26SCH3n9n55YEuYPcpMLrolHtw9FeuVuvHnKe9QiKNGTREQFf22gZW6cCLCHrBlUS9L6aK2B9pNuu4l3nocjlIJEZ4nBioKtJCJ8s7nTNW5C8ANGDk6qfemjR0ILVGWJWdI+z/fiInVdDX9HYx3mCArhd/h8E=
-  - secure: tnnrvJpI2wUcB1LEoNpS3V3ZypqGKgZtl9uN1xpqOL1coviTMwaqFamuxDP1rkH+xb4t5qTsMazQTgM8ZvurZhXDPIXae/D1Go4Xst90ECq+OTif47FG6q4wgfeLVM4V1H8FjuPzaZdSolapLEAIz+FUx/FOZE3yHTDFhbR0Ct0=
+  - secure: qv9GVeHffQ1IP8sMpKGUzuOF7hiKpouzgmXQ2C9+WPkuerbuWdZpH7fbPxql+26WN2VT3dj2DdgqN0pdfDcKxqopy79S9aHNp29C5hZsRY5rc3hWby3AgGTV277BcqAW4JtheNFWJ+rQzteXWumWZOTHh5OQfNiPPIr4EkILEos=
+  - secure: O6uwRVl2monRfTsw9CEQXafXnw2eJJAgrfXPYxmz3ANzOV6aV0EW/R8qgNXupuNTtGtuDhu8AvqQwKvZWmIX97bx2fsl3N3tjPEl76VUsKzTSaLwVm4+alLgA+/3W0E1rSFHk/T3SIt4n7mkB/ObYlfCBTTOSLgkckCI91+zkkU=
+  - secure: iaoqSSpwDNQQHetnvJdT6bVI5mnEMNeZjjP2cajqfYaGFOjIOWpkkIWpKZ64OBeTV7vctH6mm7hddzOc55O/4TGjOM3VDlGFkuYC/7ZY4GcDNPRrYno5jn0r0Atxs1oGQyh8bcMseBXYMaBL0QbBC0vNqYGkvRcDXmzcR81+cf8=
+  - secure: ZXn0LOpDzuv1hUnyK0OPtfPxOmcnAw3kA/PRw55TtqX7xxZAb0F6lObrugUe8GtCS8jEMWwtuJNkY44DHLaULRg96Yezr2Ps5r54+/vvQWxGkecdoFREG4ucj7PKck1DEbfq1r4/Z15zb8IZAeRe2BBKaocmarC9wbVFxBotQbc=
+  - secure: J3dOsaTLM6oNeSZFWg62Km1pPGhNRptGpB0CNGkAutlTF2jADpennrx+kQhKvOS8bmCi86MHjJ/tVW5ha0Q002pzJ7JrDjTsBXbUPzWiuy9xfwvnAhLmzyASv6DkcwwcvYKYGP2OoAkzRTmJjstwJyUjbWHn/VdzSKXWPNYDwAE=
+  - secure: cjIHvpHHz+Hrwh8lNJVEAaSONxBbFN2pRe6Kngm21vTIN77qv1HnCn/I/GpDN4/YMg7k1ca3y38Cj2CudS6p5t+pT+beaJOLpHk3MY+aP5K4JOa9tnMe+0vLZ/xZapjkCbv8qtb6ngKP2aAgN3vkLm+1/0GHN0120kXfNP4v4Fo=

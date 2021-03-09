@@ -3,7 +3,3 @@ include 'astyanax', 'astyanax-core', 'astyanax-cassandra', 'astyanax-cassandra-a
         'astyanax-thrift', 'astyanax-cql', 'astyanax-recipes', 'astyanax-queue', 'astyanax-entity-mapper',
         'astyanax-contrib', 'astyanax-examples', 'astyanax-test'
 
-// Temporarily enable STABLE_PUBLISHING to avoid gradle deprecation warning from Gradle 4.8.1+.
-// See https://docs.gradle.org/current/userguide/publishing_maven.html#publishing_maven:deferred_configuration.
-// TODO: remove when we update gradle-wrapper.properties to use Gradle 5.x
-enableFeaturePreview('STABLE_PUBLISHING')

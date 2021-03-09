@@ -1,4 +1,4 @@
-apply plugin: 'osgi'
+apply plugin: 'com.github.blindpirate.osgi'
 
 /**
  * Cassandra-specific features shared by astyanax-thrift and astyanax-cql.

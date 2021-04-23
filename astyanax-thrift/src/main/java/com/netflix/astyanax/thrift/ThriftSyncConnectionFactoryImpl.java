@@ -137,7 +137,7 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
                     long now = System.nanoTime();
                     latency = now - startTime;
                     lastException = ThriftConverter.ToConnectionPoolException(e).setLatency(latency);
-                    if (e instanceof IsTimeoutException) {
+                    if (lastException instanceof IsTimeoutException) {
                         pool.addLatencySample(TimeUnit.NANOSECONDS.convert(cpConfig.getSocketTimeout(), TimeUnit.MILLISECONDS), now);
                     }
                     tracer.failure(lastException);
@@ -160,7 +160,7 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
                 long now = System.nanoTime();
                 latency = now - startTime;
                 lastException = ThriftConverter.ToConnectionPoolException(e).setLatency(latency);
-                if (e instanceof IsTimeoutException) {
+                if (lastException instanceof IsTimeoutException) {
                     pool.addLatencySample(TimeUnit.NANOSECONDS.convert(cpConfig.getSocketTimeout(), TimeUnit.MILLISECONDS), now);
                 }
                 throw lastException;

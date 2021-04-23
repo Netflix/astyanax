@@ -57,7 +57,7 @@ public class AllRowsReaderTest extends KeyspaceTests {
             String rowKey = Character.toString(keyName);
             ColumnListMutation<String> cfmStandard = m.withRow(CF_ALL_ROWS_READER, rowKey);
             for (char cName = 'a'; cName <= 'z'; cName++) {
-                cfmStandard.putColumn(Character.toString(cName), (int) (cName - 'a') + 1, null);
+                cfmStandard.putColumn(Character.toString(cName), cName - 'a' + 1, null);
             }
             m.execute();
             m.discardMutations();

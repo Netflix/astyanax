@@ -325,7 +325,7 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostLis
 				
 		this.cluster = builder.build(); 
 		if (!(this.cpMonitor instanceof JavaDriverConnectionPoolMonitorImpl))
-			this.cluster.getMetrics().getRegistry().addListener((MetricRegistryListener) this.metricsRegListener);
+			this.cluster.getMetrics().getRegistry().addListener(this.metricsRegListener);
 		this.session = cluster.connect();
 	}
 }

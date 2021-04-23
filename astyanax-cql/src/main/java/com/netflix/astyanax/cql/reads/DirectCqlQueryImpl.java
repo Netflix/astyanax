@@ -17,6 +17,7 @@ package com.netflix.astyanax.cql.reads;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -139,7 +140,12 @@ public class DirectCqlQueryImpl<K, C> implements CqlQuery<K, C> {
 			return new InternalBoundStatement(pStatement).withUUIDValue(value);
 		}
 
-		@Override
+        @Override
+        public PreparedCqlQuery<K, C> withTimestamp(Date value) {
+            return new InternalBoundStatement(pStatement).withTimestamp(value);
+        }
+
+        @Override
 		public OperationResult<CqlResult<K, C>> execute() throws ConnectionException {
 			throw new NotImplementedException();
 		}
@@ -236,6 +242,12 @@ public class DirectCqlQueryImpl<K, C> implements CqlQuery<K, C> {
 			bindList.add(value);
 			return this;
 		}
+
+        @Override
+        public PreparedCqlQuery<K, C> withTimestamp(Date value) {
+            bindList.add(value);
+            return this;
+        }
 	}
 	
 	

@@ -97,7 +97,7 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 	@Override
 	public OperationResult<R> execute() throws ConnectionException {
 		
-        ConnectionException lastException = null;
+        ConnectionException lastException;
         
         retry.begin();
 
@@ -119,7 +119,7 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 
 	
 	private OperationResult<R> executeOp() throws ConnectionException {
-		CassandraOperationTracer tracer = null;
+		CassandraOperationTracer tracer;
 		
 		if (cf != null) {
 			tracer = tracerFactory.newTracer(getOperationType(), cf);
@@ -190,7 +190,7 @@ public abstract class CqlAbstractExecutionImpl<R> implements Execution<R> {
 	
 	private ConsistencyLevel getDefaultCL(KeyspaceContext ksContext) {
 		
-		ConsistencyLevel clLevel = ksContext.getConfig().getDefaultReadConsistencyLevel(); 
+		ConsistencyLevel clLevel = ksContext.getConfig().getDefaultReadConsistencyLevel();
 		
 		CassandraOperationCategory op = getOperationType().getCategory();
 		switch (op) {

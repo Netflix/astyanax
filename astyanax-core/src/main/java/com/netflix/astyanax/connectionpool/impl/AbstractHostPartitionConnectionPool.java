@@ -346,7 +346,7 @@ public abstract class AbstractHostPartitionConnectionPool<CL> implements Connect
         }
     	
         retry.begin();
-        ConnectionException lastException = null;
+        ConnectionException lastException;
         do {
             try {
                 OperationResult<R> result = newExecuteWithFailover(op).tryOperation(op);

@@ -32,7 +32,7 @@ import com.netflix.astyanax.retry.RetryPolicy;
  */
 public abstract class AbstractExecutionImpl<R> implements Execution<R> {
     public OperationResult<R> executeWithRetry(RetryPolicy retry) throws ConnectionException {
-        ConnectionException lastException = null;
+        ConnectionException lastException;
         retry.begin();
         do {
             try {

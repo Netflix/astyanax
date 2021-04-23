@@ -160,7 +160,7 @@ public class AstClient {
       logger.debug("emp");
       for(Iterator<Column<String>> i = cols.iterator(); i.hasNext(); ) {
         Column<String> c = i.next();
-        Object v = null;
+        Object v;
         if(c.getName().endsWith("id")) // type induction hack
           v = c.getIntegerValue();
         else

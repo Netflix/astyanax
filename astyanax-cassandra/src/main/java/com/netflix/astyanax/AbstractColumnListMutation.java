@@ -37,7 +37,7 @@ import org.apache.commons.codec.binary.StringUtils;
  */
 public abstract class AbstractColumnListMutation<C> implements ColumnListMutation<C> {
     protected long timestamp;
-    protected Integer defaultTtl = null;
+    protected Integer defaultTtl;
 
     public AbstractColumnListMutation(long timestamp) {
         this.timestamp = timestamp;

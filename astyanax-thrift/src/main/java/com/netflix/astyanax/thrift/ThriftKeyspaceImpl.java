@@ -635,10 +635,7 @@ public final class ThriftKeyspaceImpl implements Keyspace {
     
     private OperationResult<SchemaChangeResult> createKeyspaceIfNotExists(Callable<OperationResult<SchemaChangeResult>> createKeyspace) throws ConnectionException {
         
-    	boolean shouldCreateKeyspace = false;
-    	
-    	try { 
-    		
+    	try {
     		OperationResult<KeyspaceDefinition> opResult = this.internalDescribeKeyspace();
         	
     		if (opResult != null && opResult.getResult() != null) {
@@ -646,28 +643,20 @@ public final class ThriftKeyspaceImpl implements Keyspace {
                         new SchemaChangeResponseImpl().setSchemaId("no-op"), 
                         opResult.getLatency());
 
-        	} else {
-        		shouldCreateKeyspace = true;
         	}
         } catch (BadRequestException e) {
-        	if (e.isKeyspaceDoestNotExist()) {
-        		shouldCreateKeyspace = true;
-        	} else {
-        		throw e;
+        	if (!e.isKeyspaceDoestNotExist()) {
+                throw e;
         	}
         }
     	
-    	if (shouldCreateKeyspace) {
-    		try {
-				return createKeyspace.call();
-			} catch (ConnectionException e) {
-				throw e;
-			} catch (Exception e) {
-				throw new RuntimeException(e);
-			}
-    	} else {
-    		throw new IllegalStateException();
-    	}
+        try {
+            return createKeyspace.call();
+        } catch (ConnectionException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
 

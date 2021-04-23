@@ -248,7 +248,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
 	public void put(T entity) throws PersistenceException {
 		try {
 		    lifecycleHandler.onPrePersist(entity);
-            MutationBatch mb = newMutationBatch();
+            MutationBatch mb = getMutationBatch();
 			entityMapper.fillMutationBatch(mb, columnFamily, entity);			
             if (autoCommit)
                 mb.execute();
@@ -299,7 +299,7 @@ public class DefaultEntityManager<T, K> implements EntityManager<T, K> {
         try {
             lifecycleHandler.onPreRemove(entity);
             id = entityMapper.getEntityId(entity);
-            MutationBatch mb = newMutationBatch();
+            MutationBatch mb = getMutationBatch();
             mb.withRow(columnFamily, id).delete();
             if (autoCommit)
                 mb.execute();

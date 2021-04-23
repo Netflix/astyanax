@@ -179,6 +179,7 @@ public class ThriftSyncConnectionFactoryImpl implements ConnectionFactory<Cassan
                 if(sslCxt != null) {
                     TSSLTransportParameters params = new TSSLTransportParameters(sslCxt.getSslProtocol(), sslCxt.getSslCipherSuites().toArray(new String[0]));
                     params.setTrustStore(sslCxt.getSslTruststore(), sslCxt.getSslTruststorePassword());
+                    params.setKeyStore(sslCxt.getKeyStore(), sslCxt.getKeyPass(), sslCxt.getKeyManagerType(), sslCxt.getKeyStoreType());
                     //thrift's SSL implementation does not allow you set the socket connect timeout, only read timeout
                     socket = TSSLTransportFactory.getClientSocket(getHost().getIpAddress(), getHost().getPort(), cpConfig.getSocketTimeout(), params);
                 } else {

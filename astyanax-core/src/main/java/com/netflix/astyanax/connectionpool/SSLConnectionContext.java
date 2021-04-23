@@ -27,6 +27,10 @@ public class SSLConnectionContext
     private final List<String> sslCipherSuites;
     private final String sslTruststore;
     private final String sslTruststorePassword;
+    private String keyStore;
+    private String keyPass;
+    private String keyManagerType;
+    private String keyStoreType;
 
     public SSLConnectionContext(String sslTruststore, String sslTruststorePassword){
         this(sslTruststore, sslTruststorePassword, DEFAULT_SSL_PROTOCOL, DEFAULT_SSL_CIPHER_SUITES);
@@ -37,6 +41,13 @@ public class SSLConnectionContext
         this.sslTruststorePassword = sslTruststorePassword;
         this.sslProtocol = sslProtocol;
         this.sslCipherSuites = sslCipherSuites;
+    }
+
+    public void withKeyStore(String keyStore, String keyPass, String keyManagerType, String keyStoreType) {
+        this.keyStore = keyStore;
+        this.keyPass = keyPass;
+        this.keyManagerType = keyManagerType;
+        this.keyStoreType = keyStoreType;
     }
 
     /** SSL protocol (typically, TLS) */
@@ -58,5 +69,21 @@ public class SSLConnectionContext
 
     public String getSslTruststorePassword() {
         return sslTruststorePassword;
+    }
+
+    public String getKeyStore() {
+        return keyStore;
+    }
+
+    public String getKeyPass() {
+        return keyPass;
+    }
+
+    public String getKeyManagerType() {
+        return keyManagerType;
+    }
+
+    public String getKeyStoreType() {
+        return keyStoreType;
     }
 }

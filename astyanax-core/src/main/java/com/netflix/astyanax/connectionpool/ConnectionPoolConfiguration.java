@@ -111,6 +111,16 @@ public interface ConnectionPoolConfiguration {
      * @return Socket read/write timeout
      */
     int getSocketTimeout();
+    
+    /**
+     * @return Socket receive buffer size
+     */
+    int getReceiveBufferSize();
+    
+    /**
+     * @return Socket send buffer size
+     */
+    int getSendBufferSize();
 
     /**
      * @return Socket connect timeout

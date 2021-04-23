@@ -150,7 +150,6 @@ public class CompositeEntityMapper<T, K> {
 
         Field[] declaredFields = clazz.getDeclaredFields();
         FieldMapper tempIdMapper = null;
-        CompositeColumnEntityMapper tempEmbeddedEntityMapper = null;
         for (Field field : declaredFields) {
             // Should only have one id field and it should map to the row key
             Id idAnnotation = field.getAnnotation(Id.class);

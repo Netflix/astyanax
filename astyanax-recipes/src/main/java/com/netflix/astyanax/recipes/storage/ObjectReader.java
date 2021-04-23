@@ -117,7 +117,6 @@ public class ObjectReader implements Callable<ObjectMetadata> {
 
             final AtomicReference<Exception> exception = new AtomicReference<Exception>();
             final AtomicLong totalBytesRead = new AtomicLong();
-            final AtomicLong totalBytesRead2 = new AtomicLong();
 
             // Iterate sequentially building up the batches. Once a complete
             // batch of ids is ready

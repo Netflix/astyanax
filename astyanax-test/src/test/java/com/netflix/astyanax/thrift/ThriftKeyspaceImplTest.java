@@ -382,9 +382,7 @@ public class ThriftKeyspaceImplTest {
             // ...
             //
 
-            MutationBatch m;
-            OperationResult<Void> result;
-            m = keyspace.prepareMutationBatch();
+            MutationBatch m = keyspace.prepareMutationBatch();
 
             for (char keyName = 'A'; keyName <= 'Z'; keyName++) {
                 String rowKey = Character.toString(keyName);
@@ -404,7 +402,7 @@ public class ThriftKeyspaceImplTest {
                     .putColumn("Prefix1_b", 2, null)
                     .putColumn("prefix2_a", 3, null);
 
-            result = m.execute();
+            m.execute();
 
             String rowKey = "A";
             ColumnListMutation<Long> cfmLong = m.withRow(CF_LONGCOLUMN, rowKey);
@@ -412,7 +410,7 @@ public class ThriftKeyspaceImplTest {
                 cfmLong.putEmptyColumn(l, null);
             }
             cfmLong.putEmptyColumn(Long.MAX_VALUE, null);
-            result = m.execute();
+            m.execute();
 
             m.withRow(CF_USER_INFO, "acct1234")
                 .putColumn("firstname", "john", null)

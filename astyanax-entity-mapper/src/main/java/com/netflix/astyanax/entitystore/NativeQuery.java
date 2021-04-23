@@ -38,6 +38,7 @@ public abstract class NativeQuery<T, K> {
     protected Collection<Object>      columnNames;
     protected List<ColumnPredicate>   predicates;
     protected int                     columnLimit = Integer.MAX_VALUE;
+    protected boolean                 reverse = false;
     
     /**
      * Refine query for row key
@@ -110,6 +111,11 @@ public abstract class NativeQuery<T, K> {
 
     public NativeQuery<T,K> limit(int columnLimit) {
         this.columnLimit = columnLimit;
+        return this;
+    }
+    
+    public NativeQuery<T,K> reverse(boolean reverse) {
+        this.reverse = reverse;
         return this;
     }
     

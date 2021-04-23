@@ -647,6 +647,7 @@ public class CompositeEntityManager<T, K> implements EntityManager<T, K> {
                                 .setStart(endpoints[0])
                                 .setEnd(endpoints[1])
                                 .setLimit(columnLimit)
+                                .setReversed(reverse)
                                 .build());
                 }
                 

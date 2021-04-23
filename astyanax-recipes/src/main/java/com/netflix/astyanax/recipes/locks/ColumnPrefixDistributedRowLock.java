@@ -283,10 +283,14 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
         if (lockColumn == null) 
             throw new IllegalStateException("verifyLock() called without attempting to take the lock");
         
-        // Read back all columns. There should be only 1 if we got the lock
+        // Read back all columns. There should be only 1 if we got the lock (or more than one if we have concurrent operations)
         Map<String, Long> lockResult = readLockColumns(readDataColumns);
 
         // Cleanup and check that we really got the lock
+        //we use the position in order to check if we have the first lock inserted in cassandra, if not, then we throw a busy exception
+        int lastPosition = 0;
+        int firstCleanPosition = 0;
+
         for (Entry<String, Long> entry : lockResult.entrySet()) {
             // This is a stale lock that was never cleaned up
             if (entry.getValue() != 0 && curTimeInMicros > entry.getValue()) {
@@ -294,11 +298,13 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
                     throw new StaleLockException("Stale lock on row '" + key + "'.  Manual cleanup requried.");
                 }
                 locksToDelete.add(entry.getKey());
+                firstCleanPosition++;
             }
             // Lock already taken, and not by us
-            else if (!entry.getKey().equals(lockColumn)) {
+            else if (!entry.getKey().equals(lockColumn) && firstCleanPosition == lastPosition) {
                 throw new BusyLockException("Lock already acquired for row '" + key + "' with lock column " + entry.getKey());
             }
+            lastPosition++;
         }
     }
 
@@ -357,7 +363,8 @@ public class ColumnPrefixDistributedRowLock<K> implements DistributedRowLock {
      * @throws Exception
      */
     private Map<String, Long> readLockColumns(boolean readDataColumns) throws Exception {
-        Map<String, Long> result = Maps.newLinkedHashMap();
+        //using treemap due to a race condition capable of causing deadlock.
+        Map<String, Long> result = Maps.newTreeMap();
         // Read all the columns
         if (readDataColumns) {
             columns = new OrderedColumnMap<String>();

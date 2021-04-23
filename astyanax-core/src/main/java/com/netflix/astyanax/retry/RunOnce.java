@@ -18,7 +18,7 @@ package com.netflix.astyanax.retry;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
 public class RunOnce implements RetryPolicy {
-    public static RunOnce instance = new RunOnce();
+    public static final RunOnce instance = new RunOnce();
 
     public static RunOnce get() {
         return instance;

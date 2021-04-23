@@ -27,7 +27,7 @@ import com.netflix.astyanax.serializers.StringSerializer;
 
 public class SingleColumnMutationTests extends KeyspaceTests {
 
-	public static ColumnFamily<Long, String> CF_SINGLE_COLUMN = ColumnFamily
+	public static final ColumnFamily<Long, String> CF_SINGLE_COLUMN = ColumnFamily
 			.newColumnFamily(
 					"cfsinglecolmutation", 
 					LongSerializer.get(),

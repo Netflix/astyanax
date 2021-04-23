@@ -39,7 +39,7 @@ public class AllRowsQueryTest extends KeyspaceTests {
     
 	private static final Logger LOG = LoggerFactory.getLogger(AllRowsQueryTest.class);
 	
-	public static ColumnFamily<String, String> CF_ALL_ROWS = ColumnFamily
+	public static final ColumnFamily<String, String> CF_ALL_ROWS = ColumnFamily
             .newColumnFamily(
                     "allrows", 
                     StringSerializer.get(),

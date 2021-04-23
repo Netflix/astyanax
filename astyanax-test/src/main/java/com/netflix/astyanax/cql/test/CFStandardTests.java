@@ -59,13 +59,13 @@ public class CFStandardTests extends KeyspaceTests {
 	
 	private static final Logger LOG = Logger.getLogger(CFStandardTests.class);
 	
-    public static ColumnFamily<String, String> CF_STANDARD1 = ColumnFamily
+    public static final ColumnFamily<String, String> CF_STANDARD1 = ColumnFamily
             .newColumnFamily(
                     "Standard1", 
                     StringSerializer.get(),
                     StringSerializer.get());
     
-    public static ColumnFamily<String, String> CF_STANDARD2 = ColumnFamily
+    public static final ColumnFamily<String, String> CF_STANDARD2 = ColumnFamily
             .newColumnFamily(
                     "Standard2", 
                     StringSerializer.get(),

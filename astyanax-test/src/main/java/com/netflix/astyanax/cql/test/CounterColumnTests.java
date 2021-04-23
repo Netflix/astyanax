@@ -29,7 +29,7 @@ import com.netflix.astyanax.serializers.StringSerializer;
 
 public class CounterColumnTests extends KeyspaceTests {
 	
-    public static ColumnFamily<String, String> CF_COUNTER1 = ColumnFamily
+    public static final ColumnFamily<String, String> CF_COUNTER1 = ColumnFamily
             .newColumnFamily(
                     "Counter1", 
                     StringSerializer.get(),

@@ -26,9 +26,9 @@ import java.nio.ByteBuffer;
  */
 public class Int32Serializer extends AbstractSerializer<Integer> {
 
-    private static final IntegerSerializer instance = new IntegerSerializer();
+    private static final Int32Serializer instance = new Int32Serializer();
 
-    public static IntegerSerializer get() {
+    public static Int32Serializer get() {
         return instance;
     }
 
@@ -45,7 +45,7 @@ public class Int32Serializer extends AbstractSerializer<Integer> {
 
     @Override
     public Integer fromByteBuffer(ByteBuffer byteBuffer) {
-        if ((byteBuffer == null) || (byteBuffer.remaining() != 4)) {
+        if ((byteBuffer == null) || (byteBuffer.remaining() < 4)) {
             return null;
         }
         ByteBuffer dup = byteBuffer.duplicate();

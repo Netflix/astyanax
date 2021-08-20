@@ -44,13 +44,13 @@ public class ThriftFamilyFactory implements AstyanaxTypeFactory<Cassandra.Client
     @Override
     public Cluster createCluster(ConnectionPool<Cassandra.Client> cp, AstyanaxConfiguration asConfig,
             KeyspaceTracerFactory tracerFactory) {
-        return new ThriftClusterImpl(asConfig, (ConnectionPool<Cassandra.Client>) cp, tracerFactory);
+        return new ThriftClusterImpl(asConfig, cp, tracerFactory);
     }
 
     @Override
     public ConnectionFactory<Cassandra.Client> createConnectionFactory(AstyanaxConfiguration asConfig, ConnectionPoolConfiguration cfConfig,
             KeyspaceTracerFactory tracerFactory, ConnectionPoolMonitor monitor) {
-        return (ConnectionFactory<Cassandra.Client>) new ThriftSyncConnectionFactoryImpl(asConfig, cfConfig, tracerFactory,
+        return new ThriftSyncConnectionFactoryImpl(asConfig, cfConfig, tracerFactory,
                 monitor);
     }
 

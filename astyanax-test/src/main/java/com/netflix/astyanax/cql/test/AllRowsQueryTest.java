@@ -59,7 +59,7 @@ public class AllRowsQueryTest extends KeyspaceTests {
             String rowKey = Character.toString(keyName);
             ColumnListMutation<String> cfmStandard = m.withRow(CF_ALL_ROWS, rowKey);
             for (char cName = 'a'; cName <= 'z'; cName++) {
-                cfmStandard.putColumn(Character.toString(cName), (int) (cName - 'a') + 1, null);
+                cfmStandard.putColumn(Character.toString(cName), cName - 'a' + 1, null);
             }
             m.withCaching(true);
             m.execute();

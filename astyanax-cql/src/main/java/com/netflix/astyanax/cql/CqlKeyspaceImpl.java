@@ -413,7 +413,7 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 					
 			cluster = builder.build();
 			if (!(this.cpMonitor instanceof JavaDriverConnectionPoolMonitorImpl))
-				this.cluster.getMetrics().getRegistry().addListener((MetricRegistryListener) this.metricsRegListener);
+				this.cluster.getMetrics().getRegistry().addListener(this.metricsRegListener);
 			
 			Logger.info("Connecting to cluster");
 			session = cluster.connect();

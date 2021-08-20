@@ -336,7 +336,7 @@ public class CqlKeyspaceDefinitionImpl implements KeyspaceDefinition {
 				}
 				node = (Map<String, Object>)node.get(parts[i]);
 			}
-			node.put(parts[parts.length-1], (String)prop.getValue());
+			node.put(parts[parts.length-1], prop.getValue());
 		}
 		return root;
 	}

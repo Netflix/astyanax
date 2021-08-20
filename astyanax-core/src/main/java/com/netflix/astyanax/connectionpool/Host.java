@@ -48,7 +48,7 @@ public class Host implements Comparable<Host> {
     private Set<String>  alternateIpAddress = Sets.newHashSet();
     private List<TokenRange> ranges = Lists.newArrayList();
 
-    public static Pattern IP_ADDR_PATTERN = Pattern
+    public static final Pattern IP_ADDR_PATTERN = Pattern
             .compile("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$");
 
     /**

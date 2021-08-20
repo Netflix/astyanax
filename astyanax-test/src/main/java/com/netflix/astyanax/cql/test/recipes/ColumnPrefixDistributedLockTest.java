@@ -35,7 +35,7 @@ import com.netflix.astyanax.serializers.StringSerializer;
 
 public class ColumnPrefixDistributedLockTest extends KeyspaceTests {
 
-	public static ColumnFamily<String, String> CF_DIST_LOCK = ColumnFamily
+	public static final ColumnFamily<String, String> CF_DIST_LOCK = ColumnFamily
             .newColumnFamily(
                     "distlock", 
                     StringSerializer.get(),

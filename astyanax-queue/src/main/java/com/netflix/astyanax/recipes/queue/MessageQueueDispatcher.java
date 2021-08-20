@@ -258,7 +258,7 @@ public class MessageQueueDispatcher {
                 
                 while (!terminate) {
                     // Process events in a tight loop, until asked to terminate
-                    Collection<MessageContext> messages = null;
+                    Collection<MessageContext> messages;
                     try {
                         messages = consumer.readMessages(batchSize);
                         if (messages.isEmpty()) {

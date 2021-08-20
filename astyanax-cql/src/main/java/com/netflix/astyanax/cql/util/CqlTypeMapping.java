@@ -193,7 +193,7 @@ public class CqlTypeMapping {
 		
 		Class<?> clazz = compositeSerializer.getClazz();
 		
-		Object obj = null;
+		Object obj;
 		try {
 			obj = clazz.newInstance();
 		} catch (Exception e) {

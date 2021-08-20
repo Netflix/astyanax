@@ -255,7 +255,7 @@ public class ReverseIndexQuery<K, C, V> {
                 }
 
                 // Read the index shards
-                OperationResult<Rows<ByteBuffer, ByteBuffer>> result = null;
+                OperationResult<Rows<ByteBuffer, ByteBuffer>> result;
                 try {
                     result = ks.prepareQuery(cfIndex).setConsistencyLevel(consistencyLevel).withRetryPolicy(retry)
                             .getKeySlice(keys).withColumnRange(range.setLimit(columnLimit).build()).execute();
@@ -308,7 +308,7 @@ public class ReverseIndexQuery<K, C, V> {
             @Override
             protected void internalRun() {
                 V nextValue = value;
-                ColumnList<ByteBuffer> result = null;
+                ColumnList<ByteBuffer> result;
                 List<K> batch = Lists.newArrayListWithCapacity(keyLimit);
 
                 int pageSize = shardColumnLimit;

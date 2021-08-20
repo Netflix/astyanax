@@ -17,6 +17,7 @@ package com.netflix.astyanax.cql.direct;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -142,8 +143,14 @@ public class DirectCqlPreparedStatement implements CqlPreparedStatement {
 		bindValues.add(value);
 		return this;
 	}
-	
-	public PreparedStatement getInnerPreparedStatement() {
+
+    @Override
+    public CqlPreparedStatement withTimestamp(Date value) {
+        bindValues.add(value);
+        return this;
+    }
+
+    public PreparedStatement getInnerPreparedStatement() {
 		return pStmt;
 	}
 }

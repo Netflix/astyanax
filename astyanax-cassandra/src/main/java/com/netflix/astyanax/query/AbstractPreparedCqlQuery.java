@@ -16,19 +16,13 @@
 package com.netflix.astyanax.query;
 
 import java.nio.ByteBuffer;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.Serializer;
-import com.netflix.astyanax.serializers.BooleanSerializer;
-import com.netflix.astyanax.serializers.DoubleSerializer;
-import com.netflix.astyanax.serializers.FloatSerializer;
-import com.netflix.astyanax.serializers.IntegerSerializer;
-import com.netflix.astyanax.serializers.LongSerializer;
-import com.netflix.astyanax.serializers.ShortSerializer;
-import com.netflix.astyanax.serializers.StringSerializer;
-import com.netflix.astyanax.serializers.UUIDSerializer;
+import com.netflix.astyanax.serializers.*;
 
 public abstract class AbstractPreparedCqlQuery<K, C> implements PreparedCqlQuery<K, C> {
     private List<ByteBuffer> values = Lists.newArrayList();
@@ -92,6 +86,11 @@ public abstract class AbstractPreparedCqlQuery<K, C> implements PreparedCqlQuery
     @Override
     public PreparedCqlQuery<K, C> withUUIDValue(UUID value) {
         return withByteBufferValue(value, UUIDSerializer.get());
+    }
+
+    @Override
+    public PreparedCqlQuery<K, C> withTimestamp(Date value) {
+        return withByteBufferValue(value, DateSerializer.get());
     }
 
 }

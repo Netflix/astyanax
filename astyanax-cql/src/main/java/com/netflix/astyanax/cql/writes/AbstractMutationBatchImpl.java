@@ -179,8 +179,10 @@ public abstract class AbstractMutationBatchImpl implements MutationBatch {
 		sb.append("MutationBatch[");
 		boolean first = true;
 		for (Entry<ByteBuffer, Map<String, ColumnListMutation<?>>> row : mutationMap.entrySet()) {
-			if (!first)
+			if (!first) {
 				sb.append(",");
+			}
+			first = false;
 			sb.append(Hex.encodeHex(row.getKey().array()));
 			sb.append(row.getValue().entrySet().toString());
 		}

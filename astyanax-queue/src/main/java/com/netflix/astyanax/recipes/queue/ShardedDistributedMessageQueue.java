@@ -240,13 +240,13 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
 
         /**
          * Define this on the ShardReaderPolicy instead 
-         * @param internval
+         * @param interval
          * @param units
          * @return
          */
         @Deprecated
-        public Builder withPollInterval(Long internval, TimeUnit units) {
-            this.metadata.setPollInterval(TimeUnit.MILLISECONDS.convert(internval,  units));
+        public Builder withPollInterval(Long interval, TimeUnit units) {
+            this.metadata.setPollInterval(TimeUnit.MILLISECONDS.convert(interval,  units));
             return this;
         }
 
@@ -433,7 +433,7 @@ public class ShardedDistributedMessageQueue implements MessageQueue {
             timePartition = (messageTime / metadata.getPartitionDuration()) % metadata.getPartitionCount();
         else
             timePartition = 0;
-        return getName() + ":" + timePartition + ":" + modShard;
+        return getName() + ":" + timePartition + ":" + Math.abs(modShard);
     }
 
     String getCompositeKey(String name, String key) {

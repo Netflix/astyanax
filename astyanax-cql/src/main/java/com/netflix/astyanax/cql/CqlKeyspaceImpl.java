@@ -403,14 +403,19 @@ public class CqlKeyspaceImpl implements Keyspace, SeedHostListener {
 					.withCompression(config.getProtocolOptions().getCompression())
 					.withPoolingOptions(config.getPoolingOptions())
 					.withSocketOptions(config.getSocketOptions())
-					.withQueryOptions(config.getQueryOptions());
+					.withQueryOptions(config.getQueryOptions())
+					.withAuthProvider(config.getProtocolOptions().getAuthProvider());
 			
 			if (config.getMetricsOptions() == null) {
 				builder.withoutMetrics();
 			} else if (!config.getMetricsOptions().isJMXReportingEnabled()) {
 				builder.withoutJMXReporting();
 			}
-					
+			
+			if (config.getProtocolOptions().getSSLOptions() != null) {
+				builder.withSSL(config.getProtocolOptions().getSSLOptions())
+			}
+
 			cluster = builder.build();
 			if (!(this.cpMonitor instanceof JavaDriverConnectionPoolMonitorImpl))
 				this.cluster.getMetrics().getRegistry().addListener((MetricRegistryListener) this.metricsRegListener);

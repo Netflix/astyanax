@@ -315,12 +315,17 @@ public class CqlClusterImpl implements com.netflix.astyanax.Cluster, SeedHostLis
 				.withCompression(config.getProtocolOptions().getCompression())
 				.withPoolingOptions(config.getPoolingOptions())
 				.withSocketOptions(config.getSocketOptions())
-				.withQueryOptions(config.getQueryOptions());
+				.withQueryOptions(config.getQueryOptions())
+				.withAuthProvider(config.getProtocolOptions().getAuthProvider());
 		
 		if (config.getMetricsOptions() == null) {
 			builder.withoutMetrics();
 		} else if (!config.getMetricsOptions().isJMXReportingEnabled()) {
 			builder.withoutJMXReporting();
+		}
+		
+		if (config.getProtocolOptions().getSSLOptions() != null) {
+			builder.withSSL(config.getProtocolOptions().getSSLOptions())
 		}
 				
 		this.cluster = builder.build(); 
